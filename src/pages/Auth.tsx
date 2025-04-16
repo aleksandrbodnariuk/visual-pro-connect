@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -108,11 +107,11 @@ export default function Auth() {
       console.log("Вхід:", data);
       
       // Перевіряємо чи є адмін користувач
-      if (data.phoneNumber === "0000000000") {
+      if (data.phoneNumber === "0507068007") {
         const adminUser = {
           id: "admin",
-          firstName: "Адміністратор",
-          lastName: "Засновник",
+          firstName: "Олександр",
+          lastName: "Боднарюк",
           phoneNumber: data.phoneNumber,
           role: "admin-founder",
           status: "Адміністратор-засновник",
@@ -207,7 +206,7 @@ export default function Auth() {
               <CardFooter className="flex justify-center">
                 <p className="text-sm text-muted-foreground">
                   Для входу як Адміністратор-засновник:<br/> 
-                  Номер телефону: 0000000000
+                  Номер телефону: 0507068007
                 </p>
               </CardFooter>
             </Card>
