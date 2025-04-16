@@ -1,6 +1,7 @@
 
-import { Link } from "react-router-dom";
-import { Bell, Camera, Home, MessageCircle, PlusSquare, Search, User } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Bell, Camera, Home, MessageCircle, PlusSquare, Search, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,8 +14,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 export function Navbar() {
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Отримуємо дані користувача з localStorage
+    const userJSON = localStorage.getItem("currentUser");
+    if (userJSON) {
+      setCurrentUser(JSON.parse(userJSON));
+    }
+  }, []);
+  
+  const handleLogout = () => {
+    localStorage.removeItem("currentUser");
+    setCurrentUser(null);
+    toast.success("Ви вийшли з системи");
+    navigate("/");
+  };
+  
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur">
       <div className="container flex h-16 items-center justify-between py-4">
@@ -71,38 +91,55 @@ export function Navbar() {
             <span className="sr-only">Створити</span>
           </Button>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="/placeholder.svg" alt="@username" />
-                  <AvatarFallback>МК</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Мій акаунт</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Профіль</span>
+          {currentUser ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src="/placeholder.svg" alt={currentUser.name} />
+                    <AvatarFallback>
+                      {currentUser.name 
+                        ? currentUser.name.split(' ').map((n: string) => n[0]).join('')
+                        : 'ВП'}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Мій акаунт</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem onClick={() => navigate(`/profile/${currentUser.id}`)}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Профіль</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <PlusSquare className="mr-2 h-4 w-4" />
+                    <span>Створити публікацію</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/search')}>
+                    <Search className="mr-2 h-4 w-4" />
+                    <span>Знайти професіоналів</span>
+                  </DropdownMenuItem>
+                  {currentUser.isAdmin && (
+                    <DropdownMenuItem onClick={() => navigate('/admin')}>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Панель адміністратора</span>
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Вийти</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <PlusSquare className="mr-2 h-4 w-4" />
-                  <span>Створити публікацію</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.location.href = '/search'}>
-                  <Search className="mr-2 h-4 w-4" />
-                  <span>Знайти професіоналів</span>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <span>Вийти</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button variant="secondary" size="sm" onClick={() => navigate('/auth')}>
+              Увійти
+            </Button>
+          )}
         </nav>
       </div>
     </header>
