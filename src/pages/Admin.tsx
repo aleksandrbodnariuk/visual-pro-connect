@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,7 +22,6 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
-// Доступні статуси користувачів
 const USER_STATUSES = [
   "Учасник",
   "Активний учасник",
@@ -36,7 +34,6 @@ const USER_STATUSES = [
   "Адміністратор-засновник"
 ];
 
-// Доступні титули акціонерів
 const SHAREHOLDER_TITLES = [
   "Магнат",
   "Барон",
@@ -61,7 +58,6 @@ export default function Admin() {
   
   const navigate = useNavigate();
   
-  // Демо дані для панелі
   const stats = [
     { title: "Користувачі", value: "0", icon: Users, color: "bg-blue-100 text-blue-700" },
     { title: "Акціонери", value: "0", icon: Crown, color: "bg-amber-100 text-amber-700" },
@@ -69,7 +65,6 @@ export default function Admin() {
     { title: "Ціна акції", value: `${stockPrice} грн`, icon: Image, color: "bg-purple-100 text-purple-700" },
   ];
   
-  // Перевірка прав адміністратора
   useEffect(() => {
     const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
     if (!currentUser || !(currentUser.isAdmin || currentUser.role === "admin" || currentUser.role === "admin-founder")) {
@@ -81,22 +76,19 @@ export default function Admin() {
     setIsAdmin(true);
     setIsFounder(currentUser.role === "admin-founder");
     
-    // Завантаження користувачів з localStorage
     const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
     setUsers(storedUsers);
     
-    // Завантаження акціонерів
     const shareholdersData = storedUsers.filter((user: any) => 
       user.status === "Акціонер" || user.role === "shareholder"
     );
     
-    // Ініціалізуємо акції для акціонерів, якщо вони ще не ініціалізовані
     const initializedShareholders = shareholdersData.map((shareholder: any) => {
       if (!shareholder.shares) {
         return {
           ...shareholder,
           shares: 10,
-          percentage: 0,  // Буде розраховано пізніше
+          percentage: 0,
           title: shareholder.title || "Магнат",
           profit: 0
         };
@@ -104,7 +96,6 @@ export default function Admin() {
       return shareholder;
     });
     
-    // Розрахунок відсотка акцій
     const totalShares = initializedShareholders.reduce(
       (sum: number, sh: any) => sum + (sh.shares || 0), 0
     );
@@ -116,11 +107,9 @@ export default function Admin() {
     
     setShareholders(shareholdersWithPercentage);
     
-    // Завантаження замовлень
     const storedOrders = JSON.parse(localStorage.getItem("orders") || "[]");
     setOrders(storedOrders);
     
-    // Завантаження записів
     const storedPosts = JSON.parse(localStorage.getItem("posts") || "[]");
     setPosts(storedPosts || [
       { id: "1", author: "Олександр Петренко", title: "Нова фотосесія", status: "Активний" },
@@ -128,11 +117,9 @@ export default function Admin() {
       { id: "3", author: "Ігор Мельник", title: "Музичний реліз", status: "На розгляді" }
     ]);
     
-    // Завантаження біржі акцій
     const storedStockExchange = JSON.parse(localStorage.getItem("stockExchange") || "[]");
     setStockExchangeItems(storedStockExchange);
     
-    // Завантаження поточної ціни акцій
     const storedStockPrice = localStorage.getItem("stockPrice");
     if (storedStockPrice) {
       setStockPrice(storedStockPrice);
@@ -141,7 +128,6 @@ export default function Admin() {
     }
   }, [navigate, stockPrice]);
   
-  // Оновлення стрічок статистики
   const updatedStats = [
     { title: "Користувачі", value: users.length.toString(), icon: Users, color: "bg-blue-100 text-blue-700" },
     { title: "Акціонери", value: shareholders.length.toString(), icon: Crown, color: "bg-amber-100 text-amber-700" },
@@ -149,9 +135,7 @@ export default function Admin() {
     { title: "Ціна акції", value: `${stockPrice} грн`, icon: Image, color: "bg-purple-100 text-purple-700" },
   ];
   
-  // Функція для видалення користувача
   const deleteUser = (userId: string) => {
-    // Перевірити, чи не є користувач адмін-засновником
     const userToDelete = users.find(user => user.id === userId);
     if (userToDelete && userToDelete.role === "admin-founder") {
       toast.error("Неможливо видалити Адміністратора-засновника");
@@ -162,23 +146,19 @@ export default function Admin() {
     setUsers(updatedUsers);
     localStorage.setItem("users", JSON.stringify(updatedUsers));
     
-    // Оновлення акціонерів, якщо потрібно
     const updatedShareholders = shareholders.filter(sh => sh.id !== userId);
     setShareholders(updatedShareholders);
     
     toast.success("Користувача видалено");
   };
   
-  // Функція для зміни статусу користувача
   const changeUserStatus = (userId: string, newStatus: string) => {
-    // Перевірити, чи не є користувач адмін-засновником
     const userToUpdate = users.find(user => user.id === userId);
     if (userToUpdate && userToUpdate.role === "admin-founder" && !isFounder) {
       toast.error("Тільки Адміністратор-засновник може змінювати свій статус");
       return;
     }
     
-    // Оновлюємо роль користувача в залежності від статусу
     let newRole = "user";
     if (newStatus === "Адміністратор" || newStatus === "Адміністратор-засновник") {
       newRole = newStatus === "Адміністратор-засновник" ? "admin-founder" : "admin";
@@ -200,21 +180,19 @@ export default function Admin() {
     setUsers(updatedUsers);
     localStorage.setItem("users", JSON.stringify(updatedUsers));
     
-    // Якщо статус змінено на "Акціонер", додати до списку акціонерів
     if (newStatus === "Акціонер") {
       const user = updatedUsers.find(u => u.id === userId);
       if (user) {
         const newShareholder = {
           ...user,
-          shares: 10, // Початкова кількість акцій
-          percentage: 0, // Буде перераховано нижче
-          title: "Магнат", // Початковий титул
+          shares: 10,
+          percentage: 0,
+          title: "Магнат",
           profit: 0
         };
         
         const updatedShareholders = [...shareholders.filter(sh => sh.id !== userId), newShareholder];
         
-        // Перерахунок відсотків
         const totalShares = updatedShareholders.reduce(
           (sum: number, sh: any) => sum + (sh.shares || 0), 0
         );
@@ -227,7 +205,6 @@ export default function Admin() {
         setShareholders(shareholdersWithPercentage);
       }
     } else if (newStatus !== "Акціонер") {
-      // Якщо статус змінено з "Акціонер" на інший, видалити зі списку акціонерів
       const updatedShareholders = shareholders.filter(sh => sh.id !== userId);
       setShareholders(updatedShareholders);
     }
@@ -235,7 +212,6 @@ export default function Admin() {
     toast.success(`Статус користувача змінено на "${newStatus}"`);
   };
   
-  // Функція для зміни титулу акціонера
   const changeShareholderTitle = (userId: string, newTitle: string) => {
     const updatedShareholders = shareholders.map(sh => {
       if (sh.id === userId) {
@@ -246,7 +222,6 @@ export default function Admin() {
     
     setShareholders(updatedShareholders);
     
-    // Оновлюємо також користувача
     const updatedUsers = users.map(user => {
       if (user.id === userId) {
         return { ...user, title: newTitle };
@@ -260,7 +235,6 @@ export default function Admin() {
     toast.success(`Титул акціонера змінено на "${newTitle}"`);
   };
   
-  // Функція для додавання нового замовлення
   const addNewOrder = () => {
     if (!newOrderAmount || isNaN(parseFloat(newOrderAmount)) || parseFloat(newOrderAmount) <= 0) {
       toast.error("Введіть коректну суму замовлення");
@@ -287,7 +261,6 @@ export default function Admin() {
     setOrders(updatedOrders);
     localStorage.setItem("orders", JSON.stringify(updatedOrders));
     
-    // Розподіл прибутку між акціонерами (45% від суми)
     const profitToDistribute = amount * 0.45;
     
     if (shareholders.length > 0) {
@@ -301,7 +274,6 @@ export default function Admin() {
       
       setShareholders(updatedShareholders);
       
-      // Оновлюємо дані користувачів
       const updatedUsers = users.map(user => {
         const shareholderData = updatedShareholders.find(sh => sh.id === user.id);
         if (shareholderData) {
@@ -320,13 +292,11 @@ export default function Admin() {
     toast.success("Замовлення додано і прибуток розподілено між акціонерами");
   };
   
-  // Функція для оновлення ціни акцій
   const updateStockPrice = () => {
     localStorage.setItem("stockPrice", stockPrice);
     toast.success(`Ціну акції оновлено: ${stockPrice} грн`);
   };
   
-  // Функція для видалення публікації
   const deletePost = (postId: string) => {
     const updatedPosts = posts.filter(post => post.id !== postId);
     setPosts(updatedPosts);
@@ -651,7 +621,7 @@ export default function Admin() {
                             <td className="p-2">{item.pricePerShare}</td>
                             <td className="p-2">{(item.sharesCount * item.pricePerShare).toFixed(2)}</td>
                             <td className="p-2">
-                              <Badge variant={item.status === "Активна" ? "success" : "secondary"}>
+                              <Badge variant={item.status === "Активна" ? "secondary" : "outline"}>
                                 {item.status}
                               </Badge>
                             </td>
