@@ -11,19 +11,29 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
 import { Navbar } from "@/components/layout/Navbar";
+import { 
+  UserRoundCheck, 
+  Phone, 
+  MessageCircleMore, 
+  Instagram, 
+  Facebook, 
+  Smartphone 
+} from "lucide-react";
 
 // Схема для форми реєстрації
 const registerFormSchema = z.object({
-  name: z.string().min(2, "Ім'я повинно містити щонайменше 2 символи"),
-  email: z.string().email("Невірний формат електронної пошти"),
-  password: z.string().min(6, "Пароль повинен містити щонайменше 6 символів"),
-  profession: z.string().min(1, "Оберіть свій тип професійної діяльності")
+  firstName: z.string().min(2, "Ім'я повинно містити щонайменше 2 символи"),
+  lastName: z.string().min(2, "Прізвище повинно містити щонайменше 2 символи"),
+  phoneNumber: z.string().min(10, "Номер телефону повинен містити щонайменше 10 цифр"),
+  viber: z.string().optional(),
+  tiktok: z.string().optional(),
+  instagram: z.string().optional(),
+  facebook: z.string().optional(),
 });
 
 // Схема для форми входу
 const loginFormSchema = z.object({
-  email: z.string().email("Невірний формат електронної пошти"),
-  password: z.string().min(1, "Введіть пароль")
+  phoneNumber: z.string().min(10, "Введіть коректний номер телефону")
 });
 
 type RegisterFormValues = z.infer<typeof registerFormSchema>;
@@ -37,10 +47,13 @@ export default function Auth() {
   const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
     defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      profession: "",
+      firstName: "",
+      lastName: "",
+      phoneNumber: "",
+      viber: "",
+      tiktok: "",
+      instagram: "",
+      facebook: "",
     },
   });
 
@@ -48,8 +61,7 @@ export default function Auth() {
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
-      email: "",
-      password: "",
+      phoneNumber: "",
     },
   });
 
@@ -63,15 +75,27 @@ export default function Auth() {
       
       // Зберігаємо дані користувача в localStorage (для демонстрації)
       const users = JSON.parse(localStorage.getItem("users") || "[]");
-      users.push({...data, id: Date.now().toString(), isAdmin: false});
+      const userId = Date.now().toString();
+      
+      const newUser = {
+        ...data,
+        id: userId,
+        status: "Учасник",
+        role: "user",
+        isAdmin: false,
+        createdAt: new Date().toISOString(),
+        lastActive: new Date().toISOString()
+      };
+      
+      users.push(newUser);
       localStorage.setItem("users", JSON.stringify(users));
       
       // Імітуємо "сесію" користувача
-      localStorage.setItem("currentUser", JSON.stringify({...data, id: Date.now().toString(), isAdmin: false}));
+      localStorage.setItem("currentUser", JSON.stringify(newUser));
       
-      toast.success("Реєстрація успішна!");
+      toast.success("Реєстрація успішна! Ваш статус: Учасник");
       setIsLoading(false);
-      navigate("/profile/" + Date.now().toString());
+      navigate("/profile/" + userId);
     }, 1500);
   }
 
@@ -84,15 +108,18 @@ export default function Auth() {
       console.log("Вхід:", data);
       
       // Перевіряємо чи є адмін користувач
-      if (data.email === "admin@visualpro.com" && data.password === "admin123") {
+      if (data.phoneNumber === "0000000000") {
         const adminUser = {
           id: "admin",
-          name: "Адміністратор",
-          email: data.email,
+          firstName: "Адміністратор",
+          lastName: "Засновник",
+          phoneNumber: data.phoneNumber,
+          role: "admin-founder",
+          status: "Адміністратор-засновник",
           isAdmin: true
         };
         localStorage.setItem("currentUser", JSON.stringify(adminUser));
-        toast.success("Ви увійшли як адміністратор!");
+        toast.success("Ви увійшли як Адміністратор-засновник!");
         setIsLoading(false);
         navigate("/admin");
         return;
@@ -100,14 +127,28 @@ export default function Auth() {
       
       // Демонстраційна перевірка користувача
       const users = JSON.parse(localStorage.getItem("users") || "[]");
-      const user = users.find((u: any) => u.email === data.email);
+      const user = users.find((u: any) => u.phoneNumber === data.phoneNumber);
       
-      if (user && user.password === data.password) {
+      if (user) {
+        // Оновлюємо час останньої активності
+        user.lastActive = new Date().toISOString();
         localStorage.setItem("currentUser", JSON.stringify(user));
-        toast.success("Вхід успішний!");
-        navigate("/profile/" + user.id);
+        
+        // Оновлюємо користувача в списку користувачів
+        const updatedUsers = users.map((u: any) => 
+          u.id === user.id ? user : u
+        );
+        localStorage.setItem("users", JSON.stringify(updatedUsers));
+        
+        toast.success(`Вхід успішний! Ваш статус: ${user.status}`);
+        
+        if (user.role === "admin" || user.role === "admin-founder") {
+          navigate("/admin");
+        } else {
+          navigate("/profile/" + user.id);
+        }
       } else {
-        toast.error("Невірна електронна пошта або пароль");
+        toast.error("Користувача з таким номером телефону не знайдено");
       }
       
       setIsLoading(false);
@@ -137,25 +178,21 @@ export default function Auth() {
                   <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                     <FormField
                       control={loginForm.control}
-                      name="email"
+                      name="phoneNumber"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Електронна пошта</FormLabel>
+                          <FormLabel>Номер телефону</FormLabel>
                           <FormControl>
-                            <Input placeholder="your@email.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={loginForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Пароль</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
+                            <div className="flex">
+                              <span className="inline-flex items-center px-3 bg-muted border border-r-0 border-input rounded-l-md">
+                                <Phone className="h-4 w-4 text-muted-foreground" />
+                              </span>
+                              <Input 
+                                className="rounded-l-none" 
+                                placeholder="0671234567" 
+                                {...field} 
+                              />
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -169,9 +206,8 @@ export default function Auth() {
               </CardContent>
               <CardFooter className="flex justify-center">
                 <p className="text-sm text-muted-foreground">
-                  Для входу в кабінет адміністратора:<br/> 
-                  Email: admin@visualpro.com<br/>
-                  Пароль: admin123
+                  Для входу як Адміністратор-засновник:<br/> 
+                  Номер телефону: 0000000000
                 </p>
               </CardFooter>
             </Card>
@@ -190,12 +226,12 @@ export default function Auth() {
                   <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
                     <FormField
                       control={registerForm.control}
-                      name="name"
+                      name="firstName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Повне ім'я</FormLabel>
+                          <FormLabel>Ім'я</FormLabel>
                           <FormControl>
-                            <Input placeholder="Іван Петренко" {...field} />
+                            <Input placeholder="Іван" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -203,12 +239,12 @@ export default function Auth() {
                     />
                     <FormField
                       control={registerForm.control}
-                      name="email"
+                      name="lastName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Електронна пошта</FormLabel>
+                          <FormLabel>Прізвище</FormLabel>
                           <FormControl>
-                            <Input placeholder="your@email.com" {...field} />
+                            <Input placeholder="Петренко" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -216,40 +252,115 @@ export default function Auth() {
                     />
                     <FormField
                       control={registerForm.control}
-                      name="password"
+                      name="phoneNumber"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Пароль</FormLabel>
+                          <FormLabel>Номер телефону</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
+                            <div className="flex">
+                              <span className="inline-flex items-center px-3 bg-muted border border-r-0 border-input rounded-l-md">
+                                <Phone className="h-4 w-4 text-muted-foreground" />
+                              </span>
+                              <Input 
+                                className="rounded-l-none" 
+                                placeholder="0671234567" 
+                                {...field} 
+                              />
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={registerForm.control}
-                      name="profession"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Професійна діяльність</FormLabel>
-                          <FormControl>
-                            <select 
-                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                              {...field}
-                            >
-                              <option value="">Оберіть тип діяльності</option>
-                              <option value="Photo">Фотограф</option>
-                              <option value="Video">Відеограф</option>
-                              <option value="Music">Музикант</option>
-                              <option value="Event">Ведучий заходів</option>
-                              <option value="Pyro">Піротехнік</option>
-                            </select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium">Соціальні мережі (необов'язково)</h3>
+                      
+                      <FormField
+                        control={registerForm.control}
+                        name="viber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <div className="flex">
+                                <span className="inline-flex items-center px-3 bg-purple-100 text-purple-600 border border-r-0 border-input rounded-l-md">
+                                  <MessageCircleMore className="h-4 w-4" />
+                                </span>
+                                <Input 
+                                  className="rounded-l-none" 
+                                  placeholder="Viber" 
+                                  {...field} 
+                                />
+                              </div>
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={registerForm.control}
+                        name="tiktok"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <div className="flex">
+                                <span className="inline-flex items-center px-3 bg-gray-100 text-black border border-r-0 border-input rounded-l-md">
+                                  <Smartphone className="h-4 w-4" />
+                                </span>
+                                <Input 
+                                  className="rounded-l-none" 
+                                  placeholder="TikTok" 
+                                  {...field} 
+                                />
+                              </div>
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={registerForm.control}
+                        name="instagram"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <div className="flex">
+                                <span className="inline-flex items-center px-3 bg-pink-100 text-pink-600 border border-r-0 border-input rounded-l-md">
+                                  <Instagram className="h-4 w-4" />
+                                </span>
+                                <Input 
+                                  className="rounded-l-none" 
+                                  placeholder="Instagram" 
+                                  {...field} 
+                                />
+                              </div>
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={registerForm.control}
+                        name="facebook"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <div className="flex">
+                                <span className="inline-flex items-center px-3 bg-blue-100 text-blue-600 border border-r-0 border-input rounded-l-md">
+                                  <Facebook className="h-4 w-4" />
+                                </span>
+                                <Input 
+                                  className="rounded-l-none" 
+                                  placeholder="Facebook" 
+                                  {...field} 
+                                />
+                              </div>
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
                     <Button type="submit" className="w-full" disabled={isLoading}>
                       {isLoading ? "Обробка..." : "Зареєструватися"}
                     </Button>
