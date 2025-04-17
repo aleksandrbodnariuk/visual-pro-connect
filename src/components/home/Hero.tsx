@@ -1,6 +1,8 @@
 
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "@/context/LanguageContext";
+import { translations } from "@/lib/translations";
 
 interface HeroProps {
   onLogin?: () => void;
@@ -8,6 +10,8 @@ interface HeroProps {
 
 export function Hero({ onLogin }: HeroProps) {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const t = translations[language];
   
   const handleLoginClick = () => {
     if (onLogin) {
@@ -34,10 +38,10 @@ export function Hero({ onLogin }: HeroProps) {
           </div>
           <div className="space-x-4">
             <Button size="lg" onClick={handleLoginClick}>
-              Приєднатися зараз
+              {t.login}
             </Button>
             <Button size="lg" variant="outline" onClick={() => navigate("/search")}>
-              Знайти професіоналів
+              {t.search}
             </Button>
           </div>
         </div>
