@@ -154,7 +154,7 @@ export default function Search() {
                     <SelectValue placeholder="Виберіть категорію" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Всі категорії</SelectItem>
+                    <SelectItem value="all">Всі категорії</SelectItem>
                     <SelectItem value="photo">Фотографи</SelectItem>
                     <SelectItem value="video">Відеографи</SelectItem>
                     <SelectItem value="music">Музиканти</SelectItem>
