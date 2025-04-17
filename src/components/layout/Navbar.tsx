@@ -15,10 +15,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { NavbarActions } from "./NavbarActions";
+import { useLanguage } from "@/context/LanguageContext";
+import { translations } from "@/lib/translations";
 
 export function Navbar() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const t = translations[language];
   
   useEffect(() => {
     // Отримуємо дані користувача з localStorage
@@ -42,8 +47,8 @@ export function Navbar() {
           <Link to="/" className="flex items-center gap-2">
             <Camera className="h-6 w-6 text-secondary" />
             <span className="hidden font-heading text-xl font-bold md:inline-block">
-              <span className="text-gradient-purple">Visual</span>
-              <span>Pro</span>
+              <span className="text-gradient-purple">Спільнота</span>
+              <span> B&C</span>
             </span>
           </Link>
           
@@ -58,7 +63,7 @@ export function Navbar() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Пошук творців або контенту..."
+                placeholder={t.search}
                 className="w-full rounded-full pl-8 md:w-[300px] lg:w-[300px]"
                 onClick={() => window.location.href = '/search'}
               />
@@ -70,21 +75,23 @@ export function Navbar() {
           <Link to="/">
             <Button variant="ghost" size="icon" className="rounded-full">
               <Home className="h-5 w-5" />
-              <span className="sr-only">Головна</span>
+              <span className="sr-only">{t.home}</span>
             </Button>
           </Link>
           
           <Link to="/messages">
             <Button variant="ghost" size="icon" className="rounded-full">
               <MessageCircle className="h-5 w-5" />
-              <span className="sr-only">Повідомлення</span>
+              <span className="sr-only">{t.messages}</span>
             </Button>
           </Link>
           
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <Bell className="h-5 w-5" />
-            <span className="sr-only">Сповіщення</span>
-          </Button>
+          <Link to="/notifications">
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <Bell className="h-5 w-5" />
+              <span className="sr-only">{t.notifications}</span>
+            </Button>
+          </Link>
           
           <Button variant="ghost" size="icon" className="rounded-full hidden md:flex">
             <PlusSquare className="h-5 w-5" />
@@ -96,10 +103,10 @@ export function Navbar() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder.svg" alt={currentUser.name} />
+                    <AvatarImage src={currentUser.avatarUrl || "/placeholder.svg"} alt={currentUser.name} />
                     <AvatarFallback>
-                      {currentUser.name 
-                        ? currentUser.name.split(' ').map((n: string) => n[0]).join('')
+                      {currentUser.firstName 
+                        ? currentUser.firstName.charAt(0) + (currentUser.lastName ? currentUser.lastName.charAt(0) : '')
                         : 'ВП'}
                     </AvatarFallback>
                   </Avatar>
@@ -111,7 +118,7 @@ export function Navbar() {
                 <DropdownMenuGroup>
                   <DropdownMenuItem onClick={() => navigate(`/profile/${currentUser.id}`)}>
                     <User className="mr-2 h-4 w-4" />
-                    <span>Профіль</span>
+                    <span>{t.profile}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <PlusSquare className="mr-2 h-4 w-4" />
@@ -121,10 +128,18 @@ export function Navbar() {
                     <Search className="mr-2 h-4 w-4" />
                     <span>Знайти професіоналів</span>
                   </DropdownMenuItem>
-                  {currentUser.isAdmin && (
+                  {/* Доступ до адмін-панелі для засновника з номером 0507068007 */}
+                  {(currentUser.isAdmin || currentUser.phoneNumber === "0507068007") && (
                     <DropdownMenuItem onClick={() => navigate('/admin')}>
                       <User className="mr-2 h-4 w-4" />
                       <span>Панель адміністратора</span>
+                    </DropdownMenuItem>
+                  )}
+                  {/* Доступ до ринку акцій для акціонерів */}
+                  {(currentUser.isShareHolder || currentUser.role === "shareholder" || currentUser.status === "Акціонер") && (
+                    <DropdownMenuItem onClick={() => navigate('/stock-market')}>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Ринок акцій</span>
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuGroup>
@@ -140,6 +155,8 @@ export function Navbar() {
               Увійти
             </Button>
           )}
+          
+          <NavbarActions />
         </nav>
       </div>
     </header>

@@ -1,401 +1,391 @@
 
-import { useState } from "react";
-import { Navbar } from "@/components/layout/Navbar";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { toast } from "sonner";
-import { User, Lock, Bell, Eye, Moon, Shield, LogOut } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { Navbar } from '@/components/layout/Navbar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useLanguage } from '@/context/LanguageContext';
+import { translations } from '@/lib/translations';
 
 export default function Settings() {
-  const [user, setUser] = useState(() => {
-    const storedUser = localStorage.getItem("currentUser");
-    return storedUser ? JSON.parse(storedUser) : {
-      firstName: "",
-      lastName: "",
-      phoneNumber: "",
-      bio: "",
-      profession: "",
-      avatarUrl: "",
+  const { language } = useLanguage();
+  const t = translations[language];
+  
+  const navigate = useNavigate();
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Поля профілю
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [bio, setBio] = useState('');
+  const [location, setLocation] = useState('');
+  const [website, setWebsite] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  
+  // Поля для зміни паролю
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // Масив категорій для вибору
+  const categories = [
+    { id: 'photographer', label: 'Фотограф' },
+    { id: 'videographer', label: 'Відеограф' },
+    { id: 'musician', label: 'Музикант' },
+    { id: 'host', label: 'Ведучий' },
+    { id: 'pyrotechnician', label: 'Піротехнік' }
+  ];
+  
+  // Стан для зберігання вибраних категорій
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  
+  useEffect(() => {
+    // Отримання даних користувача з localStorage
+    const userJSON = localStorage.getItem('currentUser');
+    if (!userJSON) {
+      navigate('/auth');
+      return;
+    }
+    
+    const userData = JSON.parse(userJSON);
+    setUser(userData);
+    
+    // Заповнення полів даними користувача
+    setFirstName(userData.firstName || '');
+    setLastName(userData.lastName || '');
+    setPhone(userData.phoneNumber || '');
+    setBio(userData.bio || '');
+    setLocation(userData.location || '');
+    setWebsite(userData.website || '');
+    setAvatarUrl(userData.avatarUrl || '');
+    
+    // Встановлення вибраних категорій
+    setSelectedCategories(userData.categories || []);
+    
+    setLoading(false);
+  }, [navigate]);
+  
+  const handleSaveProfile = () => {
+    if (!firstName || !lastName) {
+      toast.error("Ім'я та прізвище обов'язкові");
+      return;
+    }
+    
+    // Оновлюємо дані користувача в localStorage
+    const updatedUser = {
+      ...user,
+      firstName,
+      lastName,
+      phoneNumber: phone,
+      bio,
+      location,
+      website,
+      avatarUrl,
+      categories: selectedCategories
     };
-  });
-
-  const [notifications, setNotifications] = useState({
-    emailNotifications: true,
-    pushNotifications: true,
-    messageNotifications: true,
-    orderNotifications: true,
-  });
-
-  const [appearance, setAppearance] = useState({
-    darkMode: false,
-    highContrast: false,
-    fontSize: "normal",
-    reducedMotion: false,
-  });
-
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-
-  const saveProfile = () => {
-    localStorage.setItem("currentUser", JSON.stringify(user));
-    toast.success("Профіль успішно оновлено");
+    
+    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    
+    // Оновлюємо дані користувача в списку всіх користувачів
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const updatedUsers = users.map((u: any) => {
+      if (u.id === user.id) {
+        return {
+          ...u,
+          firstName,
+          lastName,
+          bio,
+          location,
+          website,
+          avatarUrl,
+          categories: selectedCategories
+        };
+      }
+      return u;
+    });
+    
+    localStorage.setItem('users', JSON.stringify(updatedUsers));
+    
+    toast.success('Профіль оновлено');
   };
-
-  const changePassword = () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      toast.error("Заповніть всі поля");
+  
+  const handleChangePassword = () => {
+    if (!currentPassword) {
+      toast.error('Введіть поточний пароль');
       return;
     }
     
     if (newPassword !== confirmPassword) {
-      toast.error("Нові паролі не співпадають");
+      toast.error('Нові паролі не співпадають');
       return;
     }
     
-    toast.success("Пароль успішно змінено");
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+    // Якщо користувач увійшов з тимчасовим паролем або пароль не був встановлений раніше
+    const isFirstPasswordSet = !user.password || user.password === '' || user.password === '00000000';
+    
+    // Перевіряємо поточний пароль, якщо це не перша установка пароля
+    if (!isFirstPasswordSet && currentPassword !== user.password) {
+      toast.error('Неправильний поточний пароль');
+      return;
+    }
+    
+    // Оновлюємо пароль користувача в localStorage
+    const updatedUser = {
+      ...user,
+      password: newPassword
+    };
+    
+    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    
+    // Оновлюємо пароль користувача в списку всіх користувачів
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const updatedUsers = users.map((u: any) => {
+      if (u.id === user.id) {
+        return {
+          ...u,
+          password: newPassword
+        };
+      }
+      return u;
+    });
+    
+    localStorage.setItem('users', JSON.stringify(updatedUsers));
+    
+    toast.success('Пароль змінено');
+    
+    // Очищаємо поля
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
   };
-
-  const saveNotifications = () => {
-    localStorage.setItem("userNotificationSettings", JSON.stringify(notifications));
-    toast.success("Налаштування сповіщень збережено");
+  
+  // Обробник для зміни стану чекбоксів категорій
+  const handleCategoryChange = (categoryId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedCategories([...selectedCategories, categoryId]);
+    } else {
+      setSelectedCategories(selectedCategories.filter(id => id !== categoryId));
+    }
   };
-
-  const saveAppearance = () => {
-    localStorage.setItem("userAppearanceSettings", JSON.stringify(appearance));
-    toast.success("Налаштування зовнішнього вигляду збережено");
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("currentUser");
-    window.location.href = "/auth";
-  };
-
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container py-8">Завантаження...</div>
+      </div>
+    );
+  }
+  
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      
       <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
-        <Sidebar className="hidden lg:block col-span-3" />
+        {/* Меню на лівій стороні */}
+        <div className="col-span-12 md:col-span-3">
+          <div className="sticky top-20 space-y-6">
+            {/* Профіль користувача */}
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center gap-4">
+                <div className="relative h-16 w-16 rounded-full overflow-hidden bg-muted">
+                  <img 
+                    src={user.avatarUrl || '/placeholder.svg'} 
+                    alt={`${firstName} ${lastName}`}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">{user.firstName} {user.lastName}</h2>
+                  <p className="text-sm text-muted-foreground">{user.phoneNumber}</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Навігація налаштувань */}
+            <div className="rounded-lg border bg-card overflow-hidden">
+              <div className="bg-muted px-4 py-2">
+                <h3 className="font-medium">Налаштування</h3>
+              </div>
+              <div className="p-2">
+                <Button variant="ghost" className="w-full justify-start" onClick={() => navigate('/profile/' + user.id)}>
+                  Перейти до профілю
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
         
-        <main className="col-span-12 lg:col-span-9">
-          <h1 className="text-3xl font-bold mb-6">Налаштування</h1>
-          
-          <Tabs defaultValue="profile" className="space-y-6">
-            <TabsList className="mb-4">
-              <TabsTrigger value="profile">
-                <User className="h-4 w-4 mr-2" />
-                Профіль
-              </TabsTrigger>
-              <TabsTrigger value="security">
-                <Lock className="h-4 w-4 mr-2" />
-                Безпека
-              </TabsTrigger>
-              <TabsTrigger value="notifications">
-                <Bell className="h-4 w-4 mr-2" />
-                Сповіщення
-              </TabsTrigger>
-              <TabsTrigger value="appearance">
-                <Eye className="h-4 w-4 mr-2" />
-                Зовнішній вигляд
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="profile">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Інформація профілю</CardTitle>
-                  <CardDescription>
-                    Редагуйте свої особисті дані та професійну інформацію
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex flex-col items-center space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
-                    <Avatar className="h-24 w-24">
-                      <AvatarImage src={user.avatarUrl} alt={`${user.firstName} ${user.lastName}`} />
-                      <AvatarFallback>{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="font-medium text-lg">{user.firstName} {user.lastName}</h3>
-                      <p className="text-muted-foreground">{user.profession || "Учасник спільноти"}</p>
-                      <Button variant="outline" size="sm" className="mt-2">
-                        Змінити фото
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <Label htmlFor="first-name">Ім'я</Label>
-                      <Input 
-                        id="first-name" 
-                        value={user.firstName || ""} 
-                        onChange={(e) => setUser({...user, firstName: e.target.value})}
+        {/* Основний контент */}
+        <div className="col-span-12 md:col-span-9 space-y-6">
+          <div className="rounded-lg border bg-card">
+            <div className="p-6">
+              <h1 className="text-2xl font-bold mb-4">Налаштування акаунту</h1>
+              
+              <Tabs defaultValue="profile">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="profile">Профіль</TabsTrigger>
+                  <TabsTrigger value="security">Безпека</TabsTrigger>
+                  <TabsTrigger value="categories">Професійні категорії</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="profile" className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">Ім'я</Label>
+                      <Input
+                        id="firstName"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="last-name">Прізвище</Label>
-                      <Input 
-                        id="last-name" 
-                        value={user.lastName || ""} 
-                        onChange={(e) => setUser({...user, lastName: e.target.value})}
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Прізвище</Label>
+                      <Input
+                        id="lastName"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
                       />
                     </div>
                   </div>
                   
-                  <div>
-                    <Label htmlFor="phone">Номер телефону</Label>
-                    <Input 
-                      id="phone" 
-                      type="tel" 
-                      value={user.phoneNumber || ""} 
-                      onChange={(e) => setUser({...user, phoneNumber: e.target.value})}
-                      disabled
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Номер телефону не можна змінити (використовується для входу)
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="profession">Професія</Label>
-                    <Input 
-                      id="profession" 
-                      value={user.profession || ""} 
-                      onChange={(e) => setUser({...user, profession: e.target.value})}
-                      placeholder="Наприклад: Фотограф, Відеограф, Музикант..."
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Телефон</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      disabled // Номер телефону не можна змінити, оскільки він використовується для входу
                     />
                   </div>
                   
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="bio">Про себе</Label>
-                    <Textarea 
-                      id="bio" 
-                      value={user.bio || ""} 
-                      onChange={(e) => setUser({...user, bio: e.target.value})}
-                      placeholder="Розкажіть коротко про свій досвід та послуги"
-                      rows={4}
+                    <Input
+                      id="bio"
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
                     />
                   </div>
                   
-                  <Button onClick={saveProfile}>Зберегти зміни</Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="security">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Безпека та вхід</CardTitle>
-                  <CardDescription>
-                    Керуйте своїм паролем та налаштуваннями безпеки
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <h3 className="font-medium text-lg">Зміна паролю</h3>
-                    
-                    <div>
-                      <Label htmlFor="current-password">Поточний пароль</Label>
-                      <Input 
-                        id="current-password" 
-                        type="password" 
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="new-password">Новий пароль</Label>
-                      <Input 
-                        id="new-password" 
-                        type="password" 
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="confirm-password">Підтвердіть новий пароль</Label>
-                      <Input 
-                        id="confirm-password" 
-                        type="password" 
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                      />
-                    </div>
-                    
-                    <Button onClick={changePassword}>Змінити пароль</Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Місце розташування</Label>
+                    <Input
+                      id="location"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                    />
                   </div>
                   
-                  <div className="space-y-4 pt-4 border-t">
-                    <h3 className="font-medium text-lg">Вихід з облікового запису</h3>
-                    <p className="text-muted-foreground">
-                      Натисніть кнопку нижче, щоб вийти з усіх пристроїв.
+                  <div className="space-y-2">
+                    <Label htmlFor="website">Веб-сайт</Label>
+                    <Input
+                      id="website"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="avatarUrl">URL зображення профілю</Label>
+                    <Input
+                      id="avatarUrl"
+                      value={avatarUrl}
+                      onChange={(e) => setAvatarUrl(e.target.value)}
+                      placeholder="https://example.com/avatar.jpg"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Введіть URL зображення для аватара профілю. Рекомендовано квадратне зображення.
                     </p>
-                    <Button variant="destructive" onClick={handleLogout}>
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Вийти з облікового запису
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="notifications">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Налаштування сповіщень</CardTitle>
-                  <CardDescription>
-                    Налаштуйте, які сповіщення ви бажаєте отримувати
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="email-notifications">Email сповіщення</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Отримувати сповіщення на електронну пошту
-                        </p>
-                      </div>
-                      <Switch 
-                        id="email-notifications" 
-                        checked={notifications.emailNotifications}
-                        onCheckedChange={(checked) => 
-                          setNotifications({...notifications, emailNotifications: checked})
-                        }
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="push-notifications">Push-сповіщення</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Отримувати push-сповіщення в браузері
-                        </p>
-                      </div>
-                      <Switch 
-                        id="push-notifications" 
-                        checked={notifications.pushNotifications}
-                        onCheckedChange={(checked) => 
-                          setNotifications({...notifications, pushNotifications: checked})
-                        }
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="message-notifications">Повідомлення</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Сповіщення про нові повідомлення
-                        </p>
-                      </div>
-                      <Switch 
-                        id="message-notifications" 
-                        checked={notifications.messageNotifications}
-                        onCheckedChange={(checked) => 
-                          setNotifications({...notifications, messageNotifications: checked})
-                        }
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="order-notifications">Замовлення</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Сповіщення про нові та оновлені замовлення
-                        </p>
-                      </div>
-                      <Switch 
-                        id="order-notifications" 
-                        checked={notifications.orderNotifications}
-                        onCheckedChange={(checked) => 
-                          setNotifications({...notifications, orderNotifications: checked})
-                        }
-                      />
-                    </div>
                   </div>
                   
-                  <Button onClick={saveNotifications}>Зберегти налаштування</Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="appearance">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Зовнішній вигляд</CardTitle>
-                  <CardDescription>
-                    Налаштуйте вигляд додатку під свої потреби
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="dark-mode">Темна тема</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Перемкнути на темний режим
-                        </p>
-                      </div>
-                      <Switch 
-                        id="dark-mode" 
-                        checked={appearance.darkMode}
-                        onCheckedChange={(checked) => 
-                          setAppearance({...appearance, darkMode: checked})
-                        }
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="high-contrast">Високий контраст</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Підвищити контрастність інтерфейсу
-                        </p>
-                      </div>
-                      <Switch 
-                        id="high-contrast" 
-                        checked={appearance.highContrast}
-                        onCheckedChange={(checked) => 
-                          setAppearance({...appearance, highContrast: checked})
-                        }
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="reduced-motion">Зменшення анімацій</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Зменшити або вимкнути анімації інтерфейсу
-                        </p>
-                      </div>
-                      <Switch 
-                        id="reduced-motion" 
-                        checked={appearance.reducedMotion}
-                        onCheckedChange={(checked) => 
-                          setAppearance({...appearance, reducedMotion: checked})
-                        }
-                      />
-                    </div>
+                  <Button onClick={handleSaveProfile}>Зберегти зміни</Button>
+                </TabsContent>
+                
+                <TabsContent value="security" className="space-y-4">
+                  <div>
+                    <h2 className="text-lg font-semibold mb-2">Зміна паролю</h2>
+                    <Separator className="my-4" />
                   </div>
                   
-                  <Button onClick={saveAppearance}>Зберегти налаштування</Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </main>
+                  <div className="space-y-2">
+                    <Label htmlFor="currentPassword">Поточний пароль</Label>
+                    <Input
+                      id="currentPassword"
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">Новий пароль</Label>
+                    <Input
+                      id="newPassword"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Підтвердження нового паролю</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                  </div>
+                  
+                  <Button onClick={handleChangePassword}>Змінити пароль</Button>
+                </TabsContent>
+                
+                <TabsContent value="categories" className="space-y-4">
+                  <div>
+                    <h2 className="text-lg font-semibold mb-2">Професійні категорії</h2>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Виберіть категорії, які відповідають вашій професійній діяльності. 
+                      Ви можете вибрати кілька категорій.
+                    </p>
+                    <Separator className="my-4" />
+                  </div>
+                  
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {categories.map((category) => (
+                      <div key={category.id} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`category-${category.id}`} 
+                          checked={selectedCategories.includes(category.id)}
+                          onCheckedChange={(checked) => 
+                            handleCategoryChange(category.id, checked as boolean)
+                          }
+                        />
+                        <Label 
+                          htmlFor={`category-${category.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          {category.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <Button onClick={handleSaveProfile}>Зберегти категорії</Button>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

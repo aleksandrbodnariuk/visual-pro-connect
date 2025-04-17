@@ -10,6 +10,8 @@ import { PostCard } from "@/components/feed/PostCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PiggyBank, DollarSign, Crown } from "lucide-react";
+import { useLanguage } from '@/context/LanguageContext';
+import { translations } from '@/lib/translations';
 
 // Тестові дані для демонстрації портфоліо
 const PORTFOLIO_ITEMS = [
@@ -69,6 +71,8 @@ export default function Profile() {
   const [posts, setPosts] = useState<any[]>([]);
   const [isCurrentUser, setIsCurrentUser] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const { language } = useLanguage();
+  const t = translations[language];
   
   useEffect(() => {
     // Завантаження даних користувача
@@ -121,7 +125,8 @@ export default function Profile() {
           shares: foundUser.shares || 0,
           percentage: foundUser.percentage || 0,
           profit: foundUser.profit || 0,
-          title: foundUser.title || ""
+          title: foundUser.title || "",
+          categories: foundUser.categories || []
         });
         
         // Завантаження постів користувача
@@ -140,7 +145,8 @@ export default function Profile() {
                 name: `${foundUser.firstName} ${foundUser.lastName}`,
                 username: foundUser.username || `user_${foundUser.id.substring(0, 5)}`,
                 avatarUrl: foundUser.avatarUrl || "https://i.pravatar.cc/150?img=1",
-                profession: foundUser.profession || ""
+                profession: foundUser.profession || "",
+                categories: foundUser.categories || []
               },
               imageUrl: "https://images.unsplash.com/photo-1500673922987-e212871fec22",
               caption: "Вечірня фотосесія із використанням світлових ефектів. #creative #photoshoot #lights",
@@ -166,7 +172,8 @@ export default function Profile() {
           followingCount: 0,
           postsCount: 0,
           status: "Учасник",
-          isCurrentUser: false
+          isCurrentUser: false,
+          categories: []
         });
         
         setPosts([]);
@@ -189,18 +196,35 @@ export default function Profile() {
     );
   }
 
+  // Отримуємо назви категорій для відображення
+  const getCategoryName = (categoryId: string) => {
+    switch(categoryId) {
+      case 'photographer': return 'Фотограф';
+      case 'videographer': return 'Відеограф';
+      case 'musician': return 'Музикант';
+      case 'host': return 'Ведучий';
+      case 'pyrotechnician': return 'Піротехнік';
+      default: return categoryId;
+    }
+  };
+
   return (
     <div className="min-h-screen pb-10">
       <Navbar />
       <ProfileHeader user={user} />
       
-      <div className="container mt-8 flex flex-col md:flex-row gap-6">
-        <main className="flex-1">
+      <div className="container mt-8 grid grid-cols-12 gap-6">
+        {/* Sidebar на лівій стороні */}
+        <div className="hidden md:block md:col-span-3">
+          <Sidebar className="sticky top-20" />
+        </div>
+        
+        <main className="col-span-12 md:col-span-9">
           <Tabs defaultValue="posts" className="w-full">
             <TabsList className="mb-4">
               <TabsTrigger value="posts">Публікації</TabsTrigger>
               <TabsTrigger value="portfolio">Портфоліо</TabsTrigger>
-              {(user.role === "representative" || user.status === "Представник") && (
+              {(user.role === "representative" || user.status === "Представник" || (user.categories && user.categories.length > 0)) && (
                 <TabsTrigger value="services">Послуги</TabsTrigger>
               )}
               {(user.role === "shareholder" || user.status === "Акціонер") && (
@@ -227,10 +251,20 @@ export default function Profile() {
               <PortfolioGrid items={PORTFOLIO_ITEMS} />
             </TabsContent>
             
-            {(user.role === "representative" || user.status === "Представник") && (
+            {(user.role === "representative" || user.status === "Представник" || (user.categories && user.categories.length > 0)) && (
               <TabsContent value="services" className="mt-6">
                 <div className="rounded-xl border p-6">
                   <h2 className="mb-4 text-xl font-bold">Мої послуги</h2>
+                  
+                  {user.categories && user.categories.length > 0 ? (
+                    <div className="mb-4 flex flex-wrap gap-2">
+                      {user.categories.map((category: string) => (
+                        <Badge key={category} variant="secondary" className="text-sm">
+                          {getCategoryName(category)}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : null}
                   
                   <div className="space-y-4">
                     <div className="rounded-lg bg-muted p-4">
@@ -398,8 +432,6 @@ export default function Profile() {
             </TabsContent>
           </Tabs>
         </main>
-        
-        <Sidebar />
       </div>
     </div>
   );
