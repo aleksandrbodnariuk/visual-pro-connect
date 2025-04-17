@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
-import PostCard from '@/components/feed/PostCard';
-import Hero from '@/components/home/Hero';
+import { PostCard } from '@/components/feed/PostCard'; // Changed from default import to named import
+import { Hero } from '@/components/home/Hero'; // Changed from default import to named import
 import CreatePublicationModal from '@/components/publications/CreatePublicationModal';
 import { Button } from '@/components/ui/button';
 import { ExternalLink } from 'lucide-react';
@@ -66,11 +66,20 @@ export default function Index() {
                   posts.map((post: any) => (
                     <PostCard
                       key={post.id}
-                      title={post.title}
-                      content={post.description || ""}
-                      image={post.imageUrl}
-                      author={post.author}
-                      date={new Date(post.date)}
+                      id={post.id}
+                      title={post.title || ""}
+                      author={{
+                        id: post.userId || "",
+                        name: post.author || "",
+                        username: post.author ? post.author.split(' ')[0].toLowerCase() : "",
+                        avatarUrl: "",
+                        profession: ""
+                      }}
+                      imageUrl={post.imageUrl || ""}
+                      caption={post.description || ""}
+                      likes={0}
+                      comments={0}
+                      timeAgo={new Date(post.date).toLocaleDateString()}
                     />
                   ))
                 ) : (

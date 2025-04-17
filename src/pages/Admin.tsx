@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -686,7 +685,7 @@ export default function Admin() {
             <Card>
               <CardHeader>
                 <CardTitle>Управління користувачами</CardTitle>
-                <CardDescription>Перегляд та модерація користувачів платформи</CardDescription>
+                <CardDescription>Перегляд та модерацію користувачів платформи</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -1279,4 +1278,3 @@ export default function Admin() {
     </div>
   );
 }
-
