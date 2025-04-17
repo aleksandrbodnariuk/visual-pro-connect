@@ -7,7 +7,9 @@ import { PostCard } from '@/components/feed/PostCard';
 import { Hero } from '@/components/home/Hero';
 import CreatePublicationModal from '@/components/publications/CreatePublicationModal';
 import { Button } from '@/components/ui/button';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, BarChart3 } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card } from '@/components/ui/card';
 
 export default function Index() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -54,14 +56,28 @@ export default function Index() {
                     />
                   )}
                   {currentUser && currentUser.isShareHolder && (
-                    <Button variant="outline" onClick={() => navigate("/admin")}>
-                      <ExternalLink className="h-4 w-4 mr-2" /> Ринок акцій
+                    <Button variant="outline" onClick={() => navigate("/stock-market")}>
+                      <BarChart3 className="h-4 w-4 mr-2" /> Ринок акцій
                     </Button>
                   )}
                 </div>
               </div>
               
               <div className="grid gap-6">
+                {currentUser && (
+                  <Card className="p-4">
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-16 w-16">
+                        <AvatarImage src={currentUser.avatarUrl || ""} alt={`${currentUser.firstName} ${currentUser.lastName}`} />
+                        <AvatarFallback>{currentUser.firstName?.[0]}{currentUser.lastName?.[0]}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h2 className="text-xl font-semibold">{currentUser.firstName} {currentUser.lastName}</h2>
+                        <p className="text-muted-foreground">{currentUser.profession || "Учасник спільноти"}</p>
+                      </div>
+                    </div>
+                  </Card>
+                )}
                 {posts.length > 0 ? (
                   posts.map((post: any) => (
                     <PostCard
@@ -79,7 +95,6 @@ export default function Index() {
                       likes={0}
                       comments={0}
                       timeAgo={new Date(post.date).toLocaleDateString()}
-                      className=""
                     />
                   ))
                 ) : (

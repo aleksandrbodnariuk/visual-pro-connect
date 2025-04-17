@@ -24,7 +24,7 @@ export function Hero({ onLogin }: HeroProps) {
         <div className="flex flex-col items-center justify-center text-center space-y-4">
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-              Об'єднуємо творчих професіоналів
+              Вітаємо у Спільноті B&C
             </h1>
             <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
               Соціальна платформа для фотографів, відеографів, музикантів, 

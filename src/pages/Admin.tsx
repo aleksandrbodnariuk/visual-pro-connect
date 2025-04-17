@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,7 +24,9 @@ import {
   MessageCircle,
   CheckSquare,
   XSquare,
-  Bell
+  Bell,
+  Archive,
+  Inbox
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +61,7 @@ export default function Admin() {
   const [posts, setPosts] = useState<any[]>([]);
   const [shareholders, setShareholders] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
+  const [archivedOrders, setArchivedOrders] = useState<any[]>([]);
   const [newOrderAmount, setNewOrderAmount] = useState("");
   const [newOrderDescription, setNewOrderDescription] = useState("");
   const [stockPrice, setStockPrice] = useState("1000");
@@ -67,6 +71,7 @@ export default function Admin() {
   const [sharesTransactions, setSharesTransactions] = useState<any[]>([]);
   const [openTransactionDialog, setOpenTransactionDialog] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [newMessage, setNewMessage] = useState("");
   
   const navigate = useNavigate();
   
@@ -121,6 +126,9 @@ export default function Admin() {
     
     const storedOrders = JSON.parse(localStorage.getItem("orders") || "[]");
     setOrders(storedOrders);
+    
+    const storedArchivedOrders = JSON.parse(localStorage.getItem("archivedOrders") || "[]");
+    setArchivedOrders(storedArchivedOrders);
     
     const storedPosts = JSON.parse(localStorage.getItem("posts") || "[]");
     setPosts(storedPosts || [
@@ -393,6 +401,35 @@ export default function Admin() {
     toast.success(`Ціну акції оновлено: ${stockPrice} грн`);
   };
   
+  const deleteOrder = (orderId: string) => {
+    const updatedOrders = orders.filter(order => order.id !== orderId);
+    setOrders(updatedOrders);
+    localStorage.setItem("orders", JSON.stringify(updatedOrders));
+    toast.success("Замовлення видалено");
+  };
+  
+  const archiveOrder = (orderId: string) => {
+    const orderToArchive = orders.find(order => order.id === orderId);
+    if (!orderToArchive) return;
+    
+    const updatedOrders = orders.filter(order => order.id !== orderId);
+    setOrders(updatedOrders);
+    localStorage.setItem("orders", JSON.stringify(updatedOrders));
+    
+    const updatedArchivedOrders = [...archivedOrders, {...orderToArchive, archivedDate: new Date().toISOString()}];
+    setArchivedOrders(updatedArchivedOrders);
+    localStorage.setItem("archivedOrders", JSON.stringify(updatedArchivedOrders));
+    
+    toast.success("Замовлення архівовано");
+  };
+  
+  const deleteArchivedOrder = (orderId: string) => {
+    const updatedArchivedOrders = archivedOrders.filter(order => order.id !== orderId);
+    setArchivedOrders(updatedArchivedOrders);
+    localStorage.setItem("archivedOrders", JSON.stringify(updatedArchivedOrders));
+    toast.success("Архівне замовлення видалено");
+  };
+  
   const deletePost = (postId: string) => {
     const updatedPosts = posts.filter(post => post.id !== postId);
     setPosts(updatedPosts);
@@ -636,6 +673,36 @@ export default function Admin() {
     setOpenTransactionDialog(true);
   };
   
+  const sendMessage = () => {
+    if (!newMessage.trim() || !selectedTransaction) return;
+    
+    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+    const senderName = `${currentUser.firstName} ${currentUser.lastName} (Адміністратор)`;
+    
+    const message = {
+      id: Date.now().toString(),
+      sender: senderName,
+      senderId: currentUser.id,
+      text: newMessage,
+      date: new Date().toISOString()
+    };
+    
+    const updatedTransaction = {
+      ...selectedTransaction,
+      messages: selectedTransaction.messages ? [...selectedTransaction.messages, message] : [message]
+    };
+    
+    const updatedTransactions = sharesTransactions.map(t => 
+      t.id === selectedTransaction.id ? updatedTransaction : t
+    );
+    
+    setSharesTransactions(updatedTransactions);
+    localStorage.setItem("sharesTransactions", JSON.stringify(updatedTransactions));
+    
+    setSelectedTransaction(updatedTransaction);
+    setNewMessage("");
+  };
+  
   if (!isAdmin) {
     return <div className="container py-16 text-center">Перевірка прав доступу...</div>;
   }
@@ -646,7 +713,7 @@ export default function Admin() {
       <div className="container py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold">Панель адміністратора</h1>
-          <p className="text-muted-foreground">Управління сайтом Visual Pro Connect</p>
+          <p className="text-muted-foreground">Управління сайтом Спільнота B&C</p>
           
           {isFounder && (
             <Badge variant="secondary" className="mt-2">
@@ -676,6 +743,7 @@ export default function Admin() {
             <TabsTrigger value="users">Користувачі</TabsTrigger>
             <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
             <TabsTrigger value="orders">Замовлення</TabsTrigger>
+            <TabsTrigger value="archived-orders">Архів замовлень</TabsTrigger>
             <TabsTrigger value="stock-exchange">Ринок акцій</TabsTrigger>
             <TabsTrigger value="posts">Публікації</TabsTrigger>
             <TabsTrigger value="settings">Налаштування</TabsTrigger>
@@ -899,6 +967,7 @@ export default function Admin() {
                         <th className="text-left p-2">Опис</th>
                         <th className="text-left p-2">Сума (грн)</th>
                         <th className="text-left p-2">Прибуток акціонерів (45%)</th>
+                        <th className="text-left p-2">Дії</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -910,12 +979,85 @@ export default function Admin() {
                             <td className="p-2">{order.description}</td>
                             <td className="p-2">{order.amount.toFixed(2)}</td>
                             <td className="p-2">{(order.amount * 0.45).toFixed(2)}</td>
+                            <td className="p-2">
+                              <div className="flex gap-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => archiveOrder(order.id)}
+                                >
+                                  <Archive className="h-4 w-4 mr-1" /> Архівувати
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={() => deleteOrder(order.id)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" /> Видалити
+                                </Button>
+                              </div>
+                            </td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={5} className="p-2 text-center text-muted-foreground">
+                          <td colSpan={6} className="p-2 text-center text-muted-foreground">
                             Немає замовлень
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="archived-orders">
+            <Card>
+              <CardHeader>
+                <CardTitle>Архів замовлень</CardTitle>
+                <CardDescription>Історія виконаних замовлень</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">ID</th>
+                        <th className="text-left p-2">Дата замовлення</th>
+                        <th className="text-left p-2">Дата архівування</th>
+                        <th className="text-left p-2">Опис</th>
+                        <th className="text-left p-2">Сума (грн)</th>
+                        <th className="text-left p-2">Прибуток акціонерів (45%)</th>
+                        <th className="text-left p-2">Дії</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {archivedOrders.length > 0 ? (
+                        archivedOrders.map((order) => (
+                          <tr key={order.id} className="border-b hover:bg-muted/50">
+                            <td className="p-2">{order.id}</td>
+                            <td className="p-2">{new Date(order.date).toLocaleDateString()}</td>
+                            <td className="p-2">{new Date(order.archivedDate).toLocaleDateString()}</td>
+                            <td className="p-2">{order.description}</td>
+                            <td className="p-2">{order.amount.toFixed(2)}</td>
+                            <td className="p-2">{(order.amount * 0.45).toFixed(2)}</td>
+                            <td className="p-2">
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={() => deleteArchivedOrder(order.id)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" /> Видалити
+                              </Button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={7} className="p-2 text-center text-muted-foreground">
+                            Архів порожній
                           </td>
                         </tr>
                       )}
@@ -946,7 +1088,7 @@ export default function Admin() {
                           placeholder="1000"
                           min="1"
                         />
-                        <Button className="ml-2" onClick={updateStockPrice} disabled={!isFounder}>Оновити</Button>
+                        <Button className="ml-2" onClick={updateStockPrice}>Оновити</Button>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         Ця ціна є рекомендованою для акціонерів при продажу акцій
@@ -1170,7 +1312,7 @@ export default function Admin() {
                 <div className="grid gap-4">
                   <div>
                     <label className="text-sm font-medium" htmlFor="site-name">Назва сайту</label>
-                    <Input id="site-name" defaultValue="Visual Pro Connect" />
+                    <Input id="site-name" defaultValue="Спільнота B&C" />
                   </div>
                   
                   <div>
@@ -1182,7 +1324,7 @@ export default function Admin() {
                   </div>
                   
                   <div>
-                    <label className="text-sm font-medium" htmlFor="contact-email">Контактний телефон</label>
+                    <label className="text-sm font-medium" htmlFor="contact-phone">Контактний телефон</label>
                     <Input id="contact-phone" defaultValue="+380991234567" />
                   </div>
                 </div>
@@ -1237,11 +1379,8 @@ export default function Admin() {
               <div className="border rounded-md p-3">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-medium">Повідомлення:</p>
-                  <Button variant="outline" size="sm">
-                    <MessageCircle className="h-4 w-4 mr-1" /> Написати
-                  </Button>
                 </div>
-                <div className="max-h-[150px] overflow-y-auto border p-2 rounded-md bg-muted/50">
+                <div className="max-h-[150px] overflow-y-auto border p-2 rounded-md bg-muted/50 mb-3">
                   {selectedTransaction.messages && selectedTransaction.messages.length > 0 ? (
                     selectedTransaction.messages.map((msg: any, i: number) => (
                       <div key={i} className="mb-2">
@@ -1252,6 +1391,17 @@ export default function Admin() {
                   ) : (
                     <p className="text-sm text-muted-foreground">Немає повідомлень</p>
                   )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Input 
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Введіть повідомлення..."
+                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  />
+                  <Button size="sm" onClick={sendMessage}>
+                    <MessageCircle className="h-4 w-4 mr-1" /> Надіслати
+                  </Button>
                 </div>
               </div>
               
