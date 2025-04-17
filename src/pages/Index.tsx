@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function Index() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -20,6 +21,7 @@ export default function Index() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const t = translations[language];
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -48,12 +50,12 @@ export default function Index() {
         ) : (
           <div className="grid grid-cols-12 gap-6">
             {/* Sidebar на лівій стороні */}
-            <div className="hidden md:block md:col-span-3">
+            <div className="hidden md:block md:col-span-3 lg:col-span-3">
               <Sidebar className="sticky top-20" />
             </div>
             
             {/* Головний контент по центру */}
-            <main className="col-span-12 md:col-span-6">
+            <main className="col-span-12 md:col-span-9 lg:col-span-6">
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <h1 className="text-3xl font-bold">Стрічка</h1>
@@ -66,7 +68,7 @@ export default function Index() {
                     )}
                     {currentUser && (currentUser.isShareHolder || currentUser.role === "shareholder" || currentUser.status === "Акціонер") && (
                       <Button variant="outline" onClick={() => navigate("/stock-market")}>
-                        <BarChart3 className="h-4 w-4 mr-2" /> Ринок акцій
+                        <BarChart3 className="h-4 w-4 mr-2" /> {t.stockMarket || "Ринок акцій"}
                       </Button>
                     )}
                   </div>

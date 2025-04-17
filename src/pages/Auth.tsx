@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -53,22 +52,26 @@ export default function Auth() {
     // Отримуємо користувачів з localStorage
     const users = JSON.parse(localStorage.getItem("users") || "[]");
     
-    // Перевіряємо чи це логін адміністратора-засновника
-    if (phoneNumber === "0507068007" && password === "admin") {
-      const adminUser = {
-        id: "admin1",
-        firstName: "Admin",
-        lastName: "Founder",
-        phoneNumber: phoneNumber,
-        isAdmin: true,
-        isFounder: true,
-        isShareHolder: true
-      };
-      
-      localStorage.setItem("currentUser", JSON.stringify(adminUser));
-      toast.success(t.loginAsAdminFounder);
-      navigate("/admin");
-      return;
+    // Перевіряємо чи це логін адміністратора-засновника (0507068007)
+    if (phoneNumber === "0507068007") {
+      // Якщо це телефон адміністратора-засновника
+      if (password === "admin" || password === "00000000") {
+        const adminUser = {
+          id: "admin1",
+          firstName: "Admin",
+          lastName: "Founder",
+          phoneNumber: phoneNumber,
+          isAdmin: true,
+          isFounder: true,
+          isShareHolder: true,
+          role: "admin"
+        };
+        
+        localStorage.setItem("currentUser", JSON.stringify(adminUser));
+        toast.success(t.loginAsAdminFounder);
+        navigate("/admin");
+        return;
+      }
     }
     
     // Спочатку шукаємо користувача за номером телефону і паролем
@@ -77,6 +80,26 @@ export default function Auth() {
     
     // Якщо знайдено користувача, виконуємо вхід
     if (foundUser) {
+      // Перевіряємо, чи це адміністратор за номером телефону
+      if (phoneNumber === "0507068007") {
+        // Якщо це телефон адміністратора, додаємо права адміністратора
+        foundUser.isAdmin = true;
+        foundUser.isFounder = true;
+        foundUser.isShareHolder = true;
+        foundUser.role = "admin";
+        
+        // Оновлюємо користувача в локальному сховищі
+        const updatedUsers = users.map((u: any) => 
+          u.phoneNumber === phoneNumber ? foundUser : u
+        );
+        localStorage.setItem("users", JSON.stringify(updatedUsers));
+        
+        localStorage.setItem("currentUser", JSON.stringify(foundUser));
+        toast.success(t.loginAsAdminFounder);
+        navigate("/admin");
+        return;
+      }
+      
       localStorage.setItem("currentUser", JSON.stringify(foundUser));
       toast.success(t.loginSuccessful);
       navigate("/");
@@ -90,6 +113,26 @@ export default function Auth() {
     if (userExists && (!userExists.password || userExists.password === "")) {
       // Якщо користувач існує і не має пароля, перевіряємо тимчасовий пароль
       if (password === "00000000") {
+        // Перевіряємо, чи це адміністратор за номером телефону
+        if (phoneNumber === "0507068007") {
+          // Якщо це телефон адміністратора, додаємо права адміністратора
+          userExists.isAdmin = true;
+          userExists.isFounder = true;
+          userExists.isShareHolder = true;
+          userExists.role = "admin";
+          
+          // Оновлюємо користувача в локальному сховищі
+          const updatedUsers = users.map((u: any) => 
+            u.phoneNumber === phoneNumber ? userExists : u
+          );
+          localStorage.setItem("users", JSON.stringify(updatedUsers));
+          
+          localStorage.setItem("currentUser", JSON.stringify(userExists));
+          toast.success(t.loginAsAdminFounder);
+          navigate("/admin");
+          return;
+        }
+        
         // Успішний вхід через тимчасовий пароль
         localStorage.setItem("currentUser", JSON.stringify(userExists));
         toast.success(t.temporaryPasswordLogin);
@@ -139,6 +182,15 @@ export default function Auth() {
       categories: [] // Додаємо порожній масив категорій для нового користувача
     };
     
+    // Перевіряємо, чи це адміністратор за номером телефону
+    if (phoneNumber === "0507068007") {
+      // Якщо це телефон адміністратора, додаємо права адміністратора
+      newUser.isAdmin = true;
+      newUser.isFounder = true;
+      newUser.isShareHolder = true;
+      newUser.role = "admin";
+    }
+    
     // Додаємо нового користувача
     users.push(newUser);
     localStorage.setItem("users", JSON.stringify(users));
@@ -147,7 +199,13 @@ export default function Auth() {
     localStorage.setItem("currentUser", JSON.stringify(newUser));
     
     toast.success(t.registrationSuccessful);
-    navigate("/");
+    
+    // Якщо це адміністратор, перенаправляємо в адмін-панель
+    if (phoneNumber === "0507068007") {
+      navigate("/admin");
+    } else {
+      navigate("/");
+    }
   };
   
   const handleResetPassword = () => {
@@ -348,7 +406,7 @@ export default function Auth() {
                 onClick={handleLoginWithTempPassword}
                 className="p-0 h-auto text-sm"
               >
-                Вхід за тимчасовим паролем
+                {t.temporaryPasswordLogin || "Вхід за тимчасовим паролем"}
               </Button>
             </div>
             <div className="text-center text-sm">

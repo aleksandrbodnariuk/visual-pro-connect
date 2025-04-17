@@ -60,6 +60,7 @@ export const translations: Record<Language, Record<string, string>> = {
     messages: "Повідомлення",
     profile: "Профіль",
     settings: "Налаштування",
+    stockMarket: "Ринок акцій",
     
     // Menu
     menu: "Меню",
