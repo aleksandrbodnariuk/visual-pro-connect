@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,10 +18,18 @@ import {
   BarChart3, 
   UserCheck, 
   DollarSign,
-  Crown
+  Crown,
+  ShoppingBag,
+  Eye,
+  MessageCircle,
+  CheckSquare,
+  XSquare,
+  Bell
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const USER_STATUSES = [
   "Учасник",
@@ -28,7 +37,6 @@ const USER_STATUSES = [
   "Клієнт",
   "Партнер",
   "Представник",
-  "Акціонер",
   "Модератор",
   "Адміністратор",
   "Адміністратор-засновник"
@@ -55,6 +63,11 @@ export default function Admin() {
   const [newOrderDescription, setNewOrderDescription] = useState("");
   const [stockPrice, setStockPrice] = useState("1000");
   const [stockExchangeItems, setStockExchangeItems] = useState<any[]>([]);
+  const [selectedShareholderId, setSelectedShareholderId] = useState("");
+  const [selectedSharesCount, setSelectedSharesCount] = useState("1");
+  const [sharesTransactions, setSharesTransactions] = useState<any[]>([]);
+  const [openTransactionDialog, setOpenTransactionDialog] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   
   const navigate = useNavigate();
   
@@ -119,6 +132,9 @@ export default function Admin() {
     
     const storedStockExchange = JSON.parse(localStorage.getItem("stockExchange") || "[]");
     setStockExchangeItems(storedStockExchange);
+
+    const storedTransactions = JSON.parse(localStorage.getItem("sharesTransactions") || "[]");
+    setSharesTransactions(storedTransactions);
     
     const storedStockPrice = localStorage.getItem("stockPrice");
     if (storedStockPrice) {
@@ -164,8 +180,6 @@ export default function Admin() {
       newRole = newStatus === "Адміністратор-засновник" ? "admin-founder" : "admin";
     } else if (newStatus === "Модератор") {
       newRole = "moderator";
-    } else if (newStatus === "Акціонер") {
-      newRole = "shareholder";
     } else if (newStatus === "Представник") {
       newRole = "representative";
     }
@@ -180,15 +194,27 @@ export default function Admin() {
     setUsers(updatedUsers);
     localStorage.setItem("users", JSON.stringify(updatedUsers));
     
-    if (newStatus === "Акціонер") {
-      const user = updatedUsers.find(u => u.id === userId);
+    toast.success(`Статус користувача змінено на "${newStatus}"`);
+  };
+  
+  const toggleShareholderStatus = (userId: string, isShareHolder: boolean) => {
+    const userToUpdate = users.find(user => user.id === userId);
+    if (userToUpdate && userToUpdate.role === "admin-founder" && !isFounder) {
+      toast.error("Тільки Адміністратор-засновник може змінювати акціонерний статус");
+      return;
+    }
+    
+    if (isShareHolder) {
+      const user = users.find(u => u.id === userId);
       if (user) {
         const newShareholder = {
           ...user,
+          role: user.role === "admin" || user.role === "admin-founder" ? user.role : "shareholder",
           shares: 10,
           percentage: 0,
           title: "Магнат",
-          profit: 0
+          profit: 0,
+          isShareHolder: true
         };
         
         const updatedShareholders = [...shareholders.filter(sh => sh.id !== userId), newShareholder];
@@ -203,13 +229,42 @@ export default function Admin() {
         }));
         
         setShareholders(shareholdersWithPercentage);
+        
+        const updatedUsers = users.map(user => {
+          if (user.id === userId) {
+            return { 
+              ...user, 
+              isShareHolder: true,
+              role: user.role === "admin" || user.role === "admin-founder" ? user.role : "shareholder"
+            };
+          }
+          return user;
+        });
+        
+        setUsers(updatedUsers);
+        localStorage.setItem("users", JSON.stringify(updatedUsers));
+        toast.success("Користувача додано до акціонерів");
       }
-    } else if (newStatus !== "Акціонер") {
+    } else {
       const updatedShareholders = shareholders.filter(sh => sh.id !== userId);
       setShareholders(updatedShareholders);
+      
+      const updatedUsers = users.map(user => {
+        if (user.id === userId) {
+          const newRole = user.role === "shareholder" ? "user" : user.role;
+          return { 
+            ...user, 
+            isShareHolder: false,
+            role: newRole
+          };
+        }
+        return user;
+      });
+      
+      setUsers(updatedUsers);
+      localStorage.setItem("users", JSON.stringify(updatedUsers));
+      toast.success("Користувача видалено з акціонерів");
     }
-    
-    toast.success(`Статус користувача змінено на "${newStatus}"`);
   };
   
   const changeShareholderTitle = (userId: string, newTitle: string) => {
@@ -233,6 +288,43 @@ export default function Admin() {
     localStorage.setItem("users", JSON.stringify(updatedUsers));
     
     toast.success(`Титул акціонера змінено на "${newTitle}"`);
+  };
+
+  const updateSharesCount = (userId: string, sharesCount: number) => {
+    if (isNaN(sharesCount) || sharesCount < 0) {
+      toast.error("Кількість акцій повинна бути додатнім числом");
+      return;
+    }
+
+    const updatedShareholders = shareholders.map(sh => {
+      if (sh.id === userId) {
+        return { ...sh, shares: sharesCount };
+      }
+      return sh;
+    });
+    
+    const totalShares = updatedShareholders.reduce(
+      (sum: number, sh: any) => sum + (sh.shares || 0), 0
+    );
+    
+    const shareholdersWithPercentage = updatedShareholders.map((sh: any) => ({
+      ...sh,
+      percentage: totalShares > 0 ? ((sh.shares / totalShares) * 100).toFixed(2) : 0
+    }));
+    
+    setShareholders(shareholdersWithPercentage);
+    
+    const updatedUsers = users.map(user => {
+      if (user.id === userId) {
+        return { ...user, shares: sharesCount };
+      }
+      return user;
+    });
+    
+    setUsers(updatedUsers);
+    localStorage.setItem("users", JSON.stringify(updatedUsers));
+    
+    toast.success("Кількість акцій оновлено");
   };
   
   const addNewOrder = () => {
@@ -293,6 +385,11 @@ export default function Admin() {
   };
   
   const updateStockPrice = () => {
+    if (!stockPrice || isNaN(parseFloat(stockPrice)) || parseFloat(stockPrice) <= 0) {
+      toast.error("Введіть коректну ціну акції");
+      return;
+    }
+    
     localStorage.setItem("stockPrice", stockPrice);
     toast.success(`Ціну акції оновлено: ${stockPrice} грн`);
   };
@@ -302,6 +399,242 @@ export default function Admin() {
     setPosts(updatedPosts);
     localStorage.setItem("posts", JSON.stringify(updatedPosts));
     toast.success("Публікацію видалено");
+  };
+
+  const handleSellShares = () => {
+    if (!selectedShareholderId) {
+      toast.error("Виберіть акціонера");
+      return;
+    }
+
+    if (!selectedSharesCount || isNaN(parseInt(selectedSharesCount)) || parseInt(selectedSharesCount) <= 0) {
+      toast.error("Введіть коректну кількість акцій");
+      return;
+    }
+
+    const seller = shareholders.find(sh => sh.id === selectedShareholderId);
+    if (!seller) {
+      toast.error("Акціонера не знайдено");
+      return;
+    }
+
+    if (parseInt(selectedSharesCount) > seller.shares) {
+      toast.error(`У акціонера лише ${seller.shares} акцій`);
+      return;
+    }
+
+    const newStockExchangeItem = {
+      id: Date.now().toString(),
+      sellerId: seller.id,
+      sellerName: `${seller.firstName} ${seller.lastName}`,
+      sharesCount: parseInt(selectedSharesCount),
+      pricePerShare: parseFloat(stockPrice),
+      initialPrice: parseFloat(stockPrice),
+      status: "Активна",
+      date: new Date().toISOString(),
+      isAuction: false
+    };
+
+    const updatedStockExchangeItems = [...stockExchangeItems, newStockExchangeItem];
+    setStockExchangeItems(updatedStockExchangeItems);
+    localStorage.setItem("stockExchange", JSON.stringify(updatedStockExchangeItems));
+
+    setSelectedShareholderId("");
+    setSelectedSharesCount("1");
+
+    toast.success("Акції виставлено на продаж");
+  };
+
+  const handleBuyShares = (item: any) => {
+    if (!item) return;
+
+    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+    if (!currentUser.id) {
+      toast.error("Увійдіть в систему для покупки акцій");
+      return;
+    }
+
+    if (currentUser.id === item.sellerId) {
+      toast.error("Ви не можете купити власні акції");
+      return;
+    }
+
+    const buyer = users.find(user => user.id === currentUser.id);
+    if (!buyer) {
+      toast.error("Акаунт покупця не знайдено");
+      return;
+    }
+
+    const newTransaction = {
+      id: Date.now().toString(),
+      listingId: item.id,
+      sellerId: item.sellerId,
+      sellerName: item.sellerName,
+      buyerId: buyer.id,
+      buyerName: `${buyer.firstName} ${buyer.lastName}`,
+      sharesCount: item.sharesCount,
+      pricePerShare: item.pricePerShare,
+      totalAmount: item.sharesCount * item.pricePerShare,
+      status: "Очікує підтвердження",
+      date: new Date().toISOString(),
+      messages: [],
+      sellerConfirmed: false,
+      buyerConfirmed: false,
+      adminApproved: false
+    };
+
+    const updatedTransactions = [...sharesTransactions, newTransaction];
+    setSharesTransactions(updatedTransactions);
+    localStorage.setItem("sharesTransactions", JSON.stringify(updatedTransactions));
+
+    const updatedStockExchangeItems = stockExchangeItems.map(listItem => {
+      if (listItem.id === item.id) {
+        return { ...listItem, status: "В процесі продажу" };
+      }
+      return listItem;
+    });
+    setStockExchangeItems(updatedStockExchangeItems);
+    localStorage.setItem("stockExchange", JSON.stringify(updatedStockExchangeItems));
+
+    toast.success("Запит на покупку акцій відправлено");
+  };
+
+  const approveTransaction = (transactionId: string) => {
+    const transaction = sharesTransactions.find(t => t.id === transactionId);
+    if (!transaction) return;
+
+    const seller = users.find(user => user.id === transaction.sellerId);
+    const buyer = users.find(user => user.id === transaction.buyerId);
+
+    if (!seller || !buyer) {
+      toast.error("Користувача не знайдено");
+      return;
+    }
+
+    // Update seller shares
+    const updatedSeller = { 
+      ...seller, 
+      shares: (seller.shares || 0) - transaction.sharesCount 
+    };
+
+    // Update buyer shares
+    const updatedBuyer = { 
+      ...buyer, 
+      shares: (buyer.shares || 0) + transaction.sharesCount,
+      isShareHolder: true,
+      role: buyer.role === "admin" || buyer.role === "admin-founder" ? buyer.role : "shareholder"
+    };
+
+    // Update users
+    const updatedUsers = users.map(user => {
+      if (user.id === seller.id) return updatedSeller;
+      if (user.id === buyer.id) return updatedBuyer;
+      return user;
+    });
+
+    setUsers(updatedUsers);
+    localStorage.setItem("users", JSON.stringify(updatedUsers));
+
+    // Update shareholders
+    let updatedShareholders = [...shareholders];
+    const sellerIndex = updatedShareholders.findIndex(sh => sh.id === seller.id);
+    
+    if (sellerIndex !== -1) {
+      if (updatedSeller.shares <= 0) {
+        // Remove seller from shareholders if no shares left
+        updatedShareholders = updatedShareholders.filter(sh => sh.id !== seller.id);
+      } else {
+        // Update seller shares
+        updatedShareholders[sellerIndex] = { 
+          ...updatedShareholders[sellerIndex], 
+          shares: updatedSeller.shares 
+        };
+      }
+    }
+
+    // Add or update buyer in shareholders
+    const buyerIndex = updatedShareholders.findIndex(sh => sh.id === buyer.id);
+    if (buyerIndex === -1) {
+      // Add new shareholder
+      updatedShareholders.push({
+        ...buyer,
+        shares: transaction.sharesCount,
+        percentage: 0,
+        title: "Магнат",
+        profit: 0
+      });
+    } else {
+      // Update existing shareholder
+      updatedShareholders[buyerIndex] = {
+        ...updatedShareholders[buyerIndex],
+        shares: updatedBuyer.shares
+      };
+    }
+
+    // Recalculate percentages
+    const totalShares = updatedShareholders.reduce(
+      (sum, sh) => sum + (sh.shares || 0), 0
+    );
+    
+    const shareholdersWithPercentage = updatedShareholders.map(sh => ({
+      ...sh,
+      percentage: totalShares > 0 ? ((sh.shares / totalShares) * 100).toFixed(2) : 0
+    }));
+    
+    setShareholders(shareholdersWithPercentage);
+
+    // Update transaction status
+    const updatedTransactions = sharesTransactions.map(t => {
+      if (t.id === transactionId) {
+        return { ...t, status: "Завершено", adminApproved: true };
+      }
+      return t;
+    });
+    setSharesTransactions(updatedTransactions);
+    localStorage.setItem("sharesTransactions", JSON.stringify(updatedTransactions));
+
+    // Remove item from stock exchange
+    const updatedStockExchangeItems = stockExchangeItems.filter(
+      item => item.id !== transaction.listingId
+    );
+    setStockExchangeItems(updatedStockExchangeItems);
+    localStorage.setItem("stockExchange", JSON.stringify(updatedStockExchangeItems));
+
+    toast.success("Транзакцію успішно завершено");
+    setOpenTransactionDialog(false);
+  };
+
+  const rejectTransaction = (transactionId: string) => {
+    const transaction = sharesTransactions.find(t => t.id === transactionId);
+    if (!transaction) return;
+
+    // Update transaction status
+    const updatedTransactions = sharesTransactions.map(t => {
+      if (t.id === transactionId) {
+        return { ...t, status: "Відхилено" };
+      }
+      return t;
+    });
+    setSharesTransactions(updatedTransactions);
+    localStorage.setItem("sharesTransactions", JSON.stringify(updatedTransactions));
+
+    // Return item to active in stock exchange
+    const updatedStockExchangeItems = stockExchangeItems.map(item => {
+      if (item.id === transaction.listingId) {
+        return { ...item, status: "Активна" };
+      }
+      return item;
+    });
+    setStockExchangeItems(updatedStockExchangeItems);
+    localStorage.setItem("stockExchange", JSON.stringify(updatedStockExchangeItems));
+
+    toast.success("Транзакцію відхилено");
+    setOpenTransactionDialog(false);
+  };
+
+  const openTransaction = (transaction: any) => {
+    setSelectedTransaction(transaction);
+    setOpenTransactionDialog(true);
   };
   
   if (!isAdmin) {
@@ -364,6 +697,7 @@ export default function Admin() {
                         <th className="text-left p-2">Ім'я</th>
                         <th className="text-left p-2">Телефон</th>
                         <th className="text-left p-2">Статус</th>
+                        <th className="text-left p-2">Акціонер</th>
                         <th className="text-left p-2">Дії</th>
                       </tr>
                     </thead>
@@ -404,6 +738,16 @@ export default function Admin() {
                               )}
                             </td>
                             <td className="p-2">
+                              <div className="flex items-center">
+                                <Switch
+                                  checked={user.isShareHolder || false}
+                                  onCheckedChange={(checked) => toggleShareholderStatus(user.id, checked)}
+                                  disabled={!isFounder && user.role === "admin-founder"}
+                                />
+                                <span className="ml-2">{user.isShareHolder ? "Так" : "Ні"}</span>
+                              </div>
+                            </td>
+                            <td className="p-2">
                               <div className="flex gap-2">
                                 <Button variant="outline" size="sm" onClick={() => navigate(`/profile/${user.id}`)}>
                                   <PenLine className="h-4 w-4 mr-1" /> Профіль
@@ -422,7 +766,7 @@ export default function Admin() {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={5} className="p-2 text-center text-muted-foreground">
+                          <td colSpan={6} className="p-2 text-center text-muted-foreground">
                             Немає зареєстрованих користувачів
                           </td>
                         </tr>
@@ -457,7 +801,28 @@ export default function Admin() {
                         shareholders.map((shareholder) => (
                           <tr key={shareholder.id} className="border-b hover:bg-muted/50">
                             <td className="p-2">{shareholder.firstName} {shareholder.lastName}</td>
-                            <td className="p-2">{shareholder.shares}</td>
+                            <td className="p-2">
+                              {isFounder ? (
+                                <div className="flex items-center space-x-2">
+                                  <Input
+                                    type="number"
+                                    value={shareholder.shares}
+                                    onChange={(e) => updateSharesCount(shareholder.id, parseInt(e.target.value))}
+                                    className="w-20"
+                                    min="1"
+                                  />
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => updateSharesCount(shareholder.id, shareholder.shares)}
+                                  >
+                                    ✓
+                                  </Button>
+                                </div>
+                              ) : (
+                                shareholder.shares
+                              )}
+                            </td>
                             <td className="p-2">{shareholder.percentage}%</td>
                             <td className="p-2">
                               <Select 
@@ -570,7 +935,7 @@ export default function Admin() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4 mb-6">
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-3">
                     <div className="sm:col-span-1">
                       <label className="text-sm font-medium" htmlFor="stock-price">Поточна ціна акції (грн)</label>
                       <div className="flex">
@@ -580,62 +945,166 @@ export default function Admin() {
                           value={stockPrice} 
                           onChange={(e) => setStockPrice(e.target.value)} 
                           placeholder="1000"
+                          min="1"
                         />
-                        <Button className="ml-2" onClick={updateStockPrice}>Оновити</Button>
+                        <Button className="ml-2" onClick={updateStockPrice} disabled={!isFounder}>Оновити</Button>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         Ця ціна є рекомендованою для акціонерів при продажу акцій
                       </p>
                     </div>
                   </div>
+
+                  {isFounder && (
+                    <div className="border p-4 rounded-md">
+                      <h3 className="text-lg font-medium mb-3">Виставити акції на продаж</h3>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="text-sm font-medium mb-1 block">Акціонер</label>
+                          <Select 
+                            value={selectedShareholderId}
+                            onValueChange={setSelectedShareholderId}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Виберіть акціонера" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {shareholders.map((sh) => (
+                                <SelectItem key={sh.id} value={sh.id}>
+                                  {sh.firstName} {sh.lastName} ({sh.shares} акцій)
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium mb-1 block">Кількість акцій</label>
+                          <div className="flex">
+                            <Input 
+                              type="number" 
+                              value={selectedSharesCount}
+                              onChange={(e) => setSelectedSharesCount(e.target.value)}
+                              min="1"
+                            />
+                            <Button className="ml-2" onClick={handleSellShares}>Виставити на продаж</Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="border rounded-md p-4 mb-4">
-                  <h3 className="font-semibold mb-2">Інформація про ринок акцій</h3>
-                  <ul className="space-y-2 text-sm">
-                    <li>• Ринок акцій доступний тільки для акціонерів</li>
-                    <li>• Акціонери можуть виставляти свої акції на умовний продаж</li>
-                    <li>• Домовленість про купівлю-продаж відбувається між акціонерами</li>
-                    <li>• Адміністратор встановлює рекомендовану ціну акцій</li>
-                    <li>• Адміністратор-засновник може змінювати власників акцій після угоди</li>
-                  </ul>
-                </div>
-                
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-2">Продавець</th>
-                        <th className="text-left p-2">Кількість акцій</th>
-                        <th className="text-left p-2">Ціна за акцію</th>
-                        <th className="text-left p-2">Сума</th>
-                        <th className="text-left p-2">Статус</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stockExchangeItems.length > 0 ? (
-                        stockExchangeItems.map((item, index) => (
-                          <tr key={index} className="border-b hover:bg-muted/50">
-                            <td className="p-2">{item.sellerName}</td>
-                            <td className="p-2">{item.sharesCount}</td>
-                            <td className="p-2">{item.pricePerShare}</td>
-                            <td className="p-2">{(item.sharesCount * item.pricePerShare).toFixed(2)}</td>
-                            <td className="p-2">
-                              <Badge variant={item.status === "Активна" ? "secondary" : "outline"}>
-                                {item.status}
-                              </Badge>
+                  <h3 className="font-semibold mb-2">Активні пропозиції на ринку акцій</h3>
+                  
+                  <div className="overflow-x-auto mt-4">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2">Продавець</th>
+                          <th className="text-left p-2">Кількість акцій</th>
+                          <th className="text-left p-2">Ціна за акцію</th>
+                          <th className="text-left p-2">Сума</th>
+                          <th className="text-left p-2">Статус</th>
+                          <th className="text-left p-2">Дії</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stockExchangeItems.length > 0 ? (
+                          stockExchangeItems.map((item, index) => (
+                            <tr key={index} className="border-b hover:bg-muted/50">
+                              <td className="p-2">{item.sellerName}</td>
+                              <td className="p-2">{item.sharesCount}</td>
+                              <td className="p-2">{item.pricePerShare} грн</td>
+                              <td className="p-2">{(item.sharesCount * item.pricePerShare).toFixed(2)} грн</td>
+                              <td className="p-2">
+                                <Badge variant={item.status === "Активна" ? "secondary" : "outline"}>
+                                  {item.status}
+                                </Badge>
+                              </td>
+                              <td className="p-2">
+                                {item.status === "Активна" && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleBuyShares(item)}
+                                  >
+                                    <ShoppingBag className="h-4 w-4 mr-1" /> Купити
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={6} className="p-2 text-center text-muted-foreground">
+                              Немає активних пропозицій на продаж акцій
                             </td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={5} className="p-2 text-center text-muted-foreground">
-                            Немає активних пропозицій на продаж акцій
-                          </td>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="border rounded-md p-4">
+                  <h3 className="font-semibold mb-2">Транзакції ринку акцій</h3>
+                  
+                  <div className="overflow-x-auto mt-4">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2">Продавець</th>
+                          <th className="text-left p-2">Покупець</th>
+                          <th className="text-left p-2">Кількість акцій</th>
+                          <th className="text-left p-2">Сума</th>
+                          <th className="text-left p-2">Статус</th>
+                          <th className="text-left p-2">Дії</th>
                         </tr>
-                      )}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {sharesTransactions.length > 0 ? (
+                          sharesTransactions.map((transaction, index) => (
+                            <tr key={index} className="border-b hover:bg-muted/50">
+                              <td className="p-2">{transaction.sellerName}</td>
+                              <td className="p-2">{transaction.buyerName}</td>
+                              <td className="p-2">{transaction.sharesCount}</td>
+                              <td className="p-2">{transaction.totalAmount.toFixed(2)} грн</td>
+                              <td className="p-2">
+                                <Badge 
+                                  variant={
+                                    transaction.status === "Завершено" ? "success" : 
+                                    transaction.status === "Відхилено" ? "destructive" : "secondary"
+                                  }
+                                >
+                                  {transaction.status}
+                                </Badge>
+                              </td>
+                              <td className="p-2">
+                                {transaction.status === "Очікує підтвердження" && (
+                                  <div className="flex space-x-2">
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      onClick={() => openTransaction(transaction)}
+                                    >
+                                      <Eye className="h-4 w-4 mr-1" /> Переглянути
+                                    </Button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={6} className="p-2 text-center text-muted-foreground">
+                              Немає транзакцій ринку акцій
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -727,6 +1196,87 @@ export default function Admin() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={openTransactionDialog} onOpenChange={setOpenTransactionDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Деталі транзакції</DialogTitle>
+            <DialogDescription>
+              Перегляд та управління транзакцією ринку акцій
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTransaction && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium">Продавець:</p>
+                  <p>{selectedTransaction.sellerName}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Покупець:</p>
+                  <p>{selectedTransaction.buyerName}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium">Кількість акцій:</p>
+                  <p>{selectedTransaction.sharesCount}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Ціна за акцію:</p>
+                  <p>{selectedTransaction.pricePerShare} грн</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Загальна сума:</p>
+                <p className="text-lg font-bold">{selectedTransaction.totalAmount.toFixed(2)} грн</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Статус:</p>
+                <Badge variant="secondary">{selectedTransaction.status}</Badge>
+              </div>
+              <div className="border rounded-md p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium">Повідомлення:</p>
+                  <Button variant="outline" size="sm">
+                    <MessageCircle className="h-4 w-4 mr-1" /> Написати
+                  </Button>
+                </div>
+                <div className="max-h-[150px] overflow-y-auto border p-2 rounded-md bg-muted/50">
+                  {selectedTransaction.messages && selectedTransaction.messages.length > 0 ? (
+                    selectedTransaction.messages.map((msg: any, i: number) => (
+                      <div key={i} className="mb-2">
+                        <p className="text-sm font-medium">{msg.sender}:</p>
+                        <p className="text-sm">{msg.text}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Немає повідомлень</p>
+                  )}
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <div className="flex justify-between w-full">
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => rejectTransaction(selectedTransaction.id)}
+                  >
+                    <XSquare className="h-4 w-4 mr-1" /> Відхилити
+                  </Button>
+                  <Button 
+                    variant="default"
+                    onClick={() => approveTransaction(selectedTransaction.id)}
+                  >
+                    <CheckSquare className="h-4 w-4 mr-1" /> Схвалити
+                  </Button>
+                </div>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
