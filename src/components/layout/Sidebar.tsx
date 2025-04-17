@@ -1,122 +1,104 @@
+import React from 'react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+import { Home, Search, Bell, MessageSquare, User, Settings, Users, Image, Music, Video, Zap } from 'lucide-react';
 
-import { Link } from "react-router-dom";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-
-interface SuggestedUser {
-  id: string;
-  name: string;
-  username: string;
-  avatarUrl?: string;
-  profession?: string;
+interface SidebarProps {
+  className?: string;
 }
 
-const suggestedUsers: SuggestedUser[] = [
-  {
-    id: "user4",
-    name: "Олена Сидоренко",
-    username: "elena_photo",
-    avatarUrl: "https://i.pravatar.cc/150?img=24",
-    profession: "Photo"
-  },
-  {
-    id: "user5",
-    name: "Денис Коваль",
-    username: "denys_video",
-    avatarUrl: "https://i.pravatar.cc/150?img=12",
-    profession: "Video"
-  },
-  {
-    id: "user6",
-    name: "Анна Михайленко",
-    username: "anna_event",
-    avatarUrl: "https://i.pravatar.cc/150?img=16",
-    profession: "Event"
-  },
-  {
-    id: "user7",
-    name: "Роман Шевченко",
-    username: "roman_music",
-    avatarUrl: "https://i.pravatar.cc/150?img=33",
-    profession: "Music"
-  },
-  {
-    id: "user8",
-    name: "Сергій Лисенко",
-    username: "serhii_pyro",
-    avatarUrl: "https://i.pravatar.cc/150?img=57",
-    profession: "Pyro"
-  },
-];
-
-export function Sidebar() {
+export function Sidebar({ className }: SidebarProps) {
   return (
-    <aside className="sticky top-20 hidden w-[350px] shrink-0 xl:block">
-      <div className="mb-6 rounded-xl border p-4">
-        <h2 className="mb-4 text-lg font-semibold">Рекомендації для вас</h2>
-        <div className="space-y-4">
-          {suggestedUsers.map((user) => (
-            <div key={user.id} className="flex items-center justify-between">
-              <Link to={`/profile/${user.id}`} className="flex items-center gap-2">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={user.avatarUrl} alt={user.name} />
-                  <AvatarFallback>
-                    {user.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold">{user.name}</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">@{user.username}</span>
-                    {user.profession && (
-                      <span className={`profession-badge profession-badge-${user.profession.toLowerCase()} text-[10px]`}>
-                        {user.profession}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Link>
-              <Button variant="outline" size="sm" className="h-8 text-xs">
-                Підписатися
-              </Button>
-            </div>
-          ))}
-        </div>
+    <aside className={cn("rounded-lg border bg-card overflow-hidden", className)}>
+      <div className="p-4">
+        <h2 className="text-lg font-semibold mb-4">Меню</h2>
+        <nav className="space-y-2">
+          <Button variant="ghost" className="w-full justify-start" asChild>
+            <Link to="/">
+              <Home className="mr-2 h-4 w-4" />
+              Головна
+            </Link>
+          </Button>
+          <Button variant="ghost" className="w-full justify-start" asChild>
+            <Link to="/search">
+              <Search className="mr-2 h-4 w-4" />
+              Пошук
+            </Link>
+          </Button>
+          <Button variant="ghost" className="w-full justify-start" asChild>
+            <Link to="/notifications">
+              <Bell className="mr-2 h-4 w-4" />
+              Сповіщення
+            </Link>
+          </Button>
+          <Button variant="ghost" className="w-full justify-start" asChild>
+            <Link to="/messages">
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Повідомлення
+            </Link>
+          </Button>
+          <Button variant="ghost" className="w-full justify-start" asChild>
+            <Link to="/profile">
+              <User className="mr-2 h-4 w-4" />
+              Профіль
+            </Link>
+          </Button>
+          <Button variant="ghost" className="w-full justify-start" asChild>
+            <Link to="/settings">
+              <Settings className="mr-2 h-4 w-4" />
+              Налаштування
+            </Link>
+          </Button>
+        </nav>
       </div>
-
-      <div className="rounded-xl border p-4">
-        <h2 className="mb-4 text-lg font-semibold">Популярні події</h2>
-        <div className="space-y-4">
-          <div className="rounded-lg bg-gradient-to-r from-secondary/10 to-accent/10 p-3">
-            <h3 className="font-medium">Фестиваль фотографії 2023</h3>
-            <p className="text-sm text-muted-foreground">Київ, 15-20 травня</p>
-            <Button variant="link" className="mt-1 h-auto p-0 text-sm text-secondary">
-              Дізнатися більше
-            </Button>
-          </div>
-          <div className="rounded-lg bg-gradient-to-r from-destructive/10 to-secondary/10 p-3">
-            <h3 className="font-medium">Майстер-клас з відеомонтажу</h3>
-            <p className="text-sm text-muted-foreground">Онлайн, 28 травня</p>
-            <Button variant="link" className="mt-1 h-auto p-0 text-sm text-secondary">
-              Дізнатися більше
-            </Button>
-          </div>
-        </div>
+      
+      <div className="border-t p-4">
+        <h2 className="text-lg font-semibold mb-4">Категорії</h2>
+        <nav className="space-y-2">
+          <Button variant="ghost" className="w-full justify-start" asChild>
+            <Link to="/category/photographers">
+              <Image className="mr-2 h-4 w-4" />
+              Фотографи
+            </Link>
+          </Button>
+          <Button variant="ghost" className="w-full justify-start" asChild>
+            <Link to="/category/videographers">
+              <Video className="mr-2 h-4 w-4" />
+              Відеографи
+            </Link>
+          </Button>
+          <Button variant="ghost" className="w-full justify-start" asChild>
+            <Link to="/category/musicians">
+              <Music className="mr-2 h-4 w-4" />
+              Музиканти
+            </Link>
+          </Button>
+          <Button variant="ghost" className="w-full justify-start" asChild>
+            <Link to="/category/hosts">
+              <Users className="mr-2 h-4 w-4" />
+              Ведучі
+            </Link>
+          </Button>
+          <Button variant="ghost" className="w-full justify-start" asChild>
+            <Link to="/category/pyrotechnics">
+              <Zap className="mr-2 h-4 w-4" />
+              Піротехніки
+            </Link>
+          </Button>
+        </nav>
       </div>
-
-      <div className="mt-6 text-xs text-muted-foreground">
-        <div className="flex flex-wrap gap-2">
-          <Link to="#" className="hover:underline">Про нас</Link>
-          <Link to="#" className="hover:underline">Допомога</Link>
-          <Link to="#" className="hover:underline">API</Link>
-          <Link to="#" className="hover:underline">Вакансії</Link>
-          <Link to="#" className="hover:underline">Умови</Link>
-          <Link to="#" className="hover:underline">Конфіденційність</Link>
+      
+      <div className="border-t p-4">
+        <div className="rounded-lg bg-muted p-4">
+          <h3 className="font-medium mb-2">Розширте свою мережу</h3>
+          <p className="text-sm text-muted-foreground mb-3">
+            Знаходьте нових клієнтів та партнерів для співпраці
+          </p>
+          <Button size="sm" className="w-full" asChild>
+            <Link to="/connect">Знайти контакти</Link>
+          </Button>
         </div>
-        <div className="mt-4">© 2023 Visual Pro Connect</div>
       </div>
     </aside>
   );

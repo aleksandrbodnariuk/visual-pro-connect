@@ -1072,7 +1072,7 @@ export default function Admin() {
                               <td className="p-2">
                                 <Badge 
                                   variant={
-                                    transaction.status === "Завершено" ? "success" : 
+                                    transaction.status === "Завершено" ? "secondary" : 
                                     transaction.status === "Відхилено" ? "destructive" : "secondary"
                                   }
                                 >

@@ -2,8 +2,20 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
-export function Hero() {
+interface HeroProps {
+  onLogin?: () => void;
+}
+
+export function Hero({ onLogin }: HeroProps) {
   const navigate = useNavigate();
+  
+  const handleLoginClick = () => {
+    if (onLogin) {
+      onLogin();
+    } else {
+      navigate("/auth");
+    }
+  };
   
   return (
     <div className="relative">
@@ -21,7 +33,7 @@ export function Hero() {
             </p>
           </div>
           <div className="space-x-4">
-            <Button size="lg" onClick={() => navigate("/auth")}>
+            <Button size="lg" onClick={handleLoginClick}>
               Приєднатися зараз
             </Button>
             <Button size="lg" variant="outline" onClick={() => navigate("/search")}>

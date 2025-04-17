@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { PostCard } from '@/components/feed/PostCard'; // Changed from default import to named import
-import { Hero } from '@/components/home/Hero'; // Changed from default import to named import
+import { PostCard } from '@/components/feed/PostCard';
+import { Hero } from '@/components/home/Hero';
 import CreatePublicationModal from '@/components/publications/CreatePublicationModal';
 import { Button } from '@/components/ui/button';
 import { ExternalLink } from 'lucide-react';
@@ -67,7 +67,6 @@ export default function Index() {
                     <PostCard
                       key={post.id}
                       id={post.id}
-                      title={post.title || ""}
                       author={{
                         id: post.userId || "",
                         name: post.author || "",
@@ -80,6 +79,7 @@ export default function Index() {
                       likes={0}
                       comments={0}
                       timeAgo={new Date(post.date).toLocaleDateString()}
+                      className=""
                     />
                   ))
                 ) : (
