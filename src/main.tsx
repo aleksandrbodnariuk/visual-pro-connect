@@ -4,8 +4,8 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter as Router } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
-import { ToastContainer } from "@/components/ui/sonner";
-import { App } from "./App";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
+import App from "./App"; // Виправлено: використовуємо default import
 import "./index.css";
 import { createStorageBuckets } from "./lib/storage";
 
@@ -20,7 +20,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <Router>
         <App />
         <Toaster />
-        <ToastContainer />
+        <SonnerToaster />
       </Router>
     </QueryClientProvider>
   </React.StrictMode>
