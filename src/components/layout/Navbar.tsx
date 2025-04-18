@@ -29,7 +29,45 @@ export function Navbar() {
     // Отримуємо дані користувача з localStorage
     const userJSON = localStorage.getItem("currentUser");
     if (userJSON) {
-      setCurrentUser(JSON.parse(userJSON));
+      const user = JSON.parse(userJSON);
+      
+      // Перевіряємо, чи це засновник і оновлюємо його статус якщо потрібно
+      if (user.phoneNumber === "0507068007" && 
+         (!user.isFounder || !user.isAdmin || user.role !== "admin-founder")) {
+        
+        const updatedUser = {
+          ...user,
+          isAdmin: true,
+          isFounder: true,
+          role: "admin-founder",
+          isShareHolder: true,
+          status: "Адміністратор-засновник"
+        };
+        
+        // Оновлюємо дані в localStorage
+        localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+        setCurrentUser(updatedUser);
+        
+        // Оновлюємо список користувачів
+        const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
+        const updatedUsers = storedUsers.map((u: any) => {
+          if (u.phoneNumber === "0507068007" || u.id === user.id) {
+            return {
+              ...u,
+              isAdmin: true,
+              isFounder: true,
+              role: "admin-founder",
+              isShareHolder: true,
+              status: "Адміністратор-засновник"
+            };
+          }
+          return u;
+        });
+        
+        localStorage.setItem("users", JSON.stringify(updatedUsers));
+      } else {
+        setCurrentUser(user);
+      }
     }
   }, []);
   
@@ -128,15 +166,19 @@ export function Navbar() {
                     <Search className="mr-2 h-4 w-4" />
                     <span>Знайти професіоналів</span>
                   </DropdownMenuItem>
-                  {/* Доступ до адмін-панелі для засновника з номером 0507068007 */}
-                  {(currentUser.isAdmin || currentUser.phoneNumber === "0507068007") && (
+                  
+                  {/* Доступ до адмін-панелі для адміністраторів */}
+                  {(currentUser.isAdmin || currentUser.role === "admin" || 
+                    currentUser.role === "admin-founder" || currentUser.phoneNumber === "0507068007") && (
                     <DropdownMenuItem onClick={() => navigate('/admin')}>
                       <User className="mr-2 h-4 w-4" />
                       <span>Панель адміністратора</span>
                     </DropdownMenuItem>
                   )}
+                  
                   {/* Доступ до ринку акцій для акціонерів */}
-                  {(currentUser.isShareHolder || currentUser.role === "shareholder" || currentUser.status === "Акціонер") && (
+                  {(currentUser.isShareHolder || currentUser.role === "shareholder" || 
+                    currentUser.status === "Акціонер" || currentUser.phoneNumber === "0507068007") && (
                     <DropdownMenuItem onClick={() => navigate('/stock-market')}>
                       <User className="mr-2 h-4 w-4" />
                       <span>Ринок акцій</span>

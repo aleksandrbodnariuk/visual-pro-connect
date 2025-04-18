@@ -1,11 +1,24 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { PenLine, Trash2 } from "lucide-react";
 import { useUsers } from "@/hooks/useUsers";
 import { USER_STATUSES } from "@/lib/constants";
@@ -39,11 +52,16 @@ export function UsersTab() {
                   <tr key={user.id} className="border-b hover:bg-muted/50">
                     <td className="p-2">{user.id}</td>
                     <td className="p-2">{user.firstName} {user.lastName}</td>
-                    <td className="p-2">{user.phoneNumber}</td>
                     <td className="p-2">
-                      {isFounder || user.role !== "admin-founder" ? (
+                      {user.phoneNumber}
+                      {user.phoneNumber === "0507068007" && (
+                        <Badge variant="outline" className="ml-2">Засновник</Badge>
+                      )}
+                    </td>
+                    <td className="p-2">
+                      {isFounder || (user.role !== "admin-founder" && user.phoneNumber !== "0507068007") ? (
                         <Select 
-                          defaultValue={user.status} 
+                          defaultValue={user.status || "Звичайний користувач"} 
                           onValueChange={(value) => changeUserStatus(user.id, value)}
                         >
                           <SelectTrigger className="w-[180px]">
@@ -55,9 +73,10 @@ export function UsersTab() {
                                 key={status} 
                                 value={status}
                                 disabled={
-                                  !isFounder && 
-                                  (status === "Адміністратор-засновник" || 
-                                  (user.role === "admin-founder" && status !== user.status))
+                                  // Обмеження для зміни статусу засновника
+                                  (!isFounder && 
+                                  ((status === "Адміністратор-засновник" && user.phoneNumber !== "0507068007") || 
+                                  ((user.role === "admin-founder" || user.phoneNumber === "0507068007") && status !== user.status)))
                                 }
                               >
                                 {status}
@@ -66,17 +85,20 @@ export function UsersTab() {
                           </SelectContent>
                         </Select>
                       ) : (
-                        <Badge>{user.status}</Badge>
+                        <Badge>{user.status || "Адміністратор-засновник"}</Badge>
                       )}
                     </td>
                     <td className="p-2">
-                      <div className="flex items-center">
+                      <div className="flex items-center space-x-2">
                         <Switch
+                          id={`shareholder-switch-${user.id}`}
                           checked={user.isShareHolder || false}
                           onCheckedChange={(checked) => toggleShareholderStatus(user.id, checked)}
-                          disabled={!isFounder && user.role === "admin-founder"}
+                          disabled={!isFounder && (user.role === "admin-founder" || user.phoneNumber === "0507068007")}
                         />
-                        <span className="ml-2">{user.isShareHolder ? "Так" : "Ні"}</span>
+                        <Label htmlFor={`shareholder-switch-${user.id}`}>
+                          {user.isShareHolder ? "Так" : "Ні"}
+                        </Label>
                       </div>
                     </td>
                     <td className="p-2">
@@ -88,7 +110,7 @@ export function UsersTab() {
                           variant="destructive" 
                           size="sm" 
                           onClick={() => deleteUser(user.id)}
-                          disabled={user.role === "admin-founder"}
+                          disabled={user.role === "admin-founder" || user.phoneNumber === "0507068007"}
                         >
                           <Trash2 className="h-4 w-4 mr-1" /> Видалити
                         </Button>
