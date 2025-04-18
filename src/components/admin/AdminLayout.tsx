@@ -10,7 +10,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const isMobile = useIsMobile();
   
   return (
-    <div className={`w-full ${isMobile ? 'px-2' : 'px-6'}`}>
+    <div className={`w-full ${isMobile ? 'px-2 py-2' : 'px-6 py-4'}`}>
       {children}
     </div>
   );

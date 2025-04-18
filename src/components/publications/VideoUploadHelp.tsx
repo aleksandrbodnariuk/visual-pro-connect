@@ -18,7 +18,7 @@ export default function VideoUploadHelp() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Alert variant="warning">
+        <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Обмеження при завантаженні відео</AlertTitle>
           <AlertDescription>

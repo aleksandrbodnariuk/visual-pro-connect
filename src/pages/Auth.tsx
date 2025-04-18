@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,21 @@ enum AuthStep {
   RESET_PASSWORD,
   VERIFY_CODE,
   SET_NEW_PASSWORD
+}
+
+// Define user interface to fix type errors
+interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  password?: string;
+  createdAt: string;
+  categories: any[];
+  isAdmin?: boolean;
+  isFounder?: boolean;
+  isShareHolder?: boolean;
+  role?: string;
 }
 
 export default function Auth() {
@@ -50,13 +66,13 @@ export default function Auth() {
     }
     
     // Отримуємо користувачів з localStorage
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
+    const users = JSON.parse(localStorage.getItem("users") || "[]") as User[];
     
     // Перевіряємо чи це логін адміністратора-засновника (0507068007)
     if (phoneNumber === "0507068007") {
       // Якщо це телефон адміністратора-засновника
       if (password === "admin" || password === "00000000") {
-        const adminUser = {
+        const adminUser: User = {
           id: "admin1",
           firstName: "Admin",
           lastName: "Founder",
@@ -64,7 +80,9 @@ export default function Auth() {
           isAdmin: true,
           isFounder: true,
           isShareHolder: true,
-          role: "admin"
+          role: "admin",
+          createdAt: new Date().toISOString(),
+          categories: []
         };
         
         localStorage.setItem("currentUser", JSON.stringify(adminUser));
@@ -75,7 +93,7 @@ export default function Auth() {
     }
     
     // Спочатку шукаємо користувача за номером телефону і паролем
-    const foundUser = users.find((user: any) => 
+    const foundUser = users.find((user) => 
       user.phoneNumber === phoneNumber && user.password === password);
     
     // Якщо знайдено користувача, виконуємо вхід
@@ -89,7 +107,7 @@ export default function Auth() {
         foundUser.role = "admin";
         
         // Оновлюємо користувача в локальному сховищі
-        const updatedUsers = users.map((u: any) => 
+        const updatedUsers = users.map((u) => 
           u.phoneNumber === phoneNumber ? foundUser : u
         );
         localStorage.setItem("users", JSON.stringify(updatedUsers));
@@ -108,7 +126,7 @@ export default function Auth() {
     
     // Якщо не знайшли за паролем, перевіряємо, чи користувач існує, але без пароля
     // або використовуючи тимчасовий пароль
-    const userExists = users.find((user: any) => user.phoneNumber === phoneNumber);
+    const userExists = users.find((user) => user.phoneNumber === phoneNumber);
     
     if (userExists && (!userExists.password || userExists.password === "")) {
       // Якщо користувач існує і не має пароля, перевіряємо тимчасовий пароль
@@ -122,7 +140,7 @@ export default function Auth() {
           userExists.role = "admin";
           
           // Оновлюємо користувача в локальному сховищі
-          const updatedUsers = users.map((u: any) => 
+          const updatedUsers = users.map((u) => 
             u.phoneNumber === phoneNumber ? userExists : u
           );
           localStorage.setItem("users", JSON.stringify(updatedUsers));
@@ -162,24 +180,28 @@ export default function Auth() {
     }
     
     // Отримуємо користувачів з localStorage
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
+    const users = JSON.parse(localStorage.getItem("users") || "[]") as User[];
     
     // Перевіряємо, чи існує вже користувач з таким номером
-    const existingUser = users.find((user: any) => user.phoneNumber === phoneNumber);
+    const existingUser = users.find((user) => user.phoneNumber === phoneNumber);
     if (existingUser) {
       toast.error(t.userWithPhoneExists);
       return;
     }
     
     // Створюємо нового користувача
-    const newUser = {
+    const newUser: User = {
       id: Date.now().toString(),
       firstName,
       lastName,
       phoneNumber,
       password,
       createdAt: new Date().toISOString(),
-      categories: [] // Додаємо порожній масив категорій для нового користувача
+      categories: [],
+      isAdmin: false,
+      isFounder: false,
+      isShareHolder: false,
+      role: "user"
     };
     
     // Перевіряємо, чи це адміністратор за номером телефону
