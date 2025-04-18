@@ -32,7 +32,7 @@ const App = () => (
             <Route path="/search" element={<Search />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
-            <Route path="/admin/stock-market" element={<Admin />} />
+            <Route path="/admin/:tabName" element={<Admin />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/connect" element={<Connect />} />
@@ -47,4 +47,4 @@ const App = () => (
   </QueryClientProvider>
 );
 
-export default App; // Переконуємось, що це default експорт
+export default App;

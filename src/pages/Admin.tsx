@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/layout/Navbar";
 import { AdminStats } from "@/components/admin/AdminStats";
@@ -17,6 +17,7 @@ export default function Admin() {
   const [stockPrice, setStockPrice] = useState("1000");
   
   const navigate = useNavigate();
+  const { tabName } = useParams<{ tabName: string }>();
   
   useEffect(() => {
     const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
@@ -71,6 +72,11 @@ export default function Admin() {
       setIsFounder(true);
     }
     
+    // Якщо не вказано вкладку, перенаправляємо на вкладку "users"
+    if (!tabName) {
+      navigate("/admin/users");
+    }
+    
     // Завантажуємо усіх користувачів
     const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
     setUsers(storedUsers);
@@ -92,7 +98,7 @@ export default function Admin() {
     } else {
       localStorage.setItem("stockPrice", stockPrice);
     }
-  }, [navigate, stockPrice]);
+  }, [navigate, stockPrice, tabName]);
 
   if (!isAdmin) {
     return <div className="container py-16 text-center">Перевірка прав доступу...</div>;

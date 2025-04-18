@@ -9,19 +9,19 @@ export const CATEGORIES = [
     id: "photographer",
     name: "Фотографи",
     icon: Camera,
-    color: "bg-gradient-blue"
+    color: "bg-gradient-blue from-blue-500 to-cyan-500"
   },
   {
     id: "videographer",
     name: "Відеографи",
     icon: Video,
-    color: "bg-gradient-purple"
+    color: "bg-gradient-purple from-purple-500 to-violet-500"
   },
   {
     id: "musician",
     name: "Музиканти",
     icon: Music,
-    color: "bg-gradient-orange"
+    color: "bg-gradient-orange from-orange-500 to-amber-500"
   },
   {
     id: "host",

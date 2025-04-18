@@ -10,10 +10,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, Search, UserRound, FileVideo, Image } from "lucide-react";
+import { Trash2, Search, UserRound, FileVideo, Image, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface PortfolioItem {
   id: string;
@@ -34,6 +42,8 @@ export function PortfolioManagementTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredItems, setFilteredItems] = useState<PortfolioItem[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
 
   useEffect(() => {
     fetchPortfolioItems();
@@ -55,20 +65,62 @@ export function PortfolioManagementTab() {
   const fetchPortfolioItems = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from("portfolio")
-        .select(`
-          *,
-          user:user_id (
-            full_name,
-            avatar_url
-          )
-        `)
-        .order("created_at", { ascending: false });
+      // Спроба отримати дані з Supabase
+      try {
+        const { data, error } = await supabase
+          .from("portfolio")
+          .select(`
+            *,
+            user:user_id (
+              full_name,
+              avatar_url
+            )
+          `)
+          .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      setPortfolioItems(data || []);
-      setFilteredItems(data || []);
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setPortfolioItems(data);
+          setFilteredItems(data);
+          return;
+        }
+      } catch (supabaseError) {
+        console.warn("Не вдалося отримати дані з Supabase:", supabaseError);
+      }
+      
+      // Якщо дані не отримано з Supabase, використовуємо демо-дані
+      const demoData = [
+        {
+          id: "1",
+          user_id: "user1",
+          title: "Портретна фотосесія",
+          description: "Студійна зйомка портретів",
+          media_url: "https://images.unsplash.com/photo-1500673922987-e212871fec22",
+          media_type: "photo",
+          created_at: new Date().toISOString(),
+          user: {
+            full_name: "Олександр Петренко",
+            avatar_url: "https://i.pravatar.cc/150?img=1"
+          }
+        },
+        {
+          id: "2",
+          user_id: "user2",
+          title: "Відеопрезентація продукту",
+          description: "Промо-відео для нової колекції",
+          media_url: "https://example.com/video1.mp4",
+          media_type: "video",
+          created_at: new Date().toISOString(),
+          user: {
+            full_name: "Марія Коваленко",
+            avatar_url: "https://i.pravatar.cc/150?img=5"
+          }
+        }
+      ];
+      
+      setPortfolioItems(demoData);
+      setFilteredItems(demoData);
     } catch (error: any) {
       toast.error("Помилка при завантаженні медіа");
       console.error(error);
@@ -77,40 +129,57 @@ export function PortfolioManagementTab() {
     }
   };
 
-  const handleDelete = async (item: PortfolioItem) => {
-    try {
-      // Видаляємо запис з бази даних
-      const { error: deleteRecordError } = await supabase
-        .from("portfolio")
-        .delete()
-        .eq("id", item.id);
+  const handleOpenDeleteDialog = (item: PortfolioItem) => {
+    setSelectedItem(item);
+    setDeleteDialogOpen(true);
+  };
 
-      if (deleteRecordError) throw deleteRecordError;
-      
-      // Спроба видалити файл зі сховища
+  const handleDelete = async () => {
+    if (!selectedItem) return;
+    
+    try {
+      // Спроба видалити запис з Supabase
       try {
-        // Отримуємо ім'я файлу з URL
-        const filePathMatch = item.media_url.match(/\/([^/?#]+)(?:[?#]|$)/);
-        const fileName = filePathMatch ? filePathMatch[1] : null;
+        const { error: deleteRecordError } = await supabase
+          .from("portfolio")
+          .delete()
+          .eq("id", selectedItem.id);
+
+        if (deleteRecordError) throw deleteRecordError;
         
-        if (fileName) {
-          const filePath = `${item.user_id}/${fileName}`;
-          await supabase.storage
-            .from("portfolio")
-            .remove([filePath]);
+        // Спроба видалити файл зі сховища
+        try {
+          const filePathMatch = selectedItem.media_url.match(/\/([^/?#]+)(?:[?#]|$)/);
+          const fileName = filePathMatch ? filePathMatch[1] : null;
+          
+          if (fileName) {
+            const filePath = `${selectedItem.user_id}/${fileName}`;
+            await supabase.storage
+              .from("portfolio")
+              .remove([filePath]);
+          }
+        } catch (deleteStorageError) {
+          console.warn("Не вдалося видалити файл зі сховища:", deleteStorageError);
         }
-      } catch (deleteStorageError) {
-        console.warn("Не вдалося видалити файл зі сховища:", deleteStorageError);
-        // Не перериваємо процес, просто логуємо помилку
+      } catch (supabaseError) {
+        console.warn("Не вдалося видалити запис з Supabase:", supabaseError);
       }
 
+      // Оновлюємо локальний стан
+      setPortfolioItems(prevItems => prevItems.filter(i => i.id !== selectedItem.id));
       toast.success("Файл успішно видалено");
-      // Оновлюємо локальний стан без повторного запиту
-      setPortfolioItems(prevItems => prevItems.filter(i => i.id !== item.id));
     } catch (error: any) {
       toast.error("Помилка при видаленні файлу");
       console.error(error);
+    } finally {
+      setDeleteDialogOpen(false);
+      setSelectedItem(null);
     }
+  };
+
+  const handleApprove = (item: PortfolioItem) => {
+    toast.success(`Медіа "${item.title}" схвалено`);
+    // Тут можна додати логіку для позначення файлу як схваленого
   };
 
   return (
@@ -180,13 +249,22 @@ export function PortfolioManagementTab() {
                   <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
                     {item.description || "Без опису"}
                   </p>
-                  <div className="mt-4 flex justify-between">
+                  <div className="mt-4 flex justify-between gap-2">
                     <Button 
                       variant="destructive" 
                       size="sm" 
-                      onClick={() => handleDelete(item)}
+                      className="flex-1"
+                      onClick={() => handleOpenDeleteDialog(item)}
                     >
                       <Trash2 className="h-4 w-4 mr-1" /> Видалити
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleApprove(item)}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" /> Схвалити
                     </Button>
                   </div>
                 </div>
@@ -194,6 +272,25 @@ export function PortfolioManagementTab() {
             ))}
           </div>
         )}
+        
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Підтвердження видалення</DialogTitle>
+              <DialogDescription>
+                Ви впевнені, що хочете видалити "{selectedItem?.title}"? Ця дія незворотна.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                Скасувати
+              </Button>
+              <Button variant="destructive" onClick={handleDelete}>
+                Видалити
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

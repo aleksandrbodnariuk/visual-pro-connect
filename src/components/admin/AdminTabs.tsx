@@ -8,10 +8,31 @@ import { StockExchangeTab } from "./tabs/StockExchangeTab";
 import { PostsTab } from "./tabs/PostsTab";
 import { SettingsTab } from "./tabs/SettingsTab";
 import { PortfolioManagementTab } from "./tabs/PortfolioManagementTab";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export function AdminTabs() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState("users");
+  
+  // Витягуємо активну вкладку з URL якщо вона є
+  useEffect(() => {
+    const tabFromUrl = location.pathname.split('/').pop();
+    if (tabFromUrl && tabFromUrl !== "admin") {
+      setActiveTab(tabFromUrl);
+    }
+  }, [location]);
+  
+  // Обробник зміни вкладки
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    // Оновлюємо URL для збереження стану між перезавантаженнями
+    navigate(`/admin/${value}`);
+  };
+
   return (
-    <Tabs defaultValue="users" className="w-full">
+    <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
       <TabsList className="mb-4 flex flex-wrap gap-1">
         <TabsTrigger value="users">Користувачі</TabsTrigger>
         <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
