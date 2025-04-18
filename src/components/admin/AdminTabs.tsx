@@ -7,13 +7,15 @@ import { ArchivedOrdersTab } from "./tabs/ArchivedOrdersTab";
 import { StockExchangeTab } from "./tabs/StockExchangeTab";
 import { PostsTab } from "./tabs/PostsTab";
 import { SettingsTab } from "./tabs/SettingsTab";
+import { PortfolioManagementTab } from "./tabs/PortfolioManagementTab";
 
 export function AdminTabs() {
   return (
     <Tabs defaultValue="users" className="w-full">
-      <TabsList className="mb-4">
+      <TabsList className="mb-4 flex flex-wrap gap-1">
         <TabsTrigger value="users">Користувачі</TabsTrigger>
         <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
+        <TabsTrigger value="portfolio">Портфоліо</TabsTrigger>
         <TabsTrigger value="orders">Замовлення</TabsTrigger>
         <TabsTrigger value="archived-orders">Архів замовлень</TabsTrigger>
         <TabsTrigger value="stock-exchange">Ринок акцій</TabsTrigger>
@@ -27,6 +29,10 @@ export function AdminTabs() {
       
       <TabsContent value="shareholders">
         <ShareholdersTab />
+      </TabsContent>
+      
+      <TabsContent value="portfolio">
+        <PortfolioManagementTab />
       </TabsContent>
       
       <TabsContent value="orders">
