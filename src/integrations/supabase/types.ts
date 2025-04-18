@@ -100,6 +100,44 @@ export type Database = {
           },
         ]
       }
+      portfolio: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          media_type: string
+          media_url: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          media_type: string
+          media_url: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          media_type?: string
+          media_url?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
           content: string | null
@@ -218,7 +256,11 @@ export type Database = {
       }
       users: {
         Row: {
+          avatar_url: string | null
+          city: string | null
+          country: string | null
           created_at: string | null
+          founder_admin: boolean | null
           full_name: string | null
           id: string
           is_admin: boolean | null
@@ -227,7 +269,11 @@ export type Database = {
           phone_number: string
         }
         Insert: {
+          avatar_url?: string | null
+          city?: string | null
+          country?: string | null
           created_at?: string | null
+          founder_admin?: boolean | null
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
@@ -236,7 +282,11 @@ export type Database = {
           phone_number: string
         }
         Update: {
+          avatar_url?: string | null
+          city?: string | null
+          country?: string | null
           created_at?: string | null
+          founder_admin?: boolean | null
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
@@ -251,7 +301,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      set_founder_admin_status: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
