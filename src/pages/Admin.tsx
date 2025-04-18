@@ -174,13 +174,13 @@ export default function Admin() {
     toast.success("Користувача видалено");
   };
   
-const toggleShareholderStatus = (userId: string, isShareHolder: boolean) => {
-  const userToUpdate = users.find(user => user.id === userId);
-  if (userToUpdate && userToUpdate.role === "admin-founder" && !isFounder) {
-    toast.error("Тільки Адміністратор-засновник може змінювати акціонерний статус");
-    return;
-  }
-  
+  const toggleShareholderStatus = (userId: string, isShareHolder: boolean) => {
+    const userToUpdate = users.find(user => user.id === userId);
+    if (userToUpdate && userToUpdate.role === "admin-founder" && !isFounder) {
+      toast.error("Тільки Адміністратор-засновник може змінювати акціонерний статус");
+      return;
+    }
+    
     if (isShareHolder) {
       const user = users.find(u => u.id === userId);
       if (user) {
@@ -244,34 +244,34 @@ const toggleShareholderStatus = (userId: string, isShareHolder: boolean) => {
     }
   };
 
-const changeUserStatus = (userId: string, newStatus: string) => {
-  const userToUpdate = users.find(user => user.id === userId);
-  if (userToUpdate && userToUpdate.role === "admin-founder" && !isFounder) {
-    toast.error("Тільки Адміністратор-засновник може змінювати свій статус");
-    return;
-  }
-  
-  let newRole = "user";
-  if (newStatus === "Адміністратор" || newStatus === "Адміністратор-засновник") {
-    newRole = newStatus === "Адміністратор-засновник" ? "admin-founder" : "admin";
-  } else if (newStatus === "Модератор") {
-    newRole = "moderator";
-  } else if (newStatus === "Представник") {
-    newRole = "representative";
-  }
-  
-  const updatedUsers = users.map(user => {
-    if (user.id === userId) {
-      return { ...user, status: newStatus, role: newRole };
+  const changeUserStatus = (userId: string, newStatus: string) => {
+    const userToUpdate = users.find(user => user.id === userId);
+    if (userToUpdate && userToUpdate.role === "admin-founder" && !isFounder) {
+      toast.error("Тільки Адміністратор-засновник може змінювати свій статус");
+      return;
     }
-    return user;
-  });
-  
-  setUsers(updatedUsers);
-  localStorage.setItem("users", JSON.stringify(updatedUsers));
-  
-  toast.success(`Статус користувача змінено на "${newStatus}"`);
-};
+    
+    let newRole = "user";
+    if (newStatus === "Адміністратор" || newStatus === "Адміністратор-засновник") {
+      newRole = newStatus === "Адміністратор-засновник" ? "admin-founder" : "admin";
+    } else if (newStatus === "Модератор") {
+      newRole = "moderator";
+    } else if (newStatus === "Представник") {
+      newRole = "representative";
+    }
+    
+    const updatedUsers = users.map(user => {
+      if (user.id === userId) {
+        return { ...user, status: newStatus, role: newRole };
+      }
+      return user;
+    });
+    
+    setUsers(updatedUsers);
+    localStorage.setItem("users", JSON.stringify(updatedUsers));
+    
+    toast.success(`Статус користувача змінено на "${newStatus}"`);
+  };
   
   const changeShareholderTitle = (userId: string, newTitle: string) => {
     const updatedShareholders = shareholders.map(sh => {
@@ -853,3 +853,612 @@ const changeUserStatus = (userId: string, newStatus: string) => {
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">Ім'я</th>
+                        <th className="text-left p-2">Титул</th>
+                        <th className="text-left p-2">Акції</th>
+                        <th className="text-left p-2">Відсоток</th>
+                        <th className="text-left p-2">Прибуток</th>
+                        <th className="text-left p-2">Дії</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shareholders.length > 0 ? (
+                        shareholders.map((sh) => (
+                          <tr key={sh.id} className="border-b hover:bg-muted/50">
+                            <td className="p-2">{sh.firstName} {sh.lastName}</td>
+                            <td className="p-2">
+                              <Select 
+                                defaultValue={sh.title} 
+                                onValueChange={(value) => changeShareholderTitle(sh.id, value)}
+                              >
+                                <SelectTrigger className="w-[140px]">
+                                  <SelectValue placeholder="Титул" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {SHAREHOLDER_TITLES.map((title) => (
+                                    <SelectItem key={title} value={title}>
+                                      {title}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="p-2">
+                              <Input 
+                                type="number" 
+                                value={sh.shares} 
+                                min={1}
+                                onChange={(e) => updateSharesCount(sh.id, parseInt(e.target.value))} 
+                                className="w-24" 
+                              />
+                            </td>
+                            <td className="p-2">{sh.percentage}%</td>
+                            <td className="p-2">{sh.profit ? parseFloat(sh.profit).toFixed(2) : "0.00"} грн</td>
+                            <td className="p-2">
+                              <Button variant="outline" size="sm" onClick={() => navigate(`/profile/${sh.id}`)}>
+                                <PenLine className="h-4 w-4 mr-1" /> Профіль
+                              </Button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="p-2 text-center text-muted-foreground">
+                            Немає акціонерів
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="orders">
+            <Card>
+              <CardHeader>
+                <CardTitle>Управління замовленнями</CardTitle>
+                <CardDescription>Додавання та управління замовленнями</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-6 grid-cols-1 lg:grid-cols-3 mb-6">
+                  <div className="lg:col-span-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="amount">Сума</Label>
+                      <Input 
+                        id="amount" 
+                        type="number" 
+                        value={newOrderAmount} 
+                        onChange={(e) => setNewOrderAmount(e.target.value)} 
+                        placeholder="Введіть суму замовлення" 
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="lg:col-span-1">
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Опис</Label>
+                      <Textarea 
+                        id="description" 
+                        value={newOrderDescription} 
+                        onChange={(e) => setNewOrderDescription(e.target.value)} 
+                        placeholder="Введіть опис замовлення" 
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="lg:col-span-3">
+                    <Button className="w-full" onClick={addNewOrder}>
+                      Додати замовлення
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">ID</th>
+                        <th className="text-left p-2">Сум��</th>
+                        <th className="text-left p-2">Опис</th>
+                        <th className="text-left p-2">Дата</th>
+                        <th className="text-left p-2">Статус</th>
+                        <th className="text-left p-2">Дії</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.length > 0 ? (
+                        orders.map((order) => (
+                          <tr key={order.id} className="border-b hover:bg-muted/50">
+                            <td className="p-2">{order.id}</td>
+                            <td className="p-2">{order.amount} грн</td>
+                            <td className="p-2">{order.description}</td>
+                            <td className="p-2">{new Date(order.date).toLocaleDateString()}</td>
+                            <td className="p-2">
+                              <Badge variant="outline">{order.status}</Badge>
+                            </td>
+                            <td className="p-2">
+                              <div className="flex gap-2">
+                                <Button variant="outline" size="sm" onClick={() => archiveOrder(order.id)}>
+                                  <Archive className="h-4 w-4 mr-1" /> Архівувати
+                                </Button>
+                                <Button variant="destructive" size="sm" onClick={() => deleteOrder(order.id)}>
+                                  <Trash2 className="h-4 w-4 mr-1" /> Видалити
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="p-2 text-center text-muted-foreground">
+                            Немає замовлень
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="archived-orders">
+            <Card>
+              <CardHeader>
+                <CardTitle>Архів замовлень</CardTitle>
+                <CardDescription>Архівовані замовлення</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">ID</th>
+                        <th className="text-left p-2">Сум��</th>
+                        <th className="text-left p-2">Опис</th>
+                        <th className="text-left p-2">Дата</th>
+                        <th className="text-left p-2">Архівовано</th>
+                        <th className="text-left p-2">Дії</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {archivedOrders.length > 0 ? (
+                        archivedOrders.map((order) => (
+                          <tr key={order.id} className="border-b hover:bg-muted/50">
+                            <td className="p-2">{order.id}</td>
+                            <td className="p-2">{order.amount} грн</td>
+                            <td className="p-2">{order.description}</td>
+                            <td className="p-2">{new Date(order.date).toLocaleDateString()}</td>
+                            <td className="p-2">{new Date(order.archivedDate).toLocaleDateString()}</td>
+                            <td className="p-2">
+                              <Button variant="destructive" size="sm" onClick={() => deleteArchivedOrder(order.id)}>
+                                <Trash2 className="h-4 w-4 mr-1" /> Видалити
+                              </Button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="p-2 text-center text-muted-foreground">
+                            Немає архівованих замовлень
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="stock-exchange">
+            <Card>
+              <CardHeader>
+                <CardTitle>Ринок акцій</CardTitle>
+                <CardDescription>Управління продажем акцій</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-6 grid-cols-1 lg:grid-cols-3 mb-6">
+                  <div>
+                    <Label htmlFor="shareholder">Акціонер</Label>
+                    <Select 
+                      value={selectedShareholderId} 
+                      onValueChange={setSelectedShareholderId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Виберіть акціонера" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {shareholders.map((sh) => (
+                          <SelectItem key={sh.id} value={sh.id}>
+                            {sh.firstName} {sh.lastName} ({sh.shares} акцій)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="sharesCount">Кількість акцій</Label>
+                    <Input 
+                      id="sharesCount" 
+                      type="number" 
+                      value={selectedSharesCount} 
+                      onChange={(e) => setSelectedSharesCount(e.target.value)} 
+                      min={1} 
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="stockPrice">Ціна акції (грн)</Label>
+                    <div className="flex gap-2">
+                      <Input 
+                        id="stockPrice" 
+                        type="number" 
+                        value={stockPrice} 
+                        onChange={(e) => setStockPrice(e.target.value)} 
+                        min={1} 
+                      />
+                      <Button onClick={updateStockPrice}>
+                        Оновити
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="lg:col-span-3">
+                    <Button className="w-full" onClick={handleSellShares}>
+                      Виставити акції на продаж
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="mt-6">
+                  <h3 className="text-lg font-medium mb-2">Активні пропозиції</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2">Продавець</th>
+                          <th className="text-left p-2">Кількість</th>
+                          <th className="text-left p-2">Ціна за акцію</th>
+                          <th className="text-left p-2">Загальна сума</th>
+                          <th className="text-left p-2">Статус</th>
+                          <th className="text-left p-2">Дата</th>
+                          <th className="text-left p-2">Дії</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stockExchangeItems.length > 0 ? (
+                          stockExchangeItems.map((item) => (
+                            <tr key={item.id} className="border-b hover:bg-muted/50">
+                              <td className="p-2">{item.sellerName}</td>
+                              <td className="p-2">{item.sharesCount}</td>
+                              <td className="p-2">{item.pricePerShare} грн</td>
+                              <td className="p-2">{item.sharesCount * item.pricePerShare} грн</td>
+                              <td className="p-2">
+                                <Badge 
+                                  variant={item.status === "Активна" ? "outline" : "secondary"}
+                                >
+                                  {item.status}
+                                </Badge>
+                              </td>
+                              <td className="p-2">{new Date(item.date).toLocaleDateString()}</td>
+                              <td className="p-2">
+                                {item.status === "Активна" && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => handleBuyShares(item)}
+                                  >
+                                    <ShoppingBag className="h-4 w-4 mr-1" /> Купити
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={7} className="p-2 text-center text-muted-foreground">
+                              Немає активних пропозицій
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                
+                <div className="mt-6">
+                  <h3 className="text-lg font-medium mb-2">Транзакції</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2">Покупець</th>
+                          <th className="text-left p-2">Продавець</th>
+                          <th className="text-left p-2">Кількість</th>
+                          <th className="text-left p-2">Сума</th>
+                          <th className="text-left p-2">Статус</th>
+                          <th className="text-left p-2">Дата</th>
+                          <th className="text-left p-2">Дії</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sharesTransactions.length > 0 ? (
+                          sharesTransactions.map((transaction) => (
+                            <tr key={transaction.id} className="border-b hover:bg-muted/50">
+                              <td className="p-2">{transaction.buyerName}</td>
+                              <td className="p-2">{transaction.sellerName}</td>
+                              <td className="p-2">{transaction.sharesCount}</td>
+                              <td className="p-2">{transaction.totalAmount} грн</td>
+                              <td className="p-2">
+                                <Badge 
+                                  variant={
+                                    transaction.status === "Завершено" 
+                                      ? "default" 
+                                      : transaction.status === "Відхилено" 
+                                        ? "destructive" 
+                                        : "outline"
+                                  }
+                                >
+                                  {transaction.status}
+                                </Badge>
+                              </td>
+                              <td className="p-2">{new Date(transaction.date).toLocaleDateString()}</td>
+                              <td className="p-2">
+                                {transaction.status === "Очікує підтвердження" && (
+                                  <div className="flex gap-2">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      onClick={() => openTransaction(transaction)}
+                                    >
+                                      <Eye className="h-4 w-4 mr-1" /> Переглянути
+                                    </Button>
+                                    <Button 
+                                      variant="default" 
+                                      size="sm" 
+                                      onClick={() => approveTransaction(transaction.id)}
+                                    >
+                                      <CheckSquare className="h-4 w-4 mr-1" /> Схвалити
+                                    </Button>
+                                    <Button 
+                                      variant="destructive" 
+                                      size="sm" 
+                                      onClick={() => rejectTransaction(transaction.id)}
+                                    >
+                                      <XSquare className="h-4 w-4 mr-1" /> Відхилити
+                                    </Button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={7} className="p-2 text-center text-muted-foreground">
+                              Немає транзакцій
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <Dialog open={openTransactionDialog} onOpenChange={setOpenTransactionDialog}>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Деталі транзакції</DialogTitle>
+                      <DialogDescription>
+                        Перегляд деталей транзакції з продажу акцій
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    {selectedTransaction && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <h4 className="font-medium">Продавець</h4>
+                            <p>{selectedTransaction.sellerName}</p>
+                          </div>
+                          <div>
+                            <h4 className="font-medium">Покупець</h4>
+                            <p>{selectedTransaction.buyerName}</p>
+                          </div>
+                          <div>
+                            <h4 className="font-medium">Кількість акцій</h4>
+                            <p>{selectedTransaction.sharesCount}</p>
+                          </div>
+                          <div>
+                            <h4 className="font-medium">Ціна за акцію</h4>
+                            <p>{selectedTransaction.pricePerShare} грн</p>
+                          </div>
+                          <div>
+                            <h4 className="font-medium">Загальна сума</h4>
+                            <p>{selectedTransaction.totalAmount} грн</p>
+                          </div>
+                          <div>
+                            <h4 className="font-medium">Статус</h4>
+                            <Badge 
+                              variant={
+                                selectedTransaction.status === "Завершено" 
+                                  ? "default" 
+                                  : selectedTransaction.status === "Відхилено" 
+                                    ? "destructive" 
+                                    : "outline"
+                              }
+                            >
+                              {selectedTransaction.status}
+                            </Badge>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-medium mb-2">Повідомлення</h4>
+                          <div className="bg-muted p-4 rounded-md max-h-48 overflow-y-auto space-y-2">
+                            {selectedTransaction.messages && selectedTransaction.messages.length > 0 ? (
+                              selectedTransaction.messages.map((msg: any) => (
+                                <div key={msg.id} className="bg-background p-2 rounded-md">
+                                  <div className="flex justify-between">
+                                    <p className="font-medium">{msg.sender}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {new Date(msg.date).toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <p>{msg.text}</p>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-muted-foreground">Немає повідомлень</p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <Input 
+                            value={newMessage} 
+                            onChange={(e) => setNewMessage(e.target.value)} 
+                            placeholder="Напишіть повідомлення..."
+                          />
+                          <Button onClick={sendMessage}>
+                            <MessageCircle className="h-4 w-4 mr-1" /> Надіслати
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <DialogFooter>
+                      {selectedTransaction && selectedTransaction.status === "Очікує підтвердження" && (
+                        <div className="flex gap-2 w-full">
+                          <Button 
+                            variant="default" 
+                            onClick={() => approveTransaction(selectedTransaction.id)}
+                          >
+                            <CheckSquare className="h-4 w-4 mr-1" /> Схвалити
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            onClick={() => rejectTransaction(selectedTransaction.id)}
+                          >
+                            <XSquare className="h-4 w-4 mr-1" /> Відхилити
+                          </Button>
+                        </div>
+                      )}
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="posts">
+            <Card>
+              <CardHeader>
+                <CardTitle>Управління публікаціями</CardTitle>
+                <CardDescription>Модерація публікацій користувачів</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">ID</th>
+                        <th className="text-left p-2">Автор</th>
+                        <th className="text-left p-2">Назва</th>
+                        <th className="text-left p-2">Статус</th>
+                        <th className="text-left p-2">Дії</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {posts.length > 0 ? (
+                        posts.map((post) => (
+                          <tr key={post.id} className="border-b hover:bg-muted/50">
+                            <td className="p-2">{post.id}</td>
+                            <td className="p-2">{post.author}</td>
+                            <td className="p-2">{post.title}</td>
+                            <td className="p-2">
+                              <Badge 
+                                variant={post.status === "Активний" ? "default" : "outline"}
+                              >
+                                {post.status}
+                              </Badge>
+                            </td>
+                            <td className="p-2">
+                              <div className="flex gap-2">
+                                <Button variant="outline" size="sm">
+                                  <PenLine className="h-4 w-4 mr-1" /> Редагувати
+                                </Button>
+                                <Button 
+                                  variant="destructive" 
+                                  size="sm" 
+                                  onClick={() => deletePost(post.id)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" /> Видалити
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="p-2 text-center text-muted-foreground">
+                            Немає публікацій
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="settings">
+            <Card>
+              <CardHeader>
+                <CardTitle>Налаштування</CardTitle>
+                <CardDescription>Загальні налаштування платформи</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Ціна акції</h3>
+                    <div className="flex gap-2 max-w-md">
+                      <Input 
+                        type="number" 
+                        value={stockPrice} 
+                        onChange={(e) => setStockPrice(e.target.value)} 
+                        min={1} 
+                      />
+                      <Button onClick={updateStockPrice}>
+                        Зберегти
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Базова ціна акції, що використовується при продажу нових акцій
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Резервне копіювання</h3>
+                    <Button>
+                      <FileText className="h-4 w-4 mr-1" /> Експорт бази даних
+                    </Button>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Експорт усіх даних у файл JSON для резервного копіювання
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}
