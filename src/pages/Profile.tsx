@@ -14,7 +14,9 @@ import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 import { ProfileEditor } from "@/components/profile/ProfileEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { ProfileEditorDialog } from "@/components/profile/ProfileEditorDialog";
 
 // Тестові дані для демонстрації портфоліо
 const PORTFOLIO_ITEMS = [
@@ -74,6 +76,7 @@ export default function Profile() {
   const [posts, setPosts] = useState<any[]>([]);
   const [isCurrentUser, setIsCurrentUser] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const { language } = useLanguage();
   const t = translations[language];
   
@@ -106,27 +109,27 @@ export default function Profile() {
             name: userData.full_name || "Користувач",
             username: userData.phone_number || `user_${userData.id.substring(0, 5)}`,
             avatarUrl: userData.avatar_url,
-            coverUrl: userData.cover_url || "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
-            bio: userData.bio || "Користувач платформи Visual Pro Connect",
+            coverUrl: userData.avatar_url || "https://images.unsplash.com/photo-1605810230434-7631ac76ec81", // Default cover image
+            bio: userData.full_name ? `${userData.full_name} на платформі Visual Pro Connect` : "Користувач платформи Visual Pro Connect",
             phoneNumber: userData.phone_number,
-            viber: userData.viber,
-            tiktok: userData.tiktok,
-            instagram: userData.instagram,
-            facebook: userData.facebook,
+            viber: userData.phone_number || "",
+            tiktok: "",
+            instagram: "",
+            facebook: "",
             location: userData.city ? `${userData.city}, ${userData.country || 'Україна'}` : userData.country || "Україна",
-            website: userData.website || "",
+            website: "",
             joinDate: userData.created_at ? new Date(userData.created_at).toLocaleDateString() : "Нещодавно",
-            followersCount: userData.followers_count || 0,
-            followingCount: userData.following_count || 0,
-            postsCount: userData.posts_count || 0,
-            profession: userData.profession || "",
+            followersCount: 0,
+            followingCount: 0,
+            postsCount: 0,
+            profession: userData.categories && userData.categories.length > 0 ? userData.categories[0] : "",
             status: userData.is_shareholder ? "Акціонер" : (userData.is_admin ? "Адміністратор" : "Учасник"),
             role: userData.is_admin ? "admin" : (userData.is_shareholder ? "shareholder" : "user"),
             isCurrentUser: isCurrentUser,
-            shares: userData.shares || 0,
-            percentage: userData.percentage || 0,
-            profit: userData.profit || 0,
-            title: userData.title || "",
+            shares: 0,
+            percentage: 0,
+            profit: 0,
+            title: "",
             categories: userData.categories || [],
             country: userData.country,
             city: userData.city
@@ -149,7 +152,16 @@ export default function Profile() {
             postsCount: 0,
             status: "Учасник",
             isCurrentUser: false,
-            categories: []
+            categories: [],
+            viber: "",
+            tiktok: "",
+            instagram: "",
+            facebook: "",
+            profession: "",
+            shares: 0,
+            percentage: 0,
+            profit: 0,
+            title: ""
           });
         }
         
@@ -167,13 +179,13 @@ export default function Profile() {
               name: userData?.full_name || "Користувач",
               username: userData?.phone_number || `user_${post.user_id.substring(0, 5)}`,
               avatarUrl: userData?.avatar_url || "https://i.pravatar.cc/150?img=1",
-              profession: userData?.profession || "",
+              profession: userData?.categories && userData.categories.length > 0 ? userData.categories[0] : "",
               categories: userData?.categories || []
             },
             imageUrl: post.media_url,
             caption: post.content,
-            likes: post.likes_count || 0,
-            comments: post.comments_count || 0,
+            likes: 0, // Default value if likes_count is not present
+            comments: 0, // Default value if comments_count is not present
             timeAgo: new Date(post.created_at).toLocaleDateString()
           })));
         } else {
@@ -215,10 +227,14 @@ export default function Profile() {
     }
   };
 
+  const handleEditProfile = () => {
+    setProfileEditorOpen(true);
+  };
+
   return (
     <div className="min-h-screen pb-10">
       <Navbar />
-      <ProfileHeader user={user} />
+      <ProfileHeader user={user} onEditProfile={handleEditProfile} />
       
       <div className="container mt-8 grid grid-cols-12 gap-6">
         {/* Sidebar на лівій стороні */}
@@ -430,17 +446,12 @@ export default function Profile() {
       </div>
       
       {isCurrentUser && (
-        <dialog id="profile-editor-modal" className="modal">
-          <div className="modal-box max-w-4xl">
-            <h2 className="text-2xl font-bold mb-6">Редагування профілю</h2>
-            <ProfileEditor user={user} onUpdate={() => window.location.reload()} />
-            <div className="modal-action">
-              <form method="dialog">
-                <Button>Закрити</Button>
-              </form>
-            </div>
-          </div>
-        </dialog>
+        <ProfileEditorDialog 
+          user={user} 
+          open={profileEditorOpen}
+          onOpenChange={setProfileEditorOpen}
+          onUpdate={() => window.location.reload()}
+        />
       )}
     </div>
   );

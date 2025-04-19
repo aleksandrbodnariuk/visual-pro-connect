@@ -15,9 +15,10 @@ interface PortfolioItem {
 interface PortfolioGridProps {
   items: PortfolioItem[];
   className?: string;
+  userId?: string; // Added userId prop
 }
 
-export function PortfolioGrid({ items, className }: PortfolioGridProps) {
+export function PortfolioGrid({ items, className, userId }: PortfolioGridProps) {
   return (
     <div className={cn("portfolio-grid", className)}>
       {items.map((item) => (

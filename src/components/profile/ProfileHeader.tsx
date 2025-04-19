@@ -26,9 +26,10 @@ export interface ProfileHeaderProps {
     profession?: string;
     isCurrentUser?: boolean;
   };
+  onEditProfile?: () => void;
 }
 
-export function ProfileHeader({ user }: ProfileHeaderProps) {
+export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
   const { sendFriendRequest, friends } = useFriendRequests();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isFriend, setIsFriend] = useState(false);
@@ -150,12 +151,7 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
               <Button 
                 variant="outline" 
                 className="gap-2"
-                onClick={() => {
-                  const profileEditorModal = document.getElementById('profile-editor-modal');
-                  if (profileEditorModal) {
-                    (profileEditorModal as any).showModal();
-                  }
-                }}
+                onClick={onEditProfile}
               >
                 <Edit className="h-4 w-4" />
                 <span>Редагувати профіль</span>
