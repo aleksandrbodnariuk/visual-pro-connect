@@ -6,17 +6,27 @@ import { Check, X, UserPlus } from "lucide-react";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 
 export function FriendsList({ userId }: { userId: string }) {
-  const { friendRequests, sendFriendRequest, respondToFriendRequest } = useFriendRequests();
+  const { friendRequests, friends, sendFriendRequest, respondToFriendRequest } = useFriendRequests();
   
   const pendingRequests = friendRequests.filter(
     request => request.receiver_id === userId && request.status === 'pending'
   );
 
-  const friends = friendRequests.filter(
+  const friendsList = friendRequests.filter(
     request => 
       request.status === 'accepted' && 
       (request.sender_id === userId || request.receiver_id === userId)
   );
+
+  // Функція для отримання ініціалів
+  const getInitials = (name: string | null): string => {
+    if (!name) return 'К';
+    const nameParts = name.split(' ');
+    if (nameParts.length >= 2) {
+      return `${nameParts[0].charAt(0)}${nameParts[1].charAt(0)}`;
+    }
+    return name.charAt(0);
+  };
 
   return (
     <Card>
@@ -30,9 +40,14 @@ export function FriendsList({ userId }: { userId: string }) {
                   <div key={request.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Avatar>
-                        <AvatarFallback>К</AvatarFallback>
+                        {request.sender?.avatar_url ? (
+                          <AvatarImage src={request.sender.avatar_url} />
+                        ) : null}
+                        <AvatarFallback>
+                          {request.sender?.full_name ? getInitials(request.sender.full_name) : 'К'}
+                        </AvatarFallback>
                       </Avatar>
-                      <span>Новий запит у друзі</span>
+                      <span>{request.sender?.full_name || 'Новий запит у друзі'}</span>
                     </div>
                     <div className="flex gap-2">
                       <Button 
@@ -58,15 +73,19 @@ export function FriendsList({ userId }: { userId: string }) {
           )}
 
           <h3 className="font-semibold">Друзі</h3>
-          {friends.length > 0 ? (
+          {friends && friends.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {friends.map((friend) => (
-                <div key={friend.id} className="flex items-center gap-2">
+                <div key={friend?.id} className="flex items-center gap-2">
                   <Avatar>
-                    <AvatarImage src={friend.avatar_url} />
-                    <AvatarFallback>К</AvatarFallback>
+                    {friend?.avatar_url ? (
+                      <AvatarImage src={friend.avatar_url} />
+                    ) : null}
+                    <AvatarFallback>
+                      {friend?.full_name ? getInitials(friend.full_name) : 'К'}
+                    </AvatarFallback>
                   </Avatar>
-                  <span>{friend.full_name || 'Користувач'}</span>
+                  <span>{friend?.full_name || 'Користувач'}</span>
                 </div>
               ))}
             </div>

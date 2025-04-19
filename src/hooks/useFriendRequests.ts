@@ -9,6 +9,17 @@ export interface FriendRequest {
   receiver_id: string;
   status: 'pending' | 'accepted' | 'rejected';
   created_at: string;
+  updated_at?: string;
+  sender?: {
+    id: string;
+    full_name: string | null;
+    avatar_url: string | null;
+  };
+  receiver?: {
+    id: string;
+    full_name: string | null;
+    avatar_url: string | null;
+  };
 }
 
 export function useFriendRequests() {
@@ -22,7 +33,7 @@ export function useFriendRequests() {
 
     const { data, error } = await supabase
       .from('friend_requests')
-      .select('*')
+      .select('*, sender:sender_id(id, full_name, avatar_url), receiver:receiver_id(id, full_name, avatar_url)')
       .or(`sender_id.eq.${currentUser.user.id},receiver_id.eq.${currentUser.user.id}`);
 
     if (error) {
@@ -30,7 +41,22 @@ export function useFriendRequests() {
       return;
     }
 
-    setFriendRequests(data || []);
+    // Перетворюємо status на коректний тип
+    const typedData = data?.map(item => ({
+      ...item,
+      status: item.status as 'pending' | 'accepted' | 'rejected'
+    })) || [];
+
+    setFriendRequests(typedData);
+    
+    // Відфільтруємо прийняті запити для відображення друзів
+    const acceptedRequests = typedData.filter(req => req.status === 'accepted');
+    const friendsList = acceptedRequests.map(req => {
+      const isSender = req.sender_id === currentUser.user.id;
+      return isSender ? req.receiver : req.sender;
+    }).filter(Boolean);
+    
+    setFriends(friendsList);
   };
 
   const sendFriendRequest = async (receiverId: string) => {
