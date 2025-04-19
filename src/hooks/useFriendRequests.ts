@@ -31,9 +31,10 @@ export function useFriendRequests() {
     const { data: currentUser } = await supabase.auth.getUser();
     if (!currentUser.user) return;
 
+    // Отримуємо запити в друзі без з'єднань
     const { data, error } = await supabase
       .from('friend_requests')
-      .select('*, sender:sender_id(id, full_name, avatar_url), receiver:receiver_id(id, full_name, avatar_url)')
+      .select('*')
       .or(`sender_id.eq.${currentUser.user.id},receiver_id.eq.${currentUser.user.id}`);
 
     if (error) {
@@ -41,16 +42,62 @@ export function useFriendRequests() {
       return;
     }
 
-    // Перетворюємо status на коректний тип
-    const typedData = data?.map(item => ({
-      ...item,
-      status: item.status as 'pending' | 'accepted' | 'rejected'
-    })) || [];
+    if (!data || data.length === 0) {
+      setFriendRequests([]);
+      setFriends([]);
+      setIsLoading(false);
+      return;
+    }
 
-    setFriendRequests(typedData);
+    // Збираємо унікальні ідентифікатори користувачів
+    const userIds = new Set<string>();
+    data.forEach(request => {
+      userIds.add(request.sender_id);
+      userIds.add(request.receiver_id);
+    });
+
+    // Отримуємо інформацію про всіх користувачів одним запитом
+    const { data: usersData, error: usersError } = await supabase
+      .from('users')
+      .select('id, full_name, avatar_url')
+      .in('id', Array.from(userIds));
+
+    if (usersError) {
+      toast.error('Помилка при завантаженні інформації про користувачів');
+      return;
+    }
+
+    // Створюємо карту користувачів для швидкого доступу
+    const usersMap = new Map();
+    usersData?.forEach(user => {
+      usersMap.set(user.id, user);
+    });
+
+    // Додаємо інформацію про користувачів до запитів
+    const enrichedRequests = data.map(request => {
+      const sender = usersMap.get(request.sender_id);
+      const receiver = usersMap.get(request.receiver_id);
+      
+      return {
+        ...request,
+        status: request.status as 'pending' | 'accepted' | 'rejected',
+        sender: sender ? {
+          id: sender.id,
+          full_name: sender.full_name,
+          avatar_url: sender.avatar_url
+        } : undefined,
+        receiver: receiver ? {
+          id: receiver.id,
+          full_name: receiver.full_name,
+          avatar_url: receiver.avatar_url
+        } : undefined
+      };
+    });
+
+    setFriendRequests(enrichedRequests);
     
     // Відфільтруємо прийняті запити для відображення друзів
-    const acceptedRequests = typedData.filter(req => req.status === 'accepted');
+    const acceptedRequests = enrichedRequests.filter(req => req.status === 'accepted');
     const friendsList = acceptedRequests.map(req => {
       const isSender = req.sender_id === currentUser.user.id;
       return isSender ? req.receiver : req.sender;
