@@ -23,6 +23,101 @@ export function SettingsTab() {
     localStorage.setItem("enableNotifications", settings.enableNotifications.toString());
     localStorage.setItem("maintenanceMode", settings.maintenanceMode.toString());
     
+    // Додамо декілька демо-користувачів для розділу "Знайти контакти"
+    const existingUsers = JSON.parse(localStorage.getItem("users") || "[]");
+    
+    // Перевіримо, чи вже є користувачі з професійними категоріями
+    const hasProfessionalUsers = existingUsers.some((user: any) => 
+      user.categories && user.categories.length > 0 && 
+      (user.categories.includes('photographer') || 
+       user.categories.includes('videographer') || 
+       user.categories.includes('musician'))
+    );
+    
+    // Якщо професійних користувачів немає, додамо їх
+    if (!hasProfessionalUsers) {
+      const professionalUsers = [
+        {
+          id: "pro1",
+          firstName: "Олександр",
+          lastName: "Петренко",
+          phoneNumber: "0971234567",
+          password: "password123",
+          avatarUrl: "https://i.pravatar.cc/150?img=1",
+          categories: ["photographer"],
+          bio: "Професійний фотограф з 10-річним досвідом. Спеціалізуюсь на весільній та комерційній фотографії.",
+          city: "Київ",
+          country: "Україна",
+          instagram: "alex_photo",
+          facebook: "alex.photo",
+          isShareHolder: true
+        },
+        {
+          id: "pro2",
+          firstName: "Марія",
+          lastName: "Коваленко",
+          phoneNumber: "0982345678",
+          password: "password123",
+          avatarUrl: "https://i.pravatar.cc/150?img=5",
+          categories: ["videographer"],
+          bio: "Відеограф. Створюю емоційні відео для весіль, бізнесу та особистих проектів.",
+          city: "Львів",
+          country: "Україна",
+          instagram: "maria_video",
+          facebook: "maria.videography",
+          isShareHolder: true
+        },
+        {
+          id: "pro3",
+          firstName: "Іван",
+          lastName: "Шевченко",
+          phoneNumber: "0993456789",
+          password: "password123",
+          avatarUrl: "https://i.pravatar.cc/150?img=8",
+          categories: ["musician"],
+          bio: "Музикант, DJ. Забезпечу чудовий музичний супровід для вашого свята.",
+          city: "Одеса",
+          country: "Україна",
+          instagram: "ivan_music",
+          facebook: "ivan.music.dj",
+          isShareHolder: false
+        },
+        {
+          id: "pro4",
+          firstName: "Наталія",
+          lastName: "Мельник",
+          phoneNumber: "0964567890",
+          password: "password123",
+          avatarUrl: "https://i.pravatar.cc/150?img=9",
+          categories: ["host"],
+          bio: "Ведуча свят з 10-річним досвідом. Проведу ваше свято на найвищому рівні.",
+          city: "Харків",
+          country: "Україна",
+          instagram: "natali_host",
+          facebook: "natali.events",
+          isShareHolder: false
+        },
+        {
+          id: "pro5",
+          firstName: "Сергій",
+          lastName: "Бондаренко",
+          phoneNumber: "0975678901",
+          password: "password123",
+          avatarUrl: "https://i.pravatar.cc/150?img=12",
+          categories: ["pyrotechnician"],
+          bio: "Піротехнік. Створюю незабутні фаєр-шоу та феєрверки для будь-яких подій.",
+          city: "Дніпро",
+          country: "Україна",
+          instagram: "sergey_fire",
+          facebook: "sergey.pyro",
+          isShareHolder: false
+        }
+      ];
+      
+      const updatedUsers = [...existingUsers, ...professionalUsers];
+      localStorage.setItem("users", JSON.stringify(updatedUsers));
+    }
+    
     toast.success("Налаштування збережено");
   };
 

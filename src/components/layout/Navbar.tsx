@@ -83,7 +83,11 @@ export function Navbar() {
       <div className="container flex h-16 items-center justify-between py-4">
         <div className="flex items-center gap-2 md:gap-4">
           <Link to="/" className="flex items-center gap-2">
-            <Camera className="h-6 w-6 text-secondary" />
+            <img 
+              src="/lovable-uploads/4c2129b2-6d63-43a9-9c10-18cf11008adb.png" 
+              alt="B&C Спільнота" 
+              className="h-9 w-9" 
+            />
             <span className="hidden font-heading text-xl font-bold md:inline-block">
               <span className="text-gradient-purple">Спільнота</span>
               <span> B&C</span>

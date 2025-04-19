@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
+import { Facebook, Instagram, MessageCircle } from 'lucide-react';
 
 export default function Settings() {
   const { language } = useLanguage();
@@ -27,7 +28,11 @@ export default function Settings() {
   const [bio, setBio] = useState('');
   const [location, setLocation] = useState('');
   const [website, setWebsite] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
+  
+  // Соціальні мережі
+  const [instagram, setInstagram] = useState('');
+  const [facebook, setFacebook] = useState('');
+  const [viber, setViber] = useState('');
   
   // Поля для зміни паролю
   const [currentPassword, setCurrentPassword] = useState('');
@@ -64,7 +69,11 @@ export default function Settings() {
     setBio(userData.bio || '');
     setLocation(userData.location || '');
     setWebsite(userData.website || '');
-    setAvatarUrl(userData.avatarUrl || '');
+    
+    // Соціальні мережі
+    setInstagram(userData.instagram || '');
+    setFacebook(userData.facebook || '');
+    setViber(userData.viber || '');
     
     // Встановлення вибраних категорій
     setSelectedCategories(userData.categories || []);
@@ -87,7 +96,9 @@ export default function Settings() {
       bio,
       location,
       website,
-      avatarUrl,
+      instagram,
+      facebook,
+      viber,
       categories: selectedCategories
     };
     
@@ -104,7 +115,9 @@ export default function Settings() {
           bio,
           location,
           website,
-          avatarUrl,
+          instagram,
+          facebook,
+          viber,
           categories: selectedCategories
         };
       }
@@ -234,6 +247,7 @@ export default function Settings() {
                   <TabsTrigger value="profile">Профіль</TabsTrigger>
                   <TabsTrigger value="security">Безпека</TabsTrigger>
                   <TabsTrigger value="categories">Професійні категорії</TabsTrigger>
+                  <TabsTrigger value="social">Соціальні мережі</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="profile" className="space-y-4">
@@ -293,19 +307,6 @@ export default function Settings() {
                       value={website}
                       onChange={(e) => setWebsite(e.target.value)}
                     />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="avatarUrl">URL зображення профілю</Label>
-                    <Input
-                      id="avatarUrl"
-                      value={avatarUrl}
-                      onChange={(e) => setAvatarUrl(e.target.value)}
-                      placeholder="https://example.com/avatar.jpg"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Введіть URL зображення для аватара профілю. Рекомендовано квадратне зображення.
-                    </p>
                   </div>
                   
                   <Button onClick={handleSaveProfile}>Зберегти зміни</Button>
@@ -381,6 +382,59 @@ export default function Settings() {
                   </div>
                   
                   <Button onClick={handleSaveProfile}>Зберегти категорії</Button>
+                </TabsContent>
+                
+                <TabsContent value="social" className="space-y-4">
+                  <div>
+                    <h2 className="text-lg font-semibold mb-2">Соціальні мережі</h2>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Додайте посилання на ваші соціальні мережі, щоб інші користувачі могли вас знайти
+                    </p>
+                    <Separator className="my-4" />
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-4">
+                      <Instagram className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1 space-y-1">
+                        <Label htmlFor="instagram">Instagram</Label>
+                        <Input
+                          id="instagram"
+                          value={instagram}
+                          onChange={(e) => setInstagram(e.target.value)}
+                          placeholder="Ваш username в Instagram"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-4">
+                      <Facebook className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1 space-y-1">
+                        <Label htmlFor="facebook">Facebook</Label>
+                        <Input
+                          id="facebook"
+                          value={facebook}
+                          onChange={(e) => setFacebook(e.target.value)}
+                          placeholder="Посилання на ваш профіль у Facebook"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-4">
+                      <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1 space-y-1">
+                        <Label htmlFor="viber">Viber</Label>
+                        <Input
+                          id="viber"
+                          value={viber}
+                          onChange={(e) => setViber(e.target.value)}
+                          placeholder="Ваш номер у Viber"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Button onClick={handleSaveProfile}>Зберегти соціальні мережі</Button>
                 </TabsContent>
               </Tabs>
             </div>
