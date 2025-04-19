@@ -1,19 +1,12 @@
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/layout/Navbar";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "@/components/feed/PostCard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { PiggyBank, DollarSign, Crown, MoreHorizontal, Edit, Trash2 } from "lucide-react";
-import { useLanguage } from '@/context/LanguageContext';
-import { translations } from '@/lib/translations';
-import { ProfileEditorDialog } from "@/components/profile/ProfileEditorDialog";
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
 import { PostMenu } from "@/components/profile/PostMenu";
 import { toast } from "sonner";
 
@@ -207,8 +200,8 @@ export default function Profile() {
             },
             imageUrl: post.media_url,
             caption: post.content,
-            likes: post.likes_count || 0,
-            comments: post.comments_count || 0,
+            likes: post.likes_count ?? 0,
+            comments: post.comments_count ?? 0,
             timeAgo: new Date(post.created_at).toLocaleDateString()
           })));
         } else {
