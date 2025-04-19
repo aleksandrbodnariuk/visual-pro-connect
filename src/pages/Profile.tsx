@@ -12,6 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { PiggyBank, DollarSign, Crown } from "lucide-react";
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
+import { ProfileEditor } from "@/components/profile/ProfileEditor";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 
 // Тестові дані для демонстрації портфоліо
 const PORTFOLIO_ITEMS = [
@@ -76,114 +79,118 @@ export default function Profile() {
   
   useEffect(() => {
     // Завантаження даних користувача
-    const fetchUser = () => {
+    const fetchUser = async () => {
       setIsLoading(true);
       
-      // Отримуємо поточного користувача
-      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
-      
-      // Перевіряємо, чи це профіль поточного користувача
-      setIsCurrentUser(currentUser && currentUser.id === userId);
-      
-      // Отримуємо всіх користувачів
-      const users = JSON.parse(localStorage.getItem("users") || "[]");
-      
-      // Шукаємо користувача з відповідним ID
-      let foundUser = users.find((u: any) => u.id === userId);
-      
-      // Якщо користувача не знайдено і запитується сторінка поточного користувача
-      if (!foundUser && currentUser && (userId === currentUser.id)) {
-        foundUser = currentUser;
-      }
-      
-      // Якщо користувача знайдено
-      if (foundUser) {
-        // Підготовка даних користувача для відображення
-        setUser({
-          id: foundUser.id,
-          name: `${foundUser.firstName} ${foundUser.lastName}`,
-          username: foundUser.username || `user_${foundUser.id.substring(0, 5)}`,
-          avatarUrl: foundUser.avatarUrl || "https://i.pravatar.cc/150?img=1",
-          coverUrl: foundUser.coverUrl || "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
-          bio: foundUser.bio || "Користувач платформи Visual Pro Connect",
-          phoneNumber: foundUser.phoneNumber,
-          viber: foundUser.viber,
-          tiktok: foundUser.tiktok,
-          instagram: foundUser.instagram,
-          facebook: foundUser.facebook,
-          location: foundUser.location || "Україна",
-          website: foundUser.website || "",
-          joinDate: foundUser.createdAt ? new Date(foundUser.createdAt).toLocaleDateString() : "Нещодавно",
-          followersCount: foundUser.followersCount || 0,
-          followingCount: foundUser.followingCount || 0,
-          postsCount: foundUser.postsCount || 0,
-          profession: foundUser.profession || "",
-          status: foundUser.status || "Учасник",
-          role: foundUser.role || "user",
-          isCurrentUser: isCurrentUser,
-          // Поля для акціонерів
-          shares: foundUser.shares || 0,
-          percentage: foundUser.percentage || 0,
-          profit: foundUser.profit || 0,
-          title: foundUser.title || "",
-          categories: foundUser.categories || []
-        });
+      try {
+        // Отримуємо поточного користувача
+        const { data: authData } = await supabase.auth.getUser();
+        const currentUser = authData.user;
+        
+        // Перевіряємо, чи це профіль поточного користувача
+        if (currentUser) {
+          setIsCurrentUser(currentUser.id === userId);
+        }
+        
+        // Спробуємо отримати користувача з Supabase
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .single();
+        
+        if (userData) {
+          // Підготовка даних користувача для відображення
+          setUser({
+            id: userData.id,
+            name: userData.full_name || "Користувач",
+            username: userData.phone_number || `user_${userData.id.substring(0, 5)}`,
+            avatarUrl: userData.avatar_url,
+            coverUrl: userData.cover_url || "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
+            bio: userData.bio || "Користувач платформи Visual Pro Connect",
+            phoneNumber: userData.phone_number,
+            viber: userData.viber,
+            tiktok: userData.tiktok,
+            instagram: userData.instagram,
+            facebook: userData.facebook,
+            location: userData.city ? `${userData.city}, ${userData.country || 'Україна'}` : userData.country || "Україна",
+            website: userData.website || "",
+            joinDate: userData.created_at ? new Date(userData.created_at).toLocaleDateString() : "Нещодавно",
+            followersCount: userData.followers_count || 0,
+            followingCount: userData.following_count || 0,
+            postsCount: userData.posts_count || 0,
+            profession: userData.profession || "",
+            status: userData.is_shareholder ? "Акціонер" : (userData.is_admin ? "Адміністратор" : "Учасник"),
+            role: userData.is_admin ? "admin" : (userData.is_shareholder ? "shareholder" : "user"),
+            isCurrentUser: isCurrentUser,
+            shares: userData.shares || 0,
+            percentage: userData.percentage || 0,
+            profit: userData.profit || 0,
+            title: userData.title || "",
+            categories: userData.categories || [],
+            country: userData.country,
+            city: userData.city
+          });
+        } else {
+          console.log("Користувача не знайдено або помилка:", error);
+          // Якщо користувача не знайдено, використовуємо тестові дані
+          setUser({
+            id: "user1",
+            name: "Олександр Петренко",
+            username: "alex_photo",
+            avatarUrl: "https://i.pravatar.cc/150?img=1",
+            coverUrl: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
+            bio: "Користувач платформи Visual Pro Connect",
+            location: "Київ, Україна",
+            website: "",
+            joinDate: "Нещодавно",
+            followersCount: 0,
+            followingCount: 0,
+            postsCount: 0,
+            status: "Учасник",
+            isCurrentUser: false,
+            categories: []
+          });
+        }
         
         // Завантаження постів користувача
-        const allPosts = JSON.parse(localStorage.getItem("posts") || "[]");
-        const userPosts = allPosts.filter((post: any) => post.author && post.author.id === userId);
+        const { data: postsData } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('user_id', userId);
         
-        if (userPosts.length > 0) {
-          setPosts(userPosts);
+        if (postsData && postsData.length > 0) {
+          setPosts(postsData.map(post => ({
+            id: post.id,
+            author: {
+              id: userId,
+              name: userData?.full_name || "Користувач",
+              username: userData?.phone_number || `user_${post.user_id.substring(0, 5)}`,
+              avatarUrl: userData?.avatar_url || "https://i.pravatar.cc/150?img=1",
+              profession: userData?.profession || "",
+              categories: userData?.categories || []
+            },
+            imageUrl: post.media_url,
+            caption: post.content,
+            likes: post.likes_count || 0,
+            comments: post.comments_count || 0,
+            timeAgo: new Date(post.created_at).toLocaleDateString()
+          })));
         } else {
           // Якщо немає постів, використовуємо тестові дані
-          setPosts([
-            {
-              id: "1",
-              author: {
-                id: userId,
-                name: `${foundUser.firstName} ${foundUser.lastName}`,
-                username: foundUser.username || `user_${foundUser.id.substring(0, 5)}`,
-                avatarUrl: foundUser.avatarUrl || "https://i.pravatar.cc/150?img=1",
-                profession: foundUser.profession || "",
-                categories: foundUser.categories || []
-              },
-              imageUrl: "https://images.unsplash.com/photo-1500673922987-e212871fec22",
-              caption: "Вечірня фотосесія із використанням світлових ефектів. #creative #photoshoot #lights",
-              likes: 124,
-              comments: 18,
-              timeAgo: "2 години тому"
-            }
-          ]);
+          setPosts([]);
         }
-      } else {
-        // Якщо користувача не знайдено, використовуємо тестові дані
-        setUser({
-          id: "user1",
-          name: "Олександр Петренко",
-          username: "alex_photo",
-          avatarUrl: "https://i.pravatar.cc/150?img=1",
-          coverUrl: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
-          bio: "Користувач платформи Visual Pro Connect",
-          location: "Київ, Україна",
-          website: "",
-          joinDate: "Нещодавно",
-          followersCount: 0,
-          followingCount: 0,
-          postsCount: 0,
-          status: "Учасник",
-          isCurrentUser: false,
-          categories: []
-        });
-        
-        setPosts([]);
+      } catch (error) {
+        console.error("Помилка при завантаженні даних:", error);
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
     
-    fetchUser();
-  }, [userId, isCurrentUser]);
+    if (userId) {
+      fetchUser();
+    }
+  }, [userId]);
   
   if (isLoading || !user) {
     return (
@@ -221,18 +228,6 @@ export default function Profile() {
         
         <main className="col-span-12 md:col-span-9">
           <Tabs defaultValue="posts" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="posts">Публікації</TabsTrigger>
-              <TabsTrigger value="portfolio">Портфоліо</TabsTrigger>
-              {(user.role === "representative" || user.status === "Представник" || (user.categories && user.categories.length > 0)) && (
-                <TabsTrigger value="services">Послуги</TabsTrigger>
-              )}
-              {(user.role === "shareholder" || user.status === "Акціонер") && (
-                <TabsTrigger value="shareholder">Акціонер</TabsTrigger>
-              )}
-              <TabsTrigger value="reviews">Відгуки</TabsTrigger>
-            </TabsList>
-            
             <TabsContent value="posts" className="mt-6">
               <div className="space-y-6">
                 {posts.length > 0 ? (
@@ -248,7 +243,7 @@ export default function Profile() {
             </TabsContent>
             
             <TabsContent value="portfolio" className="mt-6">
-              <PortfolioGrid items={PORTFOLIO_ITEMS} />
+              <PortfolioGrid items={PORTFOLIO_ITEMS} userId={user.id} />
             </TabsContent>
             
             {(user.role === "representative" || user.status === "Представник" || (user.categories && user.categories.length > 0)) && (
@@ -433,6 +428,20 @@ export default function Profile() {
           </Tabs>
         </main>
       </div>
+      
+      {isCurrentUser && (
+        <dialog id="profile-editor-modal" className="modal">
+          <div className="modal-box max-w-4xl">
+            <h2 className="text-2xl font-bold mb-6">Редагування профілю</h2>
+            <ProfileEditor user={user} onUpdate={() => window.location.reload()} />
+            <div className="modal-action">
+              <form method="dialog">
+                <Button>Закрити</Button>
+              </form>
+            </div>
+          </div>
+        </dialog>
+      )}
     </div>
   );
 }

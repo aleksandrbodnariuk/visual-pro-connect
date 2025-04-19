@@ -1,9 +1,13 @@
+
 import { Button } from "@/components/ui/button";
 import { UserPlus } from "lucide-react";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import { Camera, MapPin, Link as LinkIcon, Calendar, Edit } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 export interface ProfileHeaderProps {
   user: {
@@ -25,8 +29,12 @@ export interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({ user }: ProfileHeaderProps) {
-  const { sendFriendRequest } = useFriendRequests();
+  const { sendFriendRequest, friends } = useFriendRequests();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isFriend, setIsFriend] = useState(false);
+  
   const {
+    id: userId,
     name,
     username,
     avatarUrl,
@@ -41,6 +49,35 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
     profession,
     isCurrentUser
   } = user;
+
+  useEffect(() => {
+    const checkCurrentUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) {
+        setCurrentUserId(data.user.id);
+      }
+    };
+    
+    checkCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    // Check if this user is already a friend
+    if (friends && userId) {
+      const friendExists = friends.some(friend => friend?.id === userId);
+      setIsFriend(friendExists);
+    }
+  }, [friends, userId]);
+
+  const handleAddFriend = async () => {
+    if (!currentUserId) {
+      toast.error('Ви повинні увійти в систему');
+      return;
+    }
+    
+    await sendFriendRequest(userId);
+    toast.success('Запит у друзі надіслано');
+  };
 
   return (
     <div className="animate-fade-in">
@@ -110,12 +147,32 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
 
           <div className="flex items-center gap-2">
             {isCurrentUser ? (
-              <Button variant="outline" className="gap-2">
+              <Button 
+                variant="outline" 
+                className="gap-2"
+                onClick={() => {
+                  const profileEditorModal = document.getElementById('profile-editor-modal');
+                  if (profileEditorModal) {
+                    (profileEditorModal as any).showModal();
+                  }
+                }}
+              >
                 <Edit className="h-4 w-4" />
                 <span>Редагувати профіль</span>
               </Button>
             ) : (
-              <Button className="bg-gradient-purple">Підписатися</Button>
+              <div className="flex gap-2">
+                <Button className="bg-gradient-purple">Підписатися</Button>
+                {!isFriend && currentUserId && !isCurrentUser && (
+                  <Button 
+                    variant="secondary" 
+                    onClick={handleAddFriend}
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Додати в друзі
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -157,18 +214,6 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
             </TabsList>
           </Tabs>
         </div>
-      </div>
-
-      <div className="flex items-center gap-2 mt-4">
-        {user && !user.isCurrentUser && (
-          <Button 
-            variant="secondary" 
-            onClick={() => sendFriendRequest(user.id)}
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Додати в друзі
-          </Button>
-        )}
       </div>
     </div>
   );

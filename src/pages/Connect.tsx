@@ -19,42 +19,60 @@ export default function Connect() {
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { sendFriendRequest, friends } = useFriendRequests();
 
   useEffect(() => {
+    const checkCurrentUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) {
+        setCurrentUserId(data.user.id);
+      }
+    };
+    
+    checkCurrentUser();
     fetchUsers();
   }, []);
 
   const fetchUsers = async () => {
     try {
+      setIsLoading(true);
+      
       // Спроба отримати користувачів з Supabase
       const { data, error } = await supabase
         .from('users')
         .select('*');
       
-      if (error) throw error;
+      if (error) {
+        console.error("Помилка при завантаженні користувачів:", error);
+        throw error;
+      }
       
       if (data && data.length > 0) {
         setUsers(data);
         setFilteredUsers(data);
-        return;
+      } else {
+        console.log("Користувачів не знайдено");
+        setUsers([]);
+        setFilteredUsers([]);
       }
     } catch (err) {
       console.error("Помилка при завантаженні користувачів:", err);
-      
-      // Запасний варіант - завантаження з localStorage
-      const storedUsers = localStorage.getItem("users");
-      if (storedUsers) {
-        const parsedUsers = JSON.parse(storedUsers);
-        setUsers(parsedUsers);
-        setFilteredUsers(parsedUsers);
-      }
+      toast.error("Не вдалося завантажити список користувачів");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     let result = users;
+    
+    // Не показуємо поточного користувача у списку
+    if (currentUserId) {
+      result = result.filter(user => user.id !== currentUserId);
+    }
     
     // Застосувати фільтр пошуку
     if (searchTerm) {
@@ -77,7 +95,7 @@ export default function Connect() {
     }
     
     setFilteredUsers(result);
-  }, [searchTerm, categoryFilter, users]);
+  }, [searchTerm, categoryFilter, users, currentUserId]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -91,13 +109,29 @@ export default function Connect() {
     navigate(`/messages?userId=${userId}`);
   };
 
-  const handleSendFriendRequest = (userId: string) => {
-    sendFriendRequest(userId);
-    toast.success("Запит у друзі надіслано");
+  const handleSendFriendRequest = async (userId: string) => {
+    if (!currentUserId) {
+      toast.error("Ви повинні увійти в систему");
+      return;
+    }
+    
+    try {
+      await sendFriendRequest(userId);
+      toast.success("Запит у друзі надіслано");
+    } catch (error) {
+      console.error("Помилка при надсиланні запиту:", error);
+      toast.error("Помилка при надсиланні запиту у друзі");
+    }
   };
 
   const isFriend = (userId: string) => {
-    return friends.some(friend => friend?.id === userId);
+    return friends && friends.some(friend => friend?.id === userId);
+  };
+
+  // Функція для створення заглушок аватара
+  const getAvatarFallback = (fullName: string) => {
+    if (!fullName) return 'КР';
+    return fullName.split(' ').map(part => part[0]).join('').substring(0, 2);
   };
 
   return (
@@ -145,23 +179,29 @@ export default function Connect() {
           </div>
           
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredUsers.length > 0 ? (
+            {isLoading ? (
+              <div className="col-span-full text-center py-12 border rounded-lg bg-muted/30">
+                <div className="animate-spin h-8 w-8 mx-auto border-4 border-primary border-t-transparent rounded-full mb-3"></div>
+                <h3 className="text-xl font-medium mb-2">Завантаження контактів...</h3>
+              </div>
+            ) : filteredUsers.length > 0 ? (
               filteredUsers.map((user) => (
                 <Card key={user.id} className="overflow-hidden hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex flex-col items-center text-center p-4">
                       <Avatar className="h-24 w-24 mb-4">
                         <AvatarImage src={user.avatar_url} alt={user.full_name} />
-                        <AvatarFallback>
-                          {user.full_name 
-                            ? user.full_name.split(' ').map((part: string) => part[0]).join('').substring(0, 2) 
-                            : 'КР'}
-                        </AvatarFallback>
+                        <AvatarFallback>{getAvatarFallback(user.full_name)}</AvatarFallback>
                       </Avatar>
                       <h3 className="font-semibold text-lg">{user.full_name || 'Користувач'}</h3>
                       {user.categories && user.categories.length > 0 && (
                         <Badge variant="secondary" className="mt-1">
-                          {user.categories[0]}
+                          {user.categories[0] === 'photographer' ? 'Фотограф' : 
+                           user.categories[0] === 'videographer' ? 'Відеограф' : 
+                           user.categories[0] === 'musician' ? 'Музикант' : 
+                           user.categories[0] === 'host' ? 'Ведучий' : 
+                           user.categories[0] === 'pyrotechnic' ? 'Піротехнік' : 
+                           user.categories[0]}
                         </Badge>
                       )}
                       <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
@@ -180,7 +220,7 @@ export default function Connect() {
                       >
                         <MessageSquare className="h-4 w-4 mr-1" /> Написати
                       </Button>
-                      {!isFriend(user.id) && (
+                      {!isFriend(user.id) && currentUserId && (
                         <Button 
                           variant="outline" 
                           size="sm"
