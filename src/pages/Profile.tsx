@@ -9,14 +9,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "@/components/feed/PostCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PiggyBank, DollarSign, Crown } from "lucide-react";
+import { PiggyBank, DollarSign, Crown, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
-import { ProfileEditor } from "@/components/profile/ProfileEditor";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ProfileEditorDialog } from "@/components/profile/ProfileEditorDialog";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { ProfileEditorDialog } from "@/components/profile/ProfileEditorDialog";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 // Тестові дані для демонстрації портфоліо
 const PORTFOLIO_ITEMS = [
@@ -86,20 +91,24 @@ export default function Profile() {
       setIsLoading(true);
       
       try {
-        // Отримуємо поточного користувача
-        const { data: authData } = await supabase.auth.getUser();
-        const currentUser = authData.user;
+        // Спочатку отримуємо дані з localStorage, якщо вони є
+        const currentUser = localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser') || '{}') : null;
+        
+        // Якщо userId не вказано, показуємо профіль поточного користувача
+        const targetUserId = userId || (currentUser ? currentUser.id : null);
+        
+        if (!targetUserId) {
+          throw new Error('Не вдалося визначити ID користувача');
+        }
         
         // Перевіряємо, чи це профіль поточного користувача
-        if (currentUser) {
-          setIsCurrentUser(currentUser.id === userId);
-        }
+        setIsCurrentUser(currentUser && currentUser.id === targetUserId);
         
         // Спробуємо отримати користувача з Supabase
         const { data: userData, error } = await supabase
           .from('users')
           .select('*')
-          .eq('id', userId)
+          .eq('id', targetUserId)
           .single();
         
         if (userData) {
@@ -111,7 +120,6 @@ export default function Profile() {
             avatarUrl: userData.avatar_url,
             coverUrl: userData.avatar_url || "https://images.unsplash.com/photo-1605810230434-7631ac76ec81", // Default cover image
             bio: userData.full_name ? `${userData.full_name} на платформі Visual Pro Connect` : "Користувач платформи Visual Pro Connect",
-            phoneNumber: userData.phone_number,
             viber: userData.phone_number || "",
             tiktok: "",
             instagram: "",
@@ -134,6 +142,37 @@ export default function Profile() {
             country: userData.country,
             city: userData.city
           });
+        } else if (currentUser && !userId) {
+          // Якщо дані не знайдено в Supabase, але є в localStorage
+          setUser({
+            id: currentUser.id,
+            name: `${currentUser.firstName} ${currentUser.lastName}`,
+            username: currentUser.email || currentUser.phoneNumber || `user_${currentUser.id.substring(0, 5)}`,
+            avatarUrl: currentUser.avatarUrl,
+            coverUrl: currentUser.coverUrl || "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
+            bio: `${currentUser.firstName} ${currentUser.lastName} на платформі Visual Pro Connect`,
+            viber: currentUser.phoneNumber || "",
+            tiktok: "",
+            instagram: "",
+            facebook: "",
+            location: currentUser.city ? `${currentUser.city}, ${currentUser.country || 'Україна'}` : currentUser.country || "Україна",
+            website: "",
+            joinDate: "Нещодавно",
+            followersCount: 0,
+            followingCount: 0,
+            postsCount: 0,
+            profession: currentUser.categories && currentUser.categories.length > 0 ? currentUser.categories[0] : "",
+            status: currentUser.isShareHolder ? "Акціонер" : (currentUser.isAdmin ? "Адміністратор" : "Учасник"),
+            role: currentUser.isAdmin ? "admin" : (currentUser.isShareHolder ? "shareholder" : "user"),
+            isCurrentUser: true,
+            shares: currentUser.shares || 0,
+            percentage: currentUser.percentage || 0,
+            profit: currentUser.profit || 0,
+            title: currentUser.title || "",
+            categories: currentUser.categories || [],
+            country: currentUser.country,
+            city: currentUser.city
+          });
         } else {
           console.log("Користувача не знайдено або помилка:", error);
           // Якщо користувача не знайдено, використовуємо тестові дані
@@ -152,12 +191,12 @@ export default function Profile() {
             postsCount: 0,
             status: "Учасник",
             isCurrentUser: false,
-            categories: [],
+            categories: ["photographer"],
             viber: "",
             tiktok: "",
             instagram: "",
             facebook: "",
-            profession: "",
+            profession: "photographer",
             shares: 0,
             percentage: 0,
             profit: 0,
@@ -169,39 +208,64 @@ export default function Profile() {
         const { data: postsData } = await supabase
           .from('posts')
           .select('*')
-          .eq('user_id', userId);
+          .eq('user_id', targetUserId);
         
         if (postsData && postsData.length > 0) {
           setPosts(postsData.map(post => ({
             id: post.id,
             author: {
-              id: userId,
-              name: userData?.full_name || "Користувач",
-              username: userData?.phone_number || `user_${post.user_id.substring(0, 5)}`,
-              avatarUrl: userData?.avatar_url || "https://i.pravatar.cc/150?img=1",
-              profession: userData?.categories && userData.categories.length > 0 ? userData.categories[0] : "",
-              categories: userData?.categories || []
+              id: targetUserId,
+              name: userData?.full_name || currentUser?.firstName + " " + currentUser?.lastName || "Користувач",
+              username: userData?.phone_number || currentUser?.phoneNumber || `user_${post.user_id.substring(0, 5)}`,
+              avatarUrl: userData?.avatar_url || currentUser?.avatarUrl || "https://i.pravatar.cc/150?img=1",
+              profession: userData?.categories && userData.categories.length > 0 ? userData.categories[0] : currentUser?.categories?.[0] || "",
+              categories: userData?.categories || currentUser?.categories || []
             },
             imageUrl: post.media_url,
             caption: post.content,
-            likes: 0, // Default value if likes_count is not present
-            comments: 0, // Default value if comments_count is not present
+            likes: post.likes_count || 0,
+            comments: post.comments_count || 0,
             timeAgo: new Date(post.created_at).toLocaleDateString()
           })));
         } else {
-          // Якщо немає постів, використовуємо тестові дані
+          // Якщо немає постів, використовуємо порожній масив
           setPosts([]);
         }
       } catch (error) {
         console.error("Помилка при завантаженні даних:", error);
+        // Показуємо заглушку профілю
+        setUser({
+          id: "user1",
+          name: "Олександр Петренко",
+          username: "alex_photo",
+          avatarUrl: "https://i.pravatar.cc/150?img=1",
+          coverUrl: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
+          bio: "Користувач платформи Visual Pro Connect",
+          location: "Київ, Україна",
+          website: "",
+          joinDate: "Нещодавно",
+          followersCount: 0,
+          followingCount: 0,
+          postsCount: 0,
+          status: "Учасник",
+          isCurrentUser: false,
+          categories: ["photographer"],
+          viber: "",
+          tiktok: "",
+          instagram: "",
+          facebook: "",
+          profession: "photographer",
+          shares: 0,
+          percentage: 0,
+          profit: 0,
+          title: ""
+        });
       } finally {
         setIsLoading(false);
       }
     };
     
-    if (userId) {
-      fetchUser();
-    }
+    fetchUser();
   }, [userId]);
   
   if (isLoading || !user) {
@@ -215,6 +279,54 @@ export default function Profile() {
     );
   }
 
+  const handleEditProfile = () => {
+    setProfileEditorOpen(true);
+  };
+
+  const handleEditPost = (postId: string) => {
+    // Реалізація редагування публікації
+    toast.info(`Редагування публікації ${postId}`);
+  };
+
+  const handleDeletePost = (postId: string) => {
+    // Видалення публікації
+    setPosts(posts.filter(post => post.id !== postId));
+    toast.success("Публікацію видалено");
+  };
+
+  // Додаємо опції до PostCard
+  const renderPostWithOptions = (post: any) => {
+    return (
+      <div key={post.id} className="relative">
+        {isCurrentUser && (
+          <div className="absolute right-4 top-4 z-10">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full h-8 w-8">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleEditPost(post.id)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Редагувати публікацію
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleDeletePost(post.id)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Видалити публікацію
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+        <PostCard {...post} />
+      </div>
+    );
+  };
+
   // Отримуємо назви категорій для відображення
   const getCategoryName = (categoryId: string) => {
     switch(categoryId) {
@@ -225,10 +337,6 @@ export default function Profile() {
       case 'pyrotechnician': return 'Піротехнік';
       default: return categoryId;
     }
-  };
-
-  const handleEditProfile = () => {
-    setProfileEditorOpen(true);
   };
 
   return (
@@ -247,9 +355,7 @@ export default function Profile() {
             <TabsContent value="posts" className="mt-6">
               <div className="space-y-6">
                 {posts.length > 0 ? (
-                  posts.map((post) => (
-                    <PostCard key={post.id} {...post} />
-                  ))
+                  posts.map((post) => renderPostWithOptions(post))
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     Немає публікацій для відображення
@@ -259,13 +365,24 @@ export default function Profile() {
             </TabsContent>
             
             <TabsContent value="portfolio" className="mt-6">
-              <PortfolioGrid items={PORTFOLIO_ITEMS} userId={user.id} />
+              <PortfolioGrid 
+                items={PORTFOLIO_ITEMS} 
+                userId={user.id} 
+                isOwner={isCurrentUser}
+              />
             </TabsContent>
             
             {(user.role === "representative" || user.status === "Представник" || (user.categories && user.categories.length > 0)) && (
               <TabsContent value="services" className="mt-6">
                 <div className="rounded-xl border p-6">
-                  <h2 className="mb-4 text-xl font-bold">Мої послуги</h2>
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold">Мої послуги</h2>
+                    {isCurrentUser && (
+                      <Button variant="outline" size="sm">
+                        <Edit className="h-4 w-4 mr-2" /> Редагувати послуги
+                      </Button>
+                    )}
+                  </div>
                   
                   {user.categories && user.categories.length > 0 ? (
                     <div className="mb-4 flex flex-wrap gap-2">

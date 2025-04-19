@@ -7,12 +7,14 @@ import { PostCard } from '@/components/feed/PostCard';
 import { Hero } from '@/components/home/Hero';
 import CreatePublicationModal from '@/components/publications/CreatePublicationModal';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, BarChart3 } from 'lucide-react';
+import { ExternalLink, BarChart3, Edit, Trash2, MoreHorizontal } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { PostMenu } from '@/components/profile/PostMenu';
+import { toast } from 'sonner';
 
 export default function Index() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -39,6 +41,37 @@ export default function Index() {
 
   const handleLogin = () => {
     navigate('/auth');
+  };
+  
+  const handleEditPost = (postId: string) => {
+    // Реалізація редагування публікації
+    toast.info(`Редагування публікації ${postId}`);
+  };
+
+  const handleDeletePost = (postId: string) => {
+    // Видалення публікації
+    const updatedPosts = posts.filter(post => post.id !== postId);
+    setPosts(updatedPosts);
+    localStorage.setItem('posts', JSON.stringify(updatedPosts));
+    toast.success("Публікацію видалено");
+  };
+
+  const renderPostWithOptions = (post: any) => {
+    const isAuthor = currentUser && post.userId === currentUser.id;
+    
+    return (
+      <div key={post.id} className="relative">
+        <div className="absolute right-4 top-4 z-10">
+          <PostMenu 
+            postId={post.id} 
+            isAuthor={isAuthor}
+            onEdit={handleEditPost}
+            onDelete={handleDeletePost}
+          />
+        </div>
+        <PostCard {...post} />
+      </div>
+    );
   };
 
   return (
@@ -104,24 +137,7 @@ export default function Index() {
                     </Card>
                   )}
                   {posts.length > 0 ? (
-                    posts.map((post: any) => (
-                      <PostCard
-                        key={post.id}
-                        id={post.id}
-                        author={{
-                          id: post.userId || "",
-                          name: post.author || "",
-                          username: post.author ? post.author.split(' ')[0].toLowerCase() : "",
-                          avatarUrl: "",
-                          profession: ""
-                        }}
-                        imageUrl={post.imageUrl || ""}
-                        caption={post.description || ""}
-                        likes={0}
-                        comments={0}
-                        timeAgo={new Date(post.date).toLocaleDateString()}
-                      />
-                    ))
+                    posts.map((post: any) => renderPostWithOptions(post))
                   ) : (
                     <div className="text-center py-12 border rounded-lg bg-muted/30">
                       <h3 className="text-xl font-medium mb-2">Поки що немає публікацій</h3>

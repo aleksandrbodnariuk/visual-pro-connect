@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { UserRound, Upload, Trash2, Camera } from "lucide-react";
+import { UserRound, Upload, Trash2, Camera, ChevronsUp, ChevronsDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import {
 import { PortfolioManager } from "./PortfolioManager";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CATEGORIES } from "@/components/search/SearchCategories";
+import { Slider } from "@/components/ui/slider";
 
 interface ProfileEditorProps {
   user: any;
@@ -35,6 +36,8 @@ export function ProfileEditor({ user, onUpdate }: ProfileEditorProps) {
   const [tempAvatarUrl, setTempAvatarUrl] = useState<string | null>(null);
   const [tempAvatarFile, setTempAvatarFile] = useState<File | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(user?.categories || []);
+  const [avatarSize, setAvatarSize] = useState<number>(100); // Default size 100%
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (user) {
@@ -121,6 +124,12 @@ export function ProfileEditor({ user, onUpdate }: ProfileEditorProps) {
       setTempAvatarUrl(reader.result as string);
     };
     reader.readAsDataURL(file);
+  };
+
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
   const handleSaveAvatar = async () => {
@@ -272,13 +281,19 @@ export function ProfileEditor({ user, onUpdate }: ProfileEditorProps) {
     });
   };
 
+  const handleAvatarSizeChange = (value: number[]) => {
+    setAvatarSize(value[0]);
+  };
+
   return (
     <div className="space-y-6">
       <Card className="p-6">
         <div className="space-y-6">
           <div className="flex flex-col items-center sm:flex-row sm:items-start gap-6">
             <div className="flex flex-col items-center">
-              <Avatar className="h-24 w-24 mb-2 cursor-pointer hover:opacity-90 transition-opacity" onClick={handleOpenAvatarDialog}>
+              <Avatar className="h-24 w-24 mb-2 cursor-pointer hover:opacity-90 transition-opacity" 
+                      onClick={handleOpenAvatarDialog}
+                      style={{ transform: `scale(${avatarSize / 100})` }}>
                 {avatarUrl ? (
                   <AvatarImage src={avatarUrl} alt={user?.full_name || 'Користувач'} />
                 ) : (
@@ -295,9 +310,20 @@ export function ProfileEditor({ user, onUpdate }: ProfileEditorProps) {
                 size="sm" 
                 variant="outline" 
                 onClick={handleOpenAvatarDialog}
+                className="mb-2"
               >
                 <Camera className="h-4 w-4 mr-1" /> Змінити фото
               </Button>
+              
+              <div className="flex gap-1">
+                <Button variant="ghost" size="sm" onClick={() => setAvatarSize(Math.max(50, avatarSize - 10))}>
+                  <ChevronsDown className="h-4 w-4" />
+                </Button>
+                <span className="text-sm text-muted-foreground">{avatarSize}%</span>
+                <Button variant="ghost" size="sm" onClick={() => setAvatarSize(Math.min(150, avatarSize + 10))}>
+                  <ChevronsUp className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             
             <div className="flex-1 space-y-4 w-full">
@@ -376,15 +402,42 @@ export function ProfileEditor({ user, onUpdate }: ProfileEditorProps) {
                 )}
               </Avatar>
             </div>
-            <div>
-              <Label htmlFor="avatarFile">Оберіть зображення</Label>
-              <Input
-                id="avatarFile"
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarFileChange}
-                disabled={isUploading}
-              />
+            
+            <div className="space-y-4">
+              <div>
+                <input
+                  ref={fileInputRef}
+                  id="avatarFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarFileChange}
+                  disabled={isUploading}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={triggerFileInput}
+                  disabled={isUploading}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Вибрати файл з пристрою
+                </Button>
+              </div>
+              
+              <div>
+                <Label htmlFor="avatarSize">Розмір аватара</Label>
+                <Slider
+                  defaultValue={[100]}
+                  max={150}
+                  min={50}
+                  step={5}
+                  onValueChange={handleAvatarSizeChange}
+                  value={[avatarSize]}
+                  className="mt-2"
+                />
+              </div>
             </div>
           </div>
           <DialogFooter className="flex justify-between">

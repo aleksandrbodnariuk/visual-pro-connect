@@ -33,6 +33,7 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
   const { sendFriendRequest, friends } = useFriendRequests();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isFriend, setIsFriend] = useState(false);
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
   
   const {
     id: userId,
@@ -76,8 +77,16 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
       return;
     }
     
-    await sendFriendRequest(userId);
-    toast.success('Запит у друзі надіслано');
+    try {
+      setIsSendingRequest(true);
+      await sendFriendRequest(userId);
+      toast.success('Запит у друзі надіслано');
+    } catch (error) {
+      console.error('Error sending friend request:', error);
+      toast.error('Помилка при надсиланні запиту');
+    } finally {
+      setIsSendingRequest(false);
+    }
   };
 
   return (
@@ -163,6 +172,7 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
                   <Button 
                     variant="secondary" 
                     onClick={handleAddFriend}
+                    disabled={isSendingRequest}
                   >
                     <UserPlus className="w-4 h-4 mr-2" />
                     Додати в друзі
