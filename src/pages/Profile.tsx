@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,7 +17,6 @@ import { ProfileEditorDialog } from "@/components/profile/ProfileEditorDialog";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
 
-// Тестові дані для демонстрації портфоліо
 const PORTFOLIO_ITEMS = [
   {
     id: "port1",
@@ -208,8 +206,8 @@ export default function Profile() {
             },
             imageUrl: post.media_url,
             caption: post.content,
-            likes: post.likes_count ?? 0,
-            comments: post.comments_count ?? 0,
+            likes: (post as any).likes_count ?? 0,
+            comments: (post as any).comments_count ?? 0,
             timeAgo: new Date(post.created_at).toLocaleDateString()
           })));
         } else {
