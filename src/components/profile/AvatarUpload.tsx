@@ -2,7 +2,7 @@
 import { useCallback, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Upload } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -14,6 +14,7 @@ export function AvatarUpload({
   onAvatarChange: (url: string | null) => void;
 }) {
   const [isUploading, setIsUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const uploadAvatar = useCallback(async (file: File) => {
     try {
@@ -27,6 +28,13 @@ export function AvatarUpload({
 
       const fileExt = file.name.split('.').pop();
       const filePath = `${currentUser.user.id}-${Math.random()}.${fileExt}`;
+
+      // Показуємо попередній перегляд файлу
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPreviewUrl(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
@@ -47,6 +55,7 @@ export function AvatarUpload({
       toast.error('Помилка при завантаженні аватару');
     } finally {
       setIsUploading(false);
+      setPreviewUrl(null);
     }
   }, [onAvatarChange]);
 
@@ -76,7 +85,11 @@ export function AvatarUpload({
   return (
     <div className="flex flex-col items-center gap-4">
       <Avatar className="h-24 w-24">
-        <AvatarImage src={currentAvatarUrl} />
+        {previewUrl ? (
+          <AvatarImage src={previewUrl} />
+        ) : (
+          <AvatarImage src={currentAvatarUrl} />
+        )}
         <AvatarFallback>AВ</AvatarFallback>
       </Avatar>
       
@@ -96,8 +109,8 @@ export function AvatarUpload({
             input.click();
           }}
         >
-          <Pencil className="w-4 h-4 mr-2" />
-          {isUploading ? 'Завантаження...' : 'Змінити'}
+          <Upload className="w-4 h-4 mr-2" />
+          {isUploading ? 'Завантаження...' : 'Завантажити фото'}
         </Button>
         
         {currentAvatarUrl && (

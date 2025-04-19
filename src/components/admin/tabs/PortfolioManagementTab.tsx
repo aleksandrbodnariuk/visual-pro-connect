@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -89,10 +88,19 @@ export function PortfolioManagementTab() {
         console.warn("Не вдалося отримати дані з Supabase:", supabaseError);
       }
       
-      // Якщо дані не отримано з Supabase, використовуємо демо-дані
+      // Якщо дані не отримано з Supabase, використовуємо локальне сховище
+      const storedItems = localStorage.getItem("portfolioItems");
+      if (storedItems) {
+        const parsedItems = JSON.parse(storedItems);
+        setPortfolioItems(parsedItems);
+        setFilteredItems(parsedItems);
+        return;
+      }
+      
+      // Якщо немає даних ні в Supabase, ні в локальному сховищі, використовуємо демо-дані
       const demoData = [
         {
-          id: "1",
+          id: "demo1",
           user_id: "user1",
           title: "Портретна фотосесія",
           description: "Студійна зйомка портретів",
@@ -105,7 +113,7 @@ export function PortfolioManagementTab() {
           }
         },
         {
-          id: "2",
+          id: "demo2",
           user_id: "user2",
           title: "Відеопрезентація продукту",
           description: "Промо-відео для нової колекції",
@@ -121,6 +129,7 @@ export function PortfolioManagementTab() {
       
       setPortfolioItems(demoData);
       setFilteredItems(demoData);
+      localStorage.setItem("portfolioItems", JSON.stringify(demoData));
     } catch (error: any) {
       toast.error("Помилка при завантаженні медіа");
       console.error(error);
@@ -140,33 +149,40 @@ export function PortfolioManagementTab() {
     try {
       // Спроба видалити запис з Supabase
       try {
-        const { error: deleteRecordError } = await supabase
-          .from("portfolio")
-          .delete()
-          .eq("id", selectedItem.id);
+        if (!/^demo/.test(selectedItem.id)) {
+          const { error: deleteRecordError } = await supabase
+            .from("portfolio")
+            .delete()
+            .eq("id", selectedItem.id);
 
-        if (deleteRecordError) throw deleteRecordError;
-        
-        // Спроба видалити файл зі сховища
-        try {
-          const filePathMatch = selectedItem.media_url.match(/\/([^/?#]+)(?:[?#]|$)/);
-          const fileName = filePathMatch ? filePathMatch[1] : null;
+          if (deleteRecordError) throw deleteRecordError;
           
-          if (fileName) {
-            const filePath = `${selectedItem.user_id}/${fileName}`;
-            await supabase.storage
-              .from("portfolio")
-              .remove([filePath]);
+          // Спроба видалити файл зі сховища
+          try {
+            const filePathMatch = selectedItem.media_url.match(/\/([^/?#]+)(?:[?#]|$)/);
+            const fileName = filePathMatch ? filePathMatch[1] : null;
+            
+            if (fileName) {
+              const filePath = `${selectedItem.user_id}/${fileName}`;
+              await supabase.storage
+                .from("portfolio")
+                .remove([filePath]);
+            }
+          } catch (deleteStorageError) {
+            console.warn("Не вдалося видалити файл зі сховища:", deleteStorageError);
           }
-        } catch (deleteStorageError) {
-          console.warn("Не вдалося видалити файл зі сховища:", deleteStorageError);
         }
       } catch (supabaseError) {
         console.warn("Не вдалося видалити запис з Supabase:", supabaseError);
       }
 
       // Оновлюємо локальний стан
-      setPortfolioItems(prevItems => prevItems.filter(i => i.id !== selectedItem.id));
+      const updatedItems = portfolioItems.filter(i => i.id !== selectedItem.id);
+      setPortfolioItems(updatedItems);
+      
+      // Оновлюємо локальне сховище
+      localStorage.setItem("portfolioItems", JSON.stringify(updatedItems));
+      
       toast.success("Файл успішно видалено");
     } catch (error: any) {
       toast.error("Помилка при видаленні файлу");

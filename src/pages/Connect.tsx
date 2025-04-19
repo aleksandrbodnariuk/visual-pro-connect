@@ -2,28 +2,56 @@
 import { useState, useEffect } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { Search, Filter, Users, Phone, Mail, MessageSquare, User } from "lucide-react";
+import { Search, Filter, Users, Phone, Mail, MessageSquare, User, UserPlus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useNavigate } from "react-router-dom";
+import { useFriendRequests } from "@/hooks/useFriendRequests";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function Connect() {
   const [users, setUsers] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const navigate = useNavigate();
+  const { sendFriendRequest, friends } = useFriendRequests();
 
   useEffect(() => {
-    const storedUsers = localStorage.getItem("users");
-    if (storedUsers) {
-      const parsedUsers = JSON.parse(storedUsers);
-      setUsers(parsedUsers);
-      setFilteredUsers(parsedUsers);
-    }
+    fetchUsers();
   }, []);
+
+  const fetchUsers = async () => {
+    try {
+      // Спроба отримати користувачів з Supabase
+      const { data, error } = await supabase
+        .from('users')
+        .select('*');
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setUsers(data);
+        setFilteredUsers(data);
+        return;
+      }
+    } catch (err) {
+      console.error("Помилка при завантаженні користувачів:", err);
+      
+      // Запасний варіант - завантаження з localStorage
+      const storedUsers = localStorage.getItem("users");
+      if (storedUsers) {
+        const parsedUsers = JSON.parse(storedUsers);
+        setUsers(parsedUsers);
+        setFilteredUsers(parsedUsers);
+      }
+    }
+  };
 
   useEffect(() => {
     let result = users;
@@ -31,9 +59,11 @@ export default function Connect() {
     // Застосувати фільтр пошуку
     if (searchTerm) {
       result = result.filter(user => 
-        user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.profession?.toLowerCase().includes(searchTerm.toLowerCase())
+        user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        user.profession?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.categories && user.categories.some((cat: string) => 
+          cat.toLowerCase().includes(searchTerm.toLowerCase())
+        ))
       );
     }
     
@@ -41,7 +71,8 @@ export default function Connect() {
     if (categoryFilter !== "all") {
       result = result.filter(user => 
         user.category === categoryFilter || 
-        user.profession?.toLowerCase().includes(categoryFilter.toLowerCase())
+        user.profession?.toLowerCase().includes(categoryFilter.toLowerCase()) ||
+        (user.categories && user.categories.includes(categoryFilter))
       );
     }
     
@@ -54,6 +85,19 @@ export default function Connect() {
 
   const handleCategoryChange = (value: string) => {
     setCategoryFilter(value);
+  };
+
+  const handleSendMessage = (userId: string) => {
+    navigate(`/messages?userId=${userId}`);
+  };
+
+  const handleSendFriendRequest = (userId: string) => {
+    sendFriendRequest(userId);
+    toast.success("Запит у друзі надіслано");
+  };
+
+  const isFriend = (userId: string) => {
+    return friends.some(friend => friend?.id === userId);
   };
 
   return (
@@ -107,13 +151,17 @@ export default function Connect() {
                   <CardContent className="p-4">
                     <div className="flex flex-col items-center text-center p-4">
                       <Avatar className="h-24 w-24 mb-4">
-                        <AvatarImage src={user.avatarUrl} alt={`${user.firstName} ${user.lastName}`} />
-                        <AvatarFallback>{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>
+                        <AvatarImage src={user.avatar_url} alt={user.full_name} />
+                        <AvatarFallback>
+                          {user.full_name 
+                            ? user.full_name.split(' ').map((part: string) => part[0]).join('').substring(0, 2) 
+                            : 'КР'}
+                        </AvatarFallback>
                       </Avatar>
-                      <h3 className="font-semibold text-lg">{user.firstName} {user.lastName}</h3>
-                      {user.profession && (
+                      <h3 className="font-semibold text-lg">{user.full_name || 'Користувач'}</h3>
+                      {user.categories && user.categories.length > 0 && (
                         <Badge variant="secondary" className="mt-1">
-                          {user.profession}
+                          {user.categories[0]}
                         </Badge>
                       )}
                       <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
@@ -122,14 +170,25 @@ export default function Connect() {
                     </div>
                     
                     <div className="flex mt-4 space-x-2 justify-center">
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={`/profile/${user.id}`}>
-                          <User className="h-4 w-4 mr-1" /> Профіль
-                        </a>
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/profile/${user.id}`)}>
+                        <User className="h-4 w-4 mr-1" /> Профіль
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleSendMessage(user.id)}
+                      >
                         <MessageSquare className="h-4 w-4 mr-1" /> Написати
                       </Button>
+                      {!isFriend(user.id) && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleSendFriendRequest(user.id)}
+                        >
+                          <UserPlus className="h-4 w-4 mr-1" /> Додати
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

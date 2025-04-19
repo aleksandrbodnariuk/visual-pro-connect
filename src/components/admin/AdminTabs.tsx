@@ -28,7 +28,7 @@ export function AdminTabs() {
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     // Оновлюємо URL для збереження стану між перезавантаженнями
-    navigate(`/admin/${value}`);
+    navigate(`/admin/${value}`, { replace: true });
   };
 
   return (
