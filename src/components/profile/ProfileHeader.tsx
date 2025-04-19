@@ -1,6 +1,7 @@
-
-import { Camera, MapPin, Link as LinkIcon, Calendar, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UserPlus } from "lucide-react";
+import { useFriendRequests } from "@/hooks/useFriendRequests";
+import { Camera, MapPin, Link as LinkIcon, Calendar, Edit } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -24,6 +25,7 @@ export interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({ user }: ProfileHeaderProps) {
+  const { sendFriendRequest } = useFriendRequests();
   const {
     name,
     username,
@@ -155,6 +157,18 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
             </TabsList>
           </Tabs>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2 mt-4">
+        {user && !user.isCurrentUser && (
+          <Button 
+            variant="secondary" 
+            onClick={() => sendFriendRequest(user.id)}
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            Додати в друзі
+          </Button>
+        )}
       </div>
     </div>
   );

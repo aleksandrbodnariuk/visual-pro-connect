@@ -33,6 +33,33 @@ export type Database = {
         }
         Relationships: []
       }
+      friend_requests: {
+        Row: {
+          created_at: string | null
+          id: string
+          receiver_id: string
+          sender_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          receiver_id: string
+          sender_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          receiver_id?: string
+          sender_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       market: {
         Row: {
           created_at: string | null
@@ -67,6 +94,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          read: boolean | null
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          read?: boolean | null
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          read?: boolean | null
+          receiver_id?: string
+          sender_id?: string
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -140,6 +194,7 @@ export type Database = {
       }
       posts: {
         Row: {
+          category: string | null
           content: string | null
           created_at: string | null
           id: string
@@ -147,6 +202,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          category?: string | null
           content?: string | null
           created_at?: string | null
           id?: string
@@ -154,6 +210,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          category?: string | null
           content?: string | null
           created_at?: string | null
           id?: string
@@ -257,6 +314,7 @@ export type Database = {
       users: {
         Row: {
           avatar_url: string | null
+          categories: string[] | null
           city: string | null
           country: string | null
           created_at: string | null
@@ -270,6 +328,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          categories?: string[] | null
           city?: string | null
           country?: string | null
           created_at?: string | null
@@ -283,6 +342,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          categories?: string[] | null
           city?: string | null
           country?: string | null
           created_at?: string | null
