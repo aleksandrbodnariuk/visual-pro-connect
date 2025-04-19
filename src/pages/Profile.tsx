@@ -1,4 +1,3 @@
-
 import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Navbar } from "@/components/layout/Navbar";
@@ -15,12 +14,7 @@ import { translations } from '@/lib/translations';
 import { ProfileEditorDialog } from "@/components/profile/ProfileEditorDialog";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
+import { PostMenu } from "@/components/profile/PostMenu";
 import { toast } from "sonner";
 
 // Тестові дані для демонстрації портфоліо
@@ -86,25 +80,20 @@ export default function Profile() {
   const t = translations[language];
   
   useEffect(() => {
-    // Завантаження даних користувача
     const fetchUser = async () => {
       setIsLoading(true);
       
       try {
-        // Спочатку отримуємо дані з localStorage, якщо вони є
         const currentUser = localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser') || '{}') : null;
         
-        // Якщо userId не вказано, показуємо профіль поточного користувача
         const targetUserId = userId || (currentUser ? currentUser.id : null);
         
         if (!targetUserId) {
           throw new Error('Не вдалося визначити ID користувача');
         }
         
-        // Перевіряємо, чи це профіль поточного користувача
         setIsCurrentUser(currentUser && currentUser.id === targetUserId);
         
-        // Спробуємо отримати користувача з Supabase
         const { data: userData, error } = await supabase
           .from('users')
           .select('*')
@@ -112,13 +101,12 @@ export default function Profile() {
           .single();
         
         if (userData) {
-          // Підготовка даних користувача для відображення
           setUser({
             id: userData.id,
             name: userData.full_name || "Користувач",
             username: userData.phone_number || `user_${userData.id.substring(0, 5)}`,
             avatarUrl: userData.avatar_url,
-            coverUrl: userData.avatar_url || "https://images.unsplash.com/photo-1605810230434-7631ac76ec81", // Default cover image
+            coverUrl: userData.avatar_url || "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
             bio: userData.full_name ? `${userData.full_name} на платформі Visual Pro Connect` : "Користувач платформи Visual Pro Connect",
             viber: userData.phone_number || "",
             tiktok: "",
@@ -143,7 +131,6 @@ export default function Profile() {
             city: userData.city
           });
         } else if (currentUser && !userId) {
-          // Якщо дані не знайдено в Supabase, але є в localStorage
           setUser({
             id: currentUser.id,
             name: `${currentUser.firstName} ${currentUser.lastName}`,
@@ -161,7 +148,6 @@ export default function Profile() {
             followersCount: 0,
             followingCount: 0,
             postsCount: 0,
-            profession: currentUser.categories && currentUser.categories.length > 0 ? currentUser.categories[0] : "",
             status: currentUser.isShareHolder ? "Акціонер" : (currentUser.isAdmin ? "Адміністратор" : "Учасник"),
             role: currentUser.isAdmin ? "admin" : (currentUser.isShareHolder ? "shareholder" : "user"),
             isCurrentUser: true,
@@ -175,7 +161,6 @@ export default function Profile() {
           });
         } else {
           console.log("Користувача не знайдено або помилка:", error);
-          // Якщо користувача не знайдено, використовуємо тестові дані
           setUser({
             id: "user1",
             name: "Олександр Петренко",
@@ -204,7 +189,6 @@ export default function Profile() {
           });
         }
         
-        // Завантаження постів користувача
         const { data: postsData } = await supabase
           .from('posts')
           .select('*')
@@ -228,12 +212,10 @@ export default function Profile() {
             timeAgo: new Date(post.created_at).toLocaleDateString()
           })));
         } else {
-          // Якщо немає постів, використовуємо порожній масив
           setPosts([]);
         }
       } catch (error) {
         console.error("Помилка при завантаженні даних:", error);
-        // Показуємо заглушку профілю
         setUser({
           id: "user1",
           name: "Олександр Петренко",
@@ -284,42 +266,25 @@ export default function Profile() {
   };
 
   const handleEditPost = (postId: string) => {
-    // Реалізація редагування публікації
     toast.info(`Редагування публікації ${postId}`);
   };
 
   const handleDeletePost = (postId: string) => {
-    // Видалення публікації
     setPosts(posts.filter(post => post.id !== postId));
     toast.success("Публікацію видалено");
   };
 
-  // Додаємо опції до PostCard
   const renderPostWithOptions = (post: any) => {
     return (
       <div key={post.id} className="relative">
         {isCurrentUser && (
           <div className="absolute right-4 top-4 z-10">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full h-8 w-8">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleEditPost(post.id)}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Редагувати публікацію
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => handleDeletePost(post.id)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Видалити публікацію
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <PostMenu 
+              postId={post.id}
+              isAuthor={isCurrentUser}
+              onEdit={handleEditPost}
+              onDelete={handleDeletePost}
+            />
           </div>
         )}
         <PostCard {...post} />
@@ -327,7 +292,6 @@ export default function Profile() {
     );
   };
 
-  // Отримуємо назви категорій для відображення
   const getCategoryName = (categoryId: string) => {
     switch(categoryId) {
       case 'photographer': return 'Фотограф';
@@ -345,7 +309,6 @@ export default function Profile() {
       <ProfileHeader user={user} onEditProfile={handleEditProfile} />
       
       <div className="container mt-8 grid grid-cols-12 gap-6">
-        {/* Sidebar на лівій стороні */}
         <div className="hidden md:block md:col-span-3">
           <Sidebar className="sticky top-20" />
         </div>
@@ -358,7 +321,7 @@ export default function Profile() {
                   posts.map((post) => renderPostWithOptions(post))
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    Немає публікацій для відображення
+                    Немає публікацій для ��ідображення
                   </div>
                 )}
               </div>
