@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +10,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "@/components/feed/PostCard";
 import { PostMenu } from "@/components/profile/PostMenu";
 import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { PiggyBank, DollarSign, Crown, Edit } from "lucide-react";
+import { ProfileEditorDialog } from "@/components/profile/ProfileEditorDialog";
+import { useLanguage } from "@/context/LanguageContext";
+import { translations } from "@/lib/translations";
 
 // Тестові дані для демонстрації портфоліо
 const PORTFOLIO_ITEMS = [
@@ -314,7 +322,7 @@ export default function Profile() {
                   posts.map((post) => renderPostWithOptions(post))
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    Немає публікацій для ��ідображення
+                    Немає публікацій для відображення
                   </div>
                 )}
               </div>
