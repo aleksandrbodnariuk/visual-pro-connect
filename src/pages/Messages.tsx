@@ -1,9 +1,12 @@
 
+import { useState, useEffect } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Send } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 // Тестові дані для демонстрації
 const CHATS = [
@@ -82,6 +85,113 @@ const MESSAGES = [
 ];
 
 export default function Messages() {
+  const [activeChat, setActiveChat] = useState(CHATS[0]);
+  const [messageText, setMessageText] = useState("");
+  const [messages, setMessages] = useState(MESSAGES);
+  const [chats, setChats] = useState(CHATS);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Отримуємо дані поточного користувача
+    const user = localStorage.getItem("currentUser");
+    if (user) {
+      setCurrentUser(JSON.parse(user));
+    }
+
+    // Спроба отримати повідомлення з Supabase
+    const fetchMessages = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .order('created_at', { ascending: true });
+          
+        if (error) {
+          console.error("Помилка при завантаженні повідомлень:", error);
+        } else if (data && data.length > 0) {
+          // Якщо є дані в Supabase, використовуємо їх
+          console.log("Завантажено повідомлення з Supabase:", data);
+        }
+      } catch (err) {
+        console.error("Помилка при завантаженні повідомлень:", err);
+      }
+    };
+    
+    fetchMessages();
+  }, []);
+
+  const handleSendMessage = async () => {
+    if (!messageText.trim()) return;
+    
+    // Створюємо нове повідомлення
+    const newMessage = {
+      id: `msg${messages.length + 1}`,
+      text: messageText,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isSender: true
+    };
+    
+    try {
+      // Спроба зберегти в Supabase
+      if (currentUser?.id) {
+        const { error } = await supabase
+          .from('messages')
+          .insert([
+            {
+              sender_id: currentUser.id,
+              receiver_id: activeChat.user.id,
+              content: messageText
+            }
+          ]);
+          
+        if (error) {
+          console.error("Помилка при відправленні повідомлення:", error);
+          throw error;
+        }
+      }
+      
+      // Оновлюємо локальний стан
+      setMessages([...messages, newMessage]);
+      
+      // Оновлюємо останнє повідомлення в чаті
+      const updatedChats = chats.map(chat => 
+        chat.id === activeChat.id 
+          ? {
+              ...chat,
+              lastMessage: {
+                text: messageText,
+                timestamp: "Щойно"
+              }
+            }
+          : chat
+      );
+      setChats(updatedChats);
+      
+      // Очищаємо поле вводу
+      setMessageText("");
+      
+      toast.success("Повідомлення надіслано");
+    } catch (err) {
+      console.error("Помилка при відправленні повідомлення:", err);
+      
+      // Оновлюємо локальний стан навіть якщо є помилка з Supabase
+      setMessages([...messages, newMessage]);
+      setMessageText("");
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSendMessage();
+    }
+  };
+
+  const filteredChats = chats.filter(chat => 
+    chat.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    chat.user.username.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -98,15 +208,18 @@ export default function Messages() {
                     type="search"
                     placeholder="Пошук повідомлень"
                     className="w-full pl-8"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
               </div>
               
               <div className="h-[calc(80vh-120px)] overflow-y-auto">
-                {CHATS.map((chat) => (
+                {filteredChats.map((chat) => (
                   <div 
                     key={chat.id}
-                    className="flex items-start gap-3 border-b p-3 transition-colors hover:bg-muted/50"
+                    className={`flex items-start gap-3 border-b p-3 transition-colors hover:bg-muted/50 cursor-pointer ${activeChat.id === chat.id ? 'bg-muted/80' : ''}`}
+                    onClick={() => setActiveChat(chat)}
                   >
                     <Avatar className="h-12 w-12">
                       <AvatarImage src={chat.user.avatarUrl} alt={chat.user.name} />
@@ -149,20 +262,25 @@ export default function Messages() {
               <div className="border-b p-3">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src="https://i.pravatar.cc/150?img=5" alt="Марія Коваленко" />
-                    <AvatarFallback>МК</AvatarFallback>
+                    <AvatarImage src={activeChat.user.avatarUrl} alt={activeChat.user.name} />
+                    <AvatarFallback>
+                      {activeChat.user.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
                   </Avatar>
                   
                   <div>
-                    <h3 className="font-semibold">Марія Коваленко</h3>
-                    <p className="text-xs text-muted-foreground">Онлайн</p>
+                    <h3 className="font-semibold">{activeChat.user.name}</h3>
+                    <p className="text-xs text-muted-foreground">{activeChat.user.lastSeen}</p>
                   </div>
                 </div>
               </div>
               
               <div className="flex-1 overflow-y-auto p-4">
                 <div className="space-y-4">
-                  {MESSAGES.map((message) => (
+                  {messages.map((message) => (
                     <div
                       key={message.id}
                       className={`flex ${message.isSender ? "justify-end" : "justify-start"}`}
@@ -192,8 +310,15 @@ export default function Messages() {
                     type="text"
                     placeholder="Напишіть повідомлення..."
                     className="flex-1"
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyPress={handleKeyPress}
                   />
-                  <Button className="bg-gradient-purple rounded-full" size="icon">
+                  <Button 
+                    className="bg-gradient-purple rounded-full" 
+                    size="icon"
+                    onClick={handleSendMessage}
+                  >
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>

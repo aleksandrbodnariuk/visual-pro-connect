@@ -2,6 +2,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Crown, PiggyBank, DollarSign } from "lucide-react";
+import { useMemo } from "react";
 
 interface ShareholderSectionProps {
   user: {
@@ -13,6 +14,36 @@ interface ShareholderSectionProps {
 }
 
 export function ShareholderSection({ user }: ShareholderSectionProps) {
+  // Визначаємо титул на основі відсотка акцій
+  const shareholderTitle = useMemo(() => {
+    const percentage = user?.percentage || 0;
+    
+    if (percentage === 100) return "Імператор";
+    if (percentage >= 76) return "Герцог";
+    if (percentage >= 51) return "Лорд";
+    if (percentage >= 36) return "Маркіз";
+    if (percentage >= 21) return "Граф";
+    if (percentage >= 11) return "Барон";
+    if (percentage >= 6) return "Магнат";
+    if (percentage >= 1) return "Акціонер";
+    
+    return "Акціонер";
+  }, [user?.percentage]);
+
+  // Визначаємо колір беджа на основі титулу
+  const getBadgeVariant = () => {
+    switch(shareholderTitle) {
+      case "Імператор": return "destructive";
+      case "Герцог": return "purple";
+      case "Лорд": return "orange";
+      case "Маркіз": return "yellow";
+      case "Граф": return "green";
+      case "Барон": return "blue";
+      case "Магнат": return "secondary";
+      default: return "secondary";
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -20,8 +51,8 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
           <Crown className="h-5 w-5 text-amber-500" />
           Інформація акціонера
         </CardTitle>
-        <Badge variant="secondary" className="text-lg px-3 py-1">
-          {user.title || "Магнат"}
+        <Badge variant={getBadgeVariant()} className="text-lg px-3 py-1">
+          {user.title || shareholderTitle}
         </Badge>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -79,6 +110,36 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
             Прибуток з кожного замовлення розподіляється між акціонерами відповідно до відсотка акцій.
             45% від суми кожного замовлення розподіляється між акціонерами.
           </p>
+          
+          <div className="mt-4 border-t pt-4">
+            <h4 className="font-medium mb-2">Система титулів</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+              <div className="bg-muted p-2 rounded">
+                <span className="font-semibold">1-5%:</span> Акціонер
+              </div>
+              <div className="bg-muted p-2 rounded">
+                <span className="font-semibold">6-10%:</span> Магнат
+              </div>
+              <div className="bg-muted p-2 rounded">
+                <span className="font-semibold">11-20%:</span> Барон
+              </div>
+              <div className="bg-muted p-2 rounded">
+                <span className="font-semibold">21-35%:</span> Граф
+              </div>
+              <div className="bg-muted p-2 rounded">
+                <span className="font-semibold">36-50%:</span> Маркіз
+              </div>
+              <div className="bg-muted p-2 rounded">
+                <span className="font-semibold">51-75%:</span> Лорд
+              </div>
+              <div className="bg-muted p-2 rounded">
+                <span className="font-semibold">76-99%:</span> Герцог
+              </div>
+              <div className="bg-muted p-2 rounded">
+                <span className="font-semibold">100%:</span> Імператор
+              </div>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
