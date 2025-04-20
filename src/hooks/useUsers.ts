@@ -43,15 +43,59 @@ export function useUsers() {
 
   const deleteUser = (userId: string) => {
     const userToDelete = users.find(user => user.id === userId);
+    
+    // Prevent deletion of founder-admin
     if (userToDelete && (userToDelete.role === "admin-founder" || userToDelete.phoneNumber === "0507068007")) {
       toast.error("Неможливо видалити Адміністратора-засновника");
       return;
     }
     
-    const updatedUsers = users.filter(user => user.id !== userId);
-    setUsers(updatedUsers);
-    localStorage.setItem("users", JSON.stringify(updatedUsers));
-    toast.success("Користувача видалено");
+    // Check if user is the currently logged in user
+    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+    if (userToDelete && userToDelete.id === currentUser.id) {
+      toast.error("Неможливо видалити власний обліковий запис");
+      return;
+    }
+    
+    // Confirm before deletion
+    if (confirm(`Ви впевнені, що хочете видалити користувача ${userToDelete?.firstName} ${userToDelete?.lastName}?`)) {
+      const updatedUsers = users.filter(user => user.id !== userId);
+      setUsers(updatedUsers);
+      localStorage.setItem("users", JSON.stringify(updatedUsers));
+      
+      // Also remove from other related data
+      removeUserFromRelatedData(userId);
+      
+      toast.success("Користувача видалено");
+    }
+  };
+  
+  const removeUserFromRelatedData = (userId: string) => {
+    // Remove user's posts
+    const posts = JSON.parse(localStorage.getItem("posts") || "[]");
+    const updatedPosts = posts.filter((post: any) => post.userId !== userId);
+    localStorage.setItem("posts", JSON.stringify(updatedPosts));
+    
+    // Remove user's portfolio items
+    const portfolio = JSON.parse(localStorage.getItem("portfolio") || "[]");
+    const updatedPortfolio = portfolio.filter((item: any) => item.userId !== userId);
+    localStorage.setItem("portfolio", JSON.stringify(updatedPortfolio));
+    
+    // Remove user from shares data
+    const shares = JSON.parse(localStorage.getItem("shares") || "[]");
+    const updatedShares = shares.filter((share: any) => share.userId !== userId);
+    localStorage.setItem("shares", JSON.stringify(updatedShares));
+    
+    // Remove user from other relevant storage
+    const stockExchange = JSON.parse(localStorage.getItem("stockExchange") || "[]");
+    const updatedStockExchange = stockExchange.filter((item: any) => item.sellerId !== userId);
+    localStorage.setItem("stockExchange", JSON.stringify(updatedStockExchange));
+    
+    const transactions = JSON.parse(localStorage.getItem("sharesTransactions") || "[]");
+    const updatedTransactions = transactions.filter(
+      (t: any) => t.sellerId !== userId && t.buyerId !== userId
+    );
+    localStorage.setItem("sharesTransactions", JSON.stringify(updatedTransactions));
   };
 
   const changeUserStatus = (userId: string, newStatus: string) => {

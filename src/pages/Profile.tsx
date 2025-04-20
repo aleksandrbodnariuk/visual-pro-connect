@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/layout/Navbar";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
@@ -75,6 +75,7 @@ export default function Profile() {
   const [isCurrentUser, setIsCurrentUser] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
+  const navigate = useNavigate();
   const { language } = useLanguage();
   const t = translations[language];
   
@@ -106,7 +107,7 @@ export default function Profile() {
             username: userData.phone_number || `user_${userData.id.substring(0, 5)}`,
             avatarUrl: userData.avatar_url,
             coverUrl: userData.avatar_url || "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
-            bio: userData.full_name ? `${userData.full_name} на платформі Visual Pro Connect` : "Користувач платформи Visual Pro Connect",
+            bio: userData.full_name ? `${userData.full_name} на платформі Спільнота B&C` : "Користувач платформи Спільнота B&C",
             viber: userData.phone_number || "",
             tiktok: "",
             instagram: "",
@@ -136,7 +137,7 @@ export default function Profile() {
             username: currentUser.email || currentUser.phoneNumber || `user_${currentUser.id.substring(0, 5)}`,
             avatarUrl: currentUser.avatarUrl,
             coverUrl: currentUser.coverUrl || "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
-            bio: `${currentUser.firstName} ${currentUser.lastName} на платформі Visual Pro Connect`,
+            bio: `${currentUser.firstName} ${currentUser.lastName} на платформі Спільнота B&C`,
             viber: currentUser.phoneNumber || "",
             tiktok: "",
             instagram: "",
@@ -159,33 +160,9 @@ export default function Profile() {
             city: currentUser.city
           });
         } else {
-          console.log("Користувача не знайдено або помилка:", error);
-          setUser({
-            id: "user1",
-            name: "Олександр Петренко",
-            username: "alex_photo",
-            avatarUrl: "https://i.pravatar.cc/150?img=1",
-            coverUrl: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
-            bio: "Користувач платформи Visual Pro Connect",
-            location: "Київ, Україна",
-            website: "",
-            joinDate: "Нещодавно",
-            followersCount: 0,
-            followingCount: 0,
-            postsCount: 0,
-            status: "Учасник",
-            isCurrentUser: false,
-            categories: ["photographer"],
-            viber: "",
-            tiktok: "",
-            instagram: "",
-            facebook: "",
-            profession: "photographer",
-            shares: 0,
-            percentage: 0,
-            profit: 0,
-            title: ""
-          });
+          toast.error("Користувача не знайдено");
+          navigate("/");
+          return;
         }
         
         const { data: postsData } = await supabase
@@ -206,8 +183,8 @@ export default function Profile() {
             },
             imageUrl: post.media_url,
             caption: post.content,
-            likes: (post as any).likes_count ?? 0,
-            comments: (post as any).comments_count ?? 0,
+            likes: post.likes_count ?? 0,
+            comments: post.comments_count ?? 0,
             timeAgo: new Date(post.created_at).toLocaleDateString()
           })));
         } else {
@@ -215,39 +192,15 @@ export default function Profile() {
         }
       } catch (error) {
         console.error("Помилка при завантаженні даних:", error);
-        setUser({
-          id: "user1",
-          name: "Олександр Петренко",
-          username: "alex_photo",
-          avatarUrl: "https://i.pravatar.cc/150?img=1",
-          coverUrl: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
-          bio: "Користувач платформи Visual Pro Connect",
-          location: "Київ, Україна",
-          website: "",
-          joinDate: "Нещодавно",
-          followersCount: 0,
-          followingCount: 0,
-          postsCount: 0,
-          status: "Учасник",
-          isCurrentUser: false,
-          categories: ["photographer"],
-          viber: "",
-          tiktok: "",
-          instagram: "",
-          facebook: "",
-          profession: "photographer",
-          shares: 0,
-          percentage: 0,
-          profit: 0,
-          title: ""
-        });
+        toast.error("Помилка при завантаженні профілю");
+        navigate("/");
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchUser();
-  }, [userId]);
+  }, [userId, navigate]);
   
   if (isLoading || !user) {
     return (
@@ -314,8 +267,29 @@ export default function Profile() {
         
         <main className="col-span-12 md:col-span-9">
           <Tabs defaultValue="posts" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="posts">Публікації</TabsTrigger>
+              <TabsTrigger value="portfolio">Портфоліо</TabsTrigger>
+              {(user.role === "representative" || user.status === "Представник" || (user.categories && user.categories.length > 0)) && (
+                <TabsTrigger value="services">Послуги</TabsTrigger>
+              )}
+              {(user.role === "shareholder" || user.status === "Акціонер") && (
+                <TabsTrigger value="shareholder">Акціонер</TabsTrigger>
+              )}
+              <TabsTrigger value="reviews">Відгуки</TabsTrigger>
+            </TabsList>
+            
             <TabsContent value="posts" className="mt-6">
               <div className="space-y-6">
+                {isCurrentUser && (
+                  <div className="mb-4">
+                    <Button onClick={() => toast.info("Функцію створення публікацій буде додано")}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Створити публікацію
+                    </Button>
+                  </div>
+                )}
+                
                 {posts.length > 0 ? (
                   posts.map((post) => renderPostWithOptions(post))
                 ) : (
@@ -327,6 +301,14 @@ export default function Profile() {
             </TabsContent>
             
             <TabsContent value="portfolio" className="mt-6">
+              {isCurrentUser && (
+                <div className="mb-4">
+                  <Button onClick={() => toast.info("Функцію додавання в портфоліо буде додано")}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Додати в портфоліо
+                  </Button>
+                </div>
+              )}
               <PortfolioGrid 
                 items={PORTFOLIO_ITEMS} 
                 userId={user.id} 

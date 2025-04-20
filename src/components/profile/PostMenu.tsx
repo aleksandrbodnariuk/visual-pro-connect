@@ -35,8 +35,13 @@ export function PostMenu({ postId, isAuthor, onEdit, onDelete }: PostMenuProps) 
   };
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/post/${postId}`);
-    toast.success("Посилання скопійовано");
+    try {
+      navigator.clipboard.writeText(`${window.location.origin}/post/${postId}`);
+      toast.success("Посилання скопійовано");
+    } catch (error) {
+      console.error("Copy error:", error);
+      toast.error("Помилка при копіюванні посилання");
+    }
   };
 
   const handleReport = () => {

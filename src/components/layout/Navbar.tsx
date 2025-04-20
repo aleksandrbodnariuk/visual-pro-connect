@@ -77,12 +77,17 @@ export function Navbar() {
     toast.success("Ви вийшли з системи");
     navigate("/");
   };
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate("/");
+  };
   
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur">
       <div className="container flex h-16 items-center justify-between py-4">
         <div className="flex items-center gap-2 md:gap-4">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2" onClick={handleLogoClick}>
             <img 
               src="/lovable-uploads/4c2129b2-6d63-43a9-9c10-18cf11008adb.png" 
               alt="B&C Спільнота" 
@@ -107,7 +112,7 @@ export function Navbar() {
                 type="search"
                 placeholder={t.search}
                 className="w-full rounded-full pl-8 md:w-[300px] lg:w-[300px]"
-                onClick={() => window.location.href = '/search'}
+                onClick={() => navigate('/search')}
               />
             </div>
           </div>
@@ -158,7 +163,13 @@ export function Navbar() {
                 <DropdownMenuLabel>Мій акаунт</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => navigate(`/profile/${currentUser.id}`)}>
+                  <DropdownMenuItem onClick={() => {
+                    if (currentUser && currentUser.id) {
+                      navigate(`/profile/${currentUser.id}`);
+                    } else {
+                      toast.error("Помилка: ID користувача не знайдено");
+                    }
+                  }}>
                     <User className="mr-2 h-4 w-4" />
                     <span>{t.profile}</span>
                   </DropdownMenuItem>
