@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -184,8 +183,8 @@ export default function Profile() {
             },
             imageUrl: post.media_url,
             caption: post.content,
-            likes: post.likes_count ?? 0, // Use nullish coalescing to provide default value
-            comments: post.comments_count ?? 0, // Use nullish coalescing to provide default value
+            likes: post.likes_count || 0,
+            comments: post.comments_count || 0,
             timeAgo: new Date(post.created_at).toLocaleDateString()
           })));
         } else {
