@@ -9,15 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { PiggyBank, DollarSign, Crown } from "lucide-react";
 import { ProfileEditorDialog } from "@/components/profile/ProfileEditorDialog";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
 import { ProfilePostsList } from "@/components/profile/ProfilePostsList";
 import { PostMenu } from "@/components/profile/PostMenu";
 import { PostCard } from "@/components/feed/PostCard";
+import { ServicesSection } from "@/components/profile/ServicesSection";
+import { ShareholderSection } from "@/components/profile/ShareholderSection";
 
 const PORTFOLIO_ITEMS = [
   {
@@ -319,131 +318,16 @@ export default function Profile() {
             
             {(user.role === "representative" || user.status === "Представник" || (user.categories && user.categories.length > 0)) && (
               <TabsContent value="services" className="mt-6">
-                <div className="rounded-xl border p-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold">Мої послуги</h2>
-                    {isCurrentUser && (
-                      <Button variant="outline" size="sm">
-                        <Edit className="h-4 w-4 mr-2" /> Редагувати послуги
-                      </Button>
-                    )}
-                  </div>
-                  
-                  {user.categories && user.categories.length > 0 ? (
-                    <div className="mb-4 flex flex-wrap gap-2">
-                      {user.categories.map((category: string) => (
-                        <Badge key={category} variant="secondary" className="text-sm">
-                          {getCategoryName(category)}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : null}
-                  
-                  <div className="space-y-4">
-                    <div className="rounded-lg bg-muted p-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-medium">Портретна фотосесія</h3>
-                        <span className="rounded-full bg-secondary/20 px-3 py-1 text-sm font-medium text-secondary">від 1500 грн</span>
-                      </div>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Індивідуальна фото��есія в студії або на локації. До 2 годин зйомки, 30 оброблених фотографій.
-                      </p>
-                    </div>
-                    
-                    <div className="rounded-lg bg-muted p-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-medium">Комерційна зйомка</h3>
-                        <span className="rounded-full bg-secondary/20 px-3 py-1 text-sm font-medium text-secondary">від 3000 грн</span>
-                      </div>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Фотографії для соціальних мереж, каталогів та реклами. До 4 годин зйомки, 50 оброблених фотографій.
-                      </p>
-                    </div>
-                    
-                    <div className="rounded-lg bg-muted p-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-medium">Весільна фотографія</h3>
-                        <span className="rounded-full bg-secondary/20 px-3 py-1 text-sm font-medium text-secondary">від 8000 грн</span>
-                      </div>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Повний день зйомки весілля, від зборів до першого танцю. 300+ оброблених фотографій, фотокнига.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <ServicesSection 
+                  isCurrentUser={isCurrentUser} 
+                  categories={user.categories}
+                />
               </TabsContent>
             )}
             
             {(user.role === "shareholder" || user.status === "Акціонер") && (
               <TabsContent value="shareholder" className="mt-6">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                    <CardTitle className="text-xl font-bold flex items-center gap-2">
-                      <Crown className="h-5 w-5 text-amber-500" />
-                      Інформація акціонера
-                    </CardTitle>
-                    <Badge variant="secondary" className="text-lg px-3 py-1">
-                      {user.title || "Магнат"}
-                    </Badge>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <Card>
-                        <CardContent className="p-6">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-muted-foreground">Кількість акцій</p>
-                              <h3 className="text-2xl font-bold mt-1">{user.shares || 0}</h3>
-                            </div>
-                            <div className="p-3 rounded-full bg-blue-100 text-blue-700">
-                              <PiggyBank className="h-6 w-6" />
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card>
-                        <CardContent className="p-6">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-muted-foreground">Відсоток акцій</p>
-                              <h3 className="text-2xl font-bold mt-1">{user.percentage || 0}%</h3>
-                            </div>
-                            <div className="p-3 rounded-full bg-amber-100 text-amber-700">
-                              <Crown className="h-6 w-6" />
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card>
-                        <CardContent className="p-6">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-muted-foreground">Прибуток</p>
-                              <h3 className="text-2xl font-bold mt-1">{user.profit?.toFixed(2) || 0} грн</h3>
-                            </div>
-                            <div className="p-3 rounded-full bg-green-100 text-green-700">
-                              <DollarSign className="h-6 w-6" />
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                    
-                    <div className="border rounded-md p-4">
-                      <h3 className="font-semibold mb-2">Інформація про ринок акцій</h3>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Як акціонер компанії, ви маєте доступ до ринку акцій, де можете купувати та продавати акції.
-                        Поточна рекомендована ціна акції: {localStorage.getItem("stockPrice") || "1000"} грн.
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Прибуток з кожного замовлення розподіляється між акціонерами відповідно до відсотка акцій.
-                        45% від суми кожного замовлення розподіляється між акціонерами.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <ShareholderSection user={user} />
               </TabsContent>
             )}
             
