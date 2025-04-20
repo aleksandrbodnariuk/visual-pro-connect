@@ -32,15 +32,16 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
 
   // Визначаємо варіант беджа на основі титулу
   const getBadgeVariant = () => {
+    // Використовуємо тільки допустимі варіанти для Badge
     switch(shareholderTitle) {
-      case "Імператор": return "destructive";
-      case "Герцог": return "secondary";
-      case "Лорд": return "default";
-      case "Маркіз": return "secondary";
-      case "Граф": return "default";
-      case "Барон": return "secondary";
-      case "Магнат": return "outline";
-      default: return "outline";
+      case "Імператор": return "destructive" as const;
+      case "Герцог": return "secondary" as const;
+      case "Лорд": return "default" as const;
+      case "Маркіз": return "secondary" as const;
+      case "Граф": return "default" as const;
+      case "Барон": return "secondary" as const;
+      case "Магнат": return "outline" as const;
+      default: return "outline" as const;
     }
   };
 

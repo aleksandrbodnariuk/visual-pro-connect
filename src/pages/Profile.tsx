@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect, Suspense } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/layout/Navbar";
@@ -18,6 +19,35 @@ import { PostCard } from "@/components/feed/PostCard";
 import { ServicesSection } from "@/components/profile/ServicesSection";
 import { ShareholderSection } from "@/components/profile/ShareholderSection";
 
+// Компонент для завантаження
+const LoadingSpinner = () => (
+  <div className="min-h-screen">
+    <Navbar />
+    <div className="container py-16 text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+      <p className="mt-4">Завантаження профілю...</p>
+    </div>
+  </div>
+);
+
+// Компонент для помилок
+const ErrorComponent = ({ message }: { message: string }) => (
+  <div className="min-h-screen">
+    <Navbar />
+    <div className="container py-16 text-center">
+      <h2 className="text-xl font-semibold text-destructive mb-4">Помилка</h2>
+      <p>{message}</p>
+      <Button 
+        onClick={() => window.location.reload()} 
+        className="mt-4"
+      >
+        Спробувати знову
+      </Button>
+    </div>
+  </div>
+);
+
+// Демо-дані для портфоліо
 const PORTFOLIO_ITEMS = [
   {
     id: "port1",
@@ -75,6 +105,7 @@ export default function Profile() {
   const [posts, setPosts] = useState<any[]>([]);
   const [isCurrentUser, setIsCurrentUser] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const navigate = useNavigate();
   const { language } = useLanguage();
@@ -83,6 +114,7 @@ export default function Profile() {
   useEffect(() => {
     const fetchUser = async () => {
       setIsLoading(true);
+      setError(null);
       
       try {
         const currentUser = localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser') || '{}') : null;
@@ -95,92 +127,100 @@ export default function Profile() {
         
         setIsCurrentUser(currentUser && currentUser.id === targetUserId);
         
-        const { data: userData, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', targetUserId)
-          .single();
+        // Спробуємо отримати дані з Supabase
+        let userData = null;
         
-        if (userData) {
-          setUser({
-            id: userData.id,
-            name: userData.full_name || "Користувач",
-            username: userData.phone_number || `user_${userData.id.substring(0, 5)}`,
-            avatarUrl: userData.avatar_url,
-            coverUrl: userData.avatar_url || "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
-            bio: userData.full_name ? `${userData.full_name} на платформі Спільнота B&C` : "Користувач платформи Спільнота B&C",
-            viber: userData.phone_number || "",
-            tiktok: "",
-            instagram: "",
-            facebook: "",
-            location: userData.city ? `${userData.city}, ${userData.country || 'Україна'}` : userData.country || "Україна",
-            website: "",
-            joinDate: userData.created_at ? new Date(userData.created_at).toLocaleDateString() : "Нещодавно",
-            followersCount: 0,
-            followingCount: 0,
-            postsCount: 0,
-            profession: userData.categories && userData.categories.length > 0 ? userData.categories[0] : "",
-            status: userData.is_shareholder ? "Акціонер" : (userData.is_admin ? "Адміністратор" : "Учасник"),
-            role: userData.is_admin ? "admin" : (userData.is_shareholder ? "shareholder" : "user"),
-            isCurrentUser: isCurrentUser,
-            shares: 0,
-            percentage: 0,
-            profit: 0,
-            title: "",
-            categories: userData.categories || [],
-            country: userData.country,
-            city: userData.city
-          });
-        } else if (currentUser && !userId) {
-          setUser({
-            id: currentUser.id,
-            name: `${currentUser.firstName} ${currentUser.lastName}`,
-            username: currentUser.email || currentUser.phoneNumber || `user_${currentUser.id.substring(0, 5)}`,
-            avatarUrl: currentUser.avatarUrl,
-            coverUrl: currentUser.coverUrl || "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
-            bio: `${currentUser.firstName} ${currentUser.lastName} на платформі Спільнота B&C`,
-            viber: currentUser.phoneNumber || "",
-            tiktok: "",
-            instagram: "",
-            facebook: "",
-            location: currentUser.city ? `${currentUser.city}, ${currentUser.country || 'Україна'}` : currentUser.country || "Україна",
-            website: "",
-            joinDate: "Нещодавно",
-            followersCount: 0,
-            followingCount: 0,
-            postsCount: 0,
-            status: currentUser.isShareHolder ? "Акціонер" : (currentUser.isAdmin ? "Адміністратор" : "Учасник"),
-            role: currentUser.isAdmin ? "admin" : (currentUser.isShareHolder ? "shareholder" : "user"),
-            isCurrentUser: true,
-            shares: currentUser.shares || 0,
-            percentage: currentUser.percentage || 0,
-            profit: currentUser.profit || 0,
-            title: currentUser.title || "",
-            categories: currentUser.categories || [],
-            country: currentUser.country,
-            city: currentUser.city
-          });
-        } else {
-          toast.error("Користувача не знайдено");
-          navigate("/");
-          return;
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', targetUserId)
+            .single();
+          
+          if (data) {
+            userData = data;
+          } else if (error) {
+            console.warn("Помилка запиту до Supabase:", error);
+          }
+        } catch (supabaseError) {
+          console.warn("Помилка з'єднання з Supabase:", supabaseError);
         }
         
-        const { data: postsData } = await supabase
-          .from('posts')
-          .select('*')
-          .eq('user_id', targetUserId);
+        // Якщо даних з Supabase немає, використовуємо LocalStorage
+        if (!userData) {
+          if (currentUser && (!userId || currentUser.id === userId)) {
+            userData = currentUser;
+          } else {
+            // Спробуємо знайти користувача в локальному сховищі
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            userData = users.find((u: any) => u.id === targetUserId);
+            
+            if (!userData) {
+              throw new Error('Користувача не знайдено');
+            }
+          }
+        }
         
-        if (postsData && postsData.length > 0) {
-          setPosts(postsData.map(post => ({
+        // Формуємо об'єкт користувача
+        setUser({
+          id: userData.id,
+          name: userData.full_name || userData.firstName + ' ' + userData.lastName || "Користувач",
+          username: userData.phone_number || userData.phoneNumber || `user_${userData.id.substring(0, 5)}`,
+          avatarUrl: userData.avatar_url || userData.avatarUrl,
+          coverUrl: userData.avatar_url || userData.coverUrl || "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
+          bio: userData.full_name ? `${userData.full_name} на платформі Спільнота B&C` : "Користувач платформи Спільнота B&C",
+          viber: userData.phone_number || userData.phoneNumber || "",
+          tiktok: "",
+          instagram: "",
+          facebook: "",
+          location: userData.city ? `${userData.city}, ${userData.country || 'Україна'}` : userData.country || "Україна",
+          website: "",
+          joinDate: userData.created_at ? new Date(userData.created_at).toLocaleDateString() : "Нещодавно",
+          followersCount: 0,
+          followingCount: 0,
+          postsCount: 0,
+          profession: userData.categories && userData.categories.length > 0 ? userData.categories[0] : "",
+          status: userData.is_shareholder ? "Акціонер" : (userData.is_admin ? "Адміністратор" : "Учасник"),
+          role: userData.is_admin ? "admin" : (userData.is_shareholder ? "shareholder" : "user"),
+          isCurrentUser: isCurrentUser,
+          shares: userData.shares || 0,
+          percentage: userData.percentage || 0,
+          profit: userData.profit || 0,
+          title: userData.title || "",
+          categories: userData.categories || [],
+          country: userData.country,
+          city: userData.city
+        });
+        
+        // Отримання постів
+        let postsData = [];
+        
+        // Спроба отримати пости з Supabase
+        try {
+          const { data } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('user_id', targetUserId);
+          
+          if (data && data.length > 0) {
+            postsData = data;
+          }
+        } catch (postsError) {
+          console.warn("Помилка отримання постів з Supabase:", postsError);
+          // Можна додати запасний варіант з LocalStorage для постів
+        }
+        
+        // Форматуємо пости
+        if (postsData.length > 0) {
+          setPosts(postsData.map((post: any) => ({
             id: post.id,
             author: {
               id: targetUserId,
-              name: userData?.full_name || currentUser?.firstName + " " + currentUser?.lastName || "Користувач",
-              username: userData?.phone_number || currentUser?.phoneNumber || `user_${post.user_id.substring(0, 5)}`,
-              avatarUrl: userData?.avatar_url || currentUser?.avatarUrl || "https://i.pravatar.cc/150?img=1",
-              profession: userData?.categories && userData.categories.length > 0 ? userData.categories[0] : currentUser?.categories?.[0] || "",
-              categories: userData?.categories || currentUser?.categories || []
+              name: userData.full_name || userData.firstName + ' ' + userData.lastName || "Користувач",
+              username: userData.phone_number || userData.phoneNumber || `user_${post.user_id.substring(0, 5)}`,
+              avatarUrl: userData.avatar_url || userData.avatarUrl || "https://i.pravatar.cc/150?img=1",
+              profession: userData.categories && userData.categories.length > 0 ? userData.categories[0] : "",
+              categories: userData.categories || []
             },
             imageUrl: post.media_url,
             caption: post.content,
@@ -191,10 +231,9 @@ export default function Profile() {
         } else {
           setPosts([]);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Помилка при завантаженні даних:", error);
-        toast.error("Помилка при завантаженні профілю");
-        navigate("/");
+        setError(error.message || "Помилка при завантаженні профілю");
       } finally {
         setIsLoading(false);
       }
@@ -203,15 +242,16 @@ export default function Profile() {
     fetchUser();
   }, [userId, navigate]);
   
-  if (isLoading || !user) {
-    return (
-      <div className="min-h-screen">
-        <Navbar />
-        <div className="container py-16 text-center">
-          Завантаження профілю...
-        </div>
-      </div>
-    );
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+  
+  if (error) {
+    return <ErrorComponent message={error} />;
+  }
+
+  if (!user) {
+    return <ErrorComponent message="Користувача не знайдено" />;
   }
 
   const handleEditProfile = () => {
@@ -291,12 +331,14 @@ export default function Profile() {
                   </div>
                 )}
                 
-                <ProfilePostsList 
-                  posts={posts}
-                  isCurrentUser={isCurrentUser}
-                  onEditPost={handleEditPost}
-                  onDeletePost={handleDeletePost}
-                />
+                <Suspense fallback={<div>Завантаження публікацій...</div>}>
+                  <ProfilePostsList 
+                    posts={posts}
+                    isCurrentUser={isCurrentUser}
+                    onEditPost={handleEditPost}
+                    onDeletePost={handleDeletePost}
+                  />
+                </Suspense>
               </div>
             </TabsContent>
             
@@ -309,25 +351,31 @@ export default function Profile() {
                   </Button>
                 </div>
               )}
-              <PortfolioGrid 
-                items={PORTFOLIO_ITEMS} 
-                userId={user.id} 
-                isOwner={isCurrentUser}
-              />
+              <Suspense fallback={<div>Завантаження портфоліо...</div>}>
+                <PortfolioGrid 
+                  items={PORTFOLIO_ITEMS} 
+                  userId={user.id} 
+                  isOwner={isCurrentUser}
+                />
+              </Suspense>
             </TabsContent>
             
             {(user.role === "representative" || user.status === "Представник" || (user.categories && user.categories.length > 0)) && (
               <TabsContent value="services" className="mt-6">
-                <ServicesSection 
-                  isCurrentUser={isCurrentUser} 
-                  categories={user.categories}
-                />
+                <Suspense fallback={<div>Завантаження послуг...</div>}>
+                  <ServicesSection 
+                    isCurrentUser={isCurrentUser} 
+                    categories={user.categories}
+                  />
+                </Suspense>
               </TabsContent>
             )}
             
             {(user.role === "shareholder" || user.status === "Акціонер") && (
               <TabsContent value="shareholder" className="mt-6">
-                <ShareholderSection user={user} />
+                <Suspense fallback={<div>Завантаження інформації акціонера...</div>}>
+                  <ShareholderSection user={user} />
+                </Suspense>
               </TabsContent>
             )}
             

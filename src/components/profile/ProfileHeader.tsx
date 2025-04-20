@@ -54,9 +54,28 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
 
   useEffect(() => {
     const checkCurrentUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (data.user) {
-        setCurrentUserId(data.user.id);
+      try {
+        // Спочатку спроба отримати користувача з Supabase
+        try {
+          const { data } = await supabase.auth.getUser();
+          if (data.user) {
+            setCurrentUserId(data.user.id);
+            return;
+          }
+        } catch (error) {
+          console.warn("Помилка отримання користувача з Supabase:", error);
+        }
+        
+        // Якщо не вдалося отримати з Supabase, використовуємо локальне сховище
+        const currentUser = localStorage.getItem("currentUser");
+        if (currentUser) {
+          const userData = JSON.parse(currentUser);
+          if (userData.id) {
+            setCurrentUserId(userData.id);
+          }
+        }
+      } catch (error) {
+        console.error("Помилка при перевірці поточного користувача:", error);
       }
     };
     
@@ -66,8 +85,12 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
   useEffect(() => {
     // Check if this user is already a friend
     if (friends && userId) {
-      const friendExists = friends.some(friend => friend?.id === userId);
-      setIsFriend(friendExists);
+      try {
+        const friendExists = friends.some(friend => friend?.id === userId);
+        setIsFriend(friendExists);
+      } catch (error) {
+        console.error("Помилка при перевірці друзів:", error);
+      }
     }
   }, [friends, userId]);
 
@@ -89,6 +112,12 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
     }
   };
 
+  // Fallback якщо не завантажується фон профілю
+  const handleCoverError = (e: React.SyntheticEvent<HTMLDivElement, Event>) => {
+    const target = e.target as HTMLDivElement;
+    target.style.backgroundImage = "url(https://images.unsplash.com/photo-1487887235947-a955ef187fcc)";
+  };
+
   return (
     <div className="animate-fade-in">
       {/* Обкладинка профілю */}
@@ -100,6 +129,7 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
               ? `url(${coverUrl})` 
               : "url(https://images.unsplash.com/photo-1487887235947-a955ef187fcc)",
           }}
+          onError={handleCoverError}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
       </div>
@@ -111,14 +141,16 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
             <Avatar className="h-32 w-32 border-4 border-background">
               <AvatarImage src={avatarUrl} alt={name} />
               <AvatarFallback className="text-4xl">
-                {name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
+                {name && name !== "undefined undefined"
+                  ? name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                  : "U"}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-2xl font-bold">{name}</h1>
+              <h1 className="text-2xl font-bold">{name !== "undefined undefined" ? name : "Користувач"}</h1>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">@{username}</span>
                 {profession && (

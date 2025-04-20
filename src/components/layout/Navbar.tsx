@@ -27,47 +27,51 @@ export function Navbar() {
   
   useEffect(() => {
     // Отримуємо дані користувача з localStorage
-    const userJSON = localStorage.getItem("currentUser");
-    if (userJSON) {
-      const user = JSON.parse(userJSON);
-      
-      // Перевіряємо, чи це засновник і оновлюємо його статус якщо потрібно
-      if (user.phoneNumber === "0507068007" && 
-         (!user.isFounder || !user.isAdmin || user.role !== "admin-founder")) {
+    try {
+      const userJSON = localStorage.getItem("currentUser");
+      if (userJSON) {
+        const user = JSON.parse(userJSON);
         
-        const updatedUser = {
-          ...user,
-          isAdmin: true,
-          isFounder: true,
-          role: "admin-founder",
-          isShareHolder: true,
-          status: "Адміністратор-засновник"
-        };
-        
-        // Оновлюємо дані в localStorage
-        localStorage.setItem("currentUser", JSON.stringify(updatedUser));
-        setCurrentUser(updatedUser);
-        
-        // Оновлюємо список користувачів
-        const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-        const updatedUsers = storedUsers.map((u: any) => {
-          if (u.phoneNumber === "0507068007" || u.id === user.id) {
-            return {
-              ...u,
-              isAdmin: true,
-              isFounder: true,
-              role: "admin-founder",
-              isShareHolder: true,
-              status: "Адміністратор-засновник"
-            };
-          }
-          return u;
-        });
-        
-        localStorage.setItem("users", JSON.stringify(updatedUsers));
-      } else {
-        setCurrentUser(user);
+        // Перевіряємо, чи це засновник і оновлюємо його статус якщо потрібно
+        if (user.phoneNumber === "0507068007" && 
+           (!user.isFounder || !user.isAdmin || user.role !== "admin-founder")) {
+          
+          const updatedUser = {
+            ...user,
+            isAdmin: true,
+            isFounder: true,
+            role: "admin-founder",
+            isShareHolder: true,
+            status: "Адміністратор-засновник"
+          };
+          
+          // Оновлюємо дані в localStorage
+          localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+          setCurrentUser(updatedUser);
+          
+          // Оновлюємо список користувачів
+          const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
+          const updatedUsers = storedUsers.map((u: any) => {
+            if (u.phoneNumber === "0507068007" || u.id === user.id) {
+              return {
+                ...u,
+                isAdmin: true,
+                isFounder: true,
+                role: "admin-founder",
+                isShareHolder: true,
+                status: "Адміністратор-засновник"
+              };
+            }
+            return u;
+          });
+          
+          localStorage.setItem("users", JSON.stringify(updatedUsers));
+        } else {
+          setCurrentUser(user);
+        }
       }
+    } catch (error) {
+      console.error("Помилка при завантаженні даних користувача:", error);
     }
   }, []);
   
@@ -80,7 +84,43 @@ export function Navbar() {
 
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    navigate("/");
+    try {
+      // Використовуємо setTimeout, щоб уникнути проблем з рендерингом
+      setTimeout(() => {
+        navigate("/");
+      }, 0);
+    } catch (error) {
+      console.error("Помилка при навігації на головну:", error);
+      window.location.href = "/";
+    }
+  };
+
+  const handleProfileNavigation = () => {
+    try {
+      if (currentUser && currentUser.id) {
+        // Використовуємо setTimeout, щоб уникнути проблем з рендерингом
+        setTimeout(() => {
+          navigate(`/profile/${currentUser.id}`);
+        }, 0);
+      } else {
+        toast.error("Помилка: ID користувача не знайдено");
+      }
+    } catch (error) {
+      console.error("Помилка при навігації до профілю:", error);
+      toast.error("Виникла помилка при переході до профілю");
+    }
+  };
+
+  const handleNavigate = (path: string) => {
+    try {
+      // Використовуємо setTimeout, щоб уникнути проблем з рендерингом
+      setTimeout(() => {
+        navigate(path);
+      }, 0);
+    } catch (error) {
+      console.error(`Помилка при навігації до ${path}:`, error);
+      window.location.href = path;
+    }
   };
   
   return (
@@ -112,33 +152,42 @@ export function Navbar() {
                 type="search"
                 placeholder={t.search}
                 className="w-full rounded-full pl-8 md:w-[300px] lg:w-[300px]"
-                onClick={() => navigate('/search')}
+                onClick={() => handleNavigate('/search')}
               />
             </div>
           </div>
         </div>
         
         <nav className="flex items-center gap-1 md:gap-2">
-          <Link to="/">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Home className="h-5 w-5" />
-              <span className="sr-only">{t.home}</span>
-            </Button>
-          </Link>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full" 
+            onClick={() => handleNavigate('/')}
+          >
+            <Home className="h-5 w-5" />
+            <span className="sr-only">{t.home}</span>
+          </Button>
           
-          <Link to="/messages">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <MessageCircle className="h-5 w-5" />
-              <span className="sr-only">{t.messages}</span>
-            </Button>
-          </Link>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full" 
+            onClick={() => handleNavigate('/messages')}
+          >
+            <MessageCircle className="h-5 w-5" />
+            <span className="sr-only">{t.messages}</span>
+          </Button>
           
-          <Link to="/notifications">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Bell className="h-5 w-5" />
-              <span className="sr-only">{t.notifications}</span>
-            </Button>
-          </Link>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full" 
+            onClick={() => handleNavigate('/notifications')}
+          >
+            <Bell className="h-5 w-5" />
+            <span className="sr-only">{t.notifications}</span>
+          </Button>
           
           <Button variant="ghost" size="icon" className="rounded-full hidden md:flex">
             <PlusSquare className="h-5 w-5" />
@@ -163,13 +212,7 @@ export function Navbar() {
                 <DropdownMenuLabel>Мій акаунт</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => {
-                    if (currentUser && currentUser.id) {
-                      navigate(`/profile/${currentUser.id}`);
-                    } else {
-                      toast.error("Помилка: ID користувача не знайдено");
-                    }
-                  }}>
+                  <DropdownMenuItem onClick={handleProfileNavigation}>
                     <User className="mr-2 h-4 w-4" />
                     <span>{t.profile}</span>
                   </DropdownMenuItem>
@@ -177,7 +220,7 @@ export function Navbar() {
                     <PlusSquare className="mr-2 h-4 w-4" />
                     <span>Створити публікацію</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/search')}>
+                  <DropdownMenuItem onClick={() => handleNavigate('/search')}>
                     <Search className="mr-2 h-4 w-4" />
                     <span>Знайти професіоналів</span>
                   </DropdownMenuItem>
@@ -185,7 +228,7 @@ export function Navbar() {
                   {/* Доступ до адмін-панелі для адміністраторів */}
                   {(currentUser.isAdmin || currentUser.role === "admin" || 
                     currentUser.role === "admin-founder" || currentUser.phoneNumber === "0507068007") && (
-                    <DropdownMenuItem onClick={() => navigate('/admin')}>
+                    <DropdownMenuItem onClick={() => handleNavigate('/admin')}>
                       <User className="mr-2 h-4 w-4" />
                       <span>Панель адміністратора</span>
                     </DropdownMenuItem>
@@ -194,7 +237,7 @@ export function Navbar() {
                   {/* Доступ до ринку акцій для акціонерів */}
                   {(currentUser.isShareHolder || currentUser.role === "shareholder" || 
                     currentUser.status === "Акціонер" || currentUser.phoneNumber === "0507068007") && (
-                    <DropdownMenuItem onClick={() => navigate('/stock-market')}>
+                    <DropdownMenuItem onClick={() => handleNavigate('/stock-market')}>
                       <User className="mr-2 h-4 w-4" />
                       <span>Ринок акцій</span>
                     </DropdownMenuItem>
@@ -208,7 +251,7 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button variant="secondary" size="sm" onClick={() => navigate('/auth')}>
+            <Button variant="secondary" size="sm" onClick={() => handleNavigate('/auth')}>
               Увійти
             </Button>
           )}
