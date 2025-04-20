@@ -16,6 +16,8 @@ import { ProfileEditorDialog } from "@/components/profile/ProfileEditorDialog";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
 import { ProfilePostsList } from "@/components/profile/ProfilePostsList";
+import { PostMenu } from "@/components/profile/PostMenu";
+import { PostCard } from "@/components/feed/PostCard";
 
 const PORTFOLIO_ITEMS = [
   {
@@ -344,7 +346,7 @@ export default function Profile() {
                         <span className="rounded-full bg-secondary/20 px-3 py-1 text-sm font-medium text-secondary">від 1500 грн</span>
                       </div>
                       <p className="mt-2 text-sm text-muted-foreground">
-                        Індивідуальна фотосесія в студії або на локації. До 2 годин зйомки, 30 оброблених фотографій.
+                        Індивідуальна фото��есія в студії або на локації. До 2 годин зйомки, 30 оброблених фотографій.
                       </p>
                     </div>
                     
