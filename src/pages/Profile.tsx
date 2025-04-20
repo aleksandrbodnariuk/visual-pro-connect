@@ -6,16 +6,16 @@ import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PostCard } from "@/components/feed/PostCard";
-import { PostMenu } from "@/components/profile/PostMenu";
+import { Edit } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { PiggyBank, DollarSign, Crown, Edit } from "lucide-react";
+import { PiggyBank, DollarSign, Crown } from "lucide-react";
 import { ProfileEditorDialog } from "@/components/profile/ProfileEditorDialog";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
+import { ProfilePostsList } from "@/components/profile/ProfilePostsList";
 
 const PORTFOLIO_ITEMS = [
   {
@@ -183,8 +183,8 @@ export default function Profile() {
             },
             imageUrl: post.media_url,
             caption: post.content,
-            likes: 0,
-            comments: 0,
+            likes: post.likes_count,
+            comments: post.comments_count,
             timeAgo: new Date(post.created_at).toLocaleDateString()
           })));
         } else {
@@ -290,13 +290,12 @@ export default function Profile() {
                   </div>
                 )}
                 
-                {posts.length > 0 ? (
-                  posts.map((post) => renderPostWithOptions(post))
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Немає публікацій для відображення
-                  </div>
-                )}
+                <ProfilePostsList 
+                  posts={posts}
+                  isCurrentUser={isCurrentUser}
+                  onEditPost={handleEditPost}
+                  onDeletePost={handleDeletePost}
+                />
               </div>
             </TabsContent>
             

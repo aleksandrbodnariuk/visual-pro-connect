@@ -195,25 +195,31 @@ export type Database = {
       posts: {
         Row: {
           category: string | null
+          comments_count: number
           content: string | null
           created_at: string | null
           id: string
+          likes_count: number
           media_url: string | null
           user_id: string | null
         }
         Insert: {
           category?: string | null
+          comments_count?: number
           content?: string | null
           created_at?: string | null
           id?: string
+          likes_count?: number
           media_url?: string | null
           user_id?: string | null
         }
         Update: {
           category?: string | null
+          comments_count?: number
           content?: string | null
           created_at?: string | null
           id?: string
+          likes_count?: number
           media_url?: string | null
           user_id?: string | null
         }
