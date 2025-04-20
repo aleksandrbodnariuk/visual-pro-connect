@@ -30,17 +30,17 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
     return "Акціонер";
   }, [user?.percentage]);
 
-  // Визначаємо колір беджа на основі титулу
+  // Визначаємо варіант беджа на основі титулу
   const getBadgeVariant = () => {
     switch(shareholderTitle) {
       case "Імператор": return "destructive";
-      case "Герцог": return "purple";
-      case "Лорд": return "orange";
-      case "Маркіз": return "yellow";
-      case "Граф": return "green";
-      case "Барон": return "blue";
-      case "Магнат": return "secondary";
-      default: return "secondary";
+      case "Герцог": return "secondary";
+      case "Лорд": return "default";
+      case "Маркіз": return "secondary";
+      case "Граф": return "default";
+      case "Барон": return "secondary";
+      case "Магнат": return "outline";
+      default: return "outline";
     }
   };
 
