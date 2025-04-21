@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, Suspense } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +20,7 @@ import { ShareholderSection } from "@/components/profile/ShareholderSection";
 import { PortfolioManager } from "@/components/profile/PortfolioManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
+import { FriendsList } from "@/components/profile/FriendsList";
 
 const LoadingSpinner = () => (
   <div className="min-h-screen">
@@ -328,6 +328,7 @@ export default function Profile() {
               {(user?.role === "shareholder" || user?.status === "Акціонер") && (
                 <TabsTrigger value="shareholder">Акціонер</TabsTrigger>
               )}
+              <TabsTrigger value="friends">Друзі</TabsTrigger>
               <TabsTrigger value="reviews">Відгуки</TabsTrigger>
             </TabsList>
             
@@ -390,6 +391,10 @@ export default function Profile() {
                 </Suspense>
               </TabsContent>
             )}
+            
+            <TabsContent value="friends" className="mt-6">
+              <FriendsList userId={user?.id} />
+            </TabsContent>
             
             <TabsContent value="reviews" className="mt-6">
               <div className="rounded-xl border p-6">
