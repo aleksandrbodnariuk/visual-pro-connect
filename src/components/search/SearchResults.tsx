@@ -82,8 +82,9 @@ export function SearchResults({ category }: { category: string }) {
             );
           }
           
-          // Remove dummy data added for demonstration
-          filteredData = filteredData.filter(user => !user.is_bot);
+          // Remove dummy data that might be from demos
+          // Since is_bot is not in the schema, we'll filter out users with demo IDs instead
+          filteredData = filteredData.filter(user => !user.id.startsWith('demo'));
           
           setProfessionals(filteredData);
         } else {
@@ -94,28 +95,28 @@ export function SearchResults({ category }: { category: string }) {
               full_name: "Анна Коваленко",
               categories: ["photographer"],
               avatar_url: "https://i.pravatar.cc/150?img=1",
-              is_bot: true
+              is_demo: true // Using is_demo for local tracking only
             },
             {
               id: "demo2",
               full_name: "Максим Шевченко",
               categories: ["videographer"],
               avatar_url: "https://i.pravatar.cc/150?img=3",
-              is_bot: true
+              is_demo: true
             },
             {
               id: "demo3",
               full_name: "Олена Кравченко",
               categories: ["musician"],
               avatar_url: "https://i.pravatar.cc/150?img=5",
-              is_bot: true
+              is_demo: true
             },
             {
               id: "demo4",
               full_name: "Іван Петренко",
               categories: ["photographer"],
               avatar_url: "https://i.pravatar.cc/150?img=7",
-              is_bot: true
+              is_demo: true
             }
           ];
           
@@ -141,14 +142,14 @@ export function SearchResults({ category }: { category: string }) {
             full_name: "Анна Коваленко",
             categories: ["photographer"],
             avatar_url: "https://i.pravatar.cc/150?img=1",
-            is_bot: true
+            is_demo: true
           },
           {
             id: "demo2",
             full_name: "Максим Шевченко",
             categories: ["videographer"],
             avatar_url: "https://i.pravatar.cc/150?img=3",
-            is_bot: true
+            is_demo: true
           }
         ];
         

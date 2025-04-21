@@ -5,7 +5,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { PostCard } from '@/components/feed/PostCard';
 import { Hero } from '@/components/home/Hero';
-import CreatePublicationModal from '@/components/publications/CreatePublicationModal';
+import { CreatePublicationModal } from '@/components/publications/CreatePublicationModal';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, BarChart3, Edit, Trash2, MoreHorizontal } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
