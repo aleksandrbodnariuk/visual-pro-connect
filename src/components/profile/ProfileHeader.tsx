@@ -4,7 +4,6 @@ import { UserPlus } from "lucide-react";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import { Camera, MapPin, Link as LinkIcon, Calendar, Edit } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -234,23 +233,8 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
               <span className="text-xs text-muted-foreground">Підписок</span>
             </div>
           </div>
-
-          <Tabs defaultValue="posts" className="w-full">
-            <TabsList className="bg-transparent">
-              <TabsTrigger value="posts" className="rounded-none border-b-2 border-transparent data-[state=active]:border-secondary">
-                Публікації
-              </TabsTrigger>
-              <TabsTrigger value="portfolio" className="rounded-none border-b-2 border-transparent data-[state=active]:border-secondary">
-                Портфоліо
-              </TabsTrigger>
-              <TabsTrigger value="services" className="rounded-none border-b-2 border-transparent data-[state=active]:border-secondary">
-                Послуги
-              </TabsTrigger>
-              <TabsTrigger value="reviews" className="rounded-none border-b-2 border-transparent data-[state=active]:border-secondary">
-                Відгуки
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          
+          {/* Removed duplicated menu here */}
         </div>
       </div>
     </div>
