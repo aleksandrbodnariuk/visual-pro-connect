@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, Suspense } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -473,9 +474,24 @@ export default function Profile() {
             onOpenChange={setCreatePostOpen}
             userId={user?.id}
             onSuccess={() => {
+              window.location.reload();
               toast.success("Публікацію створено");
             }}
           />
+          
+          <Dialog open={servicesDialogOpen} onOpenChange={setServicesDialogOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Управління послугами</DialogTitle>
+              </DialogHeader>
+              <ServicesSection 
+                isCurrentUser={true}
+                categories={user?.categories}
+                onEditServices={() => {}}
+                editMode={true}
+              />
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </div>

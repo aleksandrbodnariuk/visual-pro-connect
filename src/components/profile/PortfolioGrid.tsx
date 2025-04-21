@@ -2,7 +2,7 @@
 import { Link } from "react-router-dom";
 import { Camera, Music, Video, Play, Heart, MessageCircle, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect, memo } from "react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PortfolioItem {
   id: string;
@@ -27,8 +28,54 @@ interface PortfolioGridProps {
   isOwner?: boolean;
 }
 
-export function PortfolioGrid({ items, className, userId, isOwner = false }: PortfolioGridProps) {
-  const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(items);
+// Use React.memo to prevent unnecessary re-renders
+export const PortfolioGrid = memo(({ items: initialItems, className, userId, isOwner = false }: PortfolioGridProps) => {
+  const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(initialItems);
+  const [loading, setLoading] = useState(false);
+  
+  // If we have a userId, try to fetch real portfolio items
+  useEffect(() => {
+    if (userId) {
+      const fetchPortfolioItems = async () => {
+        setLoading(true);
+        try {
+          const { data, error } = await supabase
+            .from('portfolio')
+            .select('*')
+            .eq('user_id', userId);
+            
+          if (error) throw error;
+          
+          if (data && data.length > 0) {
+            // Map Supabase data to our format
+            const formattedItems = data.map(item => ({
+              id: item.id,
+              type: item.media_type === 'photo' ? 'photo' : 'video',
+              thumbnailUrl: item.media_url,
+              title: item.title,
+              likes: 0,
+              comments: 0
+            }));
+            
+            setPortfolioItems(formattedItems);
+          } else if (initialItems && initialItems.length > 0) {
+            // Fallback to initial items
+            setPortfolioItems(initialItems);
+          }
+        } catch (error) {
+          console.error("Error fetching portfolio:", error);
+          // Fallback to initial items
+          if (initialItems && initialItems.length > 0) {
+            setPortfolioItems(initialItems);
+          }
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchPortfolioItems();
+    }
+  }, [userId, initialItems]);
   
   const handleEdit = (id: string) => {
     // Implement edit functionality
@@ -41,6 +88,19 @@ export function PortfolioGrid({ items, className, userId, isOwner = false }: Por
     toast.success("Елемент портфоліо видалено");
   };
 
+  if (loading) {
+    return <div className="text-center py-8">Завантаження портфоліо...</div>;
+  }
+
+  if (portfolioItems.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <Camera className="h-12 w-12 mx-auto mb-2 opacity-50" />
+        <p>У портфоліо ще немає елементів</p>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4", className)}>
       {portfolioItems.map((item) => (
@@ -50,6 +110,7 @@ export function PortfolioGrid({ items, className, userId, isOwner = false }: Por
               src={item.thumbnailUrl}
               alt={item.title}
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+              loading="lazy" // Add lazy loading for better performance
             />
           </div>
           
@@ -111,4 +172,6 @@ export function PortfolioGrid({ items, className, userId, isOwner = false }: Por
       ))}
     </div>
   );
-}
+});
+
+PortfolioGrid.displayName = 'PortfolioGrid';
