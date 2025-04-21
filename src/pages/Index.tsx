@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
@@ -44,12 +43,10 @@ export default function Index() {
   };
   
   const handleEditPost = (postId: string) => {
-    // Реалізація редагування публікації
     toast.info(`Редагування публікації ${postId}`);
   };
 
   const handleDeletePost = (postId: string) => {
-    // Видалення публікації
     const updatedPosts = posts.filter(post => post.id !== postId);
     setPosts(updatedPosts);
     localStorage.setItem('posts', JSON.stringify(updatedPosts));
@@ -82,12 +79,10 @@ export default function Index() {
           <Hero onLogin={handleLogin} />
         ) : (
           <div className="grid grid-cols-12 gap-6">
-            {/* Sidebar на лівій стороні */}
             <div className="hidden md:block md:col-span-3 lg:col-span-3">
               <Sidebar className="sticky top-20" />
             </div>
             
-            {/* Головний контент по центру */}
             <main className="col-span-12 md:col-span-9 lg:col-span-6">
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
@@ -96,7 +91,6 @@ export default function Index() {
                     {currentUser && (
                       <CreatePublicationModal 
                         userId={currentUser.id} 
-                        userName={`${currentUser.firstName} ${currentUser.lastName}`} 
                       />
                     )}
                     {currentUser && (currentUser.isShareHolder || currentUser.role === "shareholder" || currentUser.status === "Акціонер") && (
@@ -147,7 +141,6 @@ export default function Index() {
                       {currentUser && (
                         <CreatePublicationModal 
                           userId={currentUser.id} 
-                          userName={`${currentUser.firstName} ${currentUser.lastName}`} 
                         />
                       )}
                     </div>
@@ -156,7 +149,6 @@ export default function Index() {
               </div>
             </main>
             
-            {/* Права сторона */}
             <div className="hidden lg:block lg:col-span-3">
               <div className="sticky top-20 space-y-6">
                 <Card className="p-4">

@@ -16,9 +16,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface CreatePublicationModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   userId: string;
+  userName?: string; // Make userName optional
   onSuccess?: () => void;
 }
 
@@ -26,12 +27,21 @@ export function CreatePublicationModal({
   open, 
   onOpenChange,
   userId,
+  userName,
   onSuccess
 }: CreatePublicationModalProps) {
   const [content, setContent] = useState("");
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isOpen, setIsOpen] = useState(open || false);
+  
+  const handleOpenChange = (newOpen: boolean) => {
+    setIsOpen(newOpen);
+    if (onOpenChange) {
+      onOpenChange(newOpen);
+    }
+  };
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -110,12 +120,12 @@ export function CreatePublicationModal({
         const localPosts = JSON.parse(localStorage.getItem('posts') || '[]');
         const newPost = {
           id: `local_${Date.now()}`,
-          user_id: userId,
+          userId: userId,
           content,
-          media_url: mediaUrl,
-          created_at: new Date().toISOString(),
-          likes_count: 0,
-          comments_count: 0
+          mediaUrl: mediaUrl,
+          createdAt: new Date().toISOString(),
+          likesCount: 0,
+          commentsCount: 0
         };
         
         localPosts.unshift(newPost);
@@ -131,7 +141,8 @@ export function CreatePublicationModal({
         onSuccess();
       }
       
-      onOpenChange(false);
+      handleOpenChange(false);
+      toast.success("Публікацію створено");
     } catch (error) {
       console.error("Error creating post:", error);
       toast.error("Не вдалося створити публікацію");
@@ -141,77 +152,85 @@ export function CreatePublicationModal({
   };
   
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Створити публікацію</DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          <div>
-            <Label htmlFor="content" className="sr-only">Текст публікації</Label>
-            <Textarea
-              id="content"
-              placeholder="Напишіть що у вас нового..."
-              rows={5}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-            />
+    <>
+      <Button 
+        onClick={() => handleOpenChange(true)} 
+        variant="default"
+      >
+        Створити публікацію
+      </Button>
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Створити публікацію</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="content" className="sr-only">Текст публікації</Label>
+              <Textarea
+                id="content"
+                placeholder="Напишіть що у вас нового..."
+                rows={5}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+              />
+            </div>
+            
+            {previewUrl && (
+              <div className="relative rounded-md overflow-hidden">
+                <img 
+                  src={previewUrl} 
+                  alt="Попередній перегляд" 
+                  className="w-full max-h-[300px] object-cover"
+                />
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2"
+                  onClick={handleClearImage}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            
+            <div>
+              <Label htmlFor="media" className="block mb-2">Додати зображення</Label>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2" 
+                  onClick={() => document.getElementById('media')?.click()}
+                  type="button"
+                >
+                  <Image className="h-4 w-4" />
+                  Завантажити
+                </Button>
+                <Input
+                  id="media"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <span className="text-sm text-muted-foreground">
+                  {mediaFile ? mediaFile.name : 'Зображення не вибрано'}
+                </span>
+              </div>
+            </div>
           </div>
           
-          {previewUrl && (
-            <div className="relative rounded-md overflow-hidden">
-              <img 
-                src={previewUrl} 
-                alt="Попередній перегляд" 
-                className="w-full max-h-[300px] object-cover"
-              />
-              <Button
-                variant="destructive"
-                size="icon"
-                className="absolute top-2 right-2"
-                onClick={handleClearImage}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-          
-          <div>
-            <Label htmlFor="media" className="block mb-2">Додати зображення</Label>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                className="flex items-center gap-2" 
-                onClick={() => document.getElementById('media')?.click()}
-                type="button"
-              >
-                <Image className="h-4 w-4" />
-                Завантажити
-              </Button>
-              <Input
-                id="media"
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <span className="text-sm text-muted-foreground">
-                {mediaFile ? mediaFile.name : 'Зображення не вибрано'}
-              </span>
-            </div>
-          </div>
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Скасувати
-          </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Створення...' : 'Опублікувати'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => handleOpenChange(false)}>
+              Скасувати
+            </Button>
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting ? 'Створення...' : 'Опублікувати'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
