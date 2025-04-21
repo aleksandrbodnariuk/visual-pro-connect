@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Camera, Music, Video, Play, Heart, MessageCircle, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -47,15 +46,26 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
           if (error) throw error;
           
           if (data && data.length > 0) {
-            // Map Supabase data to our format
-            const formattedItems = data.map(item => ({
-              id: item.id,
-              type: item.media_type === 'photo' ? 'photo' : 'video',
-              thumbnailUrl: item.media_url,
-              title: item.title,
-              likes: 0,
-              comments: 0
-            }));
+            // Map Supabase data to our format with proper type casting
+            const formattedItems = data.map(item => {
+              // Convert media_type to one of the allowed types
+              let mediaType: "photo" | "video" | "audio" = "photo"; // Default to photo
+              
+              if (item.media_type === 'video') {
+                mediaType = "video";
+              } else if (item.media_type === 'audio') {
+                mediaType = "audio";
+              }
+              
+              return {
+                id: item.id,
+                type: mediaType,
+                thumbnailUrl: item.media_url,
+                title: item.title,
+                likes: 0,
+                comments: 0
+              };
+            });
             
             setPortfolioItems(formattedItems);
           } else if (initialItems && initialItems.length > 0) {
