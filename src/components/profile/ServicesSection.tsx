@@ -2,23 +2,109 @@
 import { Button } from "@/components/ui/button";
 import { Edit, ExternalLink, Youtube, Instagram, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 
 interface ServicesSectionProps {
   isCurrentUser: boolean;
   categories?: string[];
+  onEditServices?: () => void;
 }
 
-export function ServicesSection({ isCurrentUser, categories }: ServicesSectionProps) {
+interface Service {
+  id: string;
+  title: string;
+  price: string;
+  description: string;
+}
+
+export function ServicesSection({ isCurrentUser, categories, onEditServices }: ServicesSectionProps) {
   const [isEditingServices, setIsEditingServices] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [instagramUrl, setInstagramUrl] = useState("");
   const [tiktokUrl, setTiktokUrl] = useState("");
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
+  const [servicesEditOpen, setServicesEditOpen] = useState(false);
+  const [services, setServices] = useState<Service[]>([]);
+  const [newService, setNewService] = useState<Service>({
+    id: '',
+    title: '',
+    price: '',
+    description: ''
+  });
+
+  useEffect(() => {
+    // Завантаження послуг з локального сховища
+    const savedServices = localStorage.getItem(`services_${categories?.[0] || 'default'}`);
+    if (savedServices) {
+      try {
+        setServices(JSON.parse(savedServices));
+      } catch (e) {
+        console.error("Помилка при завантаженні послуг:", e);
+      }
+    } else {
+      // Демо послуги за замовчуванням
+      const defaultServices = getDefaultServices(categories?.[0]);
+      setServices(defaultServices);
+      localStorage.setItem(`services_${categories?.[0] || 'default'}`, JSON.stringify(defaultServices));
+    }
+  }, [categories]);
+
+  const getDefaultServices = (category?: string): Service[] => {
+    if (category === 'photographer') {
+      return [
+        {
+          id: '1',
+          title: 'Портретна фотосесія',
+          price: 'від 1500 грн',
+          description: 'Індивідуальна фотосесія в студії або на локації. До 2 годин зйомки, 30 оброблених фотографій.'
+        },
+        {
+          id: '2',
+          title: 'Комерційна зйомка',
+          price: 'від 3000 грн',
+          description: 'Фотографії для соціальних мереж, каталогів та реклами. До 4 годин зйомки, 50 оброблених фотографій.'
+        },
+        {
+          id: '3',
+          title: 'Весільна фотографія',
+          price: 'від 8000 грн',
+          description: 'Повний день зйомки весілля, від зборів до першого танцю. 300+ оброблених фотографій, фотокнига.'
+        }
+      ];
+    } else if (category === 'videographer') {
+      return [
+        {
+          id: '1',
+          title: 'Відеозйомка події',
+          price: 'від 3500 грн',
+          description: 'Професійна відеозйомка вашої події. До 6 годин зйомки, монтаж, кольорокорекція.'
+        }
+      ];
+    } else if (category === 'musician') {
+      return [
+        {
+          id: '1',
+          title: 'Виступ на заході',
+          price: 'від 5000 грн',
+          description: 'Музичний супровід вашого заходу. Різноманітний репертуар, професійна апаратура.'
+        }
+      ];
+    } else {
+      return [
+        {
+          id: '1',
+          title: 'Професійна послуга',
+          price: 'від 2000 грн',
+          description: 'Індивідуальний підхід та професійна реалізація ваших побажань.'
+        }
+      ];
+    }
+  };
 
   const getCategoryName = (categoryId: string) => {
     switch(categoryId) {
@@ -35,6 +121,14 @@ export function ServicesSection({ isCurrentUser, categories }: ServicesSectionPr
     setVideoDialogOpen(true);
   };
 
+  const handleEditServices = () => {
+    if (onEditServices) {
+      onEditServices();
+    } else {
+      setServicesEditOpen(true);
+    }
+  };
+
   const saveVideo = () => {
     // В реальному застосунку тут був би запит до API для збереження посилань
     // Зараз просто зберігаємо в локальному сховищі для демо
@@ -49,16 +143,65 @@ export function ServicesSection({ isCurrentUser, categories }: ServicesSectionPr
     setVideoDialogOpen(false);
   };
 
+  const handleSaveService = () => {
+    if (!newService.title) {
+      toast.error("Введіть назву послуги");
+      return;
+    }
+
+    const updatedServices = [...services];
+    
+    if (newService.id) {
+      // Редагування існуючої послуги
+      const index = services.findIndex(s => s.id === newService.id);
+      if (index !== -1) {
+        updatedServices[index] = newService;
+      }
+    } else {
+      // Додавання нової послуги
+      updatedServices.push({
+        ...newService,
+        id: Date.now().toString()
+      });
+    }
+    
+    setServices(updatedServices);
+    localStorage.setItem(`services_${categories?.[0] || 'default'}`, JSON.stringify(updatedServices));
+    toast.success("Послугу збережено");
+    
+    setNewService({
+      id: '',
+      title: '',
+      price: '',
+      description: ''
+    });
+  };
+
+  const handleEditService = (service: Service) => {
+    setNewService(service);
+  };
+
+  const handleDeleteService = (id: string) => {
+    const updatedServices = services.filter(s => s.id !== id);
+    setServices(updatedServices);
+    localStorage.setItem(`services_${categories?.[0] || 'default'}`, JSON.stringify(updatedServices));
+    toast.success("Послугу видалено");
+  };
+
   // Завантаження збережених посилань
-  useState(() => {
+  useEffect(() => {
     const savedLinks = localStorage.getItem("videoLinks");
     if (savedLinks) {
-      const links = JSON.parse(savedLinks);
-      setYoutubeUrl(links.youtube || "");
-      setInstagramUrl(links.instagram || "");
-      setTiktokUrl(links.tiktok || "");
+      try {
+        const links = JSON.parse(savedLinks);
+        setYoutubeUrl(links.youtube || "");
+        setInstagramUrl(links.instagram || "");
+        setTiktokUrl(links.tiktok || "");
+      } catch (e) {
+        console.error("Помилка при завантаженні посилань:", e);
+      }
     }
-  });
+  }, []);
 
   const getEmbedUrl = (url: string, platform: 'youtube' | 'instagram' | 'tiktok') => {
     if (!url) return null;
@@ -91,7 +234,7 @@ export function ServicesSection({ isCurrentUser, categories }: ServicesSectionPr
         <h2 className="text-xl font-bold">Мої послуги</h2>
         {isCurrentUser && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setIsEditingServices(true)}>
+            <Button variant="outline" size="sm" onClick={handleEditServices}>
               <Edit className="h-4 w-4 mr-2" /> Редагувати послуги
             </Button>
             <Button variant="outline" size="sm" onClick={handleAddVideo}>
@@ -112,35 +255,35 @@ export function ServicesSection({ isCurrentUser, categories }: ServicesSectionPr
       ) : null}
       
       <div className="space-y-4">
-        <div className="rounded-lg bg-muted p-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium">Портретна фотосесія</h3>
-            <span className="rounded-full bg-secondary/20 px-3 py-1 text-sm font-medium text-secondary">від 1500 грн</span>
+        {services.map(service => (
+          <div key={service.id} className="rounded-lg bg-muted p-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">{service.title}</h3>
+              <span className="rounded-full bg-secondary/20 px-3 py-1 text-sm font-medium text-secondary">{service.price}</span>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {service.description}
+            </p>
+            {isCurrentUser && (
+              <div className="mt-3 flex justify-end gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleEditService(service)}
+                >
+                  <Edit className="h-3 w-3 mr-1" /> Редагувати
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={() => handleDeleteService(service.id)}
+                >
+                  Видалити
+                </Button>
+              </div>
+            )}
           </div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Індивідуальна фотосесія в студії або на локації. До 2 годин зйомки, 30 оброблених фотографій.
-          </p>
-        </div>
-        
-        <div className="rounded-lg bg-muted p-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium">Комерційна зйомка</h3>
-            <span className="rounded-full bg-secondary/20 px-3 py-1 text-sm font-medium text-secondary">від 3000 грн</span>
-          </div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Фотографії для соціальних мереж, каталогів та реклами. До 4 годин зйомки, 50 оброблених фотографій.
-          </p>
-        </div>
-        
-        <div className="rounded-lg bg-muted p-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium">Весільна фотографія</h3>
-            <span className="rounded-full bg-secondary/20 px-3 py-1 text-sm font-medium text-secondary">від 8000 грн</span>
-          </div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Повний день зйомки весілля, від зборів до першого танцю. 300+ оброблених фотографій, фотокнига.
-          </p>
-        </div>
+        ))}
       </div>
 
       {hasVideos && (
@@ -266,6 +409,95 @@ export function ServicesSection({ isCurrentUser, categories }: ServicesSectionPr
             </Button>
             <Button onClick={saveVideo}>
               Зберегти
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Діалог редагування послуг */}
+      <Dialog open={servicesEditOpen} onOpenChange={setServicesEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редагування послуг</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="serviceTitle">Назва послуги</Label>
+              <Input
+                id="serviceTitle"
+                value={newService.title}
+                onChange={(e) => setNewService({...newService, title: e.target.value})}
+                placeholder="Наприклад: Фотосесія в студії"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="servicePrice">Ціна</Label>
+              <Input
+                id="servicePrice"
+                value={newService.price}
+                onChange={(e) => setNewService({...newService, price: e.target.value})}
+                placeholder="Наприклад: від 1500 грн"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="serviceDescription">Опис</Label>
+              <Textarea
+                id="serviceDescription"
+                value={newService.description}
+                onChange={(e) => setNewService({...newService, description: e.target.value})}
+                placeholder="Детальний опис послуги"
+                rows={4}
+              />
+            </div>
+            
+            <Button onClick={handleSaveService} className="w-full">
+              {newService.id ? 'Оновити послугу' : 'Додати послугу'}
+            </Button>
+            
+            {services.length > 0 && (
+              <div className="mt-6">
+                <h4 className="font-medium mb-2">Існуючі послуги</h4>
+                <div className="space-y-2">
+                  {services.map(service => (
+                    <div key={service.id} className="flex justify-between items-center p-2 border rounded">
+                      <span className="truncate mr-2">{service.title}</span>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleEditService(service)}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={() => handleDeleteService(service.id)}
+                        >
+                          Видалити
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setServicesEditOpen(false);
+              setNewService({
+                id: '',
+                title: '',
+                price: '',
+                description: ''
+              });
+            }}>
+              Закрити
             </Button>
           </DialogFooter>
         </DialogContent>

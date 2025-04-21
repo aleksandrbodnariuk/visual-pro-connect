@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, Suspense } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,8 +17,10 @@ import { PostMenu } from "@/components/profile/PostMenu";
 import { PostCard } from "@/components/feed/PostCard";
 import { ServicesSection } from "@/components/profile/ServicesSection";
 import { ShareholderSection } from "@/components/profile/ShareholderSection";
+import { PortfolioManager } from "@/components/profile/PortfolioManager";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
 
-// Компонент для завантаження
 const LoadingSpinner = () => (
   <div className="min-h-screen">
     <Navbar />
@@ -30,7 +31,6 @@ const LoadingSpinner = () => (
   </div>
 );
 
-// Компонент для помилок
 const ErrorComponent = ({ message }: { message: string }) => (
   <div className="min-h-screen">
     <Navbar />
@@ -47,7 +47,6 @@ const ErrorComponent = ({ message }: { message: string }) => (
   </div>
 );
 
-// Демо-дані для портфоліо
 const PORTFOLIO_ITEMS = [
   {
     id: "port1",
@@ -93,7 +92,7 @@ const PORTFOLIO_ITEMS = [
     id: "port6",
     type: "video" as "video",
     thumbnailUrl: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
-    title: "Промо-відео для ресторану",
+    title: "Промо-відео дл�� ресторану",
     likes: 91,
     comments: 14
   }
@@ -107,6 +106,9 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
+  const [portfolioManagerOpen, setPortfolioManagerOpen] = useState(false);
+  const [createPostOpen, setCreatePostOpen] = useState(false);
+  const [servicesDialogOpen, setServicesDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { language } = useLanguage();
   const t = translations[language];
@@ -127,7 +129,6 @@ export default function Profile() {
         
         setIsCurrentUser(currentUser && currentUser.id === targetUserId);
         
-        // Спробуємо отримати дані з Supabase
         let userData = null;
         
         try {
@@ -146,12 +147,10 @@ export default function Profile() {
           console.warn("Помилка з'єднання з Supabase:", supabaseError);
         }
         
-        // Якщо даних з Supabase немає, використовуємо LocalStorage
         if (!userData) {
           if (currentUser && (!userId || currentUser.id === userId)) {
             userData = currentUser;
           } else {
-            // Спробуємо знайти користувача в локальному сховищі
             const users = JSON.parse(localStorage.getItem('users') || '[]');
             userData = users.find((u: any) => u.id === targetUserId);
             
@@ -161,7 +160,6 @@ export default function Profile() {
           }
         }
         
-        // Формуємо об'єкт користувача
         setUser({
           id: userData.id,
           name: userData.full_name || userData.firstName + ' ' + userData.lastName || "Користувач",
@@ -192,10 +190,8 @@ export default function Profile() {
           city: userData.city
         });
         
-        // Отримання постів
         let postsData = [];
         
-        // Спроба отримати пости з Supabase
         try {
           const { data } = await supabase
             .from('posts')
@@ -207,10 +203,8 @@ export default function Profile() {
           }
         } catch (postsError) {
           console.warn("Помилка отримання постів з Supabase:", postsError);
-          // Можна додати запасний варіант з LocalStorage для постів
         }
         
-        // Форматуємо пости
         if (postsData.length > 0) {
           setPosts(postsData.map((post: any) => ({
             id: post.id,
@@ -258,6 +252,18 @@ export default function Profile() {
     setProfileEditorOpen(true);
   };
 
+  const handleAddToPortfolio = () => {
+    setPortfolioManagerOpen(true);
+  };
+
+  const handleCreatePost = () => {
+    setCreatePostOpen(true);
+  };
+
+  const handleEditServices = () => {
+    setServicesDialogOpen(true);
+  };
+
   const handleEditPost = (postId: string) => {
     toast.info(`Редагування публікації ${postId}`);
   };
@@ -265,6 +271,10 @@ export default function Profile() {
   const handleDeletePost = (postId: string) => {
     setPosts(posts.filter(post => post.id !== postId));
     toast.success("Публікацію видалено");
+  };
+
+  const handlePortfolioUpdate = () => {
+    toast.success("Портфоліо оновлено");
   };
 
   const renderPostWithOptions = (post: any) => {
@@ -311,10 +321,10 @@ export default function Profile() {
             <TabsList className="mb-4">
               <TabsTrigger value="posts">Публікації</TabsTrigger>
               <TabsTrigger value="portfolio">Портфоліо</TabsTrigger>
-              {(user.role === "representative" || user.status === "Представник" || (user.categories && user.categories.length > 0)) && (
+              {(user?.role === "representative" || user?.status === "Представник" || (user?.categories && user?.categories.length > 0)) && (
                 <TabsTrigger value="services">Послуги</TabsTrigger>
               )}
-              {(user.role === "shareholder" || user.status === "Акціонер") && (
+              {(user?.role === "shareholder" || user?.status === "Акціонер") && (
                 <TabsTrigger value="shareholder">Акціонер</TabsTrigger>
               )}
               <TabsTrigger value="reviews">Відгуки</TabsTrigger>
@@ -324,7 +334,7 @@ export default function Profile() {
               <div className="space-y-6">
                 {isCurrentUser && (
                   <div className="mb-4">
-                    <Button onClick={() => toast.info("Функцію створення публікацій буде додано")}>
+                    <Button onClick={handleCreatePost}>
                       <Edit className="mr-2 h-4 w-4" />
                       Створити публікацію
                     </Button>
@@ -345,7 +355,7 @@ export default function Profile() {
             <TabsContent value="portfolio" className="mt-6">
               {isCurrentUser && (
                 <div className="mb-4">
-                  <Button onClick={() => toast.info("Функцію додавання в портфоліо буде додано")}>
+                  <Button onClick={handleAddToPortfolio}>
                     <Edit className="mr-2 h-4 w-4" />
                     Додати в портфоліо
                   </Button>
@@ -354,24 +364,25 @@ export default function Profile() {
               <Suspense fallback={<div>Завантаження портфоліо...</div>}>
                 <PortfolioGrid 
                   items={PORTFOLIO_ITEMS} 
-                  userId={user.id} 
+                  userId={user?.id} 
                   isOwner={isCurrentUser}
                 />
               </Suspense>
             </TabsContent>
             
-            {(user.role === "representative" || user.status === "Представник" || (user.categories && user.categories.length > 0)) && (
+            {(user?.role === "representative" || user?.status === "Представник" || (user?.categories && user?.categories.length > 0)) && (
               <TabsContent value="services" className="mt-6">
                 <Suspense fallback={<div>Завантаження послуг...</div>}>
                   <ServicesSection 
                     isCurrentUser={isCurrentUser} 
-                    categories={user.categories}
+                    categories={user?.categories}
+                    onEditServices={handleEditServices}
                   />
                 </Suspense>
               </TabsContent>
             )}
             
-            {(user.role === "shareholder" || user.status === "Акціонер") && (
+            {(user?.role === "shareholder" || user?.status === "Акціонер") && (
               <TabsContent value="shareholder" className="mt-6">
                 <Suspense fallback={<div>Завантаження інформації акціонера...</div>}>
                   <ShareholderSection user={user} />
@@ -440,12 +451,32 @@ export default function Profile() {
       </div>
       
       {isCurrentUser && (
-        <ProfileEditorDialog 
-          user={user} 
-          open={profileEditorOpen}
-          onOpenChange={setProfileEditorOpen}
-          onUpdate={() => window.location.reload()}
-        />
+        <>
+          <ProfileEditorDialog 
+            user={user} 
+            open={profileEditorOpen}
+            onOpenChange={setProfileEditorOpen}
+            onUpdate={() => window.location.reload()}
+          />
+          
+          <Dialog open={portfolioManagerOpen} onOpenChange={setPortfolioManagerOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Управління портфоліо</DialogTitle>
+              </DialogHeader>
+              <PortfolioManager userId={user?.id} onUpdate={handlePortfolioUpdate} />
+            </DialogContent>
+          </Dialog>
+          
+          <CreatePublicationModal 
+            open={createPostOpen} 
+            onOpenChange={setCreatePostOpen}
+            userId={user?.id}
+            onSuccess={() => {
+              toast.success("Публікацію створено");
+            }}
+          />
+        </>
       )}
     </div>
   );

@@ -1,8 +1,9 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Camera, Music, Video, Users, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 export const CATEGORIES = [
   {
@@ -42,6 +43,55 @@ export function SearchCategories() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const currentCategory = searchParams.get("category") || "";
+  const [counts, setCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const fetchCategoryCounts = async () => {
+      try {
+        // Try to get counts from Supabase
+        const { data, error } = await supabase
+          .from('users')
+          .select('categories');
+          
+        if (error) throw error;
+        
+        const categoryCounts: Record<string, number> = {};
+        
+        // Initialize all categories with 0
+        CATEGORIES.forEach(cat => {
+          categoryCounts[cat.id] = 0;
+        });
+        
+        // Count users in each category
+        if (data) {
+          data.forEach(user => {
+            if (user.categories && Array.isArray(user.categories)) {
+              user.categories.forEach(category => {
+                if (categoryCounts[category] !== undefined) {
+                  categoryCounts[category]++;
+                }
+              });
+            }
+          });
+        }
+        
+        setCounts(categoryCounts);
+      } catch (error) {
+        console.error("Error fetching category counts:", error);
+        
+        // Fallback: provide dummy counts
+        setCounts({
+          photographer: 12,
+          videographer: 8,
+          musician: 6,
+          host: 4,
+          pyrotechnician: 2
+        });
+      }
+    };
+    
+    fetchCategoryCounts();
+  }, []);
 
   const handleCategoryClick = (categoryId: string) => {
     searchParams.set("category", categoryId);
@@ -66,6 +116,11 @@ export function SearchCategories() {
           >
             <category.icon className="h-4 w-4" />
             <span>{category.name}</span>
+            {counts[category.id] > 0 && (
+              <span className="ml-1 rounded-full bg-white bg-opacity-20 px-1.5 py-0.5 text-xs">
+                {counts[category.id]}
+              </span>
+            )}
           </button>
         ))}
       </div>
