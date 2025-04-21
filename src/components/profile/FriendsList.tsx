@@ -6,18 +6,20 @@ import { Check, X, UserPlus } from "lucide-react";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import { useEffect } from "react";
 
-export function FriendsList({ userId }: { userId: string }) {
+// userId –– можна не подавати, якщо треба відобразити друзів авторизованого користувача
+export function FriendsList({ userId }: { userId?: string }) {
   const { friendRequests, friends, respondToFriendRequest, refreshFriendRequests } = useFriendRequests();
   
   useEffect(() => {
-    // Перезавантажуємо список друзів при монтуванні компонента
     refreshFriendRequests();
-  }, [userId]);
+  }, [userId, refreshFriendRequests]);
   
+  // Запити на додавання, які чекають підтвердження
   const pendingRequests = friendRequests.filter(
-    request => request.receiver_id === userId && request.status === 'pending'
+    request => request.status === 'pending'
+      && (!userId || request.receiver_id === userId)
   );
-
+  // Друзі (тільки accepted)
   const friendsList = friends.filter(friend => friend !== null);
 
   // Функція для отримання ініціалів
