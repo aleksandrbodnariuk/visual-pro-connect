@@ -18,9 +18,11 @@ import { toast } from "sonner";
 import { NavbarActions } from "./NavbarActions";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
+import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
 
 export function Navbar() {
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const navigate = useNavigate();
   const { language } = useLanguage();
   const t = translations[language];
@@ -189,7 +191,12 @@ export function Navbar() {
             <span className="sr-only">{t.notifications}</span>
           </Button>
           
-          <Button variant="ghost" size="icon" className="rounded-full hidden md:flex">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full hidden md:flex" 
+            onClick={() => setIsCreateModalOpen(true)}
+          >
             <PlusSquare className="h-5 w-5" />
             <span className="sr-only">Створити</span>
           </Button>
@@ -216,7 +223,7 @@ export function Navbar() {
                     <User className="mr-2 h-4 w-4" />
                     <span>{t.profile}</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsCreateModalOpen(true)}>
                     <PlusSquare className="mr-2 h-4 w-4" />
                     <span>Створити публікацію</span>
                   </DropdownMenuItem>
@@ -259,6 +266,20 @@ export function Navbar() {
           <NavbarActions />
         </nav>
       </div>
+      
+      {/* Модальне вікно створення публікації */}
+      {currentUser && (
+        <CreatePublicationModal
+          open={isCreateModalOpen}
+          onOpenChange={setIsCreateModalOpen}
+          userId={currentUser.id}
+          userName={`${currentUser.firstName || ''} ${currentUser.lastName || ''}`}
+          onSuccess={() => {
+            setIsCreateModalOpen(false);
+            toast.success("Публікацію створено");
+          }}
+        />
+      )}
     </header>
   );
 }

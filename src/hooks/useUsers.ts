@@ -1,47 +1,111 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { supabase } from '@/integrations/supabase/client';
 
 export function useUsers() {
   const [users, setUsers] = useState<any[]>([]);
   const [isFounder, setIsFounder] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+  const loadUsers = useCallback(async () => {
+    setIsLoading(true);
     
-    // Перевіряємо, чи це засновник
-    const isFounderAdmin = currentUser.role === "admin-founder" || 
-                          (currentUser.phoneNumber === "0507068007");
-    
-    setIsFounder(isFounderAdmin);
-    
-    // Завантажуємо користувачів
-    const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-    
-    // Переконуємося, що засновник має правильний статус
-    const updatedUsers = storedUsers.map((user: any) => {
-      if (user.phoneNumber === "0507068007") {
-        return {
-          ...user,
-          isAdmin: true,
-          isFounder: true,
-          role: "admin-founder",
-          isShareHolder: true,
-          status: "Адміністратор-засновник"
-        };
+    try {
+      // Спочатку перевіряємо, чи поточний користувач є засновником
+      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      
+      // Перевіряємо, чи це засновник
+      const isFounderAdmin = currentUser.role === "admin-founder" || 
+                            (currentUser.phoneNumber === "0507068007");
+      
+      setIsFounder(isFounderAdmin);
+      
+      // Спробуємо отримати дані з Supabase
+      try {
+        const { data: supabaseUsers, error } = await supabase
+          .from('users')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (supabaseUsers && supabaseUsers.length > 0) {
+          // Переконуємося, що засновник має правильний статус
+          const updatedUsers = supabaseUsers.map((user: any) => {
+            if (user.phone_number === "0507068007") {
+              return {
+                ...user,
+                isAdmin: true,
+                isFounder: true,
+                is_admin: true,
+                founder_admin: true,
+                role: "admin-founder",
+                isShareHolder: true,
+                is_shareholder: true,
+                status: "Адміністратор-засновник"
+              };
+            }
+            return {
+              ...user,
+              firstName: user.full_name?.split(' ')[0] || '',
+              lastName: user.full_name?.split(' ')[1] || '',
+              avatarUrl: user.avatar_url,
+              isAdmin: user.is_admin,
+              isShareHolder: user.is_shareholder,
+              isFounder: user.founder_admin
+            };
+          });
+          
+          setUsers(updatedUsers);
+          
+          // Оновлюємо також локальне сховище для сумісності
+          localStorage.setItem("users", JSON.stringify(updatedUsers));
+        }
+      } catch (supabaseError) {
+        console.warn("Помилка при отриманні даних з Supabase:", supabaseError);
+        
+        // Використовуємо дані з localStorage як запасний варіант
+        const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
+        
+        // Переконуємося, що засновник має правильний статус
+        const updatedUsers = storedUsers.map((user: any) => {
+          if (user.phoneNumber === "0507068007") {
+            return {
+              ...user,
+              isAdmin: true,
+              isFounder: true,
+              role: "admin-founder",
+              isShareHolder: true,
+              status: "Адміністратор-засновник"
+            };
+          }
+          return user;
+        });
+        
+        // Якщо є зміни, оновлюємо localStorage
+        if (JSON.stringify(updatedUsers) !== JSON.stringify(storedUsers)) {
+          localStorage.setItem("users", JSON.stringify(updatedUsers));
+        }
+        
+        setUsers(updatedUsers);
       }
-      return user;
-    });
-    
-    // Якщо є зміни, оновлюємо localStorage
-    if (JSON.stringify(updatedUsers) !== JSON.stringify(storedUsers)) {
-      localStorage.setItem("users", JSON.stringify(updatedUsers));
+    } catch (error) {
+      console.error("Помилка при завантаженні користувачів:", error);
+      toast.error("Помилка при завантаженні даних користувачів");
+    } finally {
+      setIsLoading(false);
     }
-    
-    setUsers(updatedUsers);
   }, []);
 
-  const deleteUser = (userId: string) => {
+  // Завантажуємо дані при першому рендерингу
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
+  const deleteUser = async (userId: string) => {
     const userToDelete = users.find(user => user.id === userId);
     
     // Prevent deletion of founder-admin
@@ -58,47 +122,78 @@ export function useUsers() {
     }
     
     // Confirm before deletion
-    if (confirm(`Ви впевнені, що хочете видалити користувача ${userToDelete?.firstName} ${userToDelete?.lastName}?`)) {
-      const updatedUsers = users.filter(user => user.id !== userId);
-      setUsers(updatedUsers);
-      localStorage.setItem("users", JSON.stringify(updatedUsers));
-      
-      // Also remove from other related data
-      removeUserFromRelatedData(userId);
-      
-      toast.success("Користувача видалено");
+    if (confirm(`Ви впевнені, що хочете видалити користувача ${userToDelete?.firstName || ''} ${userToDelete?.lastName || ''}?`)) {
+      try {
+        // Спроба видалити користувача в Supabase
+        try {
+          const { error } = await supabase
+            .from('users')
+            .delete()
+            .eq('id', userId);
+            
+          if (error) throw error;
+        } catch (supabaseError) {
+          console.warn("Помилка при видаленні користувача в Supabase:", supabaseError);
+        }
+        
+        // Видаляємо локально в будь-якому випадку
+        const updatedUsers = users.filter(user => user.id !== userId);
+        setUsers(updatedUsers);
+        localStorage.setItem("users", JSON.stringify(updatedUsers));
+        
+        // Also remove from other related data
+        removeUserFromRelatedData(userId);
+        
+        toast.success("Користувача видалено");
+      } catch (error) {
+        console.error("Помилка при видаленні користувача:", error);
+        toast.error("Помилка при видаленні користувача");
+      }
     }
   };
   
   const removeUserFromRelatedData = (userId: string) => {
     // Remove user's posts
     const posts = JSON.parse(localStorage.getItem("posts") || "[]");
-    const updatedPosts = posts.filter((post: any) => post.userId !== userId);
+    const updatedPosts = posts.filter((post: any) => post.userId !== userId && post.user_id !== userId);
     localStorage.setItem("posts", JSON.stringify(updatedPosts));
     
     // Remove user's portfolio items
     const portfolio = JSON.parse(localStorage.getItem("portfolio") || "[]");
-    const updatedPortfolio = portfolio.filter((item: any) => item.userId !== userId);
+    const updatedPortfolio = portfolio.filter((item: any) => item.userId !== userId && item.user_id !== userId);
     localStorage.setItem("portfolio", JSON.stringify(updatedPortfolio));
     
     // Remove user from shares data
     const shares = JSON.parse(localStorage.getItem("shares") || "[]");
-    const updatedShares = shares.filter((share: any) => share.userId !== userId);
+    const updatedShares = shares.filter((share: any) => share.userId !== userId && share.user_id !== userId);
     localStorage.setItem("shares", JSON.stringify(updatedShares));
     
     // Remove user from other relevant storage
     const stockExchange = JSON.parse(localStorage.getItem("stockExchange") || "[]");
-    const updatedStockExchange = stockExchange.filter((item: any) => item.sellerId !== userId);
+    const updatedStockExchange = stockExchange.filter((item: any) => item.sellerId !== userId && item.seller_id !== userId);
     localStorage.setItem("stockExchange", JSON.stringify(updatedStockExchange));
     
     const transactions = JSON.parse(localStorage.getItem("sharesTransactions") || "[]");
     const updatedTransactions = transactions.filter(
-      (t: any) => t.sellerId !== userId && t.buyerId !== userId
+      (t: any) => (t.sellerId !== userId && t.buyerId !== userId) && (t.seller_id !== userId && t.buyer_id !== userId)
     );
     localStorage.setItem("sharesTransactions", JSON.stringify(updatedTransactions));
+    
+    // Видаляємо повідомлення та запити в друзі
+    const friendRequests = JSON.parse(localStorage.getItem("friendRequests") || "[]");
+    const updatedFriendRequests = friendRequests.filter(
+      (req: any) => req.sender_id !== userId && req.receiver_id !== userId
+    );
+    localStorage.setItem("friendRequests", JSON.stringify(updatedFriendRequests));
+    
+    const messages = JSON.parse(localStorage.getItem("messages") || "[]");
+    const updatedMessages = messages.filter(
+      (msg: any) => msg.sender_id !== userId && msg.receiver_id !== userId
+    );
+    localStorage.setItem("messages", JSON.stringify(updatedMessages));
   };
 
-  const changeUserStatus = (userId: string, newStatus: string) => {
+  const changeUserStatus = async (userId: string, newStatus: string) => {
     const userToUpdate = users.find(user => user.id === userId);
     
     // Більш строга перевірка для захисту засновника
@@ -108,7 +203,7 @@ export function useUsers() {
     }
     
     let newRole = "user";
-    let isShareHolder = userToUpdate?.isShareHolder || false;
+    let isShareHolder = userToUpdate?.isShareHolder || userToUpdate?.is_shareholder || false;
     
     if (newStatus === "Адміністратор" || newStatus === "Адміністратор-засновник") {
       newRole = newStatus === "Адміністратор-засновник" ? "admin-founder" : "admin";
@@ -122,40 +217,69 @@ export function useUsers() {
       isShareHolder = true;
     }
     
-    const updatedUsers = users.map(user => {
-      if (user.id === userId) {
-        return { 
-          ...user, 
-          status: newStatus, 
-          role: newRole,
-          isShareHolder,
-          // Спеціальна логіка для користувача з номером засновника
-          ...(user.phoneNumber === "0507068007" ? {
-            isAdmin: true,
-            isFounder: true,
-            role: "admin-founder",
-            status: "Адміністратор-засновник"
-          } : {})
-        };
+    try {
+      // Спроба оновити дані в Supabase
+      try {
+        const { error } = await supabase
+          .from('users')
+          .update({
+            status: newStatus,
+            role: newRole,
+            is_admin: newStatus === "Адміністратор" || newStatus === "Адміністратор-засновник",
+            is_shareholder: isShareHolder,
+            founder_admin: newStatus === "Адміністратор-засновник" || userToUpdate?.phoneNumber === "0507068007"
+          })
+          .eq('id', userId);
+          
+        if (error) throw error;
+      } catch (supabaseError) {
+        console.warn("Помилка при оновленні статусу користувача в Supabase:", supabaseError);
       }
-      return user;
-    });
-    
-    setUsers(updatedUsers);
-    localStorage.setItem("users", JSON.stringify(updatedUsers));
-    toast.success(`Статус користувача змінено на "${newStatus}"`);
-    
-    // Оновлюємо поточного користувача, якщо змінено його статус
-    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
-    if (currentUser.id === userId) {
-      const updatedUser = updatedUsers.find(user => user.id === userId);
-      if (updatedUser) {
-        localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+      
+      // Оновлюємо локально в будь-якому випадку
+      const updatedUsers = users.map(user => {
+        if (user.id === userId) {
+          return { 
+            ...user, 
+            status: newStatus, 
+            role: newRole,
+            isShareHolder,
+            is_shareholder: isShareHolder,
+            isAdmin: newStatus === "Адміністратор" || newStatus === "Адміністратор-засновник",
+            is_admin: newStatus === "Адміністратор" || newStatus === "Адміністратор-засновник",
+            // Спеціальна логіка для користувача з номером засновника
+            ...(user.phoneNumber === "0507068007" || user.phone_number === "0507068007" ? {
+              isAdmin: true,
+              isFounder: true,
+              is_admin: true,
+              founder_admin: true,
+              role: "admin-founder",
+              status: "Адміністратор-засновник"
+            } : {})
+          };
+        }
+        return user;
+      });
+      
+      setUsers(updatedUsers);
+      localStorage.setItem("users", JSON.stringify(updatedUsers));
+      toast.success(`Статус користувача змінено на "${newStatus}"`);
+      
+      // Оновлюємо поточного користувача, якщо змінено його статус
+      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      if (currentUser.id === userId) {
+        const updatedUser = updatedUsers.find(user => user.id === userId);
+        if (updatedUser) {
+          localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+        }
       }
+    } catch (error) {
+      console.error("Помилка при оновленні статусу користувача:", error);
+      toast.error("Помилка при зміні статусу користувача");
     }
   };
 
-  const toggleShareholderStatus = (userId: string, isShareHolder: boolean) => {
+  const toggleShareholderStatus = async (userId: string, isShareHolder: boolean) => {
     const userToUpdate = users.find(user => user.id === userId);
     
     // Додаткова перевірка для засновника
@@ -164,52 +288,84 @@ export function useUsers() {
       return;
     }
     
-    const updatedUsers = users.map(user => {
-      if (user.id === userId) {
-        // Спеціальна логіка для користувача з номером засновника
-        if (user.phoneNumber === "0507068007") {
+    try {
+      // Спроба оновити дані в Supabase
+      try {
+        const { error } = await supabase
+          .from('users')
+          .update({
+            is_shareholder: isShareHolder,
+            status: isShareHolder ? 
+                     (userToUpdate?.status === "Звичайний користувач" ? "Акціонер" : userToUpdate?.status) : 
+                     (userToUpdate?.status === "Акціонер" ? "Звичайний користувач" : userToUpdate?.status),
+            role: isShareHolder ? 
+                   (userToUpdate?.role === "admin" || userToUpdate?.role === "admin-founder" ? userToUpdate?.role : "shareholder") :
+                   (userToUpdate?.role === "shareholder" ? "user" : userToUpdate?.role)
+          })
+          .eq('id', userId);
+          
+        if (error) throw error;
+      } catch (supabaseError) {
+        console.warn("Помилка при оновленні статусу акціонера в Supabase:", supabaseError);
+      }
+      
+      // Оновлюємо локально в будь-якому випадку
+      const updatedUsers = users.map(user => {
+        if (user.id === userId) {
+          // Спеціальна логіка для користувача з номером засновника
+          if (user.phoneNumber === "0507068007" || user.phone_number === "0507068007") {
+            return { 
+              ...user, 
+              isShareHolder: true,
+              is_shareholder: true,
+              isAdmin: true,
+              isFounder: true,
+              is_admin: true,
+              founder_admin: true,
+              role: "admin-founder",
+              status: "Адміністратор-засновник"
+            };
+          }
+          
           return { 
             ...user, 
-            isShareHolder: true,
-            isAdmin: true,
-            isFounder: true,
-            role: "admin-founder",
-            status: "Адміністратор-засновник"
+            isShareHolder,
+            is_shareholder: isShareHolder,
+            status: isShareHolder ? (user.status === "Звичайний користувач" ? "Акціонер" : user.status) : 
+                                 (user.status === "Акціонер" ? "Звичайний користувач" : user.status),
+            role: isShareHolder ? 
+              (user.role === "admin" || user.role === "admin-founder" ? user.role : "shareholder") :
+              (user.role === "shareholder" ? "user" : user.role)
           };
         }
-        
-        return { 
-          ...user, 
-          isShareHolder,
-          status: isShareHolder ? (user.status === "Звичайний користувач" ? "Акціонер" : user.status) : 
-                                 (user.status === "Акціонер" ? "Звичайний користувач" : user.status),
-          role: isShareHolder ? 
-            (user.role === "admin" || user.role === "admin-founder" ? user.role : "shareholder") :
-            (user.role === "shareholder" ? "user" : user.role)
-        };
+        return user;
+      });
+      
+      setUsers(updatedUsers);
+      localStorage.setItem("users", JSON.stringify(updatedUsers));
+      toast.success(isShareHolder ? "Користувача додано до акціонерів" : "Користувача видалено з акціонерів");
+      
+      // Оновлюємо поточного користувача, якщо змінено його статус
+      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      if (currentUser.id === userId) {
+        const updatedUser = updatedUsers.find(user => user.id === userId);
+        if (updatedUser) {
+          localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+        }
       }
-      return user;
-    });
-    
-    setUsers(updatedUsers);
-    localStorage.setItem("users", JSON.stringify(updatedUsers));
-    toast.success(isShareHolder ? "Користувача додано до акціонерів" : "Користувача видалено з акціонерів");
-    
-    // Оновлюємо поточного користувача, якщо змінено його статус
-    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
-    if (currentUser.id === userId) {
-      const updatedUser = updatedUsers.find(user => user.id === userId);
-      if (updatedUser) {
-        localStorage.setItem("currentUser", JSON.stringify(updatedUser));
-      }
+    } catch (error) {
+      console.error("Помилка при зміні статусу акціонера:", error);
+      toast.error("Помилка при зміні статусу акціонера");
     }
   };
 
   return {
     users,
     isFounder,
+    isLoading,
     deleteUser,
     changeUserStatus,
-    toggleShareholderStatus
+    toggleShareholderStatus,
+    refreshUsers: loadUsers
   };
 }
