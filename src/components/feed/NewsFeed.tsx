@@ -1,61 +1,194 @@
 
+import React, { useState, useEffect } from "react";
 import { PostCard } from "./PostCard";
-
-// Тестові дані для демонстрації
-const POSTS = [
-  {
-    id: "1",
-    author: {
-      id: "user1",
-      name: "Олександр Петренко",
-      username: "alex_photo",
-      avatarUrl: "https://i.pravatar.cc/150?img=1",
-      profession: "Photo"
-    },
-    imageUrl: "https://images.unsplash.com/photo-1500673922987-e212871fec22",
-    caption: "Вечірня фотосесія із використанням світлових ефектів. #creative #photoshoot #lights",
-    likes: 124,
-    comments: 18,
-    timeAgo: "2 години тому"
-  },
-  {
-    id: "2",
-    author: {
-      id: "user2",
-      name: "Марія Коваленко",
-      username: "maria_video",
-      avatarUrl: "https://i.pravatar.cc/150?img=5",
-      profession: "Video"
-    },
-    imageUrl: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
-    caption: "Зйомка нового музичного кліпу. Закулісся творчого процесу! #musicvideo #production",
-    likes: 89,
-    comments: 7,
-    timeAgo: "5 годин тому"
-  },
-  {
-    id: "3",
-    author: {
-      id: "user3",
-      name: "Ігор Мельник",
-      username: "igor_music",
-      avatarUrl: "https://i.pravatar.cc/150?img=8",
-      profession: "Music"
-    },
-    imageUrl: "https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b",
-    caption: "Новий трек вже скоро! Готуємось до релізу і аранжуємо останні деталі. #newmusic #producer",
-    likes: 203,
-    comments: 25,
-    timeAgo: "1 день тому"
-  },
-];
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLanguage } from "@/context/LanguageContext";
+import { translations } from "@/lib/translations";
+import { supabase } from "@/integrations/supabase/client";
 
 export function NewsFeed() {
+  const [posts, setPosts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { language } = useLanguage();
+  const t = translations[language];
+
+  // Завантаження постів з Supabase або localStorage
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setIsLoading(true);
+      try {
+        // Спробуємо отримати пости з Supabase
+        const { data: supabasePosts, error } = await supabase
+          .from('posts')
+          .select('*, user:user_id(*)')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error("Помилка отримання постів з Supabase:", error);
+          throw error;
+        }
+
+        if (supabasePosts && supabasePosts.length > 0) {
+          setPosts(supabasePosts);
+          localStorage.setItem('posts', JSON.stringify(supabasePosts));
+        } else {
+          // Якщо у Supabase немає постів, перевіряємо localStorage
+          const storedPosts = JSON.parse(localStorage.getItem('posts') || '[]');
+          
+          // Видаляємо зразки постів з localStorage
+          const filteredPosts = storedPosts.filter((post: any) => 
+            post.author !== "Олександр Петренко" && 
+            post.author !== "Марія Коваленко" && 
+            !post.title?.includes("Нова фотосесія") &&
+            !post.title?.includes("Відеомонтаж кліпу") &&
+            !post.content?.includes("Опис нової фотосесії для молодят") &&
+            !post.content?.includes("Деталі про новий музичний кліп")
+          );
+          
+          // Зберігаємо очищені пости
+          localStorage.setItem('posts', JSON.stringify(filteredPosts));
+          setPosts(filteredPosts);
+          
+          // Спроба перенесення постів з localStorage у Supabase
+          if (filteredPosts.length > 0) {
+            for (const post of filteredPosts) {
+              try {
+                const { error: insertError } = await supabase
+                  .from('posts')
+                  .insert({
+                    id: post.id || crypto.randomUUID(),
+                    content: post.content,
+                    media_url: post.media_url || post.mediaUrl,
+                    user_id: post.user_id || post.userId,
+                    category: post.category,
+                    likes_count: post.likes_count || 0,
+                    comments_count: post.comments_count || 0
+                  });
+                
+                if (insertError) {
+                  console.warn("Помилка при додаванні поста в Supabase:", insertError);
+                }
+              } catch (insertErr) {
+                console.error("Помилка при додаванні поста в Supabase:", insertErr);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Помилка при завантаженні постів:", error);
+        
+        // Використовуємо дані з localStorage як запасний варіант
+        const storedPosts = JSON.parse(localStorage.getItem('posts') || '[]');
+        
+        // Видаляємо зразки постів з localStorage
+        const filteredPosts = storedPosts.filter((post: any) => 
+          post.author !== "Олександр Петренко" && 
+          post.author !== "Марія Коваленко" && 
+          !post.title?.includes("Нова фотосесія") &&
+          !post.title?.includes("Відеомонтаж кліпу") &&
+          !post.content?.includes("Опис нової фотосесії для молодят") &&
+          !post.content?.includes("Деталі про новий музичний кліп")
+        );
+        
+        // Зберігаємо очищені пости
+        localStorage.setItem('posts', JSON.stringify(filteredPosts));
+        setPosts(filteredPosts);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchPosts();
+  }, []);
+
   return (
-    <div className="mx-auto max-w-3xl space-y-8 pb-10">
-      {POSTS.map((post) => (
-        <PostCard key={post.id} {...post} />
-      ))}
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">{t.feed}</h2>
+      </div>
+
+      <Tabs defaultValue="all">
+        <TabsList className="w-full max-w-md mx-auto mb-4">
+          <TabsTrigger value="all" className="flex-1">{t.allPosts}</TabsTrigger>
+          <TabsTrigger value="photo" className="flex-1">{t.photoPosts}</TabsTrigger>
+          <TabsTrigger value="video" className="flex-1">{t.videoPosts}</TabsTrigger>
+          <TabsTrigger value="music" className="flex-1">{t.musicPosts}</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all">
+          {isLoading ? (
+            <div className="text-center py-10">Завантаження постів...</div>
+          ) : posts.length > 0 ? (
+            <div className="space-y-6">
+              {posts.map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <p className="text-muted-foreground mb-4">
+                {t.noPostsYet}
+              </p>
+              <Button>{t.createPost}</Button>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="photo">
+          {isLoading ? (
+            <div className="text-center py-10">Завантаження...</div>
+          ) : posts.filter(post => post.category === 'photo').length > 0 ? (
+            <div className="space-y-6">
+              {posts
+                .filter(post => post.category === 'photo')
+                .map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <p className="text-muted-foreground">Немає постів у категорії "Фото"</p>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="video">
+          {isLoading ? (
+            <div className="text-center py-10">Завантаження...</div>
+          ) : posts.filter(post => post.category === 'video').length > 0 ? (
+            <div className="space-y-6">
+              {posts
+                .filter(post => post.category === 'video')
+                .map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <p className="text-muted-foreground">Немає постів у категорії "Відео"</p>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="music">
+          {isLoading ? (
+            <div className="text-center py-10">Завантаження...</div>
+          ) : posts.filter(post => post.category === 'music').length > 0 ? (
+            <div className="space-y-6">
+              {posts
+                .filter(post => post.category === 'music')
+                .map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <p className="text-muted-foreground">Немає постів у категорії "Музика"</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

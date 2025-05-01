@@ -29,10 +29,13 @@ export function useUsers() {
           .order('created_at', { ascending: false });
         
         if (error) {
+          console.error("Помилка запиту до Supabase:", error);
           throw error;
         }
         
         if (supabaseUsers && supabaseUsers.length > 0) {
+          console.log("Користувачі з Supabase:", supabaseUsers);
+          
           // Переконуємося, що засновник має правильний статус
           const updatedUsers = supabaseUsers.map((user: any) => {
             if (user.phone_number === "0507068007") {
@@ -55,43 +58,109 @@ export function useUsers() {
               avatarUrl: user.avatar_url,
               isAdmin: user.is_admin,
               isShareHolder: user.is_shareholder,
-              isFounder: user.founder_admin
+              isFounder: user.founder_admin,
+              phoneNumber: user.phone_number,
+              status: user.role === "admin-founder" ? "Адміністратор-засновник" : 
+                     user.role === "admin" ? "Адміністратор" :
+                     user.role === "moderator" ? "Модератор" :
+                     user.is_shareholder ? "Акціонер" : "Звичайний користувач"
             };
           });
           
+          console.log("Оновлені користувачі:", updatedUsers);
           setUsers(updatedUsers);
           
           // Оновлюємо також локальне сховище для сумісності
           localStorage.setItem("users", JSON.stringify(updatedUsers));
+          return;
         }
       } catch (supabaseError) {
         console.warn("Помилка при отриманні даних з Supabase:", supabaseError);
+      }
+      
+      // Якщо дані з Supabase не отримані, використовуємо localStorage
+      const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
+      
+      if (storedUsers.length > 0) {
+        console.log("Користувачі з localStorage:", storedUsers);
         
-        // Використовуємо дані з localStorage як запасний варіант
-        const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-        
-        // Переконуємося, що засновник має правильний статус
-        const updatedUsers = storedUsers.map((user: any) => {
-          if (user.phoneNumber === "0507068007") {
-            return {
-              ...user,
-              isAdmin: true,
-              isFounder: true,
-              role: "admin-founder",
-              isShareHolder: true,
-              status: "Адміністратор-засновник"
-            };
+        // Для кожного користувача в localStorage спробуємо створити запис у Supabase
+        for (const user of storedUsers) {
+          try {
+            const { error } = await supabase
+              .from('users')
+              .insert({
+                id: user.id,
+                full_name: user.firstName && user.lastName ? 
+                  `${user.firstName} ${user.lastName}` : user.full_name || '',
+                phone_number: user.phoneNumber || '',
+                is_admin: user.isAdmin || user.role === 'admin' || user.role === 'admin-founder',
+                is_shareholder: user.isShareHolder || user.role === 'shareholder',
+                founder_admin: user.isFounder || user.role === 'admin-founder' || 
+                  user.phoneNumber === '0507068007',
+                avatar_url: user.avatarUrl || '',
+                password: user.password || ''
+              })
+              .select();
+              
+            if (error && error.code !== '23505') { // Ігноруємо помилки дублікатів
+              console.warn(`Помилка створення користувача в Supabase (${user.id}):`, error);
+            }
+          } catch (insertError) {
+            console.error("Помилка при спробі створення користувача:", insertError);
           }
-          return user;
-        });
-        
-        // Якщо є зміни, оновлюємо localStorage
-        if (JSON.stringify(updatedUsers) !== JSON.stringify(storedUsers)) {
-          localStorage.setItem("users", JSON.stringify(updatedUsers));
         }
         
-        setUsers(updatedUsers);
+        // Після спроби створення користувачів у Supabase повторно завантажуємо дані
+        try {
+          const { data: refreshedUsers, error } = await supabase
+            .from('users')
+            .select('*')
+            .order('created_at', { ascending: false });
+          
+          if (!error && refreshedUsers && refreshedUsers.length > 0) {
+            const updatedUsers = refreshedUsers.map((user: any) => {
+              if (user.phone_number === "0507068007") {
+                return {
+                  ...user,
+                  isAdmin: true,
+                  isFounder: true,
+                  is_admin: true,
+                  founder_admin: true,
+                  role: "admin-founder",
+                  isShareHolder: true,
+                  is_shareholder: true,
+                  status: "Адміністратор-засновник"
+                };
+              }
+              return {
+                ...user,
+                firstName: user.full_name?.split(' ')[0] || '',
+                lastName: user.full_name?.split(' ')[1] || '',
+                avatarUrl: user.avatar_url,
+                isAdmin: user.is_admin,
+                isShareHolder: user.is_shareholder,
+                isFounder: user.founder_admin,
+                phoneNumber: user.phone_number,
+                status: user.role === "admin-founder" ? "Адміністратор-засновник" : 
+                       user.role === "admin" ? "Адміністратор" :
+                       user.role === "moderator" ? "Модератор" :
+                       user.is_shareholder ? "Акціонер" : "Звичайний користувач"
+              };
+            });
+            
+            setUsers(updatedUsers);
+            localStorage.setItem("users", JSON.stringify(updatedUsers));
+            return;
+          }
+        } catch (refreshError) {
+          console.error("Помилка при оновленні даних з Supabase:", refreshError);
+        }
       }
+      
+      // Якщо нема користувачів ані в Supabase, ані в localStorage, повертаємо порожній масив
+      setUsers([]);
+      
     } catch (error) {
       console.error("Помилка при завантаженні користувачів:", error);
       toast.error("Помилка при завантаженні даних користувачів");

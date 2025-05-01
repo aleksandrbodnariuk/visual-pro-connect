@@ -7,6 +7,7 @@ import { AdminStats } from "@/components/admin/AdminStats";
 import { AdminTabs } from "@/components/admin/AdminTabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
 
 export default function Admin() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -15,6 +16,7 @@ export default function Admin() {
   const [shareholders, setShareholders] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [stockPrice, setStockPrice] = useState("1000");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
   const navigate = useNavigate();
   const { tabName } = useParams<{ tabName: string }>();
@@ -128,6 +130,22 @@ export default function Admin() {
         
         <AdminTabs />
       </div>
+      
+      {/* Модальне вікно створення публікації */}
+      {isAdmin && (
+        <CreatePublicationModal
+          open={isCreateModalOpen}
+          onOpenChange={setIsCreateModalOpen}
+          userId={JSON.parse(localStorage.getItem("currentUser") || "{}").id}
+          userName={JSON.parse(localStorage.getItem("currentUser") || "{}").full_name || 
+                   `${JSON.parse(localStorage.getItem("currentUser") || "{}").firstName || ''} 
+                    ${JSON.parse(localStorage.getItem("currentUser") || "{}").lastName || ''}`}
+          onSuccess={() => {
+            setIsCreateModalOpen(false);
+            toast.success("Публікацію створено");
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -4,16 +4,25 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Check, X, UserPlus, MessageCircle, User } from "lucide-react";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
-import { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 // userId –– можна не подавати, якщо треба відобразити друзів авторизованого користувача
 export function FriendsList({ userId }: { userId?: string }) {
   const { friendRequests, friends, respondToFriendRequest, refreshFriendRequests } = useFriendRequests();
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
   
   useEffect(() => {
-    refreshFriendRequests();
+    const loadFriendData = async () => {
+      setIsLoading(true);
+      await refreshFriendRequests();
+      setIsLoading(false);
+    };
+    
+    loadFriendData();
   }, [userId, refreshFriendRequests]);
   
   // Запити на додавання, які чекають підтвердження
@@ -21,6 +30,7 @@ export function FriendsList({ userId }: { userId?: string }) {
     request => request.status === 'pending'
       && (!userId || request.receiver_id === userId)
   );
+  
   // Друзі (тільки accepted)
   const friendsList = friends.filter(friend => friend !== null);
 
@@ -35,18 +45,70 @@ export function FriendsList({ userId }: { userId?: string }) {
   };
 
   // Функція для відкриття чату з користувачем
-  const openChat = (friendId: string | undefined) => {
+  const openChat = async (friendId: string | undefined) => {
     if (!friendId) {
       toast.error("Не вдалося відкрити чат. ID користувача не знайдено.");
       return;
     }
     
-    // Зберігаємо ID отримувача повідомлення для відкриття чату
-    localStorage.setItem("currentChatReceiverId", friendId);
-    
-    // Переходимо на сторінку повідомлень
-    window.location.href = "/messages";
+    try {
+      // Зберігаємо ID отримувача повідомлення для відкриття чату
+      localStorage.setItem("currentChatReceiverId", friendId);
+      
+      // Перевіряємо наявність користувача в Supabase
+      const { data: userInSupabase, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', friendId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Помилка перевірки користувача в Supabase:", error);
+      }
+      
+      // Якщо користувача немає в Supabase, спробуємо його створити
+      if (!userInSupabase) {
+        const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
+        const userToAdd = storedUsers.find((user: any) => user.id === friendId);
+        
+        if (userToAdd) {
+          const { error: insertError } = await supabase
+            .from('users')
+            .insert({
+              id: userToAdd.id,
+              full_name: userToAdd.firstName && userToAdd.lastName ? 
+                `${userToAdd.firstName} ${userToAdd.lastName}` : userToAdd.full_name || '',
+              phone_number: userToAdd.phoneNumber || '',
+              is_admin: userToAdd.isAdmin || false,
+              is_shareholder: userToAdd.isShareHolder || false,
+              avatar_url: userToAdd.avatarUrl || ''
+            });
+          
+          if (insertError && insertError.code !== '23505') { // Ігноруємо помилки унікальності
+            console.error("Помилка додавання користувача в Supabase:", insertError);
+          }
+        }
+      }
+      
+      // Переходимо на сторінку повідомлень
+      navigate("/messages");
+    } catch (error) {
+      console.error("Помилка при відкритті чату:", error);
+      toast.error("Сталася помилка при відкритті чату");
+    }
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex justify-center items-center h-20">
+            <p>Завантаження списку друзів...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -64,11 +126,15 @@ export function FriendsList({ userId }: { userId?: string }) {
                           <AvatarImage src={request.sender.avatar_url} />
                         ) : (
                           <AvatarFallback>
-                            {request.sender?.full_name ? getInitials(request.sender.full_name) : 'К'}
+                            {request.sender?.full_name ? getInitials(request.sender.full_name) : 
+                             request.sender?.firstName ? getInitials(`${request.sender.firstName} ${request.sender.lastName || ''}`) : 'К'}
                           </AvatarFallback>
                         )}
                       </Avatar>
-                      <span>{request.sender?.full_name || 'Новий запит у друзі'}</span>
+                      <span>{request.sender?.full_name || 
+                           request.sender?.firstName && request.sender?.lastName ? 
+                           `${request.sender.firstName} ${request.sender.lastName}` : 
+                           'Новий запит у друзі'}</span>
                     </div>
                     <div className="flex gap-2">
                       <Button 
@@ -104,11 +170,16 @@ export function FriendsList({ userId }: { userId?: string }) {
                         <AvatarImage src={friend.avatar_url} />
                       ) : (
                         <AvatarFallback>
-                          {friend?.full_name ? getInitials(friend.full_name) : 'К'}
+                          {friend?.full_name ? getInitials(friend.full_name) : 
+                           friend?.firstName ? getInitials(`${friend.firstName} ${friend.lastName || ''}`) : 'К'}
                         </AvatarFallback>
                       )}
                     </Avatar>
-                    <span>{friend?.full_name || 'Користувач'}</span>
+                    <span>
+                      {friend?.full_name || 
+                       friend?.firstName && friend?.lastName ? 
+                       `${friend.firstName} ${friend.lastName}` : 'Користувач'}
+                    </span>
                   </div>
                   <div className="flex gap-2">
                     <Button 
