@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { FriendRequest, Friend } from './types';
+import { FriendRequest, Friend, FriendRequestStatus } from './types';
 
 export function useFetchFriends() {
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
