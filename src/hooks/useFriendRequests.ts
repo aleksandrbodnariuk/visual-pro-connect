@@ -2,7 +2,7 @@
 import { useFetchFriends } from './friends/useFetchFriends';
 import { useFriendActions } from './friends/useFriendActions';
 import { useFriendshipStatus } from './friends/useFriendshipStatus';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 
 export function useFriendRequests() {
   // Use the three sub-hooks together
