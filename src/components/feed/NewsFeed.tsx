@@ -102,6 +102,35 @@ export function NewsFeed() {
     fetchPosts();
   }, []);
 
+  // Helper function to transform post data to match PostCard props
+  const transformPostToProps = (post: any) => {
+    return {
+      id: post.id,
+      author: {
+        id: post.user_id || post.userId || post.user?.id || '',
+        name: post.user?.full_name || post.author || 'Користувач',
+        username: post.user?.phone_number || 'user',
+        avatarUrl: post.user?.avatar_url || '',
+        profession: post.category 
+          ? post.category === 'photo' 
+            ? 'Photographer' 
+            : post.category === 'video' 
+              ? 'Videographer' 
+              : post.category === 'music' 
+                ? 'Musician' 
+                : undefined
+          : undefined
+      },
+      imageUrl: post.media_url || post.mediaUrl || '',
+      caption: post.content || '',
+      likes: post.likes_count || 0,
+      comments: post.comments_count || 0,
+      timeAgo: post.created_at 
+        ? new Date(post.created_at).toLocaleDateString() 
+        : 'нещодавно'
+    };
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -122,7 +151,7 @@ export function NewsFeed() {
           ) : posts.length > 0 ? (
             <div className="space-y-6">
               {posts.map((post) => (
-                <PostCard key={post.id} post={post} />
+                <PostCard key={post.id} {...transformPostToProps(post)} />
               ))}
             </div>
           ) : (
@@ -143,7 +172,7 @@ export function NewsFeed() {
               {posts
                 .filter(post => post.category === 'photo')
                 .map((post) => (
-                  <PostCard key={post.id} post={post} />
+                  <PostCard key={post.id} {...transformPostToProps(post)} />
                 ))}
             </div>
           ) : (
@@ -161,7 +190,7 @@ export function NewsFeed() {
               {posts
                 .filter(post => post.category === 'video')
                 .map((post) => (
-                  <PostCard key={post.id} post={post} />
+                  <PostCard key={post.id} {...transformPostToProps(post)} />
                 ))}
             </div>
           ) : (
@@ -179,7 +208,7 @@ export function NewsFeed() {
               {posts
                 .filter(post => post.category === 'music')
                 .map((post) => (
-                  <PostCard key={post.id} post={post} />
+                  <PostCard key={post.id} {...transformPostToProps(post)} />
                 ))}
             </div>
           ) : (
