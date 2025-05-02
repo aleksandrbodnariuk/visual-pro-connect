@@ -14,34 +14,34 @@ export default function Index() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    const syncUserData = async () => {
       setIsLoading(true);
       try {
-        // Перевіряємо наявність автентифікованого користувача
+        // Check if user is authenticated
         const currentUser = localStorage.getItem('currentUser');
         const isUserLoggedIn = !!currentUser;
         
         setIsLoggedIn(isUserLoggedIn);
         
-        // Якщо користувач авторизований, спробуємо отримати його дані з Supabase
+        // If user is logged in, try to get their data from Supabase
         if (isUserLoggedIn) {
           try {
             const userData = JSON.parse(currentUser || "{}");
             
-            // Перевіряємо наявність даних користувача в Supabase
-            let { data: userFromDb, error } = await supabase
+            // Check if user exists in Supabase
+            const { data: userFromDb, error } = await supabase
               .from('users')
               .select('*')
               .eq('id', userData.id)
               .maybeSingle();
             
             if (error) {
-              console.error("Помилка отримання користувача з Supabase:", error);
+              console.error("Error fetching user from Supabase:", error);
             }
             
-            // Якщо в Supabase немає такого користувача, але він є в localStorage
+            // If user doesn't exist in Supabase but is in localStorage
             if (!userFromDb && userData.id) {
-              // Створюємо запис в Supabase
+              // Create record in Supabase
               const { error: insertError } = await supabase
                 .from('users')
                 .insert({
@@ -54,67 +54,101 @@ export default function Index() {
                   founder_admin: userData.isFounder || userData.role === 'admin-founder' || 
                     userData.phoneNumber === '0507068007',
                   avatar_url: userData.avatarUrl || '',
-                  password: userData.password || 'defaultpassword'
+                  password: userData.password || ''
                 });
               
-              if (insertError && insertError.code !== '23505') {
-                console.error("Помилка створення користувача в Supabase:", insertError);
+              if (insertError) {
+                console.error("Error creating user in Supabase:", insertError);
               } else {
-                console.log("Користувач успішно створений в Supabase");
+                console.log("User successfully created in Supabase");
               }
             }
             
-            // Синхронізуємо всіх користувачів з localStorage в Supabase
-            const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-            if (allUsers && allUsers.length > 0) {
-              for (const user of allUsers) {
-                if (!user.id) continue;
-                
-                const { data: existingUser, error: checkError } = await supabase
-                  .from('users')
-                  .select('id')
-                  .eq('id', user.id)
-                  .maybeSingle();
-                  
-                if (checkError) {
-                  console.error("Помилка перевірки користувача:", checkError);
-                  continue;
-                }
-                
-                if (!existingUser) {
-                  const { error: insertUserError } = await supabase
-                    .from('users')
-                    .insert({
-                      id: user.id,
-                      full_name: user.firstName && user.lastName ? 
-                        `${user.firstName} ${user.lastName}` : user.full_name || '',
-                      phone_number: user.phoneNumber || '',
-                      is_admin: user.isAdmin || user.role === 'admin' || user.role === 'admin-founder',
-                      is_shareholder: user.isShareHolder || user.role === 'shareholder',
-                      founder_admin: user.isFounder || user.role === 'admin-founder' || 
-                        user.phoneNumber === '0507068007',
-                      avatar_url: user.avatarUrl || '',
-                      password: user.password || 'defaultpassword'
-                    });
-                    
-                  if (insertUserError && insertUserError.code !== '23505') {
-                    console.error("Помилка додавання користувача в Supabase:", insertUserError);
-                  }
-                }
-              }
-            }
+            // Sync all users from localStorage to Supabase
+            await syncAllUsers();
           } catch (error) {
-            console.error("Помилка при обробці даних користувача:", error);
+            console.error("Error processing user data:", error);
           }
         }
       } catch (error) {
-        console.error("Помилка при перевірці статусу авторизації:", error);
+        console.error("Error checking authentication status:", error);
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchUserData();
+    // Function to sync all users from localStorage to Supabase
+    const syncAllUsers = async () => {
+      try {
+        const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+        if (allUsers && allUsers.length > 0) {
+          for (const user of allUsers) {
+            if (!user.id) continue;
+            
+            // Check if user exists in Supabase
+            const { data: existingUser, error: checkError } = await supabase
+              .from('users')
+              .select('id')
+              .eq('id', user.id)
+              .maybeSingle();
+              
+            if (checkError) {
+              console.error("Error checking user:", checkError);
+              continue;
+            }
+            
+            // If user doesn't exist, create them
+            if (!existingUser) {
+              const { error: insertError } = await supabase
+                .from('users')
+                .insert({
+                  id: user.id,
+                  full_name: user.firstName && user.lastName ? 
+                    `${user.firstName} ${user.lastName}` : user.full_name || '',
+                  phone_number: user.phoneNumber || '',
+                  is_admin: user.isAdmin || user.role === 'admin' || user.role === 'admin-founder',
+                  is_shareholder: user.isShareHolder || user.role === 'shareholder',
+                  founder_admin: user.isFounder || user.role === 'admin-founder' || 
+                    user.phoneNumber === '0507068007',
+                  avatar_url: user.avatarUrl || '',
+                  password: user.password || ''
+                });
+                
+              if (insertError) {
+                console.error("Error adding user to Supabase:", insertError);
+              }
+            }
+          }
+          
+          // Fetch the latest users data from Supabase
+          const { data: latestUsers, error } = await supabase
+            .from('users')
+            .select('*');
+          
+          if (!error && latestUsers) {
+            console.log("Latest users from Supabase:", latestUsers);
+            
+            // Update localStorage with the latest data
+            const formattedUsers = latestUsers.map(user => ({
+              ...user,
+              firstName: user.full_name?.split(' ')[0] || '',
+              lastName: user.full_name?.split(' ')[1] || '',
+              avatarUrl: user.avatar_url,
+              isAdmin: user.is_admin,
+              isShareHolder: user.is_shareholder,
+              isFounder: user.founder_admin,
+              phoneNumber: user.phone_number
+            }));
+            
+            localStorage.setItem('users', JSON.stringify(formattedUsers));
+          }
+        }
+      } catch (error) {
+        console.error("Error syncing users:", error);
+      }
+    };
+    
+    syncUserData();
   }, []);
 
   if (isLoading) {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
@@ -12,128 +11,119 @@ export function useUsers() {
     setIsLoading(true);
     
     try {
-      // Спочатку перевіряємо, чи поточний користувач є засновником
+      // Check if current user is a founder
       const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
       
-      // Перевіряємо, чи це засновник
+      // Check if this is founder
       const isFounderAdmin = currentUser.role === "admin-founder" || 
                             (currentUser.phoneNumber === "0507068007");
       
       setIsFounder(isFounderAdmin);
       
-      // Спробуємо отримати дані з Supabase
-      try {
-        const { data: supabaseUsers, error } = await supabase
-          .from('users')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          console.error("Помилка запиту до Supabase:", error);
-          throw error;
-        }
-        
-        if (supabaseUsers && supabaseUsers.length > 0) {
-          console.log("Користувачі з Supabase:", supabaseUsers);
-          
-          // Переконуємося, що засновник має правильний статус
-          const updatedUsers = supabaseUsers.map((user: any) => {
-            if (user.phone_number === "0507068007") {
-              return {
-                ...user,
-                isAdmin: true,
-                isFounder: true,
-                is_admin: true,
-                founder_admin: true,
-                role: "admin-founder",
-                isShareHolder: true,
-                is_shareholder: true,
-                status: "Адміністратор-засновник"
-              };
-            }
-            return {
-              ...user,
-              firstName: user.full_name?.split(' ')[0] || '',
-              lastName: user.full_name?.split(' ')[1] || '',
-              avatarUrl: user.avatar_url,
-              isAdmin: user.is_admin,
-              isShareHolder: user.is_shareholder,
-              isFounder: user.founder_admin,
-              phoneNumber: user.phone_number,
-              status: user.role === "admin-founder" ? "Адміністратор-засновник" : 
-                     user.role === "admin" ? "Адміністратор" :
-                     user.role === "moderator" ? "Модератор" :
-                     user.is_shareholder ? "Акціонер" : "Звичайний користувач"
-            };
-          });
-          
-          console.log("Оновлені користувачі:", updatedUsers);
-          setUsers(updatedUsers);
-          
-          // Оновлюємо також локальне сховище для сумісності
-          localStorage.setItem("users", JSON.stringify(updatedUsers));
-          return;
-        }
-      } catch (supabaseError) {
-        console.warn("Помилка при отриманні даних з Supabase:", supabaseError);
+      // Try to get data from Supabase first
+      const { data: supabaseUsers, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error("Error fetching users from Supabase:", error);
+        throw error;
       }
       
-      // Якщо дані з Supabase не отримані, використовуємо localStorage
-      const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-      
-      if (storedUsers.length > 0) {
-        console.log("Користувачі з localStorage:", storedUsers);
+      if (supabaseUsers && supabaseUsers.length > 0) {
+        console.log("Users loaded from Supabase:", supabaseUsers);
         
-        // Для кожного користувача в localStorage спробуємо створити запис у Supabase
-        for (const user of storedUsers) {
-          try {
-            const { error } = await supabase
-              .from('users')
-              .insert({
-                id: user.id,
-                full_name: user.firstName && user.lastName ? 
-                  `${user.firstName} ${user.lastName}` : user.full_name || '',
-                phone_number: user.phoneNumber || '',
-                is_admin: user.isAdmin || user.role === 'admin' || user.role === 'admin-founder',
-                is_shareholder: user.isShareHolder || user.role === 'shareholder',
-                founder_admin: user.isFounder || user.role === 'admin-founder' || 
-                  user.phoneNumber === '0507068007',
-                avatar_url: user.avatarUrl || '',
-                password: user.password || ''
-              })
-              .select();
-              
-            if (error && error.code !== '23505') { // Ігноруємо помилки дублікатів
-              console.warn(`Помилка створення користувача в Supabase (${user.id}):`, error);
-            }
-          } catch (insertError) {
-            console.error("Помилка при спробі створення користувача:", insertError);
+        // Make sure founder has correct status
+        const updatedUsers = supabaseUsers.map((user: any) => {
+          if (user.phone_number === "0507068007") {
+            return {
+              ...user,
+              isAdmin: true,
+              isFounder: true,
+              is_admin: true,
+              founder_admin: true,
+              role: "admin-founder",
+              isShareHolder: true,
+              is_shareholder: true,
+              status: "Адміністратор-засновник"
+            };
           }
-        }
+          return {
+            ...user,
+            firstName: user.full_name?.split(' ')[0] || '',
+            lastName: user.full_name?.split(' ')[1] || '',
+            avatarUrl: user.avatar_url,
+            isAdmin: user.is_admin,
+            isShareHolder: user.is_shareholder,
+            isFounder: user.founder_admin,
+            phoneNumber: user.phone_number,
+            status: user.role === "admin-founder" ? "Адміністратор-засновник" : 
+                   user.role === "admin" ? "Адміністратор" :
+                   user.role === "moderator" ? "Модератор" :
+                   user.is_shareholder ? "Акціонер" : "Звичайний користувач"
+          };
+        });
         
-        // Після спроби створення користувачів у Supabase повторно завантажуємо дані
-        try {
-          const { data: refreshedUsers, error } = await supabase
-            .from('users')
-            .select('*')
-            .order('created_at', { ascending: false });
+        setUsers(updatedUsers);
+        localStorage.setItem("users", JSON.stringify(updatedUsers));
+      } else {
+        // If no Supabase data, use localStorage
+        const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
+        
+        if (storedUsers.length > 0) {
+          console.log("Using users from localStorage:", storedUsers);
           
-          if (!error && refreshedUsers && refreshedUsers.length > 0) {
-            const updatedUsers = refreshedUsers.map((user: any) => {
-              if (user.phone_number === "0507068007") {
-                return {
-                  ...user,
-                  isAdmin: true,
-                  isFounder: true,
-                  is_admin: true,
-                  founder_admin: true,
-                  role: "admin-founder",
-                  isShareHolder: true,
-                  is_shareholder: true,
-                  status: "Адміністратор-засновник"
-                };
+          // Sync localStorage users to Supabase
+          for (const user of storedUsers) {
+            if (!user.id) continue;
+            
+            try {
+              const { data: existingUser, error: checkError } = await supabase
+                .from('users')
+                .select('id')
+                .eq('id', user.id)
+                .maybeSingle();
+                
+              if (checkError) {
+                console.error("Error checking user existence:", checkError);
+                continue;
               }
-              return {
+              
+              if (!existingUser) {
+                const { error: insertError } = await supabase
+                  .from('users')
+                  .insert({
+                    id: user.id,
+                    full_name: user.firstName && user.lastName ? 
+                      `${user.firstName} ${user.lastName}` : user.full_name || '',
+                    phone_number: user.phoneNumber || '',
+                    is_admin: user.isAdmin || user.role === 'admin' || user.role === 'admin-founder',
+                    is_shareholder: user.isShareHolder || user.role === 'shareholder',
+                    founder_admin: user.isFounder || user.role === 'admin-founder' || 
+                      user.phoneNumber === '0507068007',
+                    avatar_url: user.avatarUrl || '',
+                    password: user.password || 'defaultpassword'
+                  });
+                  
+                if (insertError) {
+                  console.error("Error inserting user to Supabase:", insertError);
+                }
+              }
+            } catch (error) {
+              console.error(`Error synchronizing user ${user.id}:`, error);
+            }
+          }
+          
+          // Try fetching again after synchronization
+          try {
+            const { data: refreshedUsers, error } = await supabase
+              .from('users')
+              .select('*')
+              .order('created_at', { ascending: false });
+            
+            if (!error && refreshedUsers && refreshedUsers.length > 0) {
+              const updatedUsers = refreshedUsers.map((user: any) => ({
                 ...user,
                 firstName: user.full_name?.split(' ')[0] || '',
                 lastName: user.full_name?.split(' ')[1] || '',
@@ -146,30 +136,35 @@ export function useUsers() {
                        user.role === "admin" ? "Адміністратор" :
                        user.role === "moderator" ? "Модератор" :
                        user.is_shareholder ? "Акціонер" : "Звичайний користувач"
-              };
-            });
-            
-            setUsers(updatedUsers);
-            localStorage.setItem("users", JSON.stringify(updatedUsers));
-            return;
+              }));
+              
+              setUsers(updatedUsers);
+              localStorage.setItem("users", JSON.stringify(updatedUsers));
+            } else {
+              setUsers(storedUsers);
+            }
+          } catch (refreshError) {
+            console.error("Error refreshing users from Supabase:", refreshError);
+            setUsers(storedUsers);
           }
-        } catch (refreshError) {
-          console.error("Помилка при оновленні даних з Supabase:", refreshError);
+        } else {
+          setUsers([]);
         }
       }
-      
-      // Якщо нема користувачів ані в Supabase, ані в localStorage, повертаємо порожній масив
-      setUsers([]);
-      
     } catch (error) {
-      console.error("Помилка при завантаженні користувачів:", error);
+      console.error("Error loading users:", error);
+      
+      // Fallback to localStorage
+      const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
+      setUsers(storedUsers);
+      
       toast.error("Помилка при завантаженні даних користувачів");
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Завантажуємо дані при першому рендерингу
+  // Load data on first render
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);

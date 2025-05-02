@@ -2,70 +2,191 @@
 import { useState, useEffect } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { Bell, Calendar, Info, CheckCircle, AlertTriangle } from "lucide-react";
+import { Bell, Calendar, Info, CheckCircle, AlertTriangle, Trash } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function Notifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // В реальному додатку тут має бути запит до API
-    const storedNotifications = localStorage.getItem("notifications");
-    if (storedNotifications) {
-      setNotifications(JSON.parse(storedNotifications));
-    } else {
-      // Демонстраційні дані
-      const demoNotifications = [
-        {
-          id: "1",
-          type: "info",
-          title: "Ласкаво просимо до Спільноти B&C!",
-          message: "Дякуємо за реєстрацію. Заповніть свій профіль, щоб почати користуватися всіма можливостями платформи.",
-          date: new Date().toISOString(),
-          read: false,
-        },
-        {
-          id: "2",
-          type: "success",
-          title: "Ваша публікація успішно розміщена",
-          message: "Ваша публікація тепер доступна в стрічці та профілі.",
-          date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          read: true,
-        },
-        {
-          id: "3",
-          type: "warning",
-          title: "Нове повідомлення щодо замовлення",
-          message: "У вас є непрочитане повідомлення щодо вашого замовлення.",
-          date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          read: false,
-        },
-      ];
-      setNotifications(demoNotifications);
-      localStorage.setItem("notifications", JSON.stringify(demoNotifications));
-    }
-  }, []);
-
-  const markAsRead = (id: string) => {
-    const updatedNotifications = notifications.map((notification) => {
-      if (notification.id === id) {
-        return { ...notification, read: true };
+  const fetchNotifications = async () => {
+    setIsLoading(true);
+    try {
+      // Try to get notifications from Supabase first
+      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      
+      if (!currentUser.id) {
+        throw new Error("User not authenticated");
       }
-      return notification;
-    });
-    setNotifications(updatedNotifications);
-    localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
+      
+      // Get notifications from Supabase
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        console.error("Error fetching notifications from Supabase:", error);
+        throw error;
+      }
+      
+      if (data && data.length > 0) {
+        setNotifications(data);
+        return;
+      }
+      
+      // Fallback to localStorage if no data in Supabase
+      const storedNotifications = localStorage.getItem("notifications");
+      if (storedNotifications) {
+        setNotifications(JSON.parse(storedNotifications));
+      } else {
+        setNotifications([]);
+      }
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      
+      // Final fallback to localStorage
+      const storedNotifications = localStorage.getItem("notifications");
+      if (storedNotifications) {
+        setNotifications(JSON.parse(storedNotifications));
+      } else {
+        setNotifications([]);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const markAllAsRead = () => {
-    const updatedNotifications = notifications.map((notification) => ({
-      ...notification,
-      read: true,
-    }));
-    setNotifications(updatedNotifications);
-    localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const markAsRead = async (id: string) => {
+    try {
+      // Try to update in Supabase first
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', id);
+        
+      if (error) {
+        console.error("Error updating notification in Supabase:", error);
+      }
+      
+      // Update local state
+      const updatedNotifications = notifications.map((notification) => {
+        if (notification.id === id) {
+          return { ...notification, is_read: true };
+        }
+        return notification;
+      });
+      
+      setNotifications(updatedNotifications);
+      
+      // Update localStorage
+      localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      toast.error("Не вдалося позначити сповіщення як прочитане");
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      // Try to update all in Supabase first
+      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      
+      if (currentUser.id) {
+        const { error } = await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('user_id', currentUser.id)
+          .eq('is_read', false);
+          
+        if (error) {
+          console.error("Error updating all notifications in Supabase:", error);
+        }
+      }
+      
+      // Update local state
+      const updatedNotifications = notifications.map((notification) => ({
+        ...notification,
+        is_read: true
+      }));
+      
+      setNotifications(updatedNotifications);
+      
+      // Update localStorage
+      localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
+      
+      toast.success("Всі сповіщення позначено як прочитані");
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      toast.error("Не вдалося позначити всі сповіщення як прочитані");
+    }
+  };
+  
+  const deleteNotification = async (id: string) => {
+    try {
+      // Try to delete from Supabase first
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        console.error("Error deleting notification from Supabase:", error);
+      }
+      
+      // Update local state
+      const updatedNotifications = notifications.filter(
+        (notification) => notification.id !== id
+      );
+      
+      setNotifications(updatedNotifications);
+      
+      // Update localStorage
+      localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
+      
+      toast.success("Сповіщення видалено");
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      toast.error("Не вдалося видалити сповіщення");
+    }
+  };
+  
+  const deleteAllNotifications = async () => {
+    try {
+      // Try to delete all from Supabase first
+      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      
+      if (currentUser.id) {
+        const { error } = await supabase
+          .from('notifications')
+          .delete()
+          .eq('user_id', currentUser.id);
+          
+        if (error) {
+          console.error("Error deleting all notifications from Supabase:", error);
+        }
+      }
+      
+      // Clear local state
+      setNotifications([]);
+      
+      // Update localStorage
+      localStorage.setItem("notifications", JSON.stringify([]));
+      
+      toast.success("Всі сповіщення видалено");
+    } catch (error) {
+      console.error("Error deleting all notifications:", error);
+      toast.error("Не вдалося видалити всі сповіщення");
+    }
   };
 
   const getNotificationIcon = (type: string) => {
@@ -81,7 +202,21 @@ export default function Notifications() {
     }
   };
 
-  const unreadCount = notifications.filter((notification) => !notification.read).length;
+  const unreadCount = notifications.filter((notification) => !notification.is_read).length;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container py-16 text-center">
+          <div className="flex flex-col items-center justify-center">
+            <Bell className="h-10 w-10 text-muted-foreground animate-pulse mb-4" />
+            <p>Завантаження сповіщень...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -99,11 +234,18 @@ export default function Notifications() {
                 </Badge>
               )}
             </div>
-            {unreadCount > 0 && (
-              <Button variant="outline" onClick={markAllAsRead}>
-                Позначити всі як прочитані
-              </Button>
-            )}
+            <div className="flex space-x-2">
+              {unreadCount > 0 && (
+                <Button variant="outline" onClick={markAllAsRead}>
+                  Позначити всі як прочитані
+                </Button>
+              )}
+              {notifications.length > 0 && (
+                <Button variant="destructive" onClick={deleteAllNotifications}>
+                  <Trash className="h-4 w-4 mr-1" /> Видалити всі
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -111,32 +253,42 @@ export default function Notifications() {
               notifications.map((notification) => (
                 <Card 
                   key={notification.id} 
-                  className={`transition-colors ${!notification.read ? "border-l-4 border-l-primary" : ""}`}
+                  className={`transition-colors ${!notification.is_read ? "border-l-4 border-l-primary" : ""}`}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
                       <div className="mt-1">
-                        {getNotificationIcon(notification.type)}
+                        {getNotificationIcon(notification.type || "info")}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-semibold text-lg">{notification.title}</h3>
+                          <h3 className="font-semibold text-lg">{notification.title || notification.type || "Сповіщення"}</h3>
                           <div className="flex items-center space-x-3">
                             <span className="text-sm text-muted-foreground">
-                              {new Date(notification.date).toLocaleDateString()}
+                              {new Date(notification.created_at || notification.date).toLocaleDateString()}
                             </span>
-                            {!notification.read && (
+                            <div className="flex space-x-2">
+                              {!notification.is_read && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => markAsRead(notification.id)}
+                                >
+                                  Прочитано
+                                </Button>
+                              )}
                               <Button 
                                 variant="ghost" 
-                                size="sm" 
-                                onClick={() => markAsRead(notification.id)}
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => deleteNotification(notification.id)}
                               >
-                                Прочитано
+                                <Trash className="h-4 w-4" />
                               </Button>
-                            )}
+                            </div>
                           </div>
                         </div>
-                        <p className="text-muted-foreground">{notification.message}</p>
+                        <p className="text-muted-foreground">{notification.message || notification.content}</p>
                       </div>
                     </div>
                   </CardContent>
