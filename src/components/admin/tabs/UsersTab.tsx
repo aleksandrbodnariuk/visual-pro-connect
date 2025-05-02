@@ -19,8 +19,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { PenLine, Trash2, AlertTriangle, Filter } from "lucide-react";
-import { useUsers } from "@/hooks/useUsers";
+import { PenLine, Trash2, AlertTriangle } from "lucide-react";
+import { useUsers } from "@/hooks/users"; // Updated import
 import { USER_STATUSES } from "@/lib/constants";
 import { 
   AlertDialog,
