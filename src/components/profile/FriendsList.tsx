@@ -82,7 +82,7 @@ export function FriendsList({ userId }: { userId?: string }) {
               is_admin: userToAdd.isAdmin || false,
               is_shareholder: userToAdd.isShareHolder || false,
               avatar_url: userToAdd.avatarUrl || '',
-              password: userToAdd.password || 'defaultpassword' // Adding the required password field
+              password: userToAdd.password || 'defaultpassword'
             });
           
           if (insertError && insertError.code !== '23505') { // Ігноруємо помилки унікальності

@@ -30,8 +30,16 @@ export function NewsFeed() {
         }
 
         if (supabasePosts && supabasePosts.length > 0) {
-          setPosts(supabasePosts);
-          localStorage.setItem('posts', JSON.stringify(supabasePosts));
+          // Фільтруємо тестові пости 
+          const filteredPosts = supabasePosts.filter((post: any) => 
+            post.user?.full_name !== "Олександр Петренко" && 
+            post.user?.full_name !== "Марія Коваленко" &&
+            !post.content?.includes("Опис нової фотосесії для молодят") &&
+            !post.content?.includes("Деталі про новий музичний кліп")
+          );
+          
+          setPosts(filteredPosts);
+          localStorage.setItem('posts', JSON.stringify(filteredPosts));
         } else {
           // Якщо у Supabase немає постів, перевіряємо localStorage
           const storedPosts = JSON.parse(localStorage.getItem('posts') || '[]');

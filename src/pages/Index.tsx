@@ -47,20 +47,60 @@ export default function Index() {
                 .insert({
                   id: userData.id,
                   full_name: userData.firstName && userData.lastName ? 
-                    `${userData.firstName} ${userData.lastName}` : userData.full_name,
+                    `${userData.firstName} ${userData.lastName}` : userData.full_name || '',
                   phone_number: userData.phoneNumber || '',
                   is_admin: userData.isAdmin || userData.role === 'admin' || userData.role === 'admin-founder',
                   is_shareholder: userData.isShareHolder || userData.role === 'shareholder',
                   founder_admin: userData.isFounder || userData.role === 'admin-founder' || 
                     userData.phoneNumber === '0507068007',
                   avatar_url: userData.avatarUrl || '',
-                  password: userData.password || ''
+                  password: userData.password || 'defaultpassword'
                 });
               
-              if (insertError) {
+              if (insertError && insertError.code !== '23505') {
                 console.error("Помилка створення користувача в Supabase:", insertError);
               } else {
                 console.log("Користувач успішно створений в Supabase");
+              }
+            }
+            
+            // Синхронізуємо всіх користувачів з localStorage в Supabase
+            const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+            if (allUsers && allUsers.length > 0) {
+              for (const user of allUsers) {
+                if (!user.id) continue;
+                
+                const { data: existingUser, error: checkError } = await supabase
+                  .from('users')
+                  .select('id')
+                  .eq('id', user.id)
+                  .maybeSingle();
+                  
+                if (checkError) {
+                  console.error("Помилка перевірки користувача:", checkError);
+                  continue;
+                }
+                
+                if (!existingUser) {
+                  const { error: insertUserError } = await supabase
+                    .from('users')
+                    .insert({
+                      id: user.id,
+                      full_name: user.firstName && user.lastName ? 
+                        `${user.firstName} ${user.lastName}` : user.full_name || '',
+                      phone_number: user.phoneNumber || '',
+                      is_admin: user.isAdmin || user.role === 'admin' || user.role === 'admin-founder',
+                      is_shareholder: user.isShareHolder || user.role === 'shareholder',
+                      founder_admin: user.isFounder || user.role === 'admin-founder' || 
+                        user.phoneNumber === '0507068007',
+                      avatar_url: user.avatarUrl || '',
+                      password: user.password || 'defaultpassword'
+                    });
+                    
+                  if (insertUserError && insertUserError.code !== '23505') {
+                    console.error("Помилка додавання користувача в Supabase:", insertUserError);
+                  }
+                }
               }
             }
           } catch (error) {

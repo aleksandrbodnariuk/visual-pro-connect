@@ -65,16 +65,29 @@ export function useFriendRequests() {
           if (storedFriendRequests.length > 0) {
             for (const request of storedFriendRequests) {
               try {
-                await supabase
+                // Перевіряємо чи існує вже такий запит в Supabase
+                const { data: existingRequest, error: checkError } = await supabase
                   .from('friend_requests')
-                  .insert({
-                    id: request.id,
-                    sender_id: request.sender_id,
-                    receiver_id: request.receiver_id,
-                    status: request.status,
-                    created_at: request.created_at
-                  })
-                  .select();
+                  .select('id')
+                  .eq('id', request.id)
+                  .maybeSingle();
+                  
+                if (checkError) {
+                  console.error('Помилка перевірки існування запиту:', checkError);
+                  continue;
+                }
+                
+                if (!existingRequest) {
+                  await supabase
+                    .from('friend_requests')
+                    .insert({
+                      id: request.id,
+                      sender_id: request.sender_id,
+                      receiver_id: request.receiver_id,
+                      status: request.status,
+                      created_at: request.created_at || new Date().toISOString()
+                    });
+                }
               } catch (insertError) {
                 console.error('Помилка при створенні запиту у друзі в Supabase:', insertError);
               }
