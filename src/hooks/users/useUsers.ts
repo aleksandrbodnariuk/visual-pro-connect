@@ -20,35 +20,63 @@ export function useUsers(): UseUsersReturnType {
       
       // Check if this is founder
       const isFounderAdmin = currentUser.role === "admin-founder" || 
+                            currentUser.isFounder || 
                             (currentUser.phoneNumber === "0507068007");
       
       setIsFounder(isFounderAdmin);
       
       // Try to get data from Supabase first
-      const { data: supabaseUsers, error } = await supabase
+      const { data: supabaseUsers, error: fetchError } = await supabase
         .from('users')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) {
-        console.error("Error fetching users from Supabase:", error);
-        throw error;
+      if (fetchError) {
+        console.error("Error fetching users from Supabase:", fetchError);
+        throw fetchError;
       }
       
       if (supabaseUsers && supabaseUsers.length > 0) {
         console.log("Users loaded from Supabase:", supabaseUsers);
         
         // Make sure founder has correct status
-        const updatedUsers = supabaseUsers.map(formatUserFromSupabase);
+        const updatedUsers = supabaseUsers.map(user => {
+          if (user.phone_number === "0507068007") {
+            // If this is the founder, ensure correct status
+            const { error } = supabase
+              .from('users')
+              .update({
+                founder_admin: true,
+                is_admin: true,
+                is_shareholder: true
+              })
+              .eq('id', user.id)
+              .then(response => {
+                if (response.error) {
+                  console.error("Error updating founder status:", response.error);
+                }
+                return response;
+              });
+            
+            return formatUserFromSupabase({
+              ...user,
+              founder_admin: true,
+              is_admin: true,
+              is_shareholder: true
+            });
+          }
+          
+          return formatUserFromSupabase(user);
+        });
         
         setUsers(updatedUsers);
         localStorage.setItem("users", JSON.stringify(updatedUsers));
       } else {
-        // If no Supabase data, use localStorage
+        // If no Supabase data, use localStorage and sync to Supabase
         const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
         
         if (storedUsers.length > 0) {
-          console.log("Using users from localStorage:", storedUsers);
+          console.log("Using users from localStorage and syncing to Supabase:", storedUsers);
           
           // Sync localStorage users to Supabase
           const syncedUsers = await syncAllUsersToSupabase();

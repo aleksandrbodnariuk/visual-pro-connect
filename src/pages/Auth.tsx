@@ -7,27 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
+import { supabase } from "@/integrations/supabase/client";
 
 enum AuthStep {
   LOGIN_REGISTER,
   RESET_PASSWORD,
   VERIFY_CODE,
   SET_NEW_PASSWORD
-}
-
-// Define user interface to fix type errors
-interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-  phoneNumber: string;
-  password?: string;
-  createdAt: string;
-  categories: any[];
-  isAdmin?: boolean;
-  isFounder?: boolean;
-  isShareHolder?: boolean;
-  role?: string;
 }
 
 export default function Auth() {
@@ -59,111 +45,181 @@ export default function Auth() {
     }
   }, [navigate]);
   
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!phoneNumber || !password) {
       toast.error(t.enterPhoneAndPassword);
       return;
     }
     
-    // Отримуємо користувачів з localStorage
-    const users = JSON.parse(localStorage.getItem("users") || "[]") as User[];
-    
-    // Перевіряємо чи це логін адміністратора-засновника (0507068007)
-    if (phoneNumber === "0507068007") {
-      // Якщо це телефон адміністратора-засновника
-      if (password === "admin" || password === "00000000") {
-        const adminUser: User = {
-          id: "admin1",
-          firstName: "Admin",
-          lastName: "Founder",
-          phoneNumber: phoneNumber,
-          isAdmin: true,
-          isFounder: true,
-          isShareHolder: true,
-          role: "admin",
-          createdAt: new Date().toISOString(),
-          categories: []
-        };
-        
-        localStorage.setItem("currentUser", JSON.stringify(adminUser));
-        toast.success(t.loginAsAdminFounder);
-        navigate("/admin");
-        return;
-      }
-    }
-    
-    // Спочатку шукаємо користувача за номером телефону і паролем
-    const foundUser = users.find((user) => 
-      user.phoneNumber === phoneNumber && user.password === password);
-    
-    // Якщо знайдено користувача, виконуємо вхід
-    if (foundUser) {
-      // Перевіряємо, чи це адміністратор за номером телефону
+    try {
+      // Спочатку перевіряємо чи це телефон засновника
       if (phoneNumber === "0507068007") {
-        // Якщо це телефон адміністратора, додаємо права адміністратора
-        foundUser.isAdmin = true;
-        foundUser.isFounder = true;
-        foundUser.isShareHolder = true;
-        foundUser.role = "admin";
-        
-        // Оновлюємо користувача в локальному сховищі
-        const updatedUsers = users.map((u) => 
-          u.phoneNumber === phoneNumber ? foundUser : u
-        );
-        localStorage.setItem("users", JSON.stringify(updatedUsers));
-        
-        localStorage.setItem("currentUser", JSON.stringify(foundUser));
-        toast.success(t.loginAsAdminFounder);
-        navigate("/admin");
-        return;
-      }
-      
-      localStorage.setItem("currentUser", JSON.stringify(foundUser));
-      toast.success(t.loginSuccessful);
-      navigate("/");
-      return;
-    }
-    
-    // Якщо не знайшли за паролем, перевіряємо, чи користувач існує, але без пароля
-    // або використовуючи тимчасовий пароль
-    const userExists = users.find((user) => user.phoneNumber === phoneNumber);
-    
-    if (userExists && (!userExists.password || userExists.password === "")) {
-      // Якщо користувач існує і не має пароля, перевіряємо тимчасовий пароль
-      if (password === "00000000") {
-        // Перевіряємо, чи це адміністратор за номером телефону
-        if (phoneNumber === "0507068007") {
-          // Якщо це телефон адміністратора, додаємо права адміністратора
-          userExists.isAdmin = true;
-          userExists.isFounder = true;
-          userExists.isShareHolder = true;
-          userExists.role = "admin";
+        // Перевірка користувача в Supabase
+        const { data: founderUser, error: founderError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('phone_number', phoneNumber)
+          .single();
           
-          // Оновлюємо користувача в локальному сховищі
-          const updatedUsers = users.map((u) => 
-            u.phoneNumber === phoneNumber ? userExists : u
-          );
-          localStorage.setItem("users", JSON.stringify(updatedUsers));
+        if (founderError && founderError.code !== 'PGRST116') {
+          console.error("Error checking founder account:", founderError);
+          toast.error("Помилка при авторизації");
+          return;
+        }
           
-          localStorage.setItem("currentUser", JSON.stringify(userExists));
+        // Якщо засновник існує в базі, перевіряємо пароль
+        if (founderUser) {
+          if (founderUser.password === password) {
+            // Успішний вхід для засновника
+            const adminUser = {
+              id: founderUser.id,
+              firstName: founderUser.full_name?.split(' ')[0] || 'Admin',
+              lastName: founderUser.full_name?.split(' ')[1] || 'Founder',
+              phoneNumber: phoneNumber,
+              isAdmin: true,
+              isFounder: true,
+              isShareHolder: true,
+              role: "admin-founder",
+              status: "Адміністратор-засновник",
+              createdAt: founderUser.created_at,
+              categories: founderUser.categories || [],
+              avatarUrl: founderUser.avatar_url
+            };
+            
+            localStorage.setItem("currentUser", JSON.stringify(adminUser));
+            toast.success(t.loginAsAdminFounder);
+            navigate("/admin");
+            return;
+          } else {
+            toast.error(t.incorrectPhoneOrPassword);
+            return;
+          }
+        }
+        
+        // Якщо це перший вхід засновника, створюємо обліковий запис
+        if (password === "admin" || password === "00000000") {
+          const { data: newFounder, error: createError } = await supabase
+            .from('users')
+            .insert({
+              full_name: 'Admin Founder',
+              phone_number: phoneNumber,
+              password: password,
+              is_admin: true,
+              founder_admin: true,
+              is_shareholder: true
+            })
+            .select()
+            .single();
+            
+          if (createError) {
+            console.error("Error creating founder account:", createError);
+            toast.error("Помилка при створенні облікового запису засновника");
+            return;
+          }
+          
+          const adminUser = {
+            id: newFounder.id,
+            firstName: 'Admin',
+            lastName: 'Founder',
+            phoneNumber: phoneNumber,
+            isAdmin: true,
+            isFounder: true,
+            isShareHolder: true,
+            role: "admin-founder",
+            status: "Адміністратор-засновник",
+            createdAt: newFounder.created_at,
+            categories: []
+          };
+          
+          localStorage.setItem("currentUser", JSON.stringify(adminUser));
           toast.success(t.loginAsAdminFounder);
           navigate("/admin");
           return;
         }
+      }
+      
+      // Перевірка звичайного користувача в Supabase
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('phone_number', phoneNumber)
+        .single();
         
-        // Успішний вхід через тимчасовий пароль
-        localStorage.setItem("currentUser", JSON.stringify(userExists));
-        toast.success(t.temporaryPasswordLogin);
-        toast.info(t.pleaseChangePassword);
-        navigate("/settings");
+      if (error) {
+        console.error("Error fetching user:", error);
+        if (error.code === 'PGRST116') {
+          toast.error("Користувача з таким номером не знайдено");
+        } else {
+          toast.error("Помилка при авторизації");
+        }
         return;
       }
+      
+      // Перевірка пароля
+      if (user.password !== password) {
+        // Перевірка тимчасового пароля
+        if (password === "00000000" && (!user.password || user.password === '')) {
+          // Оновлюємо в локальному сховищі
+          const currentUser = {
+            id: user.id,
+            firstName: user.full_name?.split(' ')[0] || '',
+            lastName: user.full_name?.split(' ')[1] || '',
+            phoneNumber: user.phone_number,
+            isAdmin: user.is_admin,
+            isFounder: user.founder_admin,
+            isShareHolder: user.is_shareholder,
+            role: user.is_admin ? (user.founder_admin ? "admin-founder" : "admin") : 
+                 (user.is_shareholder ? "shareholder" : "user"),
+            status: user.founder_admin ? "Адміністратор-засновник" : 
+                  (user.is_admin ? "Адміністратор" : 
+                  (user.is_shareholder ? "Акціонер" : "Звичайний користувач")),
+            createdAt: user.created_at,
+            categories: user.categories || [],
+            avatarUrl: user.avatar_url
+          };
+          
+          localStorage.setItem("currentUser", JSON.stringify(currentUser));
+          toast.success(t.temporaryPasswordLogin);
+          toast.info(t.pleaseChangePassword);
+          navigate("/settings");
+          return;
+        }
+        
+        toast.error(t.incorrectPhoneOrPassword);
+        return;
+      }
+      
+      // Успішний вхід
+      const currentUser = {
+        id: user.id,
+        firstName: user.full_name?.split(' ')[0] || '',
+        lastName: user.full_name?.split(' ')[1] || '',
+        phoneNumber: user.phone_number,
+        password: user.password,
+        isAdmin: user.is_admin,
+        isFounder: user.founder_admin,
+        isShareHolder: user.is_shareholder,
+        role: user.is_admin ? (user.founder_admin ? "admin-founder" : "admin") : 
+             (user.is_shareholder ? "shareholder" : "user"),
+        status: user.founder_admin ? "Адміністратор-засновник" : 
+              (user.is_admin ? "Адміністратор" : 
+              (user.is_shareholder ? "Акціонер" : "Звичайний користувач")),
+        createdAt: user.created_at,
+        categories: user.categories || [],
+        avatarUrl: user.avatar_url
+      };
+      
+      localStorage.setItem("currentUser", JSON.stringify(currentUser));
+      toast.success(t.loginSuccessful);
+      navigate("/");
+      
+    } catch (error) {
+      console.error("Error during login:", error);
+      toast.error("Помилка при авторизації");
     }
-    
-    toast.error(t.incorrectPhoneOrPassword);
   };
   
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!phoneNumber || !password || !confirmPassword) {
       toast.error(t.enterPhoneAndPassword);
       return;
@@ -179,72 +235,113 @@ export default function Auth() {
       return;
     }
     
-    // Отримуємо користувачів з localStorage
-    const users = JSON.parse(localStorage.getItem("users") || "[]") as User[];
-    
-    // Перевіряємо, чи існує вже користувач з таким номером
-    const existingUser = users.find((user) => user.phoneNumber === phoneNumber);
-    if (existingUser) {
-      toast.error(t.userWithPhoneExists);
-      return;
-    }
-    
-    // Створюємо нового користувача
-    const newUser: User = {
-      id: Date.now().toString(),
-      firstName,
-      lastName,
-      phoneNumber,
-      password,
-      createdAt: new Date().toISOString(),
-      categories: [],
-      isAdmin: false,
-      isFounder: false,
-      isShareHolder: false,
-      role: "user"
-    };
-    
-    // Перевіряємо, чи це адміністратор за номером телефону
-    if (phoneNumber === "0507068007") {
-      // Якщо це телефон адміністратора, додаємо права адміністратора
-      newUser.isAdmin = true;
-      newUser.isFounder = true;
-      newUser.isShareHolder = true;
-      newUser.role = "admin";
-    }
-    
-    // Додаємо нового користувача
-    users.push(newUser);
-    localStorage.setItem("users", JSON.stringify(users));
-    
-    // Встановлюємо поточного користувача
-    localStorage.setItem("currentUser", JSON.stringify(newUser));
-    
-    toast.success(t.registrationSuccessful);
-    
-    // Якщо це адміністратор, перенаправляємо в адмін-панель
-    if (phoneNumber === "0507068007") {
-      navigate("/admin");
-    } else {
-      navigate("/");
+    try {
+      // Перевірка чи існує користувач з таким номером
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('phone_number', phoneNumber)
+        .maybeSingle();
+        
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error("Error checking user existence:", checkError);
+        toast.error("Помилка при перевірці номеру телефону");
+        return;
+      }
+      
+      if (existingUser) {
+        toast.error(t.userWithPhoneExists);
+        return;
+      }
+      
+      // Спеціальна обробка для засновника
+      const isFounder = phoneNumber === "0507068007";
+      
+      // Створення нового користувача в Supabase
+      const { data: newUser, error: insertError } = await supabase
+        .from('users')
+        .insert({
+          full_name: `${firstName} ${lastName}`,
+          phone_number: phoneNumber,
+          password: password,
+          is_admin: isFounder,
+          founder_admin: isFounder,
+          is_shareholder: isFounder
+        })
+        .select()
+        .single();
+        
+      if (insertError) {
+        console.error("Error creating user:", insertError);
+        toast.error("Помилка при створенні користувача");
+        return;
+      }
+      
+      // Зберігаємо користувача в локальному сховищі
+      const currentUser = {
+        id: newUser.id,
+        firstName,
+        lastName,
+        phoneNumber,
+        password,
+        isAdmin: isFounder,
+        isFounder: isFounder,
+        isShareHolder: isFounder,
+        role: isFounder ? "admin-founder" : "user",
+        status: isFounder ? "Адміністратор-засновник" : "Звичайний користувач",
+        createdAt: newUser.created_at,
+        categories: []
+      };
+      
+      localStorage.setItem("currentUser", JSON.stringify(currentUser));
+      
+      toast.success(t.registrationSuccessful);
+      
+      if (isFounder) {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
+      
+    } catch (error) {
+      console.error("Error during registration:", error);
+      toast.error("Помилка при реєстрації");
     }
   };
   
-  const handleResetPassword = () => {
-    // Перевіряємо, чи існує користувач з таким номером
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    const user = users.find((u: any) => u.phoneNumber === resetPhoneNumber);
-    
-    if (!user) {
-      toast.error(t.phoneNotRegistered);
+  const handleResetPassword = async () => {
+    if (!resetPhoneNumber) {
+      toast.error("Введіть номер телефону");
       return;
     }
     
-    // Імітуємо надсилання коду
-    toast.success(`${t.verificationCodeSent} ${mockVerificationCode}`);
-    
-    // Переходимо до наступного кроку
-    setAuthStep(AuthStep.VERIFY_CODE);
+    try {
+      // Перевірка чи існує користувач з таким номером
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('phone_number', resetPhoneNumber)
+        .single();
+      
+      if (error) {
+        console.error("Error finding user for password reset:", error);
+        if (error.code === 'PGRST116') {
+          toast.error(t.phoneNotRegistered);
+        } else {
+          toast.error("Помилка при перевірці номеру телефону");
+        }
+        return;
+      }
+      
+      // Імітуємо надсилання коду
+      toast.success(`${t.verificationCodeSent} ${mockVerificationCode}`);
+      
+      // Переходимо до наступного кроку
+      setAuthStep(AuthStep.VERIFY_CODE);
+    } catch (error) {
+      console.error("Error during password reset:", error);
+      toast.error("Помилка при скиданні паролю");
+    }
   };
   
   const handleVerifyCode = () => {
@@ -258,28 +355,38 @@ export default function Auth() {
     setAuthStep(AuthStep.SET_NEW_PASSWORD);
   };
   
-  const handleSetNewPassword = () => {
+  const handleSetNewPassword = async () => {
+    if (!newPassword || !confirmNewPassword) {
+      toast.error("Введіть новий пароль");
+      return;
+    }
+    
     if (newPassword !== confirmNewPassword) {
       toast.error(t.passwordsDoNotMatch);
       return;
     }
     
-    // Оновлюємо пароль у локальному сховищі
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    const updatedUsers = users.map((user: any) => {
-      if (user.phoneNumber === resetPhoneNumber) {
-        return { ...user, password: newPassword };
+    try {
+      // Оновлюємо пароль у Supabase
+      const { error } = await supabase
+        .from('users')
+        .update({ password: newPassword })
+        .eq('phone_number', resetPhoneNumber);
+        
+      if (error) {
+        console.error("Error updating password:", error);
+        toast.error("Помилка при оновленні паролю");
+        return;
       }
-      return user;
-    });
-    
-    // Зберігаємо оновлений список користувачів
-    localStorage.setItem("users", JSON.stringify(updatedUsers));
-    
-    toast.success(t.passwordResetSuccess);
-    
-    // Повертаємось до форми входу
-    setAuthStep(AuthStep.LOGIN_REGISTER);
+      
+      toast.success(t.passwordResetSuccess);
+      
+      // Повертаємось до форми входу
+      setAuthStep(AuthStep.LOGIN_REGISTER);
+    } catch (error) {
+      console.error("Error during password update:", error);
+      toast.error("Помилка при оновленні паролю");
+    }
   };
   
   const handleLoginWithTempPassword = () => {

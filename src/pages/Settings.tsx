@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 import { Facebook, Instagram, MessageCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Settings() {
   const { language } = useLanguage();
@@ -52,84 +52,138 @@ export default function Settings() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   
   useEffect(() => {
-    // Отримання даних користувача з localStorage
-    const userJSON = localStorage.getItem('currentUser');
-    if (!userJSON) {
-      navigate('/auth');
-      return;
-    }
+    const loadUserData = async () => {
+      // Отримання даних користувача з localStorage
+      const userJSON = localStorage.getItem('currentUser');
+      if (!userJSON) {
+        navigate('/auth');
+        return;
+      }
+      
+      const userData = JSON.parse(userJSON);
+      setUser(userData);
+      
+      try {
+        // Отримання актуальних даних з Supabase
+        const { data: supabaseUser, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userData.id)
+          .single();
+          
+        if (error) {
+          console.error("Error fetching user data from Supabase:", error);
+          // Якщо помилка, використовуємо дані з localStorage
+          setFirstName(userData.firstName || '');
+          setLastName(userData.lastName || '');
+          setPhone(userData.phoneNumber || '');
+          setBio(userData.bio || '');
+          setLocation(userData.location || '');
+          setWebsite(userData.website || '');
+          setInstagram(userData.instagram || '');
+          setFacebook(userData.facebook || '');
+          setViber(userData.viber || '');
+          setSelectedCategories(userData.categories || []);
+        } else {
+          // Використовуємо дані з Supabase
+          setFirstName(userData.firstName || supabaseUser.full_name?.split(' ')[0] || '');
+          setLastName(userData.lastName || supabaseUser.full_name?.split(' ')[1] || '');
+          setPhone(userData.phoneNumber || supabaseUser.phone_number || '');
+          setBio(userData.bio || supabaseUser.bio || '');
+          setLocation(userData.location || supabaseUser.city || '');
+          setWebsite(userData.website || supabaseUser.website || '');
+          setInstagram(userData.instagram || supabaseUser.instagram || '');
+          setFacebook(userData.facebook || supabaseUser.facebook || '');
+          setViber(userData.viber || supabaseUser.viber || '');
+          setSelectedCategories(userData.categories || supabaseUser.categories || []);
+          
+          // Оновлюємо користувача з даними з Supabase
+          const updatedUser = {
+            ...userData,
+            id: supabaseUser.id,
+            firstName: userData.firstName || supabaseUser.full_name?.split(' ')[0] || '',
+            lastName: userData.lastName || supabaseUser.full_name?.split(' ')[1] || '',
+            phoneNumber: userData.phoneNumber || supabaseUser.phone_number || '',
+            password: supabaseUser.password || userData.password || '',
+            isAdmin: supabaseUser.is_admin || userData.isAdmin || false,
+            isFounder: supabaseUser.founder_admin || userData.isFounder || false,
+            isShareHolder: supabaseUser.is_shareholder || userData.isShareHolder || false,
+            bio: supabaseUser.bio || userData.bio || '',
+            location: supabaseUser.city || userData.location || '',
+            website: supabaseUser.website || userData.website || '',
+            instagram: supabaseUser.instagram || userData.instagram || '',
+            facebook: supabaseUser.facebook || userData.facebook || '',
+            viber: supabaseUser.viber || userData.viber || '',
+            categories: supabaseUser.categories || userData.categories || []
+          };
+          
+          setUser(updatedUser);
+          localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        }
+      } catch (error) {
+        console.error("Error in useEffect:", error);
+      }
+      
+      setLoading(false);
+    };
     
-    const userData = JSON.parse(userJSON);
-    setUser(userData);
-    
-    // Заповнення полів даними користувача
-    setFirstName(userData.firstName || '');
-    setLastName(userData.lastName || '');
-    setPhone(userData.phoneNumber || '');
-    setBio(userData.bio || '');
-    setLocation(userData.location || '');
-    setWebsite(userData.website || '');
-    
-    // Соціальні мережі
-    setInstagram(userData.instagram || '');
-    setFacebook(userData.facebook || '');
-    setViber(userData.viber || '');
-    
-    // Встановлення вибраних категорій
-    setSelectedCategories(userData.categories || []);
-    
-    setLoading(false);
+    loadUserData();
   }, [navigate]);
   
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (!firstName || !lastName) {
       toast.error("Ім'я та прізвище обов'язкові");
       return;
     }
     
-    // Оновлюємо дані користувача в localStorage
-    const updatedUser = {
-      ...user,
-      firstName,
-      lastName,
-      phoneNumber: phone,
-      bio,
-      location,
-      website,
-      instagram,
-      facebook,
-      viber,
-      categories: selectedCategories
-    };
-    
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-    
-    // Оновлюємо дані користувача в списку всіх користувачів
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const updatedUsers = users.map((u: any) => {
-      if (u.id === user.id) {
-        return {
-          ...u,
-          firstName,
-          lastName,
-          bio,
-          location,
-          website,
-          instagram,
-          facebook,
-          viber,
+    try {
+      // Оновлюємо дані в Supabase
+      const { error } = await supabase
+        .from('users')
+        .update({
+          full_name: `${firstName} ${lastName}`,
+          bio: bio,
+          city: location,
+          website: website,
+          instagram: instagram,
+          facebook: facebook,
+          viber: viber,
           categories: selectedCategories
-        };
+        })
+        .eq('id', user.id);
+        
+      if (error) {
+        console.error("Error updating user profile in Supabase:", error);
+        toast.error("Помилка при оновленні профілю в базі даних");
+        return;
       }
-      return u;
-    });
-    
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
-    
-    toast.success('Профіль оновлено');
+      
+      // Оновлюємо дані користувача в localStorage
+      const updatedUser = {
+        ...user,
+        firstName,
+        lastName,
+        phoneNumber: phone,
+        bio,
+        location,
+        website,
+        instagram,
+        facebook,
+        viber,
+        categories: selectedCategories
+      };
+      
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      
+      toast.success('Профіль оновлено');
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      toast.error("Помилка при збереженні профілю");
+    }
   };
   
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (!currentPassword) {
       toast.error('Введіть поточний пароль');
       return;
@@ -140,43 +194,60 @@ export default function Settings() {
       return;
     }
     
-    // Якщо користувач увійшов з тимчасовим паролем або пароль не був встановлений раніше
-    const isFirstPasswordSet = !user.password || user.password === '' || user.password === '00000000';
-    
-    // Перевіряємо поточний пароль, якщо це не перша установка пароля
-    if (!isFirstPasswordSet && currentPassword !== user.password) {
-      toast.error('Неправильний поточний пароль');
-      return;
-    }
-    
-    // Оновлюємо пароль користувача в localStorage
-    const updatedUser = {
-      ...user,
-      password: newPassword
-    };
-    
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-    
-    // Оновлюємо пароль користувача в списку всіх користувачів
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const updatedUsers = users.map((u: any) => {
-      if (u.id === user.id) {
-        return {
-          ...u,
-          password: newPassword
-        };
+    try {
+      // Отримуємо актуальні дані з Supabase
+      const { data: supabaseUser, error: fetchError } = await supabase
+        .from('users')
+        .select('password')
+        .eq('id', user.id)
+        .single();
+        
+      if (fetchError) {
+        console.error("Error fetching user data for password change:", fetchError);
+        toast.error("Помилка при перевірці поточного паролю");
+        return;
       }
-      return u;
-    });
-    
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
-    
-    toast.success('Пароль змінено');
-    
-    // Очищаємо поля
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+      
+      // Якщо користувач увійшов з тимчасовим паролем або пароль не був встановлений раніше
+      const isFirstPasswordSet = !supabaseUser.password || supabaseUser.password === '' || supabaseUser.password === '00000000';
+      
+      // Перевіряємо поточний пароль, якщо це не перша установка пароля
+      if (!isFirstPasswordSet && currentPassword !== supabaseUser.password) {
+        toast.error('Неправильний поточний пароль');
+        return;
+      }
+      
+      // Оновлюємо пароль в Supabase
+      const { error } = await supabase
+        .from('users')
+        .update({ password: newPassword })
+        .eq('id', user.id);
+        
+      if (error) {
+        console.error("Error updating password in Supabase:", error);
+        toast.error("Помилка при оновленні паролю в базі даних");
+        return;
+      }
+      
+      // Оновлюємо пароль користувача в localStorage
+      const updatedUser = {
+        ...user,
+        password: newPassword
+      };
+      
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      
+      toast.success('Пароль змінено');
+      
+      // Очищаємо поля
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      console.error("Error changing password:", error);
+      toast.error("Помилка при зміні паролю");
+    }
   };
   
   // Обробник для зміни стану чекбоксів категорій

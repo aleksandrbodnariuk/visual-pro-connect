@@ -1,7 +1,7 @@
 
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Bell, Camera, Home, MessageCircle, PlusSquare, Search, User, LogOut } from "lucide-react";
+import { Bell, Home, Menu, MessageCircle, PlusSquare, Search, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,6 +19,7 @@ import { NavbarActions } from "./NavbarActions";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
 import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
+import { supabase } from "@/integrations/supabase/client";
 
 export function Navbar() {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -28,66 +29,102 @@ export function Navbar() {
   const t = translations[language];
   
   useEffect(() => {
-    // Отримуємо дані користувача з localStorage
-    try {
-      const userJSON = localStorage.getItem("currentUser");
-      if (userJSON) {
+    const loadUserData = async () => {
+      try {
+        // Отримуємо дані користувача з localStorage
+        const userJSON = localStorage.getItem("currentUser");
+        if (!userJSON) {
+          return;
+        }
+        
         const user = JSON.parse(userJSON);
         
-        // Перевіряємо, чи це засновник і оновлюємо його статус якщо потрібно
-        if (user.phoneNumber === "0507068007" && 
-           (!user.isFounder || !user.isAdmin || user.role !== "admin-founder")) {
+        try {
+          // Перевіряємо, чи існує користувач в Supabase і отримуємо актуальні дані
+          const { data: supabaseUser, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle();
+            
+          if (error && error.code !== 'PGRST116') {
+            console.error("Error fetching user from Supabase:", error);
+          }
           
-          const updatedUser = {
-            ...user,
-            isAdmin: true,
-            isFounder: true,
-            role: "admin-founder",
-            isShareHolder: true,
-            status: "Адміністратор-засновник"
-          };
-          
-          // Оновлюємо дані в localStorage
-          localStorage.setItem("currentUser", JSON.stringify(updatedUser));
-          setCurrentUser(updatedUser);
-          
-          // Оновлюємо список користувачів
-          const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-          const updatedUsers = storedUsers.map((u: any) => {
-            if (u.phoneNumber === "0507068007" || u.id === user.id) {
-              return {
-                ...u,
-                isAdmin: true,
-                isFounder: true,
-                role: "admin-founder",
-                isShareHolder: true,
-                status: "Адміністратор-засновник"
-              };
+          if (supabaseUser) {
+            // Перевіряємо, чи це засновник і оновлюємо його статус якщо потрібно
+            const isFounderByPhone = supabaseUser.phone_number === "0507068007";
+            
+            const updatedUser = {
+              ...user,
+              id: supabaseUser.id,
+              firstName: user.firstName || supabaseUser.full_name?.split(' ')[0] || '',
+              lastName: user.lastName || supabaseUser.full_name?.split(' ')[1] || '',
+              phoneNumber: user.phoneNumber || supabaseUser.phone_number || '',
+              avatarUrl: user.avatarUrl || supabaseUser.avatar_url || '',
+              isAdmin: supabaseUser.is_admin || isFounderByPhone,
+              isFounder: supabaseUser.founder_admin || isFounderByPhone,
+              isShareHolder: supabaseUser.is_shareholder || isFounderByPhone,
+              role: isFounderByPhone ? "admin-founder" : 
+                  (supabaseUser.is_admin ? "admin" : 
+                  (supabaseUser.is_shareholder ? "shareholder" : "user")),
+              status: isFounderByPhone ? "Адміністратор-засновник" : 
+                    (supabaseUser.is_admin ? "Адміністратор" : 
+                    (supabaseUser.is_shareholder ? "Акціонер" : "Звичайний користувач"))
+            };
+            
+            // Оновлюємо дані в localStorage
+            localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+            setCurrentUser(updatedUser);
+            
+            // Якщо це засновник (0507068007), але статуси неправильні, оновлюємо їх в Supabase
+            if (isFounderByPhone && 
+              (!supabaseUser.founder_admin || !supabaseUser.is_admin || !supabaseUser.is_shareholder)) {
+              
+              const { error: updateError } = await supabase
+                .from('users')
+                .update({
+                  founder_admin: true,
+                  is_admin: true,
+                  is_shareholder: true
+                })
+                .eq('id', supabaseUser.id);
+                
+              if (updateError) {
+                console.error("Error updating founder status:", updateError);
+              }
             }
-            return u;
-          });
-          
-          localStorage.setItem("users", JSON.stringify(updatedUsers));
-        } else {
+          } else {
+            setCurrentUser(user);
+          }
+        } catch (supabaseError) {
+          console.error("Error with Supabase:", supabaseError);
+          // Якщо помилка з Supabase, використовуємо дані з localStorage
           setCurrentUser(user);
         }
+      } catch (error) {
+        console.error("Помилка при завантаженні даних користувача:", error);
       }
-    } catch (error) {
-      console.error("Помилка при завантаженні даних користувача:", error);
-    }
+    };
+    
+    loadUserData();
   }, []);
   
-  const handleLogout = () => {
-    localStorage.removeItem("currentUser");
-    setCurrentUser(null);
-    toast.success("Ви вийшли з системи");
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      localStorage.removeItem("currentUser");
+      setCurrentUser(null);
+      toast.success("Ви вийшли з системи");
+      navigate("/");
+    } catch (error) {
+      console.error("Помилка при виході:", error);
+      toast.error("Помилка при виході з системи");
+    }
   };
 
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
     try {
-      // Використовуємо setTimeout, щоб уникнути проблем з рендерингом
       setTimeout(() => {
         navigate("/");
       }, 0);
@@ -100,7 +137,6 @@ export function Navbar() {
   const handleProfileNavigation = () => {
     try {
       if (currentUser && currentUser.id) {
-        // Використовуємо setTimeout, щоб уникнути проблем з рендерингом
         setTimeout(() => {
           navigate(`/profile/${currentUser.id}`);
         }, 0);
@@ -115,7 +151,6 @@ export function Navbar() {
 
   const handleNavigate = (path: string) => {
     try {
-      // Використовуємо setTimeout, щоб уникнути проблем з рендерингом
       setTimeout(() => {
         navigate(path);
       }, 0);
@@ -191,14 +226,14 @@ export function Navbar() {
             <span className="sr-only">{t.notifications}</span>
           </Button>
           
+          {/* Кнопка "Створити публікацію" з більш помітним виглядом */}
           <Button 
-            variant="ghost" 
-            size="icon" 
-            className="rounded-full hidden md:flex" 
+            variant="secondary"
+            className="hidden md:flex items-center gap-1"
             onClick={() => setIsCreateModalOpen(true)}
           >
-            <PlusSquare className="h-5 w-5" />
-            <span className="sr-only">Створити</span>
+            <PlusSquare className="h-4 w-4 mr-1" />
+            <span>Створити</span>
           </Button>
           
           {currentUser ? (
@@ -267,6 +302,18 @@ export function Navbar() {
         </nav>
       </div>
       
+      {/* Мобільна кнопка "Створити" */}
+      {currentUser && (
+        <div className="md:hidden fixed bottom-20 right-4 z-40">
+          <Button
+            onClick={() => setIsCreateModalOpen(true)} 
+            className="rounded-full w-12 h-12 shadow-lg"
+          >
+            <PlusSquare className="h-6 w-6" />
+          </Button>
+        </div>
+      )}
+      
       {/* Модальне вікно створення публікації */}
       {currentUser && (
         <CreatePublicationModal
@@ -281,26 +328,5 @@ export function Navbar() {
         />
       )}
     </header>
-  );
-}
-
-function Menu(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="4" x2="20" y1="12" y2="12" />
-      <line x1="4" x2="20" y1="6" y2="6" />
-      <line x1="4" x2="20" y1="18" y2="18" />
-    </svg>
   );
 }
