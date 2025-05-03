@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
@@ -43,7 +42,7 @@ export function useUsers(): UseUsersReturnType {
         const updatedUsers = supabaseUsers.map(user => {
           if (user.phone_number === "0507068007") {
             // If this is the founder, ensure correct status
-            const { error } = supabase
+            supabase
               .from('users')
               .update({
                 founder_admin: true,

@@ -56,7 +56,12 @@ export default function Index() {
                     userData.phoneNumber === '0507068007',
                   avatar_url: userData.avatarUrl || '',
                   password: userData.password || '',
-                  categories: userData.categories || []
+                  categories: userData.categories || [],
+                  bio: userData.bio || '',
+                  website: userData.website || '',
+                  instagram: userData.instagram || '',
+                  facebook: userData.facebook || '',
+                  viber: userData.viber || ''
                 });
               
               if (insertError) {
@@ -78,7 +83,12 @@ export default function Index() {
                 isFounder: userFromDb.founder_admin || userData.isFounder || false,
                 isShareHolder: userFromDb.is_shareholder || userData.isShareHolder || false,
                 avatarUrl: userData.avatarUrl || userFromDb.avatar_url || '',
-                categories: userFromDb.categories || userData.categories || []
+                categories: userFromDb.categories || userData.categories || [],
+                bio: userFromDb.bio || userData.bio || '',
+                website: userFromDb.website || userData.website || '',
+                instagram: userFromDb.instagram || userData.instagram || '',
+                facebook: userFromDb.facebook || userData.facebook || '',
+                viber: userFromDb.viber || userData.viber || ''
               };
               
               localStorage.setItem('currentUser', JSON.stringify(updatedUser));

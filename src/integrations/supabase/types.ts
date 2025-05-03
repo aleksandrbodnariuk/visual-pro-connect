@@ -320,45 +320,60 @@ export type Database = {
       users: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           categories: string[] | null
           city: string | null
           country: string | null
           created_at: string | null
+          facebook: string | null
           founder_admin: boolean | null
           full_name: string | null
           id: string
+          instagram: string | null
           is_admin: boolean | null
           is_shareholder: boolean | null
           password: string
           phone_number: string
+          viber: string | null
+          website: string | null
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           categories?: string[] | null
           city?: string | null
           country?: string | null
           created_at?: string | null
+          facebook?: string | null
           founder_admin?: boolean | null
           full_name?: string | null
           id?: string
+          instagram?: string | null
           is_admin?: boolean | null
           is_shareholder?: boolean | null
           password: string
           phone_number: string
+          viber?: string | null
+          website?: string | null
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           categories?: string[] | null
           city?: string | null
           country?: string | null
           created_at?: string | null
+          facebook?: string | null
           founder_admin?: boolean | null
           full_name?: string | null
           id?: string
+          instagram?: string | null
           is_admin?: boolean | null
           is_shareholder?: boolean | null
           password?: string
           phone_number?: string
+          viber?: string | null
+          website?: string | null
         }
         Relationships: []
       }

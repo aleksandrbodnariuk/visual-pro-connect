@@ -31,7 +31,13 @@ export async function syncUserToSupabase(user: User): Promise<void> {
           founder_admin: user.isFounder || user.founder_admin || user.role === 'admin-founder' || 
             (user.phoneNumber === '0507068007' || user.phone_number === '0507068007'),
           avatar_url: user.avatarUrl || user.avatar_url || '',
-          password: user.password || 'defaultpassword'
+          password: user.password || 'defaultpassword',
+          // Include social profile fields
+          bio: user.bio || '',
+          website: user.website || '',
+          instagram: user.instagram || '',
+          facebook: user.facebook || '',
+          viber: user.viber || ''
         });
         
       if (insertError) {
@@ -86,6 +92,12 @@ export function formatUserFromSupabase(user: any): User {
     status: user.role === "admin-founder" ? "Адміністратор-засновник" : 
            user.role === "admin" ? "Адміністратор" :
            user.role === "moderator" ? "Модератор" :
-           user.is_shareholder ? "Акціонер" : "Звичайний користувач"
+           user.is_shareholder ? "Акціонер" : "Звичайний користувач",
+    // Map social profile fields
+    bio: user.bio,
+    website: user.website,
+    instagram: user.instagram,
+    facebook: user.facebook,
+    viber: user.viber
   };
 }

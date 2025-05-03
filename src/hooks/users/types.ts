@@ -22,6 +22,12 @@ export interface User {
   country?: string;
   categories?: string[];
   created_at?: string;
+  // New social fields
+  bio?: string;
+  website?: string;
+  instagram?: string;
+  facebook?: string;
+  viber?: string;
 }
 
 export interface UseUsersReturnType {
