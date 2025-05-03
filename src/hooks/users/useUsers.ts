@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
@@ -50,11 +51,10 @@ export function useUsers(): UseUsersReturnType {
                 is_shareholder: true
               })
               .eq('id', user.id)
-              .then(response => {
-                if (response.error) {
-                  console.error("Error updating founder status:", response.error);
+              .then(({ error }) => {
+                if (error) {
+                  console.error("Error updating founder status:", error);
                 }
-                return response;
               });
             
             return formatUserFromSupabase({

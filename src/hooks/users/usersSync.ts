@@ -11,9 +11,9 @@ export async function syncUserToSupabase(user: User): Promise<void> {
       .from('users')
       .select('id')
       .eq('id', user.id)
-      .maybeSingle();
+      .single();
       
-    if (checkError) {
+    if (checkError && checkError.code !== 'PGRST116') {
       console.error("Error checking user existence:", checkError);
       return;
     }
@@ -42,6 +42,32 @@ export async function syncUserToSupabase(user: User): Promise<void> {
         
       if (insertError) {
         console.error("Error inserting user to Supabase:", insertError);
+      }
+    } else {
+      // Update the existing user with the latest data
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          full_name: user.firstName && user.lastName ? 
+            `${user.firstName} ${user.lastName}` : user.full_name || '',
+          phone_number: user.phoneNumber || user.phone_number || '',
+          is_admin: user.isAdmin || user.is_admin || user.role === 'admin' || user.role === 'admin-founder',
+          is_shareholder: user.isShareHolder || user.is_shareholder || user.role === 'shareholder',
+          founder_admin: user.isFounder || user.founder_admin || user.role === 'admin-founder' || 
+            (user.phoneNumber === '0507068007' || user.phone_number === '0507068007'),
+          avatar_url: user.avatarUrl || user.avatar_url || '',
+          password: user.password || user.password,
+          // Include social profile fields
+          bio: user.bio || '',
+          website: user.website || '',
+          instagram: user.instagram || '',
+          facebook: user.facebook || '',
+          viber: user.viber || ''
+        })
+        .eq('id', user.id);
+        
+      if (updateError) {
+        console.error("Error updating user in Supabase:", updateError);
       }
     }
   } catch (error) {

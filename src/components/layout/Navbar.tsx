@@ -41,17 +41,19 @@ export function Navbar() {
         
         try {
           // Перевіряємо, чи існує користувач в Supabase і отримуємо актуальні дані
-          const { data: supabaseUser, error } = await supabase
+          const { data: supabaseUsers, error } = await supabase
             .from('users')
             .select('*')
-            .eq('id', user.id)
-            .maybeSingle();
+            .eq('id', user.id);
             
-          if (error && error.code !== 'PGRST116') {
+          if (error) {
             console.error("Error fetching user from Supabase:", error);
+            setCurrentUser(user); // Якщо помилка, використовуємо локальні дані
+            return;
           }
           
-          if (supabaseUser) {
+          if (supabaseUsers && supabaseUsers.length > 0) {
+            const supabaseUser = supabaseUsers[0];
             // Перевіряємо, чи це засновник і оновлюємо його статус якщо потрібно
             const isFounderByPhone = supabaseUser.phone_number === "0507068007";
             
@@ -65,12 +67,18 @@ export function Navbar() {
               isAdmin: supabaseUser.is_admin || isFounderByPhone,
               isFounder: supabaseUser.founder_admin || isFounderByPhone,
               isShareHolder: supabaseUser.is_shareholder || isFounderByPhone,
+              password: supabaseUser.password,
               role: isFounderByPhone ? "admin-founder" : 
                   (supabaseUser.is_admin ? "admin" : 
                   (supabaseUser.is_shareholder ? "shareholder" : "user")),
               status: isFounderByPhone ? "Адміністратор-засновник" : 
                     (supabaseUser.is_admin ? "Адміністратор" : 
-                    (supabaseUser.is_shareholder ? "Акціонер" : "Звичайний користувач"))
+                    (supabaseUser.is_shareholder ? "Акціонер" : "Звичайний користувач")),
+              bio: supabaseUser.bio || user.bio || '',
+              website: supabaseUser.website || user.website || '',
+              instagram: supabaseUser.instagram || user.instagram || '',
+              facebook: supabaseUser.facebook || user.facebook || '',
+              viber: supabaseUser.viber || user.viber || ''
             };
             
             // Оновлюємо дані в localStorage
@@ -159,6 +167,10 @@ export function Navbar() {
       window.location.href = path;
     }
   };
+
+  const handleCreatePublication = () => {
+    setIsCreateModalOpen(true);
+  };
   
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur">
@@ -226,15 +238,17 @@ export function Navbar() {
             <span className="sr-only">{t.notifications}</span>
           </Button>
           
-          {/* Кнопка "Створити публікацію" з більш помітним виглядом */}
-          <Button 
-            variant="secondary"
-            className="hidden md:flex items-center gap-1"
-            onClick={() => setIsCreateModalOpen(true)}
-          >
-            <PlusSquare className="h-4 w-4 mr-1" />
-            <span>Створити</span>
-          </Button>
+          {/* Кнопка "Створити публікацію" */}
+          {currentUser && (
+            <Button 
+              variant="default"
+              className="hidden md:flex items-center gap-1"
+              onClick={handleCreatePublication}
+            >
+              <PlusSquare className="h-4 w-4 mr-1" />
+              <span>Створити</span>
+            </Button>
+          )}
           
           {currentUser ? (
             <DropdownMenu>
@@ -258,7 +272,7 @@ export function Navbar() {
                     <User className="mr-2 h-4 w-4" />
                     <span>{t.profile}</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsCreateModalOpen(true)}>
+                  <DropdownMenuItem onClick={handleCreatePublication}>
                     <PlusSquare className="mr-2 h-4 w-4" />
                     <span>Створити публікацію</span>
                   </DropdownMenuItem>
@@ -302,17 +316,7 @@ export function Navbar() {
         </nav>
       </div>
       
-      {/* Мобільна кнопка "Створити" */}
-      {currentUser && (
-        <div className="md:hidden fixed bottom-20 right-4 z-40">
-          <Button
-            onClick={() => setIsCreateModalOpen(true)} 
-            className="rounded-full w-12 h-12 shadow-lg"
-          >
-            <PlusSquare className="h-6 w-6" />
-          </Button>
-        </div>
-      )}
+      {/* Мобільна кнопка "Створити" - прибрано, щоб використовувати тільки одну кнопку */}
       
       {/* Модальне вікно створення публікації */}
       {currentUser && (

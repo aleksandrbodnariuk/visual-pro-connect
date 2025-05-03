@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -37,6 +36,7 @@ export default function Auth() {
   const [resetPhoneNumber, setResetPhoneNumber] = useState("");
   
   const mockVerificationCode = "123456";
+  const [loading, setLoading] = useState(false);
   
   useEffect(() => {
     const currentUser = localStorage.getItem("currentUser");
@@ -52,38 +52,55 @@ export default function Auth() {
     }
     
     try {
+      setLoading(true);
+      // Перевіряємо користувача в Supabase
+      const { data: users, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('phone_number', phoneNumber);
+      
+      if (fetchError) {
+        console.error("Помилка при пошуку користувача:", fetchError);
+        toast.error("Помилка при перевірці облікового запису");
+        setLoading(false);
+        return;
+      }
+
+      console.log("Знайдено користувачів:", users);
+      
+      if (!users || users.length === 0) {
+        toast.error("Користувача з таким номером не знайдено");
+        setLoading(false);
+        return;
+      }
+      
+      const user = users[0]; // Беремо першого знайденого користувача
+      
       // Спочатку перевіряємо чи це телефон засновника
       if (phoneNumber === "0507068007") {
-        // Перевірка користувача в Supabase
-        const { data: founderUser, error: founderError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('phone_number', phoneNumber)
-          .single();
-          
-        if (founderError && founderError.code !== 'PGRST116') {
-          console.error("Error checking founder account:", founderError);
-          toast.error("Помилка при авторизації");
-          return;
-        }
-          
         // Якщо засновник існує в базі, перевіряємо пароль
-        if (founderUser) {
-          if (founderUser.password === password) {
+        if (user) {
+          if (user.password === password) {
             // Успішний вхід для засновника
             const adminUser = {
-              id: founderUser.id,
-              firstName: founderUser.full_name?.split(' ')[0] || 'Admin',
-              lastName: founderUser.full_name?.split(' ')[1] || 'Founder',
+              id: user.id,
+              firstName: user.full_name?.split(' ')[0] || 'Admin',
+              lastName: user.full_name?.split(' ')[1] || 'Founder',
               phoneNumber: phoneNumber,
+              password: user.password,
               isAdmin: true,
               isFounder: true,
               isShareHolder: true,
               role: "admin-founder",
               status: "Адміністратор-засновник",
-              createdAt: founderUser.created_at,
-              categories: founderUser.categories || [],
-              avatarUrl: founderUser.avatar_url
+              createdAt: user.created_at,
+              categories: user.categories || [],
+              avatarUrl: user.avatar_url,
+              bio: user.bio || '',
+              website: user.website || '',
+              instagram: user.instagram || '',
+              facebook: user.facebook || '',
+              viber: user.viber || ''
             };
             
             localStorage.setItem("currentUser", JSON.stringify(adminUser));
@@ -92,67 +109,10 @@ export default function Auth() {
             return;
           } else {
             toast.error(t.incorrectPhoneOrPassword);
+            setLoading(false);
             return;
           }
         }
-        
-        // Якщо це перший вхід засновника, створюємо обліковий запис
-        if (password === "admin" || password === "00000000") {
-          const { data: newFounder, error: createError } = await supabase
-            .from('users')
-            .insert({
-              full_name: 'Admin Founder',
-              phone_number: phoneNumber,
-              password: password,
-              is_admin: true,
-              founder_admin: true,
-              is_shareholder: true
-            })
-            .select()
-            .single();
-            
-          if (createError) {
-            console.error("Error creating founder account:", createError);
-            toast.error("Помилка при створенні облікового запису засновника");
-            return;
-          }
-          
-          const adminUser = {
-            id: newFounder.id,
-            firstName: 'Admin',
-            lastName: 'Founder',
-            phoneNumber: phoneNumber,
-            isAdmin: true,
-            isFounder: true,
-            isShareHolder: true,
-            role: "admin-founder",
-            status: "Адміністратор-засновник",
-            createdAt: newFounder.created_at,
-            categories: []
-          };
-          
-          localStorage.setItem("currentUser", JSON.stringify(adminUser));
-          toast.success(t.loginAsAdminFounder);
-          navigate("/admin");
-          return;
-        }
-      }
-      
-      // Перевірка звичайного користувача в Supabase
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('phone_number', phoneNumber)
-        .single();
-        
-      if (error) {
-        console.error("Error fetching user:", error);
-        if (error.code === 'PGRST116') {
-          toast.error("Користувача з таким номером не знайдено");
-        } else {
-          toast.error("Помилка при авторизації");
-        }
-        return;
       }
       
       // Перевірка пароля
@@ -165,6 +125,7 @@ export default function Auth() {
             firstName: user.full_name?.split(' ')[0] || '',
             lastName: user.full_name?.split(' ')[1] || '',
             phoneNumber: user.phone_number,
+            password: password,
             isAdmin: user.is_admin,
             isFounder: user.founder_admin,
             isShareHolder: user.is_shareholder,
@@ -175,7 +136,12 @@ export default function Auth() {
                   (user.is_shareholder ? "Акціонер" : "Звичайний користувач")),
             createdAt: user.created_at,
             categories: user.categories || [],
-            avatarUrl: user.avatar_url
+            avatarUrl: user.avatar_url,
+            bio: user.bio || '',
+            website: user.website || '',
+            instagram: user.instagram || '',
+            facebook: user.facebook || '',
+            viber: user.viber || ''
           };
           
           localStorage.setItem("currentUser", JSON.stringify(currentUser));
@@ -186,6 +152,7 @@ export default function Auth() {
         }
         
         toast.error(t.incorrectPhoneOrPassword);
+        setLoading(false);
         return;
       }
       
@@ -206,7 +173,12 @@ export default function Auth() {
               (user.is_shareholder ? "Акціонер" : "Звичайний користувач")),
         createdAt: user.created_at,
         categories: user.categories || [],
-        avatarUrl: user.avatar_url
+        avatarUrl: user.avatar_url,
+        bio: user.bio || '',
+        website: user.website || '',
+        instagram: user.instagram || '',
+        facebook: user.facebook || '',
+        viber: user.viber || ''
       };
       
       localStorage.setItem("currentUser", JSON.stringify(currentUser));
@@ -214,8 +186,10 @@ export default function Auth() {
       navigate("/");
       
     } catch (error) {
-      console.error("Error during login:", error);
+      console.error("Помилка при авторизації:", error);
       toast.error("Помилка при авторизації");
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -236,21 +210,23 @@ export default function Auth() {
     }
     
     try {
+      setLoading(true);
       // Перевірка чи існує користувач з таким номером
-      const { data: existingUser, error: checkError } = await supabase
+      const { data: existingUsers, error: checkError } = await supabase
         .from('users')
         .select('id')
-        .eq('phone_number', phoneNumber)
-        .maybeSingle();
+        .eq('phone_number', phoneNumber);
         
-      if (checkError && checkError.code !== 'PGRST116') {
-        console.error("Error checking user existence:", checkError);
+      if (checkError) {
+        console.error("Помилка при перевірці номеру телефону:", checkError);
         toast.error("Помилка при перевірці номеру телефону");
+        setLoading(false);
         return;
       }
       
-      if (existingUser) {
+      if (existingUsers && existingUsers.length > 0) {
         toast.error(t.userWithPhoneExists);
+        setLoading(false);
         return;
       }
       
@@ -268,18 +244,20 @@ export default function Auth() {
           founder_admin: isFounder,
           is_shareholder: isFounder
         })
-        .select()
-        .single();
+        .select();
         
       if (insertError) {
-        console.error("Error creating user:", insertError);
+        console.error("Помилка при створенні користувача:", insertError);
         toast.error("Помилка при створенні користувача");
+        setLoading(false);
         return;
       }
       
+      const createdUser = newUser[0];
+      
       // Зберігаємо користувача в локальному сховищі
       const currentUser = {
-        id: newUser.id,
+        id: createdUser.id,
         firstName,
         lastName,
         phoneNumber,
@@ -289,7 +267,7 @@ export default function Auth() {
         isShareHolder: isFounder,
         role: isFounder ? "admin-founder" : "user",
         status: isFounder ? "Адміністратор-засновник" : "Звичайний користувач",
-        createdAt: newUser.created_at,
+        createdAt: createdUser.created_at,
         categories: []
       };
       
@@ -304,8 +282,10 @@ export default function Auth() {
       }
       
     } catch (error) {
-      console.error("Error during registration:", error);
+      console.error("Помилка при реєстрації:", error);
       toast.error("Помилка при реєстрації");
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -412,11 +392,11 @@ export default function Auth() {
               onChange={(e) => setResetPhoneNumber(e.target.value)}
             />
             
-            <Button className="w-full" onClick={handleResetPassword}>
-              {t.reset}
+            <Button className="w-full" onClick={handleResetPassword} disabled={loading}>
+              {loading ? "Завантаження..." : t.reset}
             </Button>
             
-            <Button variant="outline" className="w-full" onClick={() => setAuthStep(AuthStep.LOGIN_REGISTER)}>
+            <Button variant="outline" className="w-full" onClick={() => setAuthStep(AuthStep.LOGIN_REGISTER)} disabled={loading}>
               {t.backToLogin}
             </Button>
           </div>
@@ -519,14 +499,15 @@ export default function Auth() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-            <Button className="w-full" onClick={handleLogin}>
-              {t.login}
+            <Button className="w-full" onClick={handleLogin} disabled={loading}>
+              {loading ? "Завантаження..." : t.login}
             </Button>
             <div className="flex justify-between text-sm">
               <Button
                 variant="link"
                 onClick={() => setAuthStep(AuthStep.RESET_PASSWORD)}
                 className="p-0 h-auto text-sm"
+                disabled={loading}
               >
                 {t.forgotPassword}
               </Button>
@@ -534,13 +515,14 @@ export default function Auth() {
                 variant="link"
                 onClick={handleLoginWithTempPassword}
                 className="p-0 h-auto text-sm"
+                disabled={loading}
               >
                 {t.temporaryPasswordLogin || "Вхід за тимчасовим паролем"}
               </Button>
             </div>
             <div className="text-center text-sm">
               <span className="text-muted-foreground">{t.noAccount}</span>{" "}
-              <Button variant="link" onClick={() => setIsLogin(false)} className="p-0 h-auto text-sm">
+              <Button variant="link" onClick={() => setIsLogin(false)} className="p-0 h-auto text-sm" disabled={loading}>
                 {t.register}
               </Button>
             </div>
@@ -577,12 +559,12 @@ export default function Auth() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
-            <Button className="w-full" onClick={handleRegister}>
-              {t.register}
+            <Button className="w-full" onClick={handleRegister} disabled={loading}>
+              {loading ? "Завантаження..." : t.register}
             </Button>
             <div className="text-center text-sm">
               <span className="text-muted-foreground">{t.alreadyHaveAccount}</span>{" "}
-              <Button variant="link" onClick={() => setIsLogin(true)} className="p-0 h-auto text-sm">
+              <Button variant="link" onClick={() => setIsLogin(true)} className="p-0 h-auto text-sm" disabled={loading}>
                 {t.login}
               </Button>
             </div>

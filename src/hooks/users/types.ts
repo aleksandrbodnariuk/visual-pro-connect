@@ -22,7 +22,7 @@ export interface User {
   country?: string;
   categories?: string[];
   created_at?: string;
-  // New social fields
+  // Social fields
   bio?: string;
   website?: string;
   instagram?: string;
