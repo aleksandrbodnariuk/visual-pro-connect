@@ -1,7 +1,7 @@
 
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Bell, Home, Menu, MessageCircle, Search } from "lucide-react";
+import { Bell, Home, Menu, MessageCircle, Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { translations } from "@/lib/translations";
 import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@/hooks/users/types";
+import { useAuthState } from "@/hooks/auth/useAuthState";
 
 export function Navbar() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -19,6 +20,7 @@ export function Navbar() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const t = translations[language];
+  const { syncUser } = useAuthState();
   
   useEffect(() => {
     const loadUserData = async () => {
@@ -36,7 +38,8 @@ export function Navbar() {
           const { data: supabaseUsers, error } = await supabase
             .from('users')
             .select('*')
-            .eq('id', user.id);
+            .eq('id', user.id)
+            .limit(1);
             
           if (error) {
             console.error("Error fetching user from Supabase:", error);
@@ -95,6 +98,8 @@ export function Navbar() {
               }
             }
           } else {
+            // Якщо користувач не знайдений в Supabase, синхронізуємо його
+            await syncUser();
             setCurrentUser(user);
           }
         } catch (supabaseError) {
@@ -108,7 +113,7 @@ export function Navbar() {
     };
     
     loadUserData();
-  }, []);
+  }, [syncUser]);
   
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -199,15 +204,30 @@ export function Navbar() {
             <span className="sr-only">{t.notifications}</span>
           </Button>
           
-          {/* Кнопка "Створити публікацію" тільки в desktop версії */}
+          {/* Кнопка "Створити публікацію" */}
           {currentUser && (
-            <Button 
-              variant="default"
-              className="hidden md:flex items-center gap-1"
-              onClick={handleCreatePublication}
-            >
-              <span>Створити</span>
-            </Button>
+            <>
+              {/* Desktop версія */}
+              <Button 
+                variant="default"
+                className="hidden md:flex items-center gap-1"
+                onClick={handleCreatePublication}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                <span>Створити</span>
+              </Button>
+              
+              {/* Mobile версія */}
+              <Button
+                variant="default"
+                size="icon"
+                className="md:hidden rounded-full"
+                onClick={handleCreatePublication}
+              >
+                <Plus className="h-5 w-5" />
+                <span className="sr-only">Створити публікацію</span>
+              </Button>
+            </>
           )}
           
           <UserMenu 

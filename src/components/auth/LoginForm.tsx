@@ -43,7 +43,7 @@ export default function LoginForm({ onForgotPassword, onSwitchToRegister }: Logi
       status: user.founder_admin ? "Адміністратор-засновник" : 
             (user.is_admin ? "Адміністратор" : 
             (user.is_shareholder ? "Акціонер" : "Звичайний користувач")),
-      createdAt: user.created_at,
+      created_at: user.created_at,
       categories: user.categories || [],
       avatarUrl: user.avatar_url,
       bio: user.bio || '',

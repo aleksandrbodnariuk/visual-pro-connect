@@ -85,10 +85,11 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
         
         // Додаткова інформація про помилку
         if (insertError.message.includes('row-level security policy')) {
-          toast.error("Помилка безпеки при створенні користувача. Будь ласка, зверніться до адміністратора.");
+          toast.error("Помилка безпеки при створенні користувача. Спробуйте ще раз.");
         } else {
-          toast.error("Помилка при створенні користувача");
+          toast.error("Помилка при створенні користувача. Спробуйте ще раз.");
         }
+        console.log("Повна помилка:", JSON.stringify(insertError));
         return;
       }
       
@@ -111,7 +112,7 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
         isShareHolder: isFounder,
         role: isFounder ? "admin-founder" : "user",
         status: isFounder ? "Адміністратор-засновник" : "Звичайний користувач",
-        createdAt: createdUser.created_at,
+        created_at: createdUser.created_at,
         categories: [],
         bio: '',
         website: '',
@@ -132,7 +133,7 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
       
     } catch (error) {
       console.error("Помилка при реєстрації:", error);
-      toast.error("Помилка при реєстрації");
+      toast.error("Помилка при реєстрації. Спробуйте ще раз.");
     } finally {
       setLoading(false);
     }

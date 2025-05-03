@@ -42,7 +42,7 @@ export async function syncUserToSupabase(user: User): Promise<void> {
             founder_admin: user.isFounder || user.founder_admin || user.role === 'admin-founder' || 
               (user.phoneNumber === '0507068007' || user.phone_number === '0507068007'),
             avatar_url: user.avatarUrl || user.avatar_url || '',
-            password: user.password || 'defaultpassword',
+            password: user.password || '',
             bio: user.bio || '',
             website: user.website || '',
             instagram: user.instagram || '',
@@ -71,7 +71,7 @@ export async function syncUserToSupabase(user: User): Promise<void> {
           founder_admin: user.isFounder || user.founder_admin || user.role === 'admin-founder' || 
             (user.phoneNumber === '0507068007' || user.phone_number === '0507068007'),
           avatar_url: user.avatarUrl || user.avatar_url || '',
-          password: user.password || 'defaultpassword',
+          password: user.password || '',
           bio: user.bio || '',
           website: user.website || '',
           instagram: user.instagram || '',
@@ -95,7 +95,7 @@ export async function syncUserToSupabase(user: User): Promise<void> {
           founder_admin: user.isFounder || user.founder_admin || user.role === 'admin-founder' || 
             (user.phoneNumber === '0507068007' || user.phone_number === '0507068007'),
           avatar_url: user.avatarUrl || user.avatar_url || '',
-          password: user.password,
+          password: user.password || '',
           bio: user.bio || '',
           website: user.website || '',
           instagram: user.instagram || '',

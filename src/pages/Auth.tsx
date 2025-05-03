@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
+import { useAuthState } from '@/hooks/auth/useAuthState';
 
 import LoginForm from '@/components/auth/LoginForm';
 import RegisterForm from '@/components/auth/RegisterForm';
@@ -26,13 +27,15 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [authStep, setAuthStep] = useState<AuthStep>(AuthStep.LOGIN_REGISTER);
   const [resetPhoneNumber, setResetPhoneNumber] = useState("");
+  const { checkAuthStatus } = useAuthState();
   
   useEffect(() => {
-    const currentUser = localStorage.getItem("currentUser");
-    if (currentUser) {
+    // Перевіряємо, чи користувач увійшов в систему
+    const isLoggedIn = checkAuthStatus();
+    if (isLoggedIn) {
       navigate("/");
     }
-  }, [navigate]);
+  }, [navigate, checkAuthStatus]);
   
   const handleCodeVerified = (phoneNumber: string) => {
     setResetPhoneNumber(phoneNumber);
@@ -95,19 +98,19 @@ export default function Auth() {
   }
   
   return (
-    <div className="flex h-screen flex-col items-center justify-center p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold">{isLogin ? t.loginToApp : t.register}</h1>
           <p className="mt-2 text-muted-foreground">{t.appDescription}</p>
         </div>
         
-        <Tabs value={isLogin ? "login" : "register"} className="w-full">
+        <Tabs value={isLogin ? "login" : "register"} className="w-full" onValueChange={(value) => setIsLogin(value === "login")}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login" onClick={() => setIsLogin(true)}>
+            <TabsTrigger value="login">
               {t.login}
             </TabsTrigger>
-            <TabsTrigger value="register" onClick={() => setIsLogin(false)}>
+            <TabsTrigger value="register">
               {t.register}
             </TabsTrigger>
           </TabsList>
