@@ -7,18 +7,58 @@ export async function syncUserToSupabase(user: User): Promise<void> {
   if (!user.id) return;
   
   try {
+    // Перевірка чи існує користувач в Supabase
     const { data: existingUser, error: checkError } = await supabase
       .from('users')
       .select('id')
-      .eq('id', user.id)
-      .single();
+      .eq('id', user.id);
       
-    if (checkError && checkError.code !== 'PGRST116') {
+    if (checkError) {
       console.error("Error checking user existence:", checkError);
       return;
     }
     
-    if (!existingUser) {
+    // Якщо користувача не існує або результат порожній, створюємо нового
+    if (!existingUser || existingUser.length === 0) {
+      // Перевіряємо чи існує користувач з таким телефоном
+      const { data: phoneCheck, error: phoneError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('phone_number', user.phoneNumber || user.phone_number || '');
+        
+      if (phoneError) {
+        console.error("Error checking phone existence:", phoneError);
+      } else if (phoneCheck && phoneCheck.length > 0) {
+        console.log("User with this phone already exists, updating instead of inserting");
+        
+        // Якщо користувач з таким телефоном існує, оновлюємо його дані
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            full_name: user.firstName && user.lastName ? 
+              `${user.firstName} ${user.lastName}` : user.full_name || '',
+            is_admin: user.isAdmin || user.is_admin || user.role === 'admin' || user.role === 'admin-founder',
+            is_shareholder: user.isShareHolder || user.is_shareholder || user.role === 'shareholder',
+            founder_admin: user.isFounder || user.founder_admin || user.role === 'admin-founder' || 
+              (user.phoneNumber === '0507068007' || user.phone_number === '0507068007'),
+            avatar_url: user.avatarUrl || user.avatar_url || '',
+            password: user.password || 'defaultpassword',
+            bio: user.bio || '',
+            website: user.website || '',
+            instagram: user.instagram || '',
+            facebook: user.facebook || '',
+            viber: user.viber || ''
+          })
+          .eq('phone_number', user.phoneNumber || user.phone_number || '');
+          
+        if (updateError) {
+          console.error("Error updating existing user by phone:", updateError);
+        }
+        
+        return;
+      }
+      
+      // Створюємо нового користувача, якщо не знайдено за телефоном
       const { error: insertError } = await supabase
         .from('users')
         .insert({
@@ -32,7 +72,6 @@ export async function syncUserToSupabase(user: User): Promise<void> {
             (user.phoneNumber === '0507068007' || user.phone_number === '0507068007'),
           avatar_url: user.avatarUrl || user.avatar_url || '',
           password: user.password || 'defaultpassword',
-          // Include social profile fields
           bio: user.bio || '',
           website: user.website || '',
           instagram: user.instagram || '',
@@ -44,7 +83,7 @@ export async function syncUserToSupabase(user: User): Promise<void> {
         console.error("Error inserting user to Supabase:", insertError);
       }
     } else {
-      // Update the existing user with the latest data
+      // Оновлюємо існуючого користувача з останніми даними
       const { error: updateError } = await supabase
         .from('users')
         .update({
@@ -56,8 +95,7 @@ export async function syncUserToSupabase(user: User): Promise<void> {
           founder_admin: user.isFounder || user.founder_admin || user.role === 'admin-founder' || 
             (user.phoneNumber === '0507068007' || user.phone_number === '0507068007'),
           avatar_url: user.avatarUrl || user.avatar_url || '',
-          password: user.password || user.password,
-          // Include social profile fields
+          password: user.password,
           bio: user.bio || '',
           website: user.website || '',
           instagram: user.instagram || '',
@@ -83,7 +121,7 @@ export async function syncAllUsersToSupabase(): Promise<User[]> {
         await syncUserToSupabase(user);
       }
       
-      // Fetch the latest users data from Supabase
+      // Отримуємо останні дані користувачів з Supabase
       const { data: latestUsers, error } = await supabase
         .from('users')
         .select('*')
@@ -92,7 +130,7 @@ export async function syncAllUsersToSupabase(): Promise<User[]> {
       if (!error && latestUsers) {
         console.log("Latest users from Supabase:", latestUsers);
         
-        // Update localStorage with the latest data
+        // Оновлюємо localStorage останніми даними
         const formattedUsers = latestUsers.map(formatUserFromSupabase);
         localStorage.setItem('users', JSON.stringify(formattedUsers));
         return formattedUsers;
@@ -115,15 +153,13 @@ export function formatUserFromSupabase(user: any): User {
     isShareHolder: user.is_shareholder,
     isFounder: user.founder_admin,
     phoneNumber: user.phone_number,
-    status: user.role === "admin-founder" ? "Адміністратор-засновник" : 
-           user.role === "admin" ? "Адміністратор" :
-           user.role === "moderator" ? "Модератор" :
+    status: user.founder_admin ? "Адміністратор-засновник" : 
+           user.is_admin ? "Адміністратор" :
            user.is_shareholder ? "Акціонер" : "Звичайний користувач",
-    // Map social profile fields
-    bio: user.bio,
-    website: user.website,
-    instagram: user.instagram,
-    facebook: user.facebook,
-    viber: user.viber
+    bio: user.bio || '',
+    website: user.website || '',
+    instagram: user.instagram || '',
+    facebook: user.facebook || '',
+    viber: user.viber || ''
   };
 }
