@@ -75,7 +75,7 @@ export function ProfileEditorDialog({
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4 py-2">
-            <ProfileEditor user={user} onSave={onSave} />
+            <ProfileEditor user={user} onSave={onSave} onUpdate={onUpdate} />
           </TabsContent>
 
           <TabsContent value="avatar" className="space-y-4 py-4 flex justify-center">

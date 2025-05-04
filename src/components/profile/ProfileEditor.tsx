@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,13 +19,15 @@ import { PortfolioManager } from "./PortfolioManager";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CATEGORIES } from "@/components/search/SearchCategories";
 import { Slider } from "@/components/ui/slider";
+import { User } from "@/hooks/users/types";
 
 interface ProfileEditorProps {
   user: any;
-  onUpdate: () => void;
+  onUpdate?: () => void; // Make this optional
+  onSave?: (userData: Partial<User>) => void; // Add this prop
 }
 
-export function ProfileEditor({ user, onUpdate }: ProfileEditorProps) {
+export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: ProfileEditorProps) {
   const [country, setCountry] = useState(user?.country || "");
   const [city, setCity] = useState(user?.city || "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar_url || null);
@@ -52,15 +53,20 @@ export function ProfileEditor({ user, onUpdate }: ProfileEditorProps) {
     try {
       setIsSaving(true);
       
+      const userData = {
+        country,
+        city,
+        categories: selectedCategories
+      };
+      
+      // Call onSave with the updated data
+      onSave(userData);
+      
       // Спроба оновлення в Supabase
       try {
         const { error } = await supabase
           .from("users")
-          .update({
-            country,
-            city,
-            categories: selectedCategories
-          })
+          .update(userData)
           .eq("id", user.id);
 
         if (error) throw error;
@@ -72,9 +78,7 @@ export function ProfileEditor({ user, onUpdate }: ProfileEditorProps) {
         if (currentUser && currentUser.id === user.id) {
           const updatedUser = {
             ...currentUser,
-            country,
-            city,
-            categories: selectedCategories
+            ...userData
           };
           localStorage.setItem("currentUser", JSON.stringify(updatedUser));
         }
@@ -84,9 +88,7 @@ export function ProfileEditor({ user, onUpdate }: ProfileEditorProps) {
           if (u.id === user.id) {
             return {
               ...u,
-              country,
-              city,
-              categories: selectedCategories
+              ...userData
             };
           }
           return u;
@@ -210,7 +212,7 @@ export function ProfileEditor({ user, onUpdate }: ProfileEditorProps) {
       setAvatarDialogOpen(false);
       onUpdate();
     } catch (error: any) {
-      toast.error("Помилка при завантаженні аватара");
+      toast.error("Помилка пр�� завантаженні аватара");
       console.error(error);
     } finally {
       setIsUploading(false);

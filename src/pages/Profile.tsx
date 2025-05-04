@@ -179,7 +179,7 @@ export default function Profile() {
           followingCount: 0,
           postsCount: 0,
           profession: userData.categories && userData.categories.length > 0 ? userData.categories[0] : "",
-          status: userData.is_shareholder ? "Акціонер" : (userData.is_admin ? "Адміністратор" : "Учасник"),
+          status: userData.is_shareholder ? "Акціонер" : (userData.is_admin ? "А��міністратор" : "Учасник"),
           role: userData.is_admin ? "admin" : (userData.is_shareholder ? "shareholder" : "user"),
           isCurrentUser: isCurrentUser,
           shares: userData.shares || 0,
@@ -468,7 +468,8 @@ export default function Profile() {
             onOpenChange={setProfileEditorOpen}
             onSave={(userData) => {
               // Handle save
-              if (onUpdate) handleProfileUpdate();
+              toast.success(t.profileUpdated);
+              handleProfileUpdate();
             }}
             onUpdate={handleProfileUpdate}
           />
