@@ -173,15 +173,6 @@ export function Sidebar({ className }: SidebarProps) {
         </div>
       </div>
       
-      <div className="border-t p-4">
-        <Button 
-          className="w-full" 
-          onClick={handleCreatePublication}
-        >
-          Створити публікацію
-        </Button>
-      </div>
-      
       {/* Модальне вікно створення публікації */}
       {currentUser && (
         <CreatePublicationModal

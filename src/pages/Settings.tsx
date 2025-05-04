@@ -8,11 +8,16 @@ import { LogoSettings } from '@/components/settings/LogoSettings';
 import { LogoUpload } from '@/components/settings/LogoUpload'; 
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
+import { AvatarUpload } from '@/components/profile/AvatarUpload';
+import { BannerUpload } from '@/components/profile/BannerUpload';
+import { useAuthState } from '@/hooks/auth/useAuthState';
 
 export default function Settings() {
   const { language, setLanguage } = useLanguage();
   const t = translations[language];
   const [activeTab, setActiveTab] = useState("general");
+  const { getCurrentUser } = useAuthState();
+  const currentUser = getCurrentUser();
 
   return (
     <div className="min-h-screen pb-10">
@@ -35,6 +40,7 @@ export default function Settings() {
             <TabsList className="mb-6">
               <TabsTrigger value="general">Загальні</TabsTrigger>
               <TabsTrigger value="appearance">Зовнішній вигляд</TabsTrigger>
+              <TabsTrigger value="profile">Профіль</TabsTrigger>
               <TabsTrigger value="notifications">Сповіщення</TabsTrigger>
               <TabsTrigger value="privacy">Конфіденційність</TabsTrigger>
             </TabsList>
@@ -78,6 +84,32 @@ export default function Settings() {
               <LogoSettings />
               <div className="mt-6">
                 <LogoUpload />
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="profile">
+              <div className="grid gap-6">
+                {currentUser && (
+                  <>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Аватар профілю</CardTitle>
+                        <CardDescription>Редагувати зображення профілю</CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex justify-center py-6">
+                        <AvatarUpload 
+                          userId={currentUser.id} 
+                          avatarUrl={currentUser.avatarUrl}
+                        />
+                      </CardContent>
+                    </Card>
+                    
+                    <BannerUpload 
+                      userId={currentUser.id}
+                      existingBannerUrl={currentUser.bannerUrl}
+                    />
+                  </>
+                )}
               </div>
             </TabsContent>
             
