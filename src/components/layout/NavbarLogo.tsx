@@ -1,49 +1,57 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from "react-router-dom";
-import { useLanguage } from "@/context/LanguageContext";
+import { Link } from "react-router-dom";
 
 export function NavbarLogo() {
-  const navigate = useNavigate();
-  const [logoUrl, setLogoUrl] = useState<string>(
-    '/lovable-uploads/4c2129b2-6d63-43a9-9c10-18cf11008adb.png'
-  );
-  const [siteName, setSiteName] = useState<string>("Спільнота B&C");
-  
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoText, setLogoText] = useState<string>("Спільнота B&C");
+
   useEffect(() => {
-    // Завантажуємо логотип з localStorage, якщо він є
-    const customLogo = localStorage.getItem('customLogo');
-    if (customLogo) {
-      setLogoUrl(customLogo);
+    // Завантаження логотипу з localStorage
+    const storedLogoUrl = localStorage.getItem("siteLogoUrl");
+    const storedLogoText = localStorage.getItem("siteLogoText");
+    
+    if (storedLogoUrl) {
+      setLogoUrl(storedLogoUrl);
     }
     
-    // Завантажуємо назву сайту з localStorage, якщо вона є
-    const customSiteName = localStorage.getItem('siteName');
-    if (customSiteName) {
-      setSiteName(customSiteName);
+    if (storedLogoText) {
+      setLogoText(storedLogoText);
     }
+
+    // Слухач для змін логотипу в localStorage
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "siteLogoUrl" && e.newValue) {
+        setLogoUrl(e.newValue);
+      }
+      if (e.key === "siteLogoText" && e.newValue) {
+        setLogoText(e.newValue);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, []);
-  
-  const handleLogoClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    try {
-      navigate("/");
-    } catch (error) {
-      console.error("Помилка при навігації на головну:", error);
-      window.location.href = "/";
-    }
-  };
 
   return (
-    <Link to="/" className="flex items-center gap-2" onClick={handleLogoClick}>
-      <img 
-        src={logoUrl} 
-        alt={siteName} 
-        className="h-9 w-9 object-contain" 
-      />
-      <span className="hidden font-heading text-xl font-bold md:inline-block">
-        <span className="text-gradient-purple">Спільнота</span>
-        <span> B&C</span>
+    <Link to="/" className="flex items-center space-x-2">
+      {logoUrl ? (
+        <img 
+          src={logoUrl} 
+          alt={logoText}
+          className="h-8 w-auto"
+        />
+      ) : (
+        <span className="font-bold text-lg text-primary">
+          {logoText}
+        </span>
+      )}
+      
+      <span className="text-xl font-bold hidden md:block">
+        {!logoUrl && logoText}
       </span>
     </Link>
   );

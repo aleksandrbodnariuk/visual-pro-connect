@@ -30,7 +30,7 @@ export interface User {
   shares?: number;
   percentage?: number;
   profit?: number;
-  title?: string; // Added this field
+  title?: string;
   city?: string;
   country?: string;
 }

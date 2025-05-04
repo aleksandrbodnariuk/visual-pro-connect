@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Bell, Home, MessageCircle, Search, Plus } from "lucide-react";
+import { Bell, Home, MessageCircle, Search } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
 import { User } from "@/hooks/users/types";
@@ -57,32 +57,6 @@ export function NavbarNavigation({ currentUser, onCreatePublication }: NavbarNav
         <Bell className="h-5 w-5" />
         <span className="sr-only">{t.notifications}</span>
       </Button>
-      
-      {/* Кнопка "Створити публікацію" */}
-      {currentUser && (
-        <>
-          {/* Desktop версія */}
-          <Button 
-            variant="default"
-            className="hidden md:flex items-center gap-1"
-            onClick={onCreatePublication}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            <span>Створити</span>
-          </Button>
-          
-          {/* Mobile версія */}
-          <Button
-            variant="default"
-            size="icon"
-            className="md:hidden rounded-full"
-            onClick={onCreatePublication}
-          >
-            <Plus className="h-5 w-5" />
-            <span className="sr-only">Створити публікацію</span>
-          </Button>
-        </>
-      )}
     </div>
   );
 }

@@ -21,7 +21,7 @@ interface ProfileEditorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (userData: Partial<User>) => void;
-  onUpdate?: () => void; // Added this optional prop
+  onUpdate?: () => void;
 }
 
 export function ProfileEditorDialog({
@@ -45,13 +45,13 @@ export function ProfileEditorDialog({
   const handleAvatarComplete = (url: string) => {
     onSave({ avatarUrl: url });
     toast.success(t.profileUpdated);
-    if (onUpdate) onUpdate(); // Call onUpdate if provided
+    if (onUpdate) onUpdate();
   };
 
   const handleBannerComplete = (url: string) => {
     onSave({ bannerUrl: url });
     toast.success(t.profileUpdated);
-    if (onUpdate) onUpdate(); // Call onUpdate if provided
+    if (onUpdate) onUpdate();
   };
 
   return (

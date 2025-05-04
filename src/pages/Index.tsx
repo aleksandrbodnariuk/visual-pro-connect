@@ -55,13 +55,17 @@ export default function Index() {
                   founder_admin: userData.isFounder || userData.role === 'admin-founder' || 
                     userData.phoneNumber === '0507068007',
                   avatar_url: userData.avatarUrl || '',
+                  banner_url: userData.bannerUrl || '',
                   password: userData.password || '',
                   categories: userData.categories || [],
                   bio: userData.bio || '',
                   website: userData.website || '',
                   instagram: userData.instagram || '',
                   facebook: userData.facebook || '',
-                  viber: userData.viber || ''
+                  viber: userData.viber || '',
+                  title: userData.title || '',
+                  city: userData.city || '',
+                  country: userData.country || ''
                 });
               
               if (insertError) {
@@ -83,12 +87,16 @@ export default function Index() {
                 isFounder: userFromDb.founder_admin || userData.isFounder || false,
                 isShareHolder: userFromDb.is_shareholder || userData.isShareHolder || false,
                 avatarUrl: userData.avatarUrl || userFromDb.avatar_url || '',
+                bannerUrl: userData.bannerUrl || userFromDb.banner_url || '',
                 categories: userFromDb.categories || userData.categories || [],
                 bio: userFromDb.bio || userData.bio || '',
                 website: userFromDb.website || userData.website || '',
                 instagram: userFromDb.instagram || userData.instagram || '',
                 facebook: userFromDb.facebook || userData.facebook || '',
-                viber: userFromDb.viber || userData.viber || ''
+                viber: userFromDb.viber || userData.viber || '',
+                title: userFromDb.title || userData.title || '',
+                city: userFromDb.city || userData.city || '',
+                country: userFromDb.country || userData.country || ''
               };
               
               localStorage.setItem('currentUser', JSON.stringify(updatedUser));

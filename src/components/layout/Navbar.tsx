@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { NavbarLogo } from "./NavbarLogo";
 import { NavbarSearch } from "./NavbarSearch";
-import { NavbarNavigation } from "./NavbarNavigation";
 import { NavbarActions } from "./NavbarActions";
 import { UserMenu } from "./UserMenu";
 import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
@@ -55,6 +54,7 @@ export function Navbar() {
               lastName: user.lastName || supabaseUser.full_name?.split(' ')[1] || '',
               phoneNumber: user.phoneNumber || supabaseUser.phone_number || '',
               avatarUrl: user.avatarUrl || supabaseUser.avatar_url || '',
+              bannerUrl: user.bannerUrl || supabaseUser.banner_url || '',
               isAdmin: supabaseUser.is_admin || isFounderByPhone,
               isFounder: supabaseUser.founder_admin || isFounderByPhone,
               isShareHolder: supabaseUser.is_shareholder || isFounderByPhone,
@@ -69,7 +69,11 @@ export function Navbar() {
               website: supabaseUser.website || user.website || '',
               instagram: supabaseUser.instagram || user.instagram || '',
               facebook: supabaseUser.facebook || user.facebook || '',
-              viber: supabaseUser.viber || user.viber || ''
+              viber: supabaseUser.viber || user.viber || '',
+              title: supabaseUser.title || user.title || '',
+              city: supabaseUser.city || user.city || '',
+              country: supabaseUser.country || user.country || '',
+              categories: supabaseUser.categories || user.categories || []
             };
             
             // Оновлюємо дані в localStorage
@@ -120,21 +124,17 @@ export function Navbar() {
       <div className="container flex h-16 items-center justify-between py-4">
         <div className="flex items-center gap-2 md:gap-4">
           <NavbarLogo />
-          
-          <div className="md:hidden">
-            <Button variant="ghost" size="icon">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </div>
-          
           <NavbarSearch />
         </div>
         
         <nav className="flex items-center gap-1 md:gap-2">
-          <NavbarNavigation 
-            currentUser={currentUser}
-            onCreatePublication={handleCreatePublication}
-          />
+          <Button 
+            variant="default"
+            className="flex items-center gap-1"
+            onClick={handleCreatePublication}
+          >
+            Створити
+          </Button>
           
           <UserMenu 
             currentUser={currentUser}

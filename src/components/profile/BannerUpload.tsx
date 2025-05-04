@@ -3,7 +3,7 @@ import { useState, useRef, ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, Save, X, Crop } from 'lucide-react';
+import { Upload, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -112,7 +112,7 @@ export function BannerUpload({ userId, existingBannerUrl, onComplete }: BannerUp
       try {
         const { error: updateError } = await supabase
           .from('users')
-          .update({ avatar_url: publicUrl }) // We will change this to proper field
+          .update({ banner_url: publicUrl })
           .eq('id', userId);
           
         if (updateError) {
@@ -130,6 +130,13 @@ export function BannerUpload({ userId, existingBannerUrl, onComplete }: BannerUp
       
       if (onComplete) {
         onComplete(publicUrl);
+      }
+
+      // Оновлюємо локальне сховище з новою URL банера
+      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      if (currentUser && currentUser.id === userId) {
+        currentUser.bannerUrl = publicUrl;
+        localStorage.setItem("currentUser", JSON.stringify(currentUser));
       }
 
       toast.success('Банер профілю оновлено');
