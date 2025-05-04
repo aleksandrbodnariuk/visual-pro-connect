@@ -1,11 +1,15 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Search, Bell, MessageSquare, User, Settings, Users, Image, Music, Video, Zap, UserPlus } from 'lucide-react';
+import { Home, Search, Bell, MessageSquare, User, Settings, Users, Image, Music, Video, Zap, Plus } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
+import { SidebarCreateButton } from './SidebarCreateButton';
+import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
+import { useAuthState } from "@/hooks/auth/useAuthState";
+import { toast } from "sonner";
 
 interface SidebarProps {
   className?: string;
@@ -15,10 +19,24 @@ export function Sidebar({ className }: SidebarProps) {
   const { language } = useLanguage();
   const t = translations[language];
   const location = useLocation();
+  const { getCurrentUser } = useAuthState();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  
+  const currentUser = getCurrentUser();
+  
+  const handleCreatePublication = () => {
+    if (!currentUser) {
+      toast.error("Для створення публікації необхідно увійти в систему");
+      return;
+    }
+    setIsCreateModalOpen(true);
+  };
 
   return (
     <aside className={cn("rounded-lg border bg-card overflow-hidden", className)}>
-      <div className="p-4">
+      <div className="p-4 space-y-4">
+        <SidebarCreateButton onClick={handleCreatePublication} />
+        
         <h2 className="text-lg font-semibold mb-4">{t.menu}</h2>
         <nav className="space-y-2">
           <Button variant="ghost" className="w-full justify-start" asChild data-active={location.pathname === "/"}>
@@ -113,6 +131,20 @@ export function Sidebar({ className }: SidebarProps) {
           </Button>
         </div>
       </div>
+      
+      {/* Модальне вікно створення публікації */}
+      {currentUser && (
+        <CreatePublicationModal
+          open={isCreateModalOpen}
+          onOpenChange={setIsCreateModalOpen}
+          userId={currentUser.id}
+          userName={`${currentUser.firstName || ''} ${currentUser.lastName || ''}`}
+          onSuccess={() => {
+            setIsCreateModalOpen(false);
+            toast.success("Публікацію створено");
+          }}
+        />
+      )}
     </aside>
   );
 }

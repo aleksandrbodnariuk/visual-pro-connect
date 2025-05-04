@@ -10,7 +10,7 @@ export async function syncUserToSupabase(user: User): Promise<void> {
     // Перевірка чи існує користувач в Supabase
     const { data: existingUser, error: checkError } = await supabase
       .from('users')
-      .select('id')
+      .select('id, phone_number')
       .eq('id', user.id);
       
     if (checkError) {
@@ -47,7 +47,9 @@ export async function syncUserToSupabase(user: User): Promise<void> {
             website: user.website || '',
             instagram: user.instagram || '',
             facebook: user.facebook || '',
-            viber: user.viber || ''
+            viber: user.viber || '',
+            title: user.title || '',
+            banner_url: user.bannerUrl || user.banner_url || ''
           })
           .eq('phone_number', user.phoneNumber || user.phone_number || '');
           
@@ -55,11 +57,37 @@ export async function syncUserToSupabase(user: User): Promise<void> {
           console.error("Error updating existing user by phone:", updateError);
         }
         
+        // Якщо користувач є акціонером, перевіряємо запис в таблиці shares
+        if (user.isShareHolder || user.is_shareholder) {
+          const { data: sharesData, error: sharesError } = await supabase
+            .from('shares')
+            .select('*')
+            .eq('user_id', phoneCheck[0].id);
+            
+          if (sharesError) {
+            console.error("Error checking shares:", sharesError);
+          }
+          
+          // Якщо запису немає або він порожній, створюємо новий
+          if (!sharesData || sharesData.length === 0) {
+            const { error: insertSharesError } = await supabase
+              .from('shares')
+              .insert({
+                user_id: phoneCheck[0].id,
+                quantity: user.shares || 10
+              });
+              
+            if (insertSharesError) {
+              console.error("Error inserting shares:", insertSharesError);
+            }
+          }
+        }
+        
         return;
       }
       
       // Створюємо нового користувача, якщо не знайдено за телефоном
-      const { error: insertError } = await supabase
+      const { data: newUser, error: insertError } = await supabase
         .from('users')
         .insert({
           id: user.id,
@@ -76,11 +104,29 @@ export async function syncUserToSupabase(user: User): Promise<void> {
           website: user.website || '',
           instagram: user.instagram || '',
           facebook: user.facebook || '',
-          viber: user.viber || ''
-        });
+          viber: user.viber || '',
+          title: user.title || '',
+          banner_url: user.bannerUrl || user.banner_url || ''
+        })
+        .select();
         
       if (insertError) {
         console.error("Error inserting user to Supabase:", insertError);
+        return;
+      }
+      
+      // Якщо користувач є акціонером, створюємо запис в таблиці shares
+      if ((user.isShareHolder || user.is_shareholder) && newUser && newUser.length > 0) {
+        const { error: sharesError } = await supabase
+          .from('shares')
+          .insert({
+            user_id: newUser[0].id,
+            quantity: user.shares || 10
+          });
+          
+        if (sharesError) {
+          console.error("Error inserting shares:", sharesError);
+        }
       }
     } else {
       // Оновлюємо існуючого користувача з останніми даними
@@ -100,12 +146,53 @@ export async function syncUserToSupabase(user: User): Promise<void> {
           website: user.website || '',
           instagram: user.instagram || '',
           facebook: user.facebook || '',
-          viber: user.viber || ''
+          viber: user.viber || '',
+          title: user.title || '',
+          banner_url: user.bannerUrl || user.banner_url || ''
         })
         .eq('id', user.id);
         
       if (updateError) {
         console.error("Error updating user in Supabase:", updateError);
+      }
+      
+      // Якщо користувач є акціонером, перевіряємо запис в таблиці shares
+      if (user.isShareHolder || user.is_shareholder) {
+        const { data: sharesData, error: sharesError } = await supabase
+          .from('shares')
+          .select('*')
+          .eq('user_id', user.id);
+          
+        if (sharesError) {
+          console.error("Error checking shares:", sharesError);
+        }
+        
+        // Якщо запису немає або він порожній, створюємо новий
+        if (!sharesData || sharesData.length === 0) {
+          const { error: insertSharesError } = await supabase
+            .from('shares')
+            .insert({
+              user_id: user.id,
+              quantity: user.shares || 10
+            });
+            
+          if (insertSharesError) {
+            console.error("Error inserting shares:", insertSharesError);
+          }
+        } 
+        // Інакше оновлюємо існуючий запис
+        else if (user.shares) {
+          const { error: updateSharesError } = await supabase
+            .from('shares')
+            .update({
+              quantity: user.shares
+            })
+            .eq('user_id', user.id);
+            
+          if (updateSharesError) {
+            console.error("Error updating shares:", updateSharesError);
+          }
+        }
       }
     }
   } catch (error) {
@@ -149,6 +236,7 @@ export function formatUserFromSupabase(user: any): User {
     firstName: user.full_name?.split(' ')[0] || '',
     lastName: user.full_name?.split(' ')[1] || '',
     avatarUrl: user.avatar_url,
+    bannerUrl: user.banner_url,
     isAdmin: user.is_admin,
     isShareHolder: user.is_shareholder,
     isFounder: user.founder_admin,
@@ -160,6 +248,7 @@ export function formatUserFromSupabase(user: any): User {
     website: user.website || '',
     instagram: user.instagram || '',
     facebook: user.facebook || '',
-    viber: user.viber || ''
+    viber: user.viber || '',
+    title: user.title || ''
   };
 }

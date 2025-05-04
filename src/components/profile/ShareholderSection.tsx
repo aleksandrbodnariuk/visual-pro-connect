@@ -2,22 +2,117 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Crown, PiggyBank, DollarSign } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface ShareholderSectionProps {
   user: {
+    id: string;
     shares?: number;
     percentage?: number;
     profit?: number;
     title?: string;
+    isShareHolder?: boolean;
   };
 }
 
 export function ShareholderSection({ user }: ShareholderSectionProps) {
-  // Визначаємо титул на основі відсотка акцій
-  const shareholderTitle = useMemo(() => {
-    const percentage = user?.percentage || 0;
+  const [shareholderData, setShareholderData] = useState({
+    shares: user?.shares || 0,
+    percentage: user?.percentage || 0,
+    profit: user?.profit || 0,
+    title: user?.title || "Акціонер"
+  });
+  
+  useEffect(() => {
+    const loadShareholderData = async () => {
+      if (!user?.id || !user?.isShareHolder) return;
+      
+      try {
+        // Спочатку перевіряємо наявність даних в таблиці shares
+        const { data: sharesData, error: sharesError } = await supabase
+          .from('shares')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (sharesError && sharesError.code !== 'PGRST116') {
+          console.error("Помилка при отриманні даних акцій:", sharesError);
+          return;
+        }
+        
+        // Отримуємо загальну кількість акцій для розрахунку відсотка
+        const totalSharesStr = localStorage.getItem("totalShares") || "1000";
+        const totalShares = parseInt(totalSharesStr) || 1000;
+        
+        let shares = user.shares || 0;
+        let percentage = user.percentage || 0;
+        
+        // Якщо є дані в Supabase, використовуємо їх
+        if (sharesData) {
+          shares = sharesData.quantity;
+          percentage = totalShares > 0 ? (shares / totalShares) * 100 : 0;
+        } 
+        // Якщо даних немає в Supabase, але є в user, створюємо запис
+        else if (user.shares && user.shares > 0) {
+          const { error: insertError } = await supabase
+            .from('shares')
+            .insert({
+              user_id: user.id,
+              quantity: user.shares
+            });
+            
+          if (insertError) {
+            console.error("Помилка при створенні запису акцій:", insertError);
+          }
+        } 
+        // Якщо даних немає взагалі, створюємо запис з 10 акціями за замовчуванням
+        else if (user.isShareHolder) {
+          shares = 10;
+          percentage = totalShares > 0 ? (shares / totalShares) * 100 : 0;
+          
+          const { error: insertError } = await supabase
+            .from('shares')
+            .insert({
+              user_id: user.id,
+              quantity: shares
+            });
+            
+          if (insertError) {
+            console.error("Помилка при створенні запису акцій:", insertError);
+          } else {
+            // Оновлюємо локальні дані користувача
+            const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+            if (currentUser.id === user.id) {
+              currentUser.shares = shares;
+              currentUser.percentage = percentage;
+              localStorage.setItem("currentUser", JSON.stringify(currentUser));
+            }
+          }
+        }
+        
+        // Визначаємо титул на основі відсотка акцій
+        const title = determineShareholderTitle(percentage);
+        
+        // Оновлюємо стан компонента
+        setShareholderData({
+          shares,
+          percentage,
+          profit: user.profit || 0,
+          title: user.title || title
+        });
+      } catch (error) {
+        console.error("Помилка при завантаженні даних акціонера:", error);
+        toast.error("Не вдалося завантажити дані акціонера");
+      }
+    };
     
+    loadShareholderData();
+  }, [user]);
+
+  // Визначаємо титул на основі відсотка акцій
+  const determineShareholderTitle = (percentage: number): string => {
     if (percentage === 100) return "Імператор";
     if (percentage >= 76) return "Герцог";
     if (percentage >= 51) return "Лорд";
@@ -28,12 +123,12 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
     if (percentage >= 1) return "Акціонер";
     
     return "Акціонер";
-  }, [user?.percentage]);
+  };
 
   // Визначаємо варіант беджа на основі титулу
   const getBadgeVariant = () => {
     // Використовуємо тільки допустимі варіанти для Badge
-    switch(shareholderTitle) {
+    switch(shareholderData.title) {
       case "Імператор": return "destructive" as const;
       case "Герцог": return "secondary" as const;
       case "Лорд": return "default" as const;
@@ -45,6 +140,11 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
     }
   };
 
+  // Якщо користувач не є акціонером, не відображаємо секцію
+  if (!user?.isShareHolder) {
+    return null;
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -53,7 +153,7 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
           Інформація акціонера
         </CardTitle>
         <Badge variant={getBadgeVariant()} className="text-lg px-3 py-1">
-          {user.title || shareholderTitle}
+          {shareholderData.title}
         </Badge>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -63,7 +163,7 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Кількість акцій</p>
-                  <h3 className="text-2xl font-bold mt-1">{user.shares || 0}</h3>
+                  <h3 className="text-2xl font-bold mt-1">{shareholderData.shares}</h3>
                 </div>
                 <div className="p-3 rounded-full bg-blue-100 text-blue-700">
                   <PiggyBank className="h-6 w-6" />
@@ -77,7 +177,7 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Відсоток акцій</p>
-                  <h3 className="text-2xl font-bold mt-1">{user.percentage || 0}%</h3>
+                  <h3 className="text-2xl font-bold mt-1">{shareholderData.percentage.toFixed(2)}%</h3>
                 </div>
                 <div className="p-3 rounded-full bg-amber-100 text-amber-700">
                   <Crown className="h-6 w-6" />
@@ -91,7 +191,7 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Прибуток</p>
-                  <h3 className="text-2xl font-bold mt-1">{user.profit?.toFixed(2) || 0} грн</h3>
+                  <h3 className="text-2xl font-bold mt-1">{shareholderData.profit.toFixed(2)} грн</h3>
                 </div>
                 <div className="p-3 rounded-full bg-green-100 text-green-700">
                   <DollarSign className="h-6 w-6" />

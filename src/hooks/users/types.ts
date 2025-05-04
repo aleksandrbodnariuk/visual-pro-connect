@@ -4,38 +4,42 @@ export interface User {
   firstName?: string;
   lastName?: string;
   full_name?: string;
+  email?: string;
   phoneNumber?: string;
   phone_number?: string;
+  password?: string;
   avatarUrl?: string;
   avatar_url?: string;
-  isAdmin?: boolean;
-  is_admin?: boolean;
-  isShareHolder?: boolean;
-  is_shareholder?: boolean;
-  isFounder?: boolean;
-  founder_admin?: boolean;
-  role?: string;
-  status?: string;
-  password?: string;
-  email?: string;
-  city?: string;
-  country?: string;
-  categories?: string[];
-  created_at?: string;
-  // Social fields
+  bannerUrl?: string;
+  banner_url?: string;
   bio?: string;
   website?: string;
   instagram?: string;
   facebook?: string;
   viber?: string;
+  isAdmin?: boolean;
+  is_admin?: boolean;
+  isFounder?: boolean;
+  founder_admin?: boolean;
+  isShareHolder?: boolean;
+  is_shareholder?: boolean;
+  created_at?: string;
+  role?: string;
+  categories?: string[];
+  status?: string;
+  shares?: number;
+  percentage?: number;
+  profit?: number;
+  title?: string;
+  city?: string;
+  country?: string;
 }
 
-export interface UseUsersReturnType {
-  users: User[];
-  isFounder: boolean;
-  isLoading: boolean;
-  deleteUser: (userId: string) => Promise<void>;
-  changeUserStatus: (userId: string, newStatus: string) => Promise<void>;
-  toggleShareholderStatus: (userId: string, isShareHolder: boolean) => Promise<void>;
-  refreshUsers: () => Promise<void>;
+export interface UserForList {
+  id: string;
+  name: string;
+  title?: string;
+  avatar?: string;
+  role?: string;
+  status?: string;
 }

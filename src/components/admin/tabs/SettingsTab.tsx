@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { FileText, RefreshCw, Save } from "lucide-react";
 import { toast } from "sonner";
+import { LogoUpload } from "@/components/settings/LogoUpload";
+import { supabase } from "@/integrations/supabase/client";
 
 export function SettingsTab() {
   const [settings, setSettings] = useState({
@@ -16,6 +18,90 @@ export function SettingsTab() {
     enableNotifications: localStorage.getItem("enableNotifications") !== "false",
     maintenanceMode: localStorage.getItem("maintenanceMode") === "true"
   });
+
+  // Перевіряємо і створюємо bucket для зберігання логотипів і банерів
+  useEffect(() => {
+    const checkAndCreateBuckets = async () => {
+      try {
+        // Перевіряємо існування бакета logos
+        const { data: logosBucket, error: logosError } = await supabase
+          .storage
+          .getBucket('logos');
+          
+        if (logosError && !logosError.message.includes('does not exist')) {
+          console.error("Error checking logos bucket:", logosError);
+        }
+        
+        // Якщо бакет не існує, створюємо його
+        if (!logosBucket) {
+          const { error: createLogosError } = await supabase
+            .storage
+            .createBucket('logos', {
+              public: true
+            });
+            
+          if (createLogosError) {
+            console.error("Error creating logos bucket:", createLogosError);
+          } else {
+            console.log("Created logos bucket");
+          }
+        }
+        
+        // Перевіряємо існування бакета banners
+        const { data: bannersBucket, error: bannersError } = await supabase
+          .storage
+          .getBucket('banners');
+          
+        if (bannersError && !bannersError.message.includes('does not exist')) {
+          console.error("Error checking banners bucket:", bannersError);
+        }
+        
+        // Якщо бакет не існує, створюємо його
+        if (!bannersBucket) {
+          const { error: createBannersError } = await supabase
+            .storage
+            .createBucket('banners', {
+              public: true
+            });
+            
+          if (createBannersError) {
+            console.error("Error creating banners bucket:", createBannersError);
+          } else {
+            console.log("Created banners bucket");
+          }
+        }
+        
+        // Перевіряємо існування бакета avatars
+        const { data: avatarsBucket, error: avatarsError } = await supabase
+          .storage
+          .getBucket('avatars');
+          
+        if (avatarsError && !avatarsError.message.includes('does not exist')) {
+          console.error("Error checking avatars bucket:", avatarsError);
+        }
+        
+        // Якщо бакет не існує, створюємо його
+        if (!avatarsBucket) {
+          const { error: createAvatarsError } = await supabase
+            .storage
+            .createBucket('avatars', {
+              public: true
+            });
+            
+          if (createAvatarsError) {
+            console.error("Error creating avatars bucket:", createAvatarsError);
+          } else {
+            console.log("Created avatars bucket");
+          }
+        }
+        
+      } catch (error) {
+        console.error("Error checking buckets:", error);
+      }
+    };
+    
+    checkAndCreateBuckets();
+  }, []);
 
   const saveSettings = () => {
     localStorage.setItem("siteName", settings.siteName);
@@ -172,6 +258,8 @@ export function SettingsTab() {
 
   return (
     <div className="space-y-6">
+      <LogoUpload />
+      
       <Card>
         <CardHeader>
           <CardTitle>Загальні налаштування</CardTitle>
