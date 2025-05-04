@@ -136,6 +136,7 @@ export function BannerUpload({ userId, existingBannerUrl, onComplete }: BannerUp
       const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
       if (currentUser && currentUser.id === userId) {
         currentUser.bannerUrl = publicUrl;
+        currentUser.banner_url = publicUrl;
         localStorage.setItem("currentUser", JSON.stringify(currentUser));
       }
 
