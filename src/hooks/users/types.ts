@@ -1,4 +1,5 @@
 
+
 export interface User {
   id: string;
   firstName: string;
@@ -22,6 +23,9 @@ export interface User {
   isFounder?: boolean;
   isShareHolder?: boolean;
   categories?: string[];
+  shares?: number; // Додаємо підтримку кількості акцій
+  percentage?: number; // Додаємо підтримку відсотка акцій
+  profit?: number; // Додаємо підтримку прибутку
   
   // Додаємо підтримку полів з базою даних Supabase (в snake_case)
   avatar_url?: string;
@@ -33,3 +37,25 @@ export interface User {
   is_shareholder?: boolean;
   phone_number?: string;
 }
+
+// Додаємо тип для списку користувачів
+export interface UserForList {
+  id: string;
+  fullName: string;
+  phoneNumber: string;
+  avatarUrl?: string;
+  role?: string;
+  status?: string;
+}
+
+// Додаємо тип повернення для useUsers
+export interface UseUsersReturnType {
+  users: User[];
+  isFounder: boolean;
+  isLoading: boolean;
+  deleteUser: (userId: string) => Promise<void>;
+  changeUserStatus: (userId: string, newStatus: string) => Promise<void>;
+  toggleShareholderStatus: (userId: string, isShareHolder: boolean) => Promise<void>;
+  refreshUsers: () => Promise<void>;
+}
+
