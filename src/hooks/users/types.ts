@@ -1,5 +1,4 @@
 
-
 export interface User {
   id: string;
   firstName: string;
@@ -36,6 +35,7 @@ export interface User {
   is_admin?: boolean;
   is_shareholder?: boolean;
   phone_number?: string;
+  title?: string; // Додаємо для сумісності з БД
 }
 
 // Додаємо тип для списку користувачів
@@ -58,4 +58,3 @@ export interface UseUsersReturnType {
   toggleShareholderStatus: (userId: string, isShareHolder: boolean) => Promise<void>;
   refreshUsers: () => Promise<void>;
 }
-
