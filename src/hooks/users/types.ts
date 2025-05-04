@@ -7,7 +7,7 @@ export interface User {
   email?: string;
   password?: string;
   avatarUrl?: string;
-  bannerUrl?: string; // Додаємо підтримку URL банера
+  bannerUrl?: string;
   role?: string;
   status?: string;
   bio?: string;
@@ -17,28 +17,27 @@ export interface User {
   instagram?: string;
   facebook?: string;
   viber?: string;
-  title?: string; // Додаємо підтримку заголовка
+  title?: string;
   isAdmin?: boolean;
   isFounder?: boolean;
   isShareHolder?: boolean;
   categories?: string[];
-  shares?: number; // Додаємо підтримку кількості акцій
-  percentage?: number; // Додаємо підтримку відсотка акцій
-  profit?: number; // Додаємо підтримку прибутку
+  shares?: number;
+  percentage?: number;
+  profit?: number;
   
-  // Додаємо підтримку полів з базою даних Supabase (в snake_case)
+  // Fields for Supabase DB compatibility (snake_case)
   avatar_url?: string;
-  banner_url?: string; // Додаємо для сумісності з БД
+  banner_url?: string;
   full_name?: string;
   created_at?: string;
   founder_admin?: boolean;
   is_admin?: boolean;
   is_shareholder?: boolean;
   phone_number?: string;
-  title?: string; // Додаємо для сумісності з БД
 }
 
-// Додаємо тип для списку користувачів
+// Type for user list
 export interface UserForList {
   id: string;
   fullName: string;
@@ -48,7 +47,7 @@ export interface UserForList {
   status?: string;
 }
 
-// Додаємо тип повернення для useUsers
+// Return type for useUsers hook
 export interface UseUsersReturnType {
   users: User[];
   isFounder: boolean;
