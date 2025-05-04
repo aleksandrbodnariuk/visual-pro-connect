@@ -1,3 +1,3 @@
 
 export { useUsers } from './useUsers';
-export type { User, UseUsersReturnType } from './types';
+export type { User, UserForList, UseUsersReturnType } from './types';

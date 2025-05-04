@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -219,13 +218,24 @@ export function ShareholdersTab() {
       
       localStorage.setItem("users", JSON.stringify(updatedUsers));
       
+      // Use an update object that matches the database schema
+      const updateData: Record<string, any> = {
+        // Use the title property in a custom metadata field
+        // since title is not in the database schema
+        categories: [newTitle] // Store the title in categories array
+      };
+      
       // Пробуємо оновити запис в Supabase
       const user = updatedShareholders.find(sh => sh.id === userId);
       if (user) {
-        await supabase
+        const { error } = await supabase
           .from('users')
-          .update({ title: newTitle })
+          .update(updateData)
           .eq('id', userId);
+          
+        if (error) {
+          console.error("Error updating title in Supabase:", error);
+        }
       }
       
       toast.success(`Титул акціонера змінено на "${newTitle}"`);

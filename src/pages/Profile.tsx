@@ -298,13 +298,17 @@ export default function Profile() {
 
   const getCategoryName = (categoryId: string) => {
     switch(categoryId) {
-      case 'photographer': return 'Фотограф';
+      case 'photographer': return 'Ф��тограф';
       case 'videographer': return 'Відеограф';
       case 'musician': return 'Музикант';
       case 'host': return 'Ведучий';
       case 'pyrotechnician': return 'Піротехнік';
       default: return categoryId;
     }
+  };
+
+  const handleProfileUpdate = () => {
+    window.location.reload();
   };
 
   return (
@@ -374,7 +378,7 @@ export default function Profile() {
             
             {(user?.role === "representative" || user?.status === "Представник" || (user?.categories && user?.categories.length > 0)) && (
               <TabsContent value="services" className="mt-6">
-                <Suspense fallback={<div>Завантаження послуг...</div>}>
+                <Suspense fallback={<div>Завантаже��ня послуг...</div>}>
                   <ServicesSection 
                     isCurrentUser={isCurrentUser} 
                     categories={user?.categories}
@@ -462,7 +466,11 @@ export default function Profile() {
             user={user} 
             open={profileEditorOpen}
             onOpenChange={setProfileEditorOpen}
-            onUpdate={() => window.location.reload()}
+            onSave={(userData) => {
+              // Handle save
+              if (onUpdate) handleProfileUpdate();
+            }}
+            onUpdate={handleProfileUpdate}
           />
           
           <Dialog open={portfolioManagerOpen} onOpenChange={setPortfolioManagerOpen}>

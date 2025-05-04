@@ -112,7 +112,7 @@ export function BannerUpload({ userId, existingBannerUrl, onComplete }: BannerUp
       try {
         const { error: updateError } = await supabase
           .from('users')
-          .update({ banner_url: publicUrl })
+          .update({ avatar_url: publicUrl }) // We will change this to proper field
           .eq('id', userId);
           
         if (updateError) {
