@@ -11,7 +11,7 @@ export function NavbarLogo() {
       <img 
         src={customLogo || "/lovable-uploads/4c2129b2-6d63-43a9-9c10-18cf11008adb.png"} 
         alt="Логотип" 
-        className="h-10 w-10 rounded-full object-cover" // Збільшено розмір та зроблено круглим
+        className="h-12 w-12 rounded-full object-cover" // Збільшено розмір та залишено круглим
       />
     </Link>
   );
