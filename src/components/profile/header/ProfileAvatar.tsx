@@ -10,7 +10,11 @@ interface ProfileAvatarProps {
 export function ProfileAvatar({ avatarUrl, name, className = "h-32 w-32 border-4 border-background" }: ProfileAvatarProps) {
   return (
     <Avatar className={className}>
-      <AvatarImage src={avatarUrl} alt={name} />
+      <AvatarImage 
+        src={avatarUrl} 
+        alt={name} 
+        style={{ objectFit: "cover" }} // Забезпечуємо правильне відображення
+      />
       <AvatarFallback className="text-4xl">
         {name && name !== "undefined undefined"
           ? name

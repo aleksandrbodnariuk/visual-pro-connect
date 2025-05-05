@@ -118,9 +118,8 @@ export function Navbar() {
     loadUserData();
   }, [syncUser]);
 
-  const handleCreatePublication = () => {
-    setIsCreateModalOpen(true);
-  };
+  // Видалено handleCreatePublication - це функція більше не потрібна у цьому компоненті
+  // Всі взаємодії з модальним вікном створення публікації перенесено в UserMenu
   
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur">
@@ -131,17 +130,10 @@ export function Navbar() {
         </div>
         
         <nav className="flex items-center gap-1 md:gap-2">
-          <Button 
-            variant="default"
-            className="flex items-center gap-1"
-            onClick={handleCreatePublication}
-          >
-            Створити
-          </Button>
-          
+          {/* Видалена кнопка "Створити" з навбару, буде доступна через UserMenu */}
           <UserMenu 
             currentUser={currentUser}
-            onOpenCreateModal={handleCreatePublication}
+            onOpenCreateModal={() => setIsCreateModalOpen(true)} // Передаємо функцію відкриття модального вікна
           />
           
           <NavbarActions />

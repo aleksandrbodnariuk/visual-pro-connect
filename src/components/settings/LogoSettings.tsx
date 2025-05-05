@@ -55,6 +55,16 @@ export function LogoSettings() {
 
       // Завантажуємо файл до Supabase Storage
       try {
+        // Перевіряємо, чи існує бакет
+        const { data: bucketExists } = await supabase.storage.getBucket('logos');
+        
+        // Якщо бакет не існує, створюємо його
+        if (!bucketExists) {
+          await supabase.storage.createBucket('logos', {
+            public: true
+          });
+        }
+        
         const { data, error } = await supabase.storage
           .from('logos')
           .upload(fileName, file);
@@ -70,6 +80,7 @@ export function LogoSettings() {
 
         // Зберігаємо URL логотипу
         localStorage.setItem("siteLogoUrl", publicUrl);
+        localStorage.setItem("customLogo", publicUrl); // Також зберігаємо як customLogo для NavbarLogo
         setLogoUrl(publicUrl);
         setPreviewUrl(null);
 
@@ -83,6 +94,7 @@ export function LogoSettings() {
         reader.onload = (e) => {
           const dataUrl = e.target?.result as string;
           localStorage.setItem("siteLogoUrl", dataUrl);
+          localStorage.setItem("customLogo", dataUrl); // Також зберігаємо як customLogo для NavbarLogo
           setLogoUrl(dataUrl);
           setPreviewUrl(null);
           
@@ -131,7 +143,7 @@ export function LogoSettings() {
                     className="max-h-24 object-contain"
                   />
                 ) : (
-                  <div className="h-24 w-24 rounded flex flex-col items-center justify-center text-gray-400 border border-dashed">
+                  <div className="h-24 w-24 rounded-full flex flex-col items-center justify-center text-gray-400 border border-dashed">
                     <Image className="h-8 w-8 mb-2" />
                     <span className="text-xs">Логотип відсутній</span>
                   </div>

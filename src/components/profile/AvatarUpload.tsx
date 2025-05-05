@@ -33,58 +33,92 @@ export function AvatarUpload({ userId, avatarUrl, onComplete }: AvatarUploadProp
       }
 
       const file = event.target.files[0];
+      
+      // Перевірка типу файлу
+      if (!file.type.match('image.*')) {
+        throw new Error("Будь ласка, виберіть файл зображення");
+      }
+      
+      // Перевірка розміру файлу
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error("Розмір файлу не повинен перевищувати 5MB");
+      }
+      
+      // Генеруємо унікальне ім'я файлу
       const fileExt = file.name.split(".").pop();
-      const filePath = `${userId}-${Math.random()}.${fileExt}`;
+      const filePath = `${userId}-${Date.now()}.${fileExt}`;
 
-      let uploadResult;
       try {
-        uploadResult = await supabase.storage
+        // Перевіряємо, чи існує бакет
+        const { data: bucketExists } = await supabase.storage.getBucket('avatars');
+        
+        // Якщо бакет не існує, створюємо його
+        if (!bucketExists) {
+          await supabase.storage.createBucket('avatars', {
+            public: true
+          });
+        }
+        
+        // Завантажуємо файл
+        const { error: uploadError } = await supabase.storage
           .from("avatars")
           .upload(filePath, file);
 
-        if (uploadResult.error) {
-          throw uploadResult.error;
-        }
-      } catch (uploadError: any) {
-        console.error("Error uploading avatar:", uploadError);
-        
-        // Якщо помилка через дублікат, продовжуємо з існуючим шляхом
-        if (uploadError.message?.includes("duplicate")) {
-          // noop, продовжуємо з поточним filePath
-        } else {
+        if (uploadError) {
           throw uploadError;
         }
+        
+        // Отримуємо публічний URL
+        const { data: { publicUrl } } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(filePath);
+
+        // Оновлюємо аватар в базі даних
+        const { error: updateError } = await supabase
+          .from("users")
+          .update({ avatar_url: publicUrl })
+          .eq("id", userId);
+
+        if (updateError) {
+          console.error("Error updating user avatar:", updateError);
+          toast.error("Не вдалося оновити аватар у базі даних");
+        }
+
+        // Оновлюємо UI та локальні дані
+        setAvatar(publicUrl);
+        updateUser({ avatarUrl: publicUrl, avatar_url: publicUrl });
+        
+        if (onComplete) {
+          onComplete(publicUrl);
+        }
+
+        toast.success("Аватар успішно оновлено!");
+        
+      } catch (storageError: any) {
+        // Якщо помилка при завантаженні до Supabase
+        console.error("Storage error:", storageError);
+        
+        // Спробуємо локально зберегти аватар
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64Data = reader.result as string;
+          
+          // Зберігаємо локально
+          setAvatar(base64Data);
+          updateUser({ avatarUrl: base64Data });
+          
+          if (onComplete) {
+            onComplete(base64Data);
+          }
+          
+          toast.success("Аватар оновлено (збережено локально)");
+        };
+        reader.readAsDataURL(file);
       }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
-
-      // Оновлюємо аватар в базі даних
-      const { error: updateError } = await supabase
-        .from("users")
-        .update({ avatar_url: publicUrl })
-        .eq("id", userId);
-
-      if (updateError) {
-        console.error("Error updating user avatar:", updateError);
-        toast.error("Не вдалося оновити аватар у базі даних");
-      }
-
-      setAvatar(publicUrl);
-      
-      // Оновлюємо локального користувача
-      updateUser({ avatarUrl: publicUrl });
-      
-      if (onComplete) {
-        onComplete(publicUrl);
-      }
-
-      toast.success("Аватар успішно оновлено!");
       
     } catch (error: any) {
       console.error("Помилка при завантаженні аватару:", error);
-      toast.error(`Помилка завантаження аватару: ${error.message}`);
+      toast.error(`Помилка: ${error.message || "Не вдалося завантажити аватар"}`);
     } finally {
       setUploading(false);
       // Очищаємо поле вводу файлу для можливості повторного завантаження того ж файлу
