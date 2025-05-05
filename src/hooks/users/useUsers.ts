@@ -108,15 +108,21 @@ export function useUsers(): UseUsersReturnType {
   }, [loadUsers]);
 
   const deleteUser = async (userId: string) => {
-    await deleteUserAction(userId, users, setUsers, isFounder);
+    await deleteUserAction(userId);
+    // Reload users after deletion
+    loadUsers();
   };
 
   const changeUserStatus = async (userId: string, newStatus: string) => {
-    await changeUserStatusAction(userId, newStatus, users, setUsers, isFounder);
+    await changeUserStatusAction(userId, newStatus);
+    // Reload users after status change
+    loadUsers();
   };
 
   const toggleShareholderStatus = async (userId: string, isShareHolder: boolean) => {
-    await toggleShareholderStatusAction(userId, isShareHolder, users, setUsers, isFounder);
+    await toggleShareholderStatusAction(userId, isShareHolder);
+    // Reload users after shareholder status change
+    loadUsers();
   };
 
   return {

@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Save } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 export function LogoSettings() {
   const [logoUrl, setLogoUrl] = useState<string | null>(localStorage.getItem("customLogo") || null);
@@ -15,25 +14,10 @@ export function LogoSettings() {
   const handleSaveLogoText = async () => {
     localStorage.setItem("siteName", logoText);
     
-    // Зберігаємо назву сайту на сервері
-    try {
-      // Тут можна додати код для зберігання назви сайту в Supabase
-      // Наприклад, в окрему таблицю site_settings або в якийсь інший спосіб
-      const { error } = await supabase
-        .from('site_settings')
-        .upsert({ 
-          id: 'site-name', 
-          value: logoText 
-        })
-        .select();
-        
-      if (error && error.code !== 'PGRST204') {
-        console.warn("Помилка при збереженні назви сайту в Supabase:", error);
-      }
-    } catch (supabaseError) {
-      console.warn("Помилка зв'язку з Supabase:", supabaseError);
-    }
-
+    // We'll store it only in localStorage since we don't have a site_settings table
+    // If in the future you need to store this in the database,
+    // first create a site_settings table in Supabase
+    
     toast.success('Назву сайту оновлено');
   };
 

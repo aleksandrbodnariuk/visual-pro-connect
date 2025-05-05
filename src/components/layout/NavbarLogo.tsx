@@ -1,19 +1,32 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 export function NavbarLogo() {
-  // Отримуємо кастомне лого та назву з localStorage
-  const customLogo = localStorage.getItem('customLogo');
-  const siteName = localStorage.getItem('siteName') || 'Спільнота B&C';
+  const [customLogo, setCustomLogo] = useState<string | null>(null);
+  const [siteName, setSiteName] = useState<string>("Спільнота B&C");
+  
+  // Load logo and site name from localStorage on component mount
+  useEffect(() => {
+    const storedLogo = localStorage.getItem('customLogo');
+    const storedName = localStorage.getItem('siteName');
+    
+    if (storedLogo) {
+      setCustomLogo(storedLogo);
+    }
+    
+    if (storedName) {
+      setSiteName(storedName);
+    }
+  }, []);
 
   return (
     <Link to="/" className="flex items-center gap-3">
-      <div className="flex-shrink-0">
+      <div className="relative h-14 w-14 flex-shrink-0">
         <img 
           src={customLogo || "/lovable-uploads/4c2129b2-6d63-43a9-9c10-18cf11008adb.png"} 
           alt="Логотип" 
-          className="h-14 w-14 rounded-full object-cover" 
+          className="h-full w-full rounded-full object-cover" 
         />
       </div>
       
