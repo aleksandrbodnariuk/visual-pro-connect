@@ -75,8 +75,8 @@ export function Navbar() {
               country: supabaseUser.country || user.country || '',
               categories: supabaseUser.categories || user.categories || [],
               avatar_url: supabaseUser.avatar_url,
-              banner_url: supabaseUser.banner_url,
-              title: supabaseUser.title
+              banner_url: supabaseUser.banner_url
+              // Видалено дублікат поля title, яке було тут раніше
             };
             
             // Оновлюємо дані в localStorage
