@@ -73,7 +73,10 @@ export function Navbar() {
               title: supabaseUser.title || user.title || '',
               city: supabaseUser.city || user.city || '',
               country: supabaseUser.country || user.country || '',
-              categories: supabaseUser.categories || user.categories || []
+              categories: supabaseUser.categories || user.categories || [],
+              avatar_url: supabaseUser.avatar_url,
+              banner_url: supabaseUser.banner_url,
+              title: supabaseUser.title
             };
             
             // Оновлюємо дані в localStorage

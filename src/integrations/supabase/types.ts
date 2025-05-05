@@ -320,6 +320,7 @@ export type Database = {
       users: {
         Row: {
           avatar_url: string | null
+          banner_url: string | null
           bio: string | null
           categories: string[] | null
           city: string | null
@@ -334,11 +335,13 @@ export type Database = {
           is_shareholder: boolean | null
           password: string
           phone_number: string
+          title: string | null
           viber: string | null
           website: string | null
         }
         Insert: {
           avatar_url?: string | null
+          banner_url?: string | null
           bio?: string | null
           categories?: string[] | null
           city?: string | null
@@ -353,11 +356,13 @@ export type Database = {
           is_shareholder?: boolean | null
           password: string
           phone_number: string
+          title?: string | null
           viber?: string | null
           website?: string | null
         }
         Update: {
           avatar_url?: string | null
+          banner_url?: string | null
           bio?: string | null
           categories?: string[] | null
           city?: string | null
@@ -372,6 +377,7 @@ export type Database = {
           is_shareholder?: boolean | null
           password?: string
           phone_number?: string
+          title?: string | null
           viber?: string | null
           website?: string | null
         }

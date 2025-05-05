@@ -1,8 +1,8 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useBannerUpload } from './banner/useBannerUpload';
-import { BannerPreview } from './banner/BannerPreview';
-import { BannerActions } from './banner/BannerActions';
+import { BannerPreview } from './BannerPreview';
+import { BannerActions } from './BannerActions';
+import { useBannerUpload } from './useBannerUpload';
 
 interface BannerUploadProps {
   userId: string;

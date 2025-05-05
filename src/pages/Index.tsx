@@ -56,6 +56,7 @@ export default function Index() {
                     userData.phoneNumber === '0507068007',
                   avatar_url: userData.avatarUrl || '',
                   banner_url: userData.bannerUrl || '',
+                  title: userData.title || '',
                   password: userData.password || '',
                   categories: userData.categories || [],
                   bio: userData.bio || '',
@@ -63,7 +64,6 @@ export default function Index() {
                   instagram: userData.instagram || '',
                   facebook: userData.facebook || '',
                   viber: userData.viber || '',
-                  title: userData.title || '',
                   city: userData.city || '',
                   country: userData.country || ''
                 });
@@ -88,13 +88,13 @@ export default function Index() {
                 isShareHolder: userFromDb.is_shareholder || userData.isShareHolder || false,
                 avatarUrl: userData.avatarUrl || userFromDb.avatar_url || '',
                 bannerUrl: userData.bannerUrl || userFromDb.banner_url || '',
+                title: userData.title || userFromDb.title || '',
                 categories: userFromDb.categories || userData.categories || [],
                 bio: userFromDb.bio || userData.bio || '',
                 website: userFromDb.website || userData.website || '',
                 instagram: userFromDb.instagram || userData.instagram || '',
                 facebook: userFromDb.facebook || userData.facebook || '',
                 viber: userFromDb.viber || userData.viber || '',
-                title: userFromDb.title || userData.title || '',
                 city: userFromDb.city || userData.city || '',
                 country: userFromDb.country || userData.country || ''
               };
