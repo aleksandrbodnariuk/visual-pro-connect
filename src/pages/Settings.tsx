@@ -13,7 +13,7 @@ import { BannerUpload } from '@/components/profile/BannerUpload';
 import { useAuthState } from '@/hooks/auth/useAuthState';
 
 export default function Settings() {
-  const { language, setLanguage } = useLanguage();
+  const { language } = useLanguage();
   const t = translations[language];
   const [activeTab, setActiveTab] = useState("general");
   const { getCurrentUser } = useAuthState();
@@ -46,29 +46,6 @@ export default function Settings() {
             </TabsList>
             
             <TabsContent value="general">
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Мова</CardTitle>
-                  <CardDescription>Виберіть мову інтерфейсу</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      className={`p-3 rounded-md ${language === 'uk' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
-                      onClick={() => setLanguage('uk')}
-                    >
-                      Українська
-                    </button>
-                    <button
-                      className={`p-3 rounded-md ${language === 'en' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
-                      onClick={() => setLanguage('en')}
-                    >
-                      English
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
-              
               <Card>
                 <CardHeader>
                   <CardTitle>Акаунт</CardTitle>
