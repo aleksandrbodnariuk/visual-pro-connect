@@ -55,11 +55,11 @@ export const changeUserStatus = async (userId: string, newStatus: string) => {
     
     localStorage.setItem("users", JSON.stringify(updatedUsers));
     
-    // Also try to update in Supabase
+    // Also try to update in Supabase - we use full_name field to store status since there's no status field
     try {
       const { error } = await supabase
         .from('users')
-        .update({ status: newStatus })
+        .update({ full_name: newStatus })
         .eq('id', userId);
         
       if (error) {

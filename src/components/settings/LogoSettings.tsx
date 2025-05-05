@@ -1,24 +1,75 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Save } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export function LogoSettings() {
   const [logoUrl, setLogoUrl] = useState<string | null>(localStorage.getItem("customLogo") || null);
   const [logoText, setLogoText] = useState<string>(localStorage.getItem("siteName") || "Спільнота B&C");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // Load the site name from site_settings table when component mounts
+  useEffect(() => {
+    async function loadSiteName() {
+      try {
+        const { data, error } = await supabase
+          .from("site_settings")
+          .select("value")
+          .eq("id", "site-name")
+          .single();
+          
+        if (error) {
+          console.error("Error loading site name:", error);
+          return;
+        }
+        
+        if (data) {
+          setLogoText(data.value);
+          // Also update localStorage for components that might still be using it
+          localStorage.setItem("siteName", data.value);
+        }
+      } catch (error) {
+        console.error("Failed to load site name:", error);
+      }
+    }
+    
+    loadSiteName();
+  }, []);
 
   const handleSaveLogoText = async () => {
-    localStorage.setItem("siteName", logoText);
+    setIsLoading(true);
     
-    // We'll store it only in localStorage since we don't have a site_settings table
-    // If in the future you need to store this in the database,
-    // first create a site_settings table in Supabase
-    
-    toast.success('Назву сайту оновлено');
+    try {
+      // Update in Supabase
+      const { error } = await supabase
+        .from("site_settings")
+        .upsert({ id: "site-name", value: logoText, updated_at: new Date().toISOString() });
+      
+      if (error) {
+        console.error("Error saving site name to Supabase:", error);
+        toast.error("Помилка збереження назви сайту");
+        
+        // If Supabase fails, at least update localStorage
+        localStorage.setItem("siteName", logoText);
+      } else {
+        // Update localStorage too for compatibility
+        localStorage.setItem("siteName", logoText);
+        toast.success("Назву сайту оновлено");
+      }
+    } catch (error) {
+      console.error("Failed to save site name:", error);
+      toast.error("Помилка збереження назви сайту");
+      
+      // Fallback to localStorage
+      localStorage.setItem("siteName", logoText);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -36,7 +87,7 @@ export function LogoSettings() {
                 <img 
                   src={logoUrl} 
                   alt="Логотип сайту" 
-                  className="h-24 w-24 rounded-full object-cover"
+                  className="h-24 object-contain"
                 />
               ) : (
                 <div className="h-24 w-24 rounded-full flex flex-col items-center justify-center text-gray-400 border border-dashed">
@@ -55,8 +106,8 @@ export function LogoSettings() {
             onChange={(e) => setLogoText(e.target.value)}
             placeholder="Введіть назву сайту"
           />
-          <Button onClick={handleSaveLogoText}>
-            <Save className="mr-2 h-4 w-4" /> Зберегти назву
+          <Button onClick={handleSaveLogoText} disabled={isLoading}>
+            <Save className="mr-2 h-4 w-4" /> {isLoading ? 'Зберігаємо...' : 'Зберегти назву'}
           </Button>
         </div>
       </CardContent>

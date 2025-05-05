@@ -262,6 +262,27 @@ export type Database = {
           },
         ]
       }
+      site_settings: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           approved_by_admin: boolean | null
@@ -390,6 +411,10 @@ export type Database = {
     Functions: {
       is_admin: {
         Args: { user_id: string }
+        Returns: boolean
+      }
+      is_admin_user: {
+        Args: Record<PropertyKey, never>
         Returns: boolean
       }
       set_founder_admin_status: {
