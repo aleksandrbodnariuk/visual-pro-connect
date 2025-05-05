@@ -1,7 +1,7 @@
 
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { User, Search, PlusSquare, LogOut } from "lucide-react";
+import { User, Search, LogOut } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { CreatePostButton } from "./CreatePostButton";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
 import { User as UserType } from "@/hooks/users/types";
@@ -69,60 +70,69 @@ export function UserMenu({ currentUser, onOpenCreateModal }: UserMenuProps) {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="rounded-full">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={currentUser.avatarUrl || "/placeholder.svg"} alt={currentUser.firstName} />
-            <AvatarFallback>
-              {currentUser.firstName 
-                ? currentUser.firstName.charAt(0) + (currentUser.lastName ? currentUser.lastName.charAt(0) : '')
-                : 'ВП'}
-            </AvatarFallback>
-          </Avatar>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>Мій акаунт</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem onClick={handleProfileNavigation}>
-            <User className="mr-2 h-4 w-4" />
-            <span>{t.profile}</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={onOpenCreateModal}>
-            <PlusSquare className="mr-2 h-4 w-4" />
-            <span>Створити публікацію</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleNavigate('/search')}>
-            <Search className="mr-2 h-4 w-4" />
-            <span>Знайти професіоналів</span>
-          </DropdownMenuItem>
-          
-          {/* Доступ до адмін-панелі для адміністраторів */}
-          {(currentUser.isAdmin || currentUser.role === "admin" || 
-            currentUser.role === "admin-founder" || currentUser.phoneNumber === "0507068007") && (
-            <DropdownMenuItem onClick={() => handleNavigate('/admin')}>
+    <>
+      {/* Додаємо кнопку створення публікації в основний інтерфейс */}
+      <div className="hidden sm:block mr-2">
+        <CreatePostButton onClick={onOpenCreateModal} variant="default" />
+      </div>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="rounded-full">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={currentUser.avatarUrl || "/placeholder.svg"} alt={currentUser.firstName} />
+              <AvatarFallback>
+                {currentUser.firstName 
+                  ? currentUser.firstName.charAt(0) + (currentUser.lastName ? currentUser.lastName.charAt(0) : '')
+                  : 'ВП'}
+              </AvatarFallback>
+            </Avatar>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel>Мій акаунт</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem onClick={handleProfileNavigation}>
               <User className="mr-2 h-4 w-4" />
-              <span>Панель адміністратора</span>
+              <span>{t.profile}</span>
             </DropdownMenuItem>
-          )}
-          
-          {/* Доступ до ринку акцій для акціонерів */}
-          {(currentUser.isShareHolder || currentUser.role === "shareholder" || 
-            currentUser.status === "Акціонер" || currentUser.phoneNumber === "0507068007") && (
-            <DropdownMenuItem onClick={() => handleNavigate('/stock-market')}>
-              <User className="mr-2 h-4 w-4" />
-              <span>Ринок акцій</span>
+            
+            {/* Показуємо кнопку створення публікації в меню для мобільних пристроїв */}
+            <DropdownMenuItem onClick={onOpenCreateModal} className="sm:hidden">
+              <CreatePostButton onClick={onOpenCreateModal} variant="ghost" className="w-full justify-start p-0" />
             </DropdownMenuItem>
-          )}
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Вийти</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+            
+            <DropdownMenuItem onClick={() => handleNavigate('/search')}>
+              <Search className="mr-2 h-4 w-4" />
+              <span>Знайти професіоналів</span>
+            </DropdownMenuItem>
+            
+            {/* Доступ до адмін-панелі для адміністраторів */}
+            {(currentUser.isAdmin || currentUser.role === "admin" || 
+              currentUser.role === "admin-founder" || currentUser.phoneNumber === "0507068007") && (
+              <DropdownMenuItem onClick={() => handleNavigate('/admin')}>
+                <User className="mr-2 h-4 w-4" />
+                <span>Панель адміністратора</span>
+              </DropdownMenuItem>
+            )}
+            
+            {/* Доступ до ринку акцій для акціонерів */}
+            {(currentUser.isShareHolder || currentUser.role === "shareholder" || 
+              currentUser.status === "Акціонер" || currentUser.phoneNumber === "0507068007") && (
+              <DropdownMenuItem onClick={() => handleNavigate('/stock-market')}>
+                <User className="mr-2 h-4 w-4" />
+                <span>Ринок акцій</span>
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Вийти</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 }

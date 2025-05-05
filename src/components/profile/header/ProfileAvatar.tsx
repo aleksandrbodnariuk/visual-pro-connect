@@ -13,7 +13,7 @@ export function ProfileAvatar({ avatarUrl, name, className = "h-32 w-32 border-4
       <AvatarImage 
         src={avatarUrl} 
         alt={name} 
-        style={{ objectFit: "cover" }} // Забезпечуємо правильне відображення
+        style={{ objectFit: "cover" }}
       />
       <AvatarFallback className="text-4xl">
         {name && name !== "undefined undefined"

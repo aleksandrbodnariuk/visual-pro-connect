@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from "react";
-import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { NavbarLogo } from "./NavbarLogo";
@@ -76,7 +75,6 @@ export function Navbar() {
               categories: supabaseUser.categories || user.categories || [],
               avatar_url: supabaseUser.avatar_url,
               banner_url: supabaseUser.banner_url
-              // Видалено дублікат поля title, яке було тут раніше
             };
             
             // Оновлюємо дані в localStorage
@@ -117,9 +115,6 @@ export function Navbar() {
     
     loadUserData();
   }, [syncUser]);
-
-  // Видалено handleCreatePublication - це функція більше не потрібна у цьому компоненті
-  // Всі взаємодії з модальним вікном створення публікації перенесено в UserMenu
   
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur">
@@ -130,10 +125,9 @@ export function Navbar() {
         </div>
         
         <nav className="flex items-center gap-1 md:gap-2">
-          {/* Видалена кнопка "Створити" з навбару, буде доступна через UserMenu */}
           <UserMenu 
             currentUser={currentUser}
-            onOpenCreateModal={() => setIsCreateModalOpen(true)} // Передаємо функцію відкриття модального вікна
+            onOpenCreateModal={() => setIsCreateModalOpen(true)}
           />
           
           <NavbarActions />
@@ -146,7 +140,7 @@ export function Navbar() {
           open={isCreateModalOpen}
           onOpenChange={setIsCreateModalOpen}
           userId={currentUser.id}
-          userName={`${currentUser.firstName || ''} ${currentUser.lastName || ''}`}
+          userName={currentUser.full_name || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`}
           onSuccess={() => {
             setIsCreateModalOpen(false);
             toast.success("Публікацію створено");
