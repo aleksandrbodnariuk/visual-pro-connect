@@ -2,22 +2,24 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Створює необхідні бакети сховища, якщо вони не існують
+ * Creates necessary storage buckets if they don't exist
  */
 export async function createStorageBuckets() {
   const buckets = ["avatars", "banners", "logos", "portfolio"];
   
   for (const bucketName of buckets) {
     try {
-      // Перевіряємо, чи існує бакет
+      console.log(`Перевіряємо бакет ${bucketName}...`);
+      
+      // Check if the bucket exists
       const { data: existingBucket, error: bucketError } = await supabase.storage.getBucket(bucketName);
       
-      // Якщо є помилка і це не 404 (бакет не існує), виводимо її
-      if (bucketError && bucketError.message !== 'The resource was not found' && !bucketError.message.includes('does not exist')) {
+      // If there's an error and it's not a 404 (bucket doesn't exist), log it
+      if (bucketError && !bucketError.message.includes('does not exist')) {
         console.error(`Помилка перевірки бакета ${bucketName}:`, bucketError);
       }
       
-      // Якщо бакет не існує, створюємо його
+      // If the bucket doesn't exist, create it
       if (!existingBucket || bucketError) {
         console.log(`Створюємо бакет ${bucketName}...`);
         const { error: createError } = await supabase.storage.createBucket(bucketName, {
@@ -30,6 +32,8 @@ export async function createStorageBuckets() {
         } else {
           console.log(`Бакет ${bucketName} успішно створено`);
         }
+      } else {
+        console.log(`Бакет ${bucketName} вже існує`);
       }
     } catch (error) {
       console.error(`Помилка роботи з бакетом ${bucketName}:`, error);
@@ -37,36 +41,22 @@ export async function createStorageBuckets() {
   }
 }
 
-// Викликаємо функцію при завантаженні застосунку
-createStorageBuckets().catch(console.error);
-
 /**
- * Завантажує файл до Supabase Storage
+ * Uploads a file to Supabase Storage
  */
 export async function uploadToStorage(
   bucketName: string,
   filePath: string,
   file: File,
   contentType?: string
-) {
+): Promise<string> {
   try {
-    // Забезпечуємо існування бакета
-    try {
-      const { data: existingBucket, error } = await supabase.storage.getBucket(bucketName);
-      
-      if (error) {
-        console.log(`Створюємо бакет ${bucketName}...`);
-        await supabase.storage.createBucket(bucketName, {
-          public: true,
-          fileSizeLimit: 52428800, // 50MB
-        });
-      }
-    } catch (bucketError) {
-      console.log('Перевірка бакета:', bucketError);
-      // Продовжуємо, оскільки бакет може існувати
-    }
+    // Ensure the bucket exists
+    await createStorageBuckets();
     
-    // Спочатку видаляємо попередній файл, якщо він існує
+    console.log(`Завантаження ${filePath} до ${bucketName}...`);
+    
+    // First try to delete any existing file with the same path
     try {
       const { error } = await supabase.storage
         .from(bucketName)
@@ -76,12 +66,11 @@ export async function uploadToStorage(
         console.warn(`Помилка при видаленні попереднього файлу:`, error);
       }
     } catch (removeError) {
-      // Ігноруємо, файлу може не бути
-      console.log('Видалення файлу (можна ігнорувати):', removeError);
+      // Ignore, file might not exist
+      console.log('Видалення попереднього файлу (можна ігнорувати):', removeError);
     }
     
-    // Завантажуємо файл
-    console.log(`Завантаження ${filePath} до ${bucketName}...`);
+    // Upload the file
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucketName)
       .upload(filePath, file, {
@@ -97,7 +86,7 @@ export async function uploadToStorage(
     
     console.log(`Файл успішно завантажено:`, uploadData);
     
-    // Отримуємо публічний URL
+    // Get the public URL
     const { data: urlData } = supabase.storage
       .from(bucketName)
       .getPublicUrl(filePath);
@@ -111,9 +100,9 @@ export async function uploadToStorage(
 }
 
 /**
- * Видаляє файл зі сховища
+ * Deletes a file from storage
  */
-export async function deleteFromStorage(bucketName: string, filePath: string) {
+export async function deleteFromStorage(bucketName: string, filePath: string): Promise<boolean> {
   try {
     const { error } = await supabase.storage
       .from(bucketName)
@@ -129,12 +118,15 @@ export async function deleteFromStorage(bucketName: string, filePath: string) {
 }
 
 /**
- * Отримує публічний URL файлу
+ * Gets the public URL of a file
  */
-export async function getPublicUrl(bucketName: string, filePath: string) {
+export async function getPublicUrl(bucketName: string, filePath: string): Promise<string> {
   const { data } = supabase.storage
     .from(bucketName)
     .getPublicUrl(filePath);
     
   return data.publicUrl;
 }
+
+// Call this function when the app loads to create necessary buckets
+createStorageBuckets().catch(console.error);

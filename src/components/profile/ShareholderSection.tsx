@@ -2,7 +2,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Crown, PiggyBank, DollarSign } from "lucide-react";
-import { useMemo, useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -30,32 +30,35 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
       if (!user?.id || !user?.isShareHolder) return;
       
       try {
-        // Спочатку перевіряємо наявність даних в таблиці shares
+        console.log("Завантажую дані акціонера з ID:", user.id);
+        
+        // First check for data in the shares table
         const { data: sharesData, error: sharesError } = await supabase
           .from('shares')
           .select('*')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
           
         if (sharesError && sharesError.code !== 'PGRST116') {
           console.error("Помилка при отриманні даних акцій:", sharesError);
-          return;
         }
         
-        // Отримуємо загальну кількість акцій для розрахунку відсотка
+        // Get the total number of shares for percentage calculation
         const totalSharesStr = localStorage.getItem("totalShares") || "1000";
         const totalShares = parseInt(totalSharesStr) || 1000;
         
         let shares = user.shares || 0;
         let percentage = user.percentage || 0;
         
-        // Якщо є дані в Supabase, використовуємо їх
+        // If we have data in Supabase, use it
         if (sharesData) {
+          console.log("Знайдено дані акцій в Supabase:", sharesData);
           shares = sharesData.quantity;
           percentage = totalShares > 0 ? (shares / totalShares) * 100 : 0;
         } 
-        // Якщо даних немає в Supabase, але є в user, створюємо запис
+        // If no data in Supabase but we have data in user, create a record
         else if (user.shares && user.shares > 0) {
+          console.log("Створюємо запис акцій для користувача з існуючих даних");
           const { error: insertError } = await supabase
             .from('shares')
             .insert({
@@ -67,8 +70,9 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
             console.error("Помилка при створенні запису акцій:", insertError);
           }
         } 
-        // Якщо даних немає взагалі, створюємо запис з 10 акціями за замовчуванням
+        // If no data anywhere but user is a shareholder, create default shares
         else if (user.isShareHolder) {
+          console.log("Створюємо запис акцій за замовчуванням (10 акцій)");
           shares = 10;
           percentage = totalShares > 0 ? (shares / totalShares) * 100 : 0;
           
@@ -82,7 +86,7 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
           if (insertError) {
             console.error("Помилка при створенні запису акцій:", insertError);
           } else {
-            // Оновлюємо локальні дані користувача
+            // Update local user data
             const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
             if (currentUser.id === user.id) {
               currentUser.shares = shares;
@@ -92,10 +96,10 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
           }
         }
         
-        // Визначаємо титул на основі відсотка акцій
+        // Determine title based on percentage
         const title = determineShareholderTitle(percentage);
         
-        // Оновлюємо стан компонента
+        // Update component state
         setShareholderData({
           shares,
           percentage,
@@ -111,7 +115,7 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
     loadShareholderData();
   }, [user]);
 
-  // Визначаємо титул на основі відсотка акцій
+  // Determine shareholder title based on percentage
   const determineShareholderTitle = (percentage: number): string => {
     if (percentage === 100) return "Імператор";
     if (percentage >= 76) return "Герцог";
@@ -125,9 +129,9 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
     return "Акціонер";
   };
 
-  // Визначаємо варіант беджа на основі титулу
+  // Determine badge variant based on title
   const getBadgeVariant = () => {
-    // Використовуємо тільки допустимі варіанти для Badge
+    // Use only valid variants for Badge
     switch(shareholderData.title) {
       case "Імператор": return "destructive" as const;
       case "Герцог": return "secondary" as const;
@@ -140,7 +144,7 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
     }
   };
 
-  // Якщо користувач не є акціонером, не відображаємо секцію
+  // If user is not a shareholder, don't display anything
   if (!user?.isShareHolder) {
     return null;
   }
