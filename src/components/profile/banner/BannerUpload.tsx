@@ -18,7 +18,8 @@ export function BannerUpload({ userId, existingBannerUrl, onComplete }: BannerUp
     fileInputRef,
     handleFileChange,
     handleUpload,
-    handleCancel
+    handleCancel,
+    removeBanner
   } = useBannerUpload(userId, existingBannerUrl, onComplete);
 
   return (
@@ -30,21 +31,13 @@ export function BannerUpload({ userId, existingBannerUrl, onComplete }: BannerUp
       <CardContent className="space-y-4">
         <BannerPreview bannerUrl={previewUrl || bannerUrl} />
         
-        <input
-          id="banner-upload"
-          type="file"
-          className="hidden"
-          accept="image/*"
-          onChange={handleFileChange}
-          ref={fileInputRef}
-        />
-        
         <BannerActions 
           fileInputRef={fileInputRef}
           previewUrl={previewUrl}
           isUploading={isUploading}
           onCancel={handleCancel}
           onUpload={handleUpload}
+          onRemove={removeBanner}
         />
       </CardContent>
     </Card>

@@ -1,8 +1,5 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useBannerUpload } from './banner/useBannerUpload';
-import { BannerPreview } from './banner/BannerPreview';
-import { BannerActions } from './banner/BannerActions';
+import { BannerUpload as BannerUploadComponent } from './banner/BannerUpload';
 
 interface BannerUploadProps {
   userId: string;
@@ -10,43 +7,6 @@ interface BannerUploadProps {
   onComplete?: (url: string) => void;
 }
 
-export function BannerUpload({ userId, existingBannerUrl, onComplete }: BannerUploadProps) {
-  const {
-    bannerUrl,
-    previewUrl,
-    isUploading,
-    fileInputRef,
-    handleFileChange,
-    handleUpload,
-    handleCancel
-  } = useBannerUpload(userId, existingBannerUrl, onComplete);
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Банер профілю</CardTitle>
-        <CardDescription>Завантажте новий банер для вашого профілю</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <BannerPreview bannerUrl={previewUrl || bannerUrl} />
-        
-        <input
-          id="banner-upload"
-          type="file"
-          className="hidden"
-          accept="image/*"
-          onChange={handleFileChange}
-          ref={fileInputRef}
-        />
-        
-        <BannerActions 
-          fileInputRef={fileInputRef}
-          previewUrl={previewUrl}
-          isUploading={isUploading}
-          onCancel={handleCancel}
-          onUpload={handleUpload}
-        />
-      </CardContent>
-    </Card>
-  );
+export function BannerUpload(props: BannerUploadProps) {
+  return <BannerUploadComponent {...props} />;
 }

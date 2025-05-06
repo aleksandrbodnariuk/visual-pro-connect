@@ -1,14 +1,17 @@
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadToStorage, deleteFromStorage } from '@/lib/storage';
 
-export function useBannerUpload(userId: string, existingBannerUrl?: string | null) {
+export function useBannerUpload(userId: string, existingBannerUrl?: string | null, onComplete?: (url: string) => void) {
   const [bannerUrl, setBannerUrl] = useState<string | null>(existingBannerUrl || null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const handleUpload = async (file: File) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
     
     // Check if file is an image
@@ -23,6 +26,21 @@ export function useBannerUpload(userId: string, existingBannerUrl?: string | nul
       return;
     }
     
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setPreviewUrl(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+  
+  const handleUpload = async () => {
+    if (!previewUrl || !fileInputRef.current?.files?.[0]) {
+      toast.error('Спочатку виберіть зображення');
+      return;
+    }
+    
+    const file = fileInputRef.current.files[0];
     setIsUploading(true);
     
     try {
@@ -45,10 +63,15 @@ export function useBannerUpload(userId: string, existingBannerUrl?: string | nul
       
       // Update state
       setBannerUrl(publicUrl);
+      setPreviewUrl(null);
       
       toast.success('Банер успішно оновлено');
       
-      // Return the URL for parent components
+      // Call onComplete if provided
+      if (onComplete) {
+        onComplete(publicUrl);
+      }
+      
       return publicUrl;
     } catch (error) {
       console.error('Error uploading banner:', error);
@@ -56,6 +79,13 @@ export function useBannerUpload(userId: string, existingBannerUrl?: string | nul
       return null;
     } finally {
       setIsUploading(false);
+    }
+  };
+  
+  const handleCancel = () => {
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
   
@@ -82,6 +112,7 @@ export function useBannerUpload(userId: string, existingBannerUrl?: string | nul
       
       // Update state
       setBannerUrl(null);
+      setPreviewUrl(null);
       
       toast.success('Банер видалено');
       return true;
@@ -96,8 +127,12 @@ export function useBannerUpload(userId: string, existingBannerUrl?: string | nul
   
   return {
     bannerUrl,
+    previewUrl,
     isUploading,
+    fileInputRef,
+    handleFileChange,
     handleUpload,
+    handleCancel,
     removeBanner
   };
 }
