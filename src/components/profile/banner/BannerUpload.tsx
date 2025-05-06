@@ -35,9 +35,20 @@ export function BannerUpload({ userId, existingBannerUrl, onComplete }: BannerUp
           fileInputRef={fileInputRef}
           previewUrl={previewUrl}
           isUploading={isUploading}
+          bannerUrl={bannerUrl} // Pass bannerUrl to BannerActions
           onCancel={handleCancel}
           onUpload={handleUpload}
           onRemove={removeBanner}
+        />
+
+        {/* Hidden file input element */}
+        <input 
+          type="file" 
+          id="banner-upload"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept="image/*" 
+          className="hidden" 
         />
       </CardContent>
     </Card>

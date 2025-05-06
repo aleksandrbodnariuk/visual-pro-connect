@@ -8,6 +8,7 @@ interface BannerActionsProps {
   fileInputRef: RefObject<HTMLInputElement>;
   previewUrl: string | null;
   isUploading: boolean;
+  bannerUrl?: string | null; // Add bannerUrl to props
   onCancel: () => void;
   onUpload: () => Promise<string | null>;
   onRemove?: () => Promise<boolean>;
@@ -17,6 +18,7 @@ export function BannerActions({
   fileInputRef, 
   previewUrl, 
   isUploading, 
+  bannerUrl, // Add to destructured props
   onCancel, 
   onUpload,
   onRemove
