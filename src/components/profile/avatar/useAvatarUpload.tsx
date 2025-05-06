@@ -91,7 +91,7 @@ export function useAvatarUpload(
           throw updateError;
         }
       } catch (dbError) {
-        console.error('Помилка з'єднання з базою даних:', dbError);
+        console.error('Помилка з\'єднання з базою даних:', dbError);
       }
 
       // Update the avatar URL in localStorage for the current user

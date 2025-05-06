@@ -107,7 +107,7 @@ export function useBannerUpload(
           throw updateError;
         }
       } catch (dbError) {
-        console.error('Помилка з'єднання з базою даних:', dbError);
+        console.error('Помилка з\'єднання з базою даних:', dbError);
       }
 
       // Update the banner URL in localStorage for the current user
