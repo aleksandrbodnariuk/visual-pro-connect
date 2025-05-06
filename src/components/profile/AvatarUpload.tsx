@@ -1,5 +1,4 @@
 
-// Make any changes needed to ensure avatar uploads properly to Supabase
 import React, { useState, useRef, useEffect } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -87,10 +86,28 @@ export function AvatarUpload({ userId, avatarUrl: initialAvatarUrl, onAvatarChan
       const fileName = `avatar-${userId}`;
       
       try {
+        // First check if avatars bucket exists, create if not
+        try {
+          const { data: bucketExists } = await supabase.storage.getBucket('avatars');
+          if (!bucketExists) {
+            await supabase.storage.createBucket('avatars', {
+              public: true,
+              fileSizeLimit: 5242880 // 5MB
+            });
+          }
+        } catch (bucketError) {
+          console.log('Checking or creating bucket:', bucketError);
+          // Continue anyway since the bucket might already exist
+        }
+
         // First remove old file if exists
-        await supabase.storage
-          .from('avatars')
-          .remove([fileName]);
+        try {
+          await supabase.storage
+            .from('avatars')
+            .remove([fileName]);
+        } catch (removeError) {
+          console.log('Removing old file (can be ignored if not exists):', removeError);
+        }
           
         // Upload new file
         const { error } = await supabase.storage
@@ -171,6 +188,12 @@ export function AvatarUpload({ userId, avatarUrl: initialAvatarUrl, onAvatarChan
           src={avatarUrl || undefined}
           alt="Аватар користувача"
           className="object-cover"
+          onError={(e) => {
+            // Fallback if image loading fails
+            const target = e.target as HTMLImageElement;
+            target.onerror = null;
+            target.src = '/placeholder.svg';
+          }}
         />
         <AvatarFallback className="text-4xl">
           {userId?.substring(0, 2) || "КР"}

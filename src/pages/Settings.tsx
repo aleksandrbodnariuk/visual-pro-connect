@@ -4,8 +4,6 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { LogoSettings } from '@/components/settings/LogoSettings';
-import { LogoUpload } from '@/components/settings/LogoUpload'; 
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
@@ -18,20 +16,7 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState("general");
   const { getCurrentUser } = useAuthState();
   const currentUser = getCurrentUser();
-  const [isAdmin, setIsAdmin] = useState(false);
   
-  useEffect(() => {
-    // Check if user is admin
-    if (currentUser) {
-      setIsAdmin(
-        currentUser.isAdmin || 
-        currentUser.role === "admin" || 
-        currentUser.founder_admin ||
-        currentUser.phoneNumber === "0507068007"
-      );
-    }
-  }, [currentUser]);
-
   return (
     <div className="min-h-screen pb-10">
       <Navbar />
@@ -52,9 +37,6 @@ export default function Settings() {
           >
             <TabsList className="mb-6">
               <TabsTrigger value="general">Загальні</TabsTrigger>
-              {isAdmin && (
-                <TabsTrigger value="appearance">Зовнішній вигляд</TabsTrigger>
-              )}
               <TabsTrigger value="profile">Профіль</TabsTrigger>
               <TabsTrigger value="notifications">Сповіщення</TabsTrigger>
               <TabsTrigger value="privacy">Конфіденційність</TabsTrigger>
@@ -71,15 +53,6 @@ export default function Settings() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
-            {isAdmin && (
-              <TabsContent value="appearance">
-                <LogoSettings />
-                <div className="mt-6">
-                  <LogoUpload />
-                </div>
-              </TabsContent>
-            )}
             
             <TabsContent value="profile">
               <div className="grid gap-6">

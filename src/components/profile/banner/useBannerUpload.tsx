@@ -37,7 +37,7 @@ export function useBannerUpload(userId: string, existingBannerUrl?: string | nul
   const handleUpload = async () => {
     if (!previewUrl || !fileInputRef.current?.files?.[0]) {
       toast.error('Спочатку виберіть зображення');
-      return;
+      return null;
     }
     
     const file = fileInputRef.current.files[0];

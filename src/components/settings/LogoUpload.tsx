@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Upload, Save, X, Image } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadToStorage } from "@/lib/storage";
 
 export function LogoUpload() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -46,35 +47,13 @@ export function LogoUpload() {
     const file = fileInputRef.current.files[0];
 
     try {
-      // Генеруємо унікальне ім'я файлу
-      const fileExt = file.name.split('.').pop();
-      const fileName = `logo-${Date.now()}.${fileExt}`;
-
-      // Завантажуємо файл до Supabase Storage
+      // Генеруємо унікальне ім'я файлу - використовуємо те саме ім'я для спрощення оновлення
+      const fileName = `site-logo`;
+      
       try {
-        // Перевіряємо, чи існує бакет
-        const { data: bucketExists } = await supabase.storage.getBucket('logos');
+        // Завантажуємо файл через покращену утиліту
+        const publicUrl = await uploadToStorage('logos', fileName, file);
         
-        // Якщо бакет не існує, створюємо його
-        if (!bucketExists) {
-          await supabase.storage.createBucket('logos', {
-            public: true
-          });
-        }
-        
-        const { data, error } = await supabase.storage
-          .from('logos')
-          .upload(fileName, file);
-
-        if (error) {
-          throw error;
-        }
-
-        // Отримуємо публічне URL для зображення
-        const { data: { publicUrl } } = supabase.storage
-          .from('logos')
-          .getPublicUrl(data.path);
-
         // Зберігаємо URL логотипу в localStorage
         localStorage.setItem("customLogo", publicUrl);
         toast.success('Логотип оновлено');
@@ -86,22 +65,7 @@ export function LogoUpload() {
         }
       } catch (storageError: any) {
         console.error("Error uploading logo:", storageError);
-        
-        // Якщо не вдалося завантажити до Supabase, зберігаємо локально
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (e) => {
-          const dataUrl = e.target?.result as string;
-          localStorage.setItem("customLogo", dataUrl);
-          setPreviewUrl(null);
-          
-          toast.success('Логотип оновлено (збережено локально)');
-          
-          // Очищаємо поле вводу
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
-        };
+        toast.error('Помилка при завантаженні логотипу');
       }
     } catch (error) {
       console.error('Помилка при завантаженні логотипу:', error);

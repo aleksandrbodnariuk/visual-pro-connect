@@ -17,12 +17,13 @@ export async function createStorageBuckets() {
       }
     } catch (error) {
       console.error(`Error checking/creating bucket ${bucketName}:`, error);
+      // Continue with other operations as this is initialization
     }
   }
 }
 
 // Call this function when the app starts
-createStorageBuckets();
+createStorageBuckets().catch(console.error);
 
 export async function uploadToStorage(
   bucketName: string,
@@ -32,13 +33,28 @@ export async function uploadToStorage(
 ) {
   try {
     // Ensure bucket exists
-    const { data: existingBucket } = await supabase.storage.getBucket(bucketName);
+    try {
+      const { data: existingBucket } = await supabase.storage.getBucket(bucketName);
+      
+      if (!existingBucket) {
+        await supabase.storage.createBucket(bucketName, {
+          public: true,
+          fileSizeLimit: 52428800, // 50MB
+        });
+      }
+    } catch (bucketError) {
+      console.log('Error checking bucket:', bucketError);
+      // Continue anyway since the bucket might exist already
+    }
     
-    if (!existingBucket) {
-      await supabase.storage.createBucket(bucketName, {
-        public: true,
-        fileSizeLimit: 52428800, // 50MB
-      });
+    // Try to remove existing file first
+    try {
+      await supabase.storage
+        .from(bucketName)
+        .remove([filePath]);
+    } catch (removeError) {
+      // Ignore, file might not exist
+      console.log('Removing file (can be ignored if not exists):', removeError);
     }
     
     // Upload file

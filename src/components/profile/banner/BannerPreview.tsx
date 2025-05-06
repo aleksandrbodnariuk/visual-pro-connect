@@ -16,7 +16,9 @@ export function BannerPreview({ bannerUrl }: BannerPreviewProps) {
             className="w-full h-48 object-cover rounded"
             onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
               // Handle image loading errors
-              e.currentTarget.src = "https://images.unsplash.com/photo-1487887235947-a955ef187fcc";
+              const target = e.target as HTMLImageElement;
+              target.onerror = null;
+              target.src = "https://images.unsplash.com/photo-1487887235947-a955ef187fcc";
             }}
           />
         ) : (

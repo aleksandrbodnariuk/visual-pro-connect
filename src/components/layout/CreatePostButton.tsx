@@ -10,6 +10,7 @@ interface CreatePostButtonProps {
 }
 
 export function CreatePostButton({ onClick, variant = "default", className = "" }: CreatePostButtonProps) {
+  // This component is now only used on the profile page
   return (
     <Button 
       variant={variant} 
