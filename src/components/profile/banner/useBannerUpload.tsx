@@ -44,14 +44,16 @@ export function useBannerUpload(
     fileReader.readAsDataURL(file);
   };
 
-  const handleUpload = async () => {
+  // Update handleUpload to return a string (the URL) instead of void
+  const handleUpload = async (): Promise<string> => {
     if (!fileInputRef.current?.files?.length) {
       toast.error('Будь ласка, виберіть файл');
-      return;
+      return ''; // Return empty string on error
     }
 
     const file = fileInputRef.current.files[0];
     setIsUploading(true);
+    let uploadedUrl = '';
 
     try {
       console.log('Перевіряю наявність бакета banners...');
@@ -92,6 +94,7 @@ export function useBannerUpload(
       
       // Upload using the improved storage utility
       const publicUrl = await uploadToStorage('banners', filePath, file, file.type);
+      uploadedUrl = publicUrl;
       
       console.log('Банер успішно завантажено, URL:', publicUrl);
 
@@ -136,6 +139,8 @@ export function useBannerUpload(
     } finally {
       setIsUploading(false);
     }
+
+    return uploadedUrl; // Return the uploaded URL
   };
 
   const handleCancel = () => {
@@ -145,8 +150,10 @@ export function useBannerUpload(
     }
   };
 
-  const removeBanner = async () => {
+  // Update removeBanner to return a boolean instead of void
+  const removeBanner = async (): Promise<boolean> => {
     setIsUploading(true);
+    let success = false;
 
     try {
       // Remove the banner URL from the database
@@ -172,12 +179,16 @@ export function useBannerUpload(
       setPreviewUrl(null);
 
       toast.success('Банер видалено');
+      success = true;
     } catch (error) {
       console.error('Помилка видалення банера:', error);
       toast.error('Не вдалося видалити банер');
+      success = false;
     } finally {
       setIsUploading(false);
     }
+
+    return success;
   };
 
   return {
