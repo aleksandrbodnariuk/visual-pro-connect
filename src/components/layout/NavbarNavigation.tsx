@@ -9,10 +9,11 @@ import { User } from "@/hooks/users/types";
 
 interface NavbarNavigationProps {
   currentUser: User | null;
-  onCreatePublication: () => void;
+  onCreatePublication?: () => void;
+  className?: string; // Add className prop
 }
 
-export function NavbarNavigation({ currentUser, onCreatePublication }: NavbarNavigationProps) {
+export function NavbarNavigation({ currentUser, onCreatePublication, className = "" }: NavbarNavigationProps) {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const t = translations[language];
@@ -27,7 +28,7 @@ export function NavbarNavigation({ currentUser, onCreatePublication }: NavbarNav
   };
 
   return (
-    <div className="flex items-center gap-1 md:gap-2">
+    <div className={`flex items-center gap-1 md:gap-2 ${className}`}>
       <Button 
         variant="ghost" 
         size="icon" 

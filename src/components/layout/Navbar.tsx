@@ -34,7 +34,13 @@ export function Navbar({
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
             <NavbarLogo />
-            {showNav && variant === "default" && <NavbarNavigation className="hidden md:flex" />}
+            {showNav && variant === "default" && 
+              <NavbarNavigation 
+                className="hidden md:flex" 
+                currentUser={currentUser}
+                onCreatePublication={() => setCreatePublicationOpen(true)}
+              />
+            }
           </div>
           
           <div className="flex items-center gap-4">
