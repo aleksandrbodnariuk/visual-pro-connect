@@ -14,6 +14,10 @@ export function BannerPreview({ bannerUrl }: BannerPreviewProps) {
             src={bannerUrl} 
             alt="Банер профілю" 
             className="w-full h-48 object-cover rounded"
+            onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+              // Handle image loading errors
+              e.currentTarget.src = "https://images.unsplash.com/photo-1487887235947-a955ef187fcc";
+            }}
           />
         ) : (
           <div className="w-full h-48 bg-gray-200 rounded flex items-center justify-center text-gray-400">

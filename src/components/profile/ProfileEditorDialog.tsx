@@ -42,7 +42,7 @@ export function ProfileEditorDialog({
     }
   }, [open]);
 
-  const handleAvatarComplete = (url: string) => {
+  const handleAvatarChange = (url: string) => {
     onSave({ avatarUrl: url });
     toast.success(t.profileUpdated);
     if (onUpdate) onUpdate();
@@ -82,7 +82,7 @@ export function ProfileEditorDialog({
             <AvatarUpload 
               userId={user.id} 
               avatarUrl={user.avatarUrl}
-              onComplete={handleAvatarComplete} 
+              onAvatarChange={handleAvatarChange} 
             />
           </TabsContent>
           

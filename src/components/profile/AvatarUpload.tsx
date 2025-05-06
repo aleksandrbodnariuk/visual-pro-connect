@@ -17,7 +17,7 @@ export function AvatarUpload({ userId, avatarUrl: initialAvatarUrl, onAvatarChan
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl || null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { updateCurrentUser } = useAuthState();
+  const { updateUser } = useAuthState();
   
   // Try to load avatar from Supabase on mount if not provided
   useEffect(() => {
@@ -130,8 +130,8 @@ export function AvatarUpload({ userId, avatarUrl: initialAvatarUrl, onAvatarChan
           localStorage.setItem('currentUser', JSON.stringify(currentUser));
           
           // Update current user in context if available
-          if (typeof updateCurrentUser === 'function') {
-            updateCurrentUser({
+          if (typeof updateUser === 'function') {
+            updateUser({
               ...currentUser,
               avatarUrl: publicUrl,
               avatar_url: publicUrl

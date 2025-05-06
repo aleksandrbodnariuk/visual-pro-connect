@@ -1,230 +1,103 @@
 
-import { useState, useRef, ChangeEvent, useEffect } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadToStorage, deleteFromStorage } from '@/lib/storage';
 
-export function useBannerUpload(
-  userId: string,
-  existingBannerUrl: string | null = null,
-  onComplete?: (url: string) => void
-) {
+export function useBannerUpload(userId: string, existingBannerUrl?: string | null) {
   const [bannerUrl, setBannerUrl] = useState<string | null>(existingBannerUrl || null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Try to load banner from Supabase on mount
-  useEffect(() => {
-    async function loadBannerFromSupabase() {
-      try {
-        // First try to get from users table
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('banner_url')
-          .eq('id', userId)
-          .single();
-          
-        if (userData?.banner_url) {
-          setBannerUrl(userData.banner_url);
-          return;
-        }
-        
-        // If no URL in users table, try storage
-        const fileName = `banner-${userId}`;
-        const { data } = supabase.storage
-          .from('banners')
-          .getPublicUrl(fileName);
-            
-        if (data?.publicUrl) {
-          setBannerUrl(data.publicUrl);
-          
-          // Update user record with this URL
-          await supabase
-            .from('users')
-            .update({ banner_url: data.publicUrl })
-            .eq('id', userId);
-        }
-      } catch (error) {
-        console.error("Error loading banner:", error);
-      }
-    }
-    
-    if (!existingBannerUrl) {
-      loadBannerFromSupabase();
-    }
-  }, [userId, existingBannerUrl]);
-
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  
+  const handleUpload = async (file: File) => {
     if (!file) return;
-
-    // Перевірка типу файлу (лише зображення)
+    
+    // Check if file is an image
     if (!file.type.match('image.*')) {
       toast.error('Будь ласка, виберіть зображення');
       return;
     }
-
-    // Максимальний розмір файлу (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Розмір файлу не повинен перевищувати 5MB');
+    
+    // Check file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Розмір файлу не повинен перевищувати 10MB');
       return;
     }
-
-    // Створюємо URL для превью
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setPreviewUrl(event.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleUpload = async () => {
-    if (!fileInputRef.current?.files?.length) {
-      toast.error('Будь ласка, виберіть зображення');
-      return;
-    }
-
-    const file = fileInputRef.current.files[0];
+    
     setIsUploading(true);
-
+    
     try {
-      // Генеруємо унікальне ім'я файлу
+      // Generate unique filename
       const fileName = `banner-${userId}`;
-
-      // Завантажуємо файл до Supabase Storage
-      let publicUrl = '';
-
-      try {
-        // Спочатку видаляємо старий файл, якщо він існує
-        await supabase.storage
-          .from('banners')
-          .remove([fileName]);
-          
-        // Завантажуємо новий файл
-        const { data, error } = await supabase.storage
-          .from('banners')
-          .upload(fileName, file, {
-            upsert: true,
-            cacheControl: '3600'
-          });
-
-        if (error) {
-          throw error;
-        }
+      
+      // Upload to Supabase Storage
+      const publicUrl = await uploadToStorage('banners', fileName, file);
+      
+      // Update user record with banner URL
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ banner_url: publicUrl })
+        .eq('id', userId);
         
-        // Отримуємо публічне URL для зображення
-        const { data: urlData } = supabase.storage
-          .from('banners')
-          .getPublicUrl(fileName);
-          
-        publicUrl = urlData.publicUrl;
-      } catch (storageError: any) {
-        console.error("Storage upload error:", storageError);
-        throw storageError;
+      if (updateError) {
+        console.error("Error updating banner_url in database:", updateError);
+        throw updateError;
       }
-
-      // Оновлюємо користувача з новим URL банера
-      try {
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ banner_url: publicUrl })
-          .eq('id', userId);
-          
-        if (updateError) {
-          console.error("Error updating user banner:", updateError);
-        }
-      } catch (updateError) {
-        console.error("Error updating user:", updateError);
-      }
-
+      
+      // Update state
       setBannerUrl(publicUrl);
-      setPreviewUrl(null);
       
-      if (onComplete) {
-        onComplete(publicUrl);
-      }
-
-      // Оновлюємо локальне сховище з новою URL банера
-      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
-      if (currentUser && currentUser.id === userId) {
-        currentUser.bannerUrl = publicUrl;
-        currentUser.banner_url = publicUrl;
-        localStorage.setItem("currentUser", JSON.stringify(currentUser));
-      }
-
-      toast.success('Банер профілю оновлено');
+      toast.success('Банер успішно оновлено');
+      
+      // Return the URL for parent components
+      return publicUrl;
     } catch (error) {
-      console.error('Помилка при завантаженні банеру:', error);
+      console.error('Error uploading banner:', error);
       toast.error('Не вдалося завантажити банер');
+      return null;
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
     }
   };
-
-  const handleCancel = () => {
-    setPreviewUrl(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const handleRemoveAvatar = async () => {
+  
+  const removeBanner = async () => {
+    setIsUploading(true);
+    
     try {
-      if (!bannerUrl) return;
-      
-      setIsUploading(true);
-      
-      // Спроба видалення з Supabase
-      try {
+      // Delete from storage
+      if (bannerUrl) {
         const fileName = `banner-${userId}`;
-        await supabase.storage
-          .from('banners')
-          .remove([fileName]);
+        await deleteFromStorage('banners', fileName);
+      }
+      
+      // Update user record
+      const { error } = await supabase
+        .from('users')
+        .update({ banner_url: null })
+        .eq('id', userId);
         
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ banner_url: null })
-          .eq('id', userId);
-
-        if (updateError) throw updateError;
-      } catch (supabaseError) {
-        console.warn("Не вдалося видалити банер в Supabase:", supabaseError);
+      if (error) {
+        console.error("Error removing banner_url in database:", error);
+        throw error;
       }
       
+      // Update state
       setBannerUrl(null);
-      setPreviewUrl(null);
+      
       toast.success('Банер видалено');
-      
-      if (onComplete) {
-        onComplete('');
-      }
-      
-      // Оновлюємо дані в локальному сховищі
-      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
-      if (currentUser && currentUser.id === userId) {
-        currentUser.bannerUrl = null;
-        currentUser.banner_url = null;
-        localStorage.setItem("currentUser", JSON.stringify(currentUser));
-      }
-    } catch (error: any) {
-      toast.error('Помилка при видаленні банера');
-      console.error(error);
+      return true;
+    } catch (error) {
+      console.error('Error removing banner:', error);
+      toast.error('Не вдалося видалити банер');
+      return false;
     } finally {
       setIsUploading(false);
     }
   };
-
+  
   return {
     bannerUrl,
-    previewUrl,
     isUploading,
-    fileInputRef,
-    handleFileChange,
     handleUpload,
-    handleCancel,
-    handleRemoveAvatar
+    removeBanner
   };
 }
