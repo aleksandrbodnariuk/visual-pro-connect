@@ -21,13 +21,13 @@ export function NavbarSearch() {
   };
 
   return (
-    <div className="hidden md:flex md:w-full md:max-w-sm">
+    <div className="ml-auto md:w-auto md:max-w-sm">
       <div className="relative w-full">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           type="search"
           placeholder={t.search}
-          className="w-full rounded-full pl-8 md:w-[300px] lg:w-[300px]"
+          className="w-full rounded-full pl-8 md:w-[200px] lg:w-[250px]"
           onClick={handleNavigate}
         />
       </div>

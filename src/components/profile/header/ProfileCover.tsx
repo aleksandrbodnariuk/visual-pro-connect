@@ -15,6 +15,8 @@ export function ProfileCover({ coverUrl, onError }: ProfileCoverProps) {
           backgroundImage: coverUrl 
             ? `url(${coverUrl})` 
             : "url(https://images.unsplash.com/photo-1487887235947-a955ef187fcc)",
+          backgroundPosition: "center center",
+          backgroundSize: "cover"
         }}
         onError={onError}
       />

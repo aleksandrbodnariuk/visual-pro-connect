@@ -36,6 +36,8 @@ export function NavbarLogo() {
         
         if (data) {
           setSiteName(data.value);
+          // Also update localStorage for components that might still be using it
+          localStorage.setItem('siteName', data.value);
         }
       } catch (error) {
         console.error("Failed to load site name:", error);
@@ -47,7 +49,25 @@ export function NavbarLogo() {
       }
     }
     
+    // Try to load logo from Supabase storage
+    async function loadLogoFromStorage() {
+      try {
+        const { data: publicUrl } = supabase.storage
+          .from('logos')
+          .getPublicUrl('site-logo');
+          
+        if (publicUrl) {
+          const logoUrl = publicUrl.publicUrl;
+          setCustomLogo(logoUrl);
+          localStorage.setItem('customLogo', logoUrl);
+        }
+      } catch (error) {
+        console.error("Error loading logo from storage:", error);
+      }
+    }
+    
     loadSiteName();
+    loadLogoFromStorage();
   }, []);
 
   return (
@@ -60,7 +80,7 @@ export function NavbarLogo() {
         />
       </div>
       
-      <span className="text-lg font-medium hidden md:block">
+      <span className="text-lg font-medium hidden md:block md:max-w-[150px] truncate">
         {siteName}
       </span>
     </Link>

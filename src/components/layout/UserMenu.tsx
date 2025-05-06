@@ -1,5 +1,6 @@
 
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { User, Search, LogOut } from "lucide-react";
 import {
@@ -27,6 +28,24 @@ export function UserMenu({ currentUser, onOpenCreateModal }: UserMenuProps) {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const t = translations[language];
+  const [avatar, setAvatar] = useState<string | null | undefined>(currentUser?.avatarUrl || currentUser?.avatar_url);
+  
+  // Listen for avatar updates
+  useEffect(() => {
+    setAvatar(currentUser?.avatarUrl || currentUser?.avatar_url);
+    
+    const handleAvatarUpdate = (e: CustomEvent) => {
+      if (e.detail?.userId === currentUser?.id) {
+        setAvatar(e.detail.avatarUrl);
+      }
+    };
+    
+    window.addEventListener('avatar-updated', handleAvatarUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('avatar-updated', handleAvatarUpdate as EventListener);
+    };
+  }, [currentUser]);
   
   const handleLogout = async () => {
     try {
@@ -80,7 +99,7 @@ export function UserMenu({ currentUser, onOpenCreateModal }: UserMenuProps) {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="rounded-full">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={currentUser.avatarUrl || "/placeholder.svg"} alt={currentUser.firstName} />
+              <AvatarImage src={avatar || "/placeholder.svg"} alt={currentUser.firstName} />
               <AvatarFallback>
                 {currentUser.firstName 
                   ? currentUser.firstName.charAt(0) + (currentUser.lastName ? currentUser.lastName.charAt(0) : '')

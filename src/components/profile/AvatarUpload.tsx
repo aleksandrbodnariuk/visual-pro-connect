@@ -1,170 +1,197 @@
 
-import { useState, useEffect, useRef } from "react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Upload, User, Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuthState } from "@/hooks/auth/useAuthState";
+// Make any changes needed to ensure avatar uploads properly to Supabase
+import React, { useState, useRef, useEffect } from 'react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuthState } from '@/hooks/auth/useAuthState';
 
 interface AvatarUploadProps {
   userId: string;
   avatarUrl?: string | null;
-  onComplete?: (url: string) => void;
+  onAvatarChange?: (url: string) => void;
 }
 
-export function AvatarUpload({ userId, avatarUrl, onComplete }: AvatarUploadProps) {
-  const [avatar, setAvatar] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
+export function AvatarUpload({ userId, avatarUrl: initialAvatarUrl, onAvatarChange }: AvatarUploadProps) {
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl || null);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { updateUser } = useAuthState();
+  const { updateCurrentUser } = useAuthState();
   
-  // При монтуванні компоненту завантажуємо аватар
+  // Try to load avatar from Supabase on mount if not provided
   useEffect(() => {
-    setAvatar(avatarUrl || null);
-  }, [avatarUrl]);
-
-  const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      setUploading(true);
-      
-      if (!event.target.files || event.target.files.length === 0) {
-        throw new Error("Ви повинні вибрати зображення для завантаження.");
-      }
-
-      const file = event.target.files[0];
-      
-      // Перевірка типу файлу
-      if (!file.type.match('image.*')) {
-        throw new Error("Будь ласка, виберіть файл зображення");
-      }
-      
-      // Перевірка розміру файлу
-      if (file.size > 5 * 1024 * 1024) {
-        throw new Error("Розмір файлу не повинен перевищувати 5MB");
-      }
-      
-      // Генеруємо унікальне ім'я файлу
-      const fileExt = file.name.split(".").pop();
-      const filePath = `${userId}-${Date.now()}.${fileExt}`;
-
-      try {
-        // Перевіряємо, чи існує бакет
-        const { data: bucketExists } = await supabase.storage.getBucket('avatars');
-        
-        // Якщо бакет не існує, створюємо його
-        if (!bucketExists) {
-          await supabase.storage.createBucket('avatars', {
-            public: true
-          });
-        }
-        
-        // Завантажуємо файл
-        const { error: uploadError } = await supabase.storage
-          .from("avatars")
-          .upload(filePath, file);
-
-        if (uploadError) {
-          throw uploadError;
-        }
-        
-        // Отримуємо публічний URL
-        const { data: { publicUrl } } = supabase.storage
-          .from("avatars")
-          .getPublicUrl(filePath);
-
-        // Оновлюємо аватар в базі даних
-        const { error: updateError } = await supabase
-          .from("users")
-          .update({ avatar_url: publicUrl })
-          .eq("id", userId);
-
-        if (updateError) {
-          console.error("Error updating user avatar:", updateError);
-          toast.error("Не вдалося оновити аватар у базі даних");
-        }
-
-        // Оновлюємо UI та локальні дані
-        setAvatar(publicUrl);
-        updateUser({ avatarUrl: publicUrl, avatar_url: publicUrl });
-        
-        if (onComplete) {
-          onComplete(publicUrl);
-        }
-
-        toast.success("Аватар успішно оновлено!");
-        
-      } catch (storageError: any) {
-        // Якщо помилка при завантаженні до Supabase
-        console.error("Storage error:", storageError);
-        
-        // Спробуємо локально зберегти аватар
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64Data = reader.result as string;
-          
-          // Зберігаємо локально
-          setAvatar(base64Data);
-          updateUser({ avatarUrl: base64Data });
-          
-          if (onComplete) {
-            onComplete(base64Data);
+    if (!initialAvatarUrl) {
+      async function loadAvatarFromSupabase() {
+        try {
+          // First try to get from users table
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('avatar_url')
+            .eq('id', userId)
+            .single();
+            
+          if (userData?.avatar_url) {
+            setAvatarUrl(userData.avatar_url);
+            return;
           }
           
-          toast.success("Аватар оновлено (збережено локально)");
-        };
-        reader.readAsDataURL(file);
+          // If no URL in users table, try storage
+          const fileName = `avatar-${userId}`;
+          const { data } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(fileName);
+              
+          if (data?.publicUrl) {
+            setAvatarUrl(data.publicUrl);
+            
+            // Update user record with this URL
+            await supabase
+              .from('users')
+              .update({ avatar_url: data.publicUrl })
+              .eq('id', userId);
+          }
+        } catch (error) {
+          console.error("Error loading avatar:", error);
+        }
       }
       
-    } catch (error: any) {
-      console.error("Помилка при завантаженні аватару:", error);
-      toast.error(`Помилка: ${error.message || "Не вдалося завантажити аватар"}`);
+      loadAvatarFromSupabase();
+    }
+  }, [userId, initialAvatarUrl]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file type
+    if (!file.type.match('image.*')) {
+      toast.error('Будь ласка, виберіть зображення');
+      return;
+    }
+
+    // Check file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Розмір файлу не повинен перевищувати 5MB');
+      return;
+    }
+
+    handleUpload(file);
+  };
+
+  const handleUpload = async (file: File) => {
+    setIsUploading(true);
+    
+    try {
+      // Generate unique filename
+      const fileName = `avatar-${userId}`;
+      
+      try {
+        // First remove old file if exists
+        await supabase.storage
+          .from('avatars')
+          .remove([fileName]);
+          
+        // Upload new file
+        const { error } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, file, {
+            upsert: true,
+            cacheControl: '3600'
+          });
+          
+        if (error) throw error;
+        
+        // Get public URL
+        const { data } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(fileName);
+          
+        const publicUrl = data.publicUrl;
+        
+        // Update user in database
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ avatar_url: publicUrl })
+          .eq('id', userId);
+          
+        if (updateError) {
+          console.error("Error updating user avatar in database:", updateError);
+        }
+        
+        // Update in state and localStorage
+        setAvatarUrl(publicUrl);
+        
+        // Update avatar in current user data
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        if (currentUser && currentUser.id === userId) {
+          currentUser.avatarUrl = publicUrl;
+          currentUser.avatar_url = publicUrl;
+          localStorage.setItem('currentUser', JSON.stringify(currentUser));
+          
+          // Update current user in context if available
+          if (typeof updateCurrentUser === 'function') {
+            updateCurrentUser({
+              ...currentUser,
+              avatarUrl: publicUrl,
+              avatar_url: publicUrl
+            });
+          }
+        }
+        
+        if (onAvatarChange) {
+          onAvatarChange(publicUrl);
+        }
+        
+        toast.success('Аватар успішно оновлено');
+        
+        // Force refresh components that show the avatar
+        window.dispatchEvent(new CustomEvent('avatar-updated', { 
+          detail: { userId, avatarUrl: publicUrl } 
+        }));
+      } catch (error: any) {
+        console.error("Помилка при завантаженні на Supabase:", error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Помилка при завантаженні аватара:', error);
+      toast.error('Не вдалося завантажити аватар');
     } finally {
-      setUploading(false);
-      // Очищаємо поле вводу файлу для можливості повторного завантаження того ж файлу
+      setIsUploading(false);
       if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+        fileInputRef.current.value = '';
       }
     }
   };
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <Avatar className="h-24 w-24">
-        {avatar ? (
-          <AvatarImage src={avatar} alt="Avatar" className="object-cover" />
-        ) : (
-          <AvatarFallback>
-            <User className="h-12 w-12 text-muted-foreground" />
-          </AvatarFallback>
-        )}
+    <div className="flex flex-col items-center space-y-4">
+      <Avatar className="h-32 w-32 mx-auto">
+        <AvatarImage
+          src={avatarUrl || undefined}
+          alt="Аватар користувача"
+          className="object-cover"
+        />
+        <AvatarFallback className="text-4xl">
+          {userId?.substring(0, 2) || "КР"}
+        </AvatarFallback>
       </Avatar>
-      <div>
+      
+      <div className="flex gap-2 justify-center">
         <input
           type="file"
-          id="single"
           accept="image/*"
-          onChange={uploadAvatar}
-          disabled={uploading}
-          className="hidden"
+          onChange={handleFileChange}
           ref={fileInputRef}
+          className="hidden"
+          id={`avatar-upload-${userId}`}
         />
-        <Button 
-          onClick={() => fileInputRef.current?.click()} 
-          disabled={uploading}
+        <Button
           variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
         >
-          {uploading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Завантаження...
-            </>
-          ) : (
-            <>
-              <Upload className="mr-2 h-4 w-4" />
-              Завантажити аватар
-            </>
-          )}
+          {isUploading ? 'Завантаження...' : 'Змінити аватар'}
         </Button>
       </div>
     </div>

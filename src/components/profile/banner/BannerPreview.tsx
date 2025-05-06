@@ -13,10 +13,10 @@ export function BannerPreview({ bannerUrl }: BannerPreviewProps) {
           <img 
             src={bannerUrl} 
             alt="Банер профілю" 
-            className="w-full h-32 object-cover rounded"
+            className="w-full h-48 object-cover rounded"
           />
         ) : (
-          <div className="w-full h-32 bg-gray-200 rounded flex items-center justify-center text-gray-400">
+          <div className="w-full h-48 bg-gray-200 rounded flex items-center justify-center text-gray-400">
             Банер не встановлено
           </div>
         )}
