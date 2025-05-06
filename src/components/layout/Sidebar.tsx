@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Search, Bell, MessageSquare, User, Settings, Users, Image, Music, Video, Zap } from 'lucide-react';
+import { Home, Search, Bell, MessageSquare, User, Settings, Users, Image, Music, Video, Zap, PlusSquare } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
@@ -48,7 +48,7 @@ export function Sidebar({ className }: SidebarProps) {
           onClick={handleCreatePublication} 
           className="w-full flex items-center justify-center gap-2"
         >
-          Створити публікацію
+          <PlusSquare className="mr-2 h-4 w-4" /> Створити публікацію
         </Button>
         
         <h2 className="text-lg font-semibold mb-4">{t.menu}</h2>

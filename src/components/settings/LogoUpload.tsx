@@ -1,5 +1,5 @@
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -10,9 +10,18 @@ import { uploadToStorage } from "@/lib/storage";
 
 export function LogoUpload() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Завантажуємо поточний логотип при монтуванні компонента
+  useEffect(() => {
+    const storedLogo = localStorage.getItem("customLogo");
+    if (storedLogo) {
+      setLogoUrl(storedLogo);
+    }
+  }, []);
+  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -49,22 +58,44 @@ export function LogoUpload() {
     try {
       // Генеруємо унікальне ім'я файлу - використовуємо те саме ім'я для спрощення оновлення
       const fileName = `site-logo`;
+      const uniqueFileName = `${fileName}-${Date.now()}`;
       
       try {
         // Завантажуємо файл через покращену утиліту
-        const publicUrl = await uploadToStorage('logos', fileName, file);
+        const publicUrl = await uploadToStorage('logos', uniqueFileName, file);
         
-        // Зберігаємо URL логотипу в localStorage
+        // Зберігаємо URL логотипу в localStorage та Supabase
         localStorage.setItem("customLogo", publicUrl);
+        
+        try {
+          // Зберігаємо посилання в таблиці site_settings
+          const { error } = await supabase
+            .from('site_settings')
+            .upsert({ 
+              id: 'site-logo', 
+              value: publicUrl,
+              updated_at: new Date().toISOString()
+            });
+            
+          if (error) {
+            console.error("Помилка збереження логотипу в Supabase:", error);
+          }
+        } catch (dbError) {
+          console.error("Помилка з'єднання з базою даних:", dbError);
+        }
+        
         toast.success('Логотип оновлено');
         
-        // Очищаємо превью і поле вводу
+        // Оновлюємо відображення
+        setLogoUrl(publicUrl);
         setPreviewUrl(null);
+        
+        // Очищаємо превью і поле вводу
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
       } catch (storageError: any) {
-        console.error("Error uploading logo:", storageError);
+        console.error("Помилка завантаження логотипу:", storageError);
         toast.error('Помилка при завантаженні логотипу');
       }
     } catch (error) {
@@ -90,14 +121,19 @@ export function LogoUpload() {
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
-          <Label>Логотип сайту</Label>
+          <Label>Поточний логотип сайту</Label>
           <div className="flex justify-center mb-4">
             <div className="p-4 border rounded-lg bg-muted/50 w-full flex items-center justify-center">
-              {previewUrl ? (
+              {logoUrl ? (
                 <img 
-                  src={previewUrl} 
-                  alt="Превью логотипу" 
+                  src={logoUrl} 
+                  alt="Логотип сайту" 
                   className="max-h-24 object-contain"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/placeholder.svg';
+                    target.onerror = null;
+                  }}
                 />
               ) : (
                 <div className="h-24 w-24 rounded-full flex flex-col items-center justify-center text-gray-400 border border-dashed">
@@ -128,23 +164,35 @@ export function LogoUpload() {
           </div>
 
           {previewUrl && (
-            <div className="flex gap-2 justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancel}
-                disabled={isUploading}
-              >
-                <X className="mr-2 h-4 w-4" /> Скасувати
-              </Button>
-              <Button
-                type="button"
-                onClick={handleUploadLogo}
-                disabled={isUploading}
-              >
-                <Save className="mr-2 h-4 w-4" /> {isUploading ? 'Завантаження...' : 'Зберегти логотип'}
-              </Button>
-            </div>
+            <>
+              <div className="flex justify-center mt-4 mb-4">
+                <div className="p-4 border rounded-lg bg-muted/50 w-full flex items-center justify-center">
+                  <img 
+                    src={previewUrl} 
+                    alt="Превью логотипу" 
+                    className="max-h-24 object-contain"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-2 justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                  disabled={isUploading}
+                >
+                  <X className="mr-2 h-4 w-4" /> Скасувати
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleUploadLogo}
+                  disabled={isUploading}
+                >
+                  <Save className="mr-2 h-4 w-4" /> {isUploading ? 'Завантаження...' : 'Зберегти логотип'}
+                </Button>
+              </div>
+            </>
           )}
         </div>
       </CardContent>

@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Bell, Home, MessageCircle, Search } from "lucide-react";
+import { Bell, Home, MessageCircle, PlusSquare, Search } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
 import { User } from "@/hooks/users/types";
@@ -10,7 +10,7 @@ import { User } from "@/hooks/users/types";
 interface NavbarNavigationProps {
   currentUser: User | null;
   onCreatePublication?: () => void;
-  className?: string; // Add className prop
+  className?: string; 
 }
 
 export function NavbarNavigation({ currentUser, onCreatePublication, className = "" }: NavbarNavigationProps) {

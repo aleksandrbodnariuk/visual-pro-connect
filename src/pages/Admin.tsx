@@ -7,6 +7,9 @@ import { AdminStats } from "@/components/admin/AdminStats";
 import { AdminTabs } from "@/components/admin/AdminTabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { PlusSquare } from "lucide-react";
+import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
 
 export default function Admin() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -15,6 +18,7 @@ export default function Admin() {
   const [shareholders, setShareholders] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [stockPrice, setStockPrice] = useState("1000");
+  const [createPublicationOpen, setCreatePublicationOpen] = useState(false);
   
   const navigate = useNavigate();
   const { tabName } = useParams<{ tabName: string }>();
@@ -104,19 +108,35 @@ export default function Admin() {
     return <div className="container py-16 text-center">Перевірка прав доступу...</div>;
   }
 
+  const handleCreatePublication = () => {
+    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+    if (!currentUser || !currentUser.id) {
+      toast.error("Для створення публікації необхідно увійти в систему");
+      return;
+    }
+    setCreatePublicationOpen(true);
+  };
+
   return (
     <div className="min-h-screen">
       <Navbar />
       <div className="container py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">Панель адміністратора</h1>
-          <p className="text-muted-foreground">Управління сайтом Спільнота B&C</p>
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold">Панель адміністратора</h1>
+            <p className="text-muted-foreground">Управління сайтом Спільнота B&C</p>
+            
+            {isFounder && (
+              <Badge variant="secondary" className="mt-2">
+                Адміністратор-засновник
+              </Badge>
+            )}
+          </div>
           
-          {isFounder && (
-            <Badge variant="secondary" className="mt-2">
-              Адміністратор-засновник
-            </Badge>
-          )}
+          <Button onClick={handleCreatePublication}>
+            <PlusSquare className="mr-2 h-4 w-4" />
+            Створити публікацію
+          </Button>
         </div>
         
         <AdminStats 
@@ -128,6 +148,17 @@ export default function Admin() {
         
         <AdminTabs />
       </div>
+      
+      {/* Модальне вікно для створення публікації */}
+      <CreatePublicationModal 
+        open={createPublicationOpen} 
+        onOpenChange={setCreatePublicationOpen}
+        userId={JSON.parse(localStorage.getItem("currentUser") || "{}").id}
+        onSuccess={() => {
+          toast.success("Публікацію створено");
+          setCreatePublicationOpen(false);
+        }}
+      />
     </div>
   );
 }

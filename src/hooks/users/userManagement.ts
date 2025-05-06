@@ -81,12 +81,17 @@ export const changeUserStatus = async (userId: string, newStatus: string) => {
 // Toggle shareholder status function
 export const toggleShareholderStatus = async (userId: string, isShareHolder: boolean) => {
   try {
+    console.log(`Зміна статусу акціонера для користувача ${userId} на ${isShareHolder}`);
     const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
     
     // Update in localStorage
     const updatedUsers = storedUsers.map((user: User) => {
       if (user.id === userId) {
-        return { ...user, isShareHolder };
+        return { 
+          ...user, 
+          isShareHolder,
+          is_shareholder: isShareHolder 
+        };
       }
       return user;
     });
@@ -97,7 +102,10 @@ export const toggleShareholderStatus = async (userId: string, isShareHolder: boo
     try {
       const { error } = await supabase
         .from('users')
-        .update({ is_shareholder: isShareHolder })
+        .update({ 
+          is_shareholder: isShareHolder,
+          isShareHolder: isShareHolder
+        })
         .eq('id', userId);
         
       if (error) {
@@ -105,6 +113,14 @@ export const toggleShareholderStatus = async (userId: string, isShareHolder: boo
       }
     } catch (supabaseError) {
       console.warn("Supabase connection error:", supabaseError);
+    }
+    
+    // Update the current user if it's the same user
+    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+    if (currentUser && currentUser.id === userId) {
+      currentUser.isShareHolder = isShareHolder;
+      currentUser.is_shareholder = isShareHolder;
+      localStorage.setItem("currentUser", JSON.stringify(currentUser));
     }
     
     toast.success(isShareHolder ? "Користувача призначено акціонером" : "Статус акціонера знято");

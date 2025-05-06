@@ -8,6 +8,8 @@ import { NavbarLogo } from "./NavbarLogo";
 import { UserMenu } from "./UserMenu";
 import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
 import { useAuthState } from "@/hooks/auth/useAuthState";
+import { Button } from "@/components/ui/button";
+import { PlusSquare } from "lucide-react";
 
 interface NavbarProps {
   className?: string;
@@ -48,6 +50,16 @@ export function Navbar({
             
             {showActions && (
               <div className="flex items-center">
+                {currentUser && (
+                  <Button 
+                    size="sm" 
+                    className="mr-2"
+                    onClick={() => setCreatePublicationOpen(true)}
+                  >
+                    <PlusSquare className="mr-2 h-4 w-4" /> 
+                    Створити публікацію
+                  </Button>
+                )}
                 <NavbarActions />
                 <UserMenu 
                   currentUser={currentUser} 
