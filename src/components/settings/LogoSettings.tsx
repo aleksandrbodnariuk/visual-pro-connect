@@ -23,7 +23,7 @@ export function LogoSettings() {
           .eq("id", "site-name")
           .single();
           
-        if (error) {
+        if (error && error.code !== 'PGRST116') {
           console.error("Error loading site name:", error);
           return;
         }
@@ -52,15 +52,19 @@ export function LogoSettings() {
       
       if (error) {
         console.error("Error saving site name to Supabase:", error);
-        toast.error("Помилка збереження назви сайту");
-        
-        // If Supabase fails, at least update localStorage
-        localStorage.setItem("siteName", logoText);
-      } else {
-        // Update localStorage too for compatibility
-        localStorage.setItem("siteName", logoText);
-        toast.success("Назву сайту оновлено");
+        throw error;
       }
+        
+      // Update localStorage too for compatibility
+      localStorage.setItem("siteName", logoText);
+      
+      // Dispatch an event to update components that use the site name
+      const siteNameEvent = new CustomEvent('sitename-updated', { 
+        detail: { siteName: logoText }
+      });
+      window.dispatchEvent(siteNameEvent);
+      
+      toast.success("Назву сайту оновлено");
     } catch (error) {
       console.error("Failed to save site name:", error);
       toast.error("Помилка збереження назви сайту");
@@ -88,6 +92,11 @@ export function LogoSettings() {
                   src={logoUrl} 
                   alt="Логотип сайту" 
                   className="h-24 object-contain"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/placeholder.svg';
+                    target.onerror = null;
+                  }}
                 />
               ) : (
                 <div className="h-24 w-24 rounded-full flex flex-col items-center justify-center text-gray-400 border border-dashed">

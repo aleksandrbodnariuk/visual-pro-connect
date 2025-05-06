@@ -1,88 +1,81 @@
 
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
 export function NavbarLogo() {
-  const [customLogo, setCustomLogo] = useState<string | null>(null);
-  const [siteName, setSiteName] = useState<string>("Спільнота B&C");
-  
-  // Load logo and site name on component mount
+  const [logoUrl, setLogoUrl] = useState<string | null>(localStorage.getItem('customLogo') || null);
+  const [siteName, setSiteName] = useState<string>(localStorage.getItem('siteName') || 'Спільнота B&C');
+
   useEffect(() => {
-    // First try to load from localStorage (for backward compatibility)
-    const storedLogo = localStorage.getItem('customLogo');
-    if (storedLogo) {
-      setCustomLogo(storedLogo);
-    }
-    
-    // Load site name from database
-    async function loadSiteName() {
+    // Load logo from site_settings if available
+    const loadLogoAndSiteName = async () => {
       try {
-        const { data, error } = await supabase
-          .from("site_settings")
-          .select("value")
-          .eq("id", "site-name")
+        // Try to get logo URL
+        const { data: logoData, error: logoError } = await supabase
+          .from('site_settings')
+          .select('value')
+          .eq('id', 'site-logo')
           .single();
-          
-        if (error) {
-          console.error("Error loading site name:", error);
-          // Fall back to localStorage if database fails
-          const storedName = localStorage.getItem('siteName');
-          if (storedName) {
-            setSiteName(storedName);
-          }
-          return;
+
+        if (!logoError && logoData) {
+          setLogoUrl(logoData.value);
+          localStorage.setItem('customLogo', logoData.value);
         }
-        
-        if (data) {
-          setSiteName(data.value);
-          // Also update localStorage for components that might still be using it
-          localStorage.setItem('siteName', data.value);
-        }
-      } catch (error) {
-        console.error("Failed to load site name:", error);
-        // Fall back to localStorage
-        const storedName = localStorage.getItem('siteName');
-        if (storedName) {
-          setSiteName(storedName);
-        }
-      }
-    }
-    
-    // Try to load logo from Supabase storage
-    async function loadLogoFromStorage() {
-      try {
-        const { data: publicUrl } = supabase.storage
-          .from('logos')
-          .getPublicUrl('site-logo');
-          
-        if (publicUrl) {
-          const logoUrl = publicUrl.publicUrl;
-          setCustomLogo(logoUrl);
-          localStorage.setItem('customLogo', logoUrl);
+
+        // Try to get site name
+        const { data: nameData, error: nameError } = await supabase
+          .from('site_settings')
+          .select('value')
+          .eq('id', 'site-name')
+          .single();
+
+        if (!nameError && nameData) {
+          setSiteName(nameData.value);
+          localStorage.setItem('siteName', nameData.value);
         }
       } catch (error) {
-        console.error("Error loading logo from storage:", error);
+        console.error('Failed to load logo or site name:', error);
       }
-    }
-    
-    loadSiteName();
-    loadLogoFromStorage();
+    };
+
+    loadLogoAndSiteName();
+
+    // Listen for logo updates
+    const handleLogoUpdate = (e: CustomEvent) => {
+      setLogoUrl(e.detail.logoUrl);
+    };
+
+    // Listen for site name updates
+    const handleSiteNameUpdate = (e: CustomEvent) => {
+      setSiteName(e.detail.siteName);
+    };
+
+    window.addEventListener('logo-updated', handleLogoUpdate as EventListener);
+    window.addEventListener('sitename-updated', handleSiteNameUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('logo-updated', handleLogoUpdate as EventListener);
+      window.removeEventListener('sitename-updated', handleSiteNameUpdate as EventListener);
+    };
   }, []);
 
   return (
-    <Link to="/" className="flex items-center gap-3">
-      <div className="h-14 w-14 flex-shrink-0">
+    <NavLink to="/" className="flex items-center space-x-2">
+      {logoUrl ? (
         <img 
-          src={customLogo || "/lovable-uploads/4c2129b2-6d63-43a9-9c10-18cf11008adb.png"} 
-          alt="Логотип" 
-          className="h-full w-full object-contain" 
+          src={logoUrl} 
+          alt={siteName}
+          className="h-8 max-w-[120px] object-contain"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.onerror = null;
+            target.style.display = 'none';
+          }}
         />
-      </div>
-      
-      <span className="text-lg font-medium hidden md:block md:max-w-[150px] truncate">
-        {siteName}
-      </span>
-    </Link>
+      ) : (
+        <span className="font-bold text-xl">{siteName}</span>
+      )}
+    </NavLink>
   );
 }

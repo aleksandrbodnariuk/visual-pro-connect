@@ -110,6 +110,16 @@ export const toggleShareholderStatus = async (userId: string, isShareHolder: boo
         
       if (error) {
         console.warn("Error updating shareholder status in Supabase:", error);
+      } else {
+        // Update was successful
+        // Dispatch an event to notify other components about the shareholder status update
+        const statusUpdateEvent = new CustomEvent('shareholder-status-updated', { 
+          detail: { 
+            userId: userId,
+            isShareHolder: isShareHolder 
+          }
+        });
+        window.dispatchEvent(statusUpdateEvent);
       }
     } catch (supabaseError) {
       console.warn("Supabase connection error:", supabaseError);

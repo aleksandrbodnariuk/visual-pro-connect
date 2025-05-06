@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Upload, Save, X, Image } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { createStorageBuckets } from "@/lib/storage";
+import { createStorageBuckets, uploadToStorage } from "@/lib/storage";
 
 export function LogoUpload() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -89,62 +89,14 @@ export function LogoUpload() {
     const file = fileInputRef.current.files[0];
 
     try {
-      // Ensure the logos bucket exists
-      console.log('Перевіряю наявність бакета logos...');
-      try {
-        const { data: bucket, error } = await supabase.storage.getBucket('logos');
-        
-        if (error && !error.message.includes('does not exist')) {
-          console.error('Помилка перевірки бакета logos:', error);
-        }
-        
-        if (!bucket) {
-          console.log('Створюю бакет logos...');
-          const { error: createError } = await supabase.storage.createBucket('logos', {
-            public: true,
-            fileSizeLimit: 5242880, // 5MB
-          });
-          
-          if (createError) {
-            console.error('Помилка створення бакета logos:', createError);
-            throw createError;
-          } else {
-            console.log('Бакет logos успішно створено');
-          }
-        } else {
-          console.log('Бакет logos вже існує');
-        }
-      } catch (bucketError) {
-        console.error('Помилка при перевірці/створенні бакета:', bucketError);
-      }
-
       // Generate a unique filename with timestamp
       const uniqueFileName = `site-logo-${Date.now()}`;
       
-      // Upload file to storage
+      // Upload file to storage using our utility function
       console.log(`Завантаження логотипу ${uniqueFileName}...`);
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('logos')
-        .upload(uniqueFileName, file, {
-          upsert: true,
-          contentType: file.type,
-          cacheControl: '3600',
-        });
-        
-      if (uploadError) {
-        console.error('Помилка завантаження логотипу:', uploadError);
-        throw uploadError;
-      }
+      const publicUrl = await uploadToStorage('logos', uniqueFileName, file, file.type);
       
-      console.log('Логотип успішно завантажено:', uploadData);
-      
-      // Get the public URL
-      const { data: urlData } = supabase.storage
-        .from('logos')
-        .getPublicUrl(uniqueFileName);
-      
-      const publicUrl = urlData.publicUrl;
-      console.log('Публічний URL логотипу:', publicUrl);
+      console.log('Логотип успішно завантажено, URL:', publicUrl);
       
       // Save to site_settings table
       try {
@@ -176,6 +128,13 @@ export function LogoUpload() {
       }
       
       toast.success('Логотип успішно оновлено');
+      
+      // Dispatch an event to notify other components about logo update
+      const logoUpdateEvent = new CustomEvent('logo-updated', { 
+        detail: { logoUrl: publicUrl }
+      });
+      window.dispatchEvent(logoUpdateEvent);
+      
     } catch (error) {
       console.error('Помилка при завантаженні логотипу:', error);
       toast.error('Не вдалося завантажити логотип. Спробуйте ще раз.');
