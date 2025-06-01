@@ -1,6 +1,4 @@
 
-import { useState } from "react";
-import { toast } from "sonner";
 import { NavbarSearch } from "./NavbarSearch";
 import { NavbarNavigation } from "./NavbarNavigation";
 import { NavbarActions } from "./NavbarActions";
@@ -26,12 +24,6 @@ export function Navbar({
   const { getCurrentUser } = useAuthState();
   const currentUser = getCurrentUser();
   
-  // Add empty handler function for onOpenCreateModal
-  const handleOpenCreateModal = () => {
-    // This is just a placeholder function since we're not implementing the create modal here
-    toast.info("Функція створення публікації недоступна");
-  };
-  
   return (
     <header className={`sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur ${className}`}>
       <div className="container flex h-16 items-center justify-between">
@@ -51,10 +43,7 @@ export function Navbar({
           {showActions && (
             <div className="flex items-center">
               <NavbarActions />
-              <UserMenu 
-                currentUser={currentUser}
-                onOpenCreateModal={handleOpenCreateModal} 
-              />
+              <UserMenu currentUser={currentUser} />
             </div>
           )}
         </div>

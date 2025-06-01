@@ -41,6 +41,19 @@ export function Sidebar({ className }: SidebarProps) {
     }
   };
 
+  const handleHomeNavigation = () => {
+    try {
+      navigate('/');
+      // Force page refresh if needed
+      if (location.pathname === '/') {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Помилка при навігації до головної:', error);
+      window.location.href = '/';
+    }
+  };
+
   return (
     <aside className={cn("rounded-lg border bg-card overflow-hidden", className)}>
       <div className="p-4 space-y-4">
@@ -49,7 +62,7 @@ export function Sidebar({ className }: SidebarProps) {
           <Button 
             variant="ghost" 
             className="w-full justify-start" 
-            onClick={() => handleNavigate('/')}
+            onClick={handleHomeNavigation}
             data-active={location.pathname === "/"}
           >
             <Home className="mr-2 h-4 w-4" />

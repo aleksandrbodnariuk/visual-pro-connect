@@ -20,10 +20,9 @@ import { User as UserType } from "@/hooks/users/types";
 
 interface UserMenuProps {
   currentUser: UserType | null;
-  onOpenCreateModal: () => void;
 }
 
-export function UserMenu({ currentUser, onOpenCreateModal }: UserMenuProps) {
+export function UserMenu({ currentUser }: UserMenuProps) {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const t = translations[language];
@@ -116,12 +115,6 @@ export function UserMenu({ currentUser, onOpenCreateModal }: UserMenuProps) {
           <DropdownMenuItem onClick={handleProfileNavigation}>
             <User className="mr-2 h-4 w-4" />
             <span>{t.profile}</span>
-          </DropdownMenuItem>
-          
-          {/* Кнопка створення публікації тепер лише тут */}
-          <DropdownMenuItem onClick={onOpenCreateModal}>
-            <User className="mr-2 h-4 w-4" />
-            <span>Створити публікацію</span>
           </DropdownMenuItem>
           
           <DropdownMenuItem onClick={() => handleNavigate('/search')}>

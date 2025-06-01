@@ -15,38 +15,49 @@ export default function FriendsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   useEffect(() => {
-    // Завантажуємо поточного користувача
-    const userJSON = localStorage.getItem("currentUser");
-    if (userJSON) {
+    const loadData = async () => {
+      setIsLoading(true);
       try {
-        const user = JSON.parse(userJSON);
-        setCurrentUser(user);
+        // Завантажуємо поточного користувача
+        const userJSON = localStorage.getItem("currentUser");
+        if (userJSON) {
+          const user = JSON.parse(userJSON);
+          setCurrentUser(user);
+        }
+        
+        // Оновлюємо список друзів при завантаженні
+        await refreshFriendRequests();
       } catch (error) {
-        console.error("Помилка при завантаженні даних користувача:", error);
+        console.error("Помилка при завантаженні даних:", error);
+        toast.error("Помилка при завантаженні даних");
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
     
-    // Оновлюємо список друзів при завантаженні
-    refreshFriendRequests();
+    loadData();
   }, [refreshFriendRequests]);
   
   // Функція для пошуку користувачів
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!searchTerm.trim()) {
       setSearchResults([]);
       return;
     }
     
-    // Отримуємо всіх користувачів з localStorage
-    const usersJSON = localStorage.getItem("users");
-    if (!usersJSON) {
-      toast.error("Не вдалося знайти користувачів");
-      return;
-    }
+    setIsLoading(true);
     
     try {
+      // Отримуємо всіх користувачів з localStorage
+      const usersJSON = localStorage.getItem("users");
+      if (!usersJSON) {
+        toast.error("Не вдалося знайти користувачів");
+        return;
+      }
+      
       const allUsers = JSON.parse(usersJSON);
       
       // Фільтруємо користувачів за пошуковим запитом
@@ -72,16 +83,32 @@ export default function FriendsPage() {
     } catch (error) {
       console.error("Помилка при пошуку користувачів:", error);
       toast.error("Помилка при пошуку користувачів");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Функція для додавання користувача в друзі
-  const handleAddFriend = (userId: string) => {
-    if (userId.trim()) {
-      sendFriendRequest(userId.trim());
-      // Не очищуємо результати пошуку, щоб користувач бачив статус запиту
+  const handleAddFriend = async (userId: string) => {
+    if (!userId.trim()) return;
+    
+    try {
+      await sendFriendRequest(userId.trim());
+      // Оновлюємо дані після відправки запиту
+      await refreshFriendRequests();
+    } catch (error) {
+      console.error("Помилка при додаванні друга:", error);
+      toast.error("Помилка при додаванні друга");
     }
   };
+
+  if (isLoading && !currentUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Завантаження...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pb-10">
@@ -105,9 +132,9 @@ export default function FriendsPage() {
                   className="pl-8"
                 />
               </div>
-              <Button onClick={handleSearch}>
+              <Button onClick={handleSearch} disabled={isLoading}>
                 <Search className="mr-2 h-4 w-4" />
-                Знайти
+                {isLoading ? 'Пошук...' : 'Знайти'}
               </Button>
             </div>
           </div>
@@ -132,7 +159,7 @@ export default function FriendsPage() {
                       </div>
                       <Button 
                         onClick={() => handleAddFriend(user.id)} 
-                        disabled={isFriend}
+                        disabled={isFriend || isLoading}
                         variant={isFriend ? "outline" : "default"}
                       >
                         <UserPlus className="mr-2 h-4 w-4" />
@@ -157,7 +184,7 @@ export default function FriendsPage() {
                   onChange={e => setUserIdToAdd(e.target.value)}
                   className="w-full sm:max-w-xs"
                 />
-                <Button onClick={() => handleAddFriend(userIdToAdd)} disabled={!userIdToAdd}>
+                <Button onClick={() => handleAddFriend(userIdToAdd)} disabled={!userIdToAdd || isLoading}>
                   <UserPlus className="mr-2 h-4 w-4" />
                   Додати в друзі
                 </Button>
