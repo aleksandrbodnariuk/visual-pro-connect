@@ -73,13 +73,22 @@ export function LogoUpload() {
 
   const ensureStorageBucket = async () => {
     try {
-      // Перевіряємо, чи існує bucket
-      const { data: bucket, error: bucketError } = await supabase.storage.getBucket('logos');
+      console.log('Перевіряємо наявність bucket для логотипів...');
       
-      if (bucketError && bucketError.message.includes('does not exist')) {
+      // Перевіряємо, чи існує bucket
+      const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+      
+      if (listError) {
+        console.error('Помилка отримання списку bucket\'ів:', listError);
+        throw listError;
+      }
+      
+      const logoBucket = buckets?.find(bucket => bucket.name === 'logos');
+      
+      if (!logoBucket) {
         // Створюємо bucket, якщо його немає
         console.log('Створюємо bucket для логотипів...');
-        const { error: createError } = await supabase.storage.createBucket('logos', {
+        const { data: createData, error: createError } = await supabase.storage.createBucket('logos', {
           public: true,
           fileSizeLimit: 5242880, // 5MB
         });
@@ -89,16 +98,15 @@ export function LogoUpload() {
           throw createError;
         }
         
-        console.log('Bucket для логотипів успішно створено');
-      } else if (bucketError) {
-        console.error('Помилка перевірки bucket:', bucketError);
-        throw bucketError;
+        console.log('Bucket для логотипів успішно створено:', createData);
+      } else {
+        console.log('Bucket для логотипів вже існує');
       }
       
       return true;
     } catch (error) {
       console.error('Помилка роботи з bucket:', error);
-      return false;
+      throw error;
     }
   };
 
@@ -113,10 +121,7 @@ export function LogoUpload() {
 
     try {
       // Переконуємося, що bucket існує
-      const bucketExists = await ensureStorageBucket();
-      if (!bucketExists) {
-        throw new Error('Не вдалося підготувати сховище для завантаження');
-      }
+      await ensureStorageBucket();
 
       // Генеруємо унікальне ім'я файлу з timestamp
       const fileExtension = file.name.split('.').pop() || 'png';
@@ -185,7 +190,7 @@ export function LogoUpload() {
       });
       window.dispatchEvent(logoUpdateEvent);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Помилка при завантаженні логотипу:', error);
       toast.error(`Не вдалося завантажити логотип: ${error.message}`);
     } finally {

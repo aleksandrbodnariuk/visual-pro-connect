@@ -149,20 +149,27 @@ export function DatabaseDiagnostics() {
         if (storageResult.missingBuckets.includes(bucket.name)) {
           try {
             console.log(`Створюємо bucket ${bucket.name}...`);
+            
+            // Спочатку перевіряємо, чи bucket не існує
+            const { data: existingBuckets } = await supabase.storage.listBuckets();
+            const bucketExists = existingBuckets?.some(b => b.name === bucket.name);
+            
+            if (bucketExists) {
+              console.log(`Bucket ${bucket.name} вже існує`);
+              results.push(`${bucket.name}: вже існує`);
+              fixedCount++;
+              continue;
+            }
+            
+            // Створюємо bucket
             const { data, error } = await supabase.storage.createBucket(bucket.name, {
               public: bucket.public,
               fileSizeLimit: 52428800 // 50MB
             });
             
             if (error) {
-              if (error.message.includes('already exists')) {
-                console.log(`Bucket ${bucket.name} вже існує`);
-                results.push(`${bucket.name}: вже існує`);
-                fixedCount++;
-              } else {
-                console.error(`Помилка створення bucket ${bucket.name}:`, error);
-                results.push(`${bucket.name}: помилка - ${error.message}`);
-              }
+              console.error(`Помилка створення bucket ${bucket.name}:`, error);
+              results.push(`${bucket.name}: помилка - ${error.message}`);
             } else {
               console.log(`Bucket ${bucket.name} успішно створено:`, data);
               results.push(`${bucket.name}: успішно створено`);
@@ -170,7 +177,7 @@ export function DatabaseDiagnostics() {
             }
           } catch (bucketError: any) {
             console.error(`Не вдалося створити bucket ${bucket.name}:`, bucketError);
-            results.push(`${bucket.name}: критична помилка`);
+            results.push(`${bucket.name}: критична помилка - ${bucketError.message}`);
           }
         }
       }
@@ -178,13 +185,13 @@ export function DatabaseDiagnostics() {
       console.log('Результати створення bucket\'ів:', results);
       
       if (fixedCount > 0) {
-        toast.success(`Успішно створено/перевірено ${fixedCount} bucket'ів`);
+        toast.success(`Успішно створено/перевірено ${fixedCount} bucket'ів. Деталі: ${results.join(', ')}`);
         // Повторюємо діагностику через невелику затримку
         setTimeout(() => {
           runDiagnostics();
-        }, 1000);
+        }, 2000);
       } else {
-        toast.error("Не вдалося створити жодного bucket'а");
+        toast.error(`Не вдалося створити жодного bucket'а. Деталі: ${results.join(', ')}`);
       }
       
     } catch (error: any) {

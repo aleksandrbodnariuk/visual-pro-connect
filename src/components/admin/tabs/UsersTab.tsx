@@ -66,6 +66,7 @@ export function UsersTab() {
   const toggleShareholderStatus = async (userId: string, currentStatus: boolean) => {
     try {
       const newStatus = !currentStatus;
+      console.log(`Зміна статусу акціонера для ${userId}: ${currentStatus} -> ${newStatus}`);
       
       // Оновлюємо в Supabase
       try {
@@ -76,6 +77,8 @@ export function UsersTab() {
 
         if (error) {
           console.error("Помилка оновлення статусу акціонера в Supabase:", error);
+        } else {
+          console.log("Статус акціонера успішно оновлено в Supabase");
         }
       } catch (supabaseError) {
         console.warn("Не вдалося оновити в Supabase, оновлюємо локально:", supabaseError);
@@ -180,7 +183,7 @@ export function UsersTab() {
   const changeUserRole = async (userId: string, newRole: string) => {
     try {
       // Автоматично встановлюємо статуси залежно від ролі
-      const updates: any = {};
+      const updates: any = { role: newRole };
       
       if (newRole === "Адміністратор") {
         updates.is_admin = true;
@@ -302,7 +305,7 @@ export function UsersTab() {
         </div>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-8 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
+          <div className="grid grid-cols-7 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
             <div>ID</div>
             <div>Ім'я</div>
             <div>Телефон</div>
@@ -313,7 +316,7 @@ export function UsersTab() {
           </div>
 
           {filteredUsers.map((user) => (
-            <div key={user.id} className="grid grid-cols-8 gap-4 items-center py-2 border-b">
+            <div key={user.id} className="grid grid-cols-7 gap-4 items-center py-2 border-b">
               <div className="text-sm font-mono">{user.id.slice(0, 8)}...</div>
               <div>{user.full_name || 'Не вказано'}</div>
               <div>{user.phone_number || 'Не вказано'}</div>
@@ -343,7 +346,6 @@ export function UsersTab() {
                   <Select 
                     value={user.title || "Акціонер"} 
                     onValueChange={(value) => changeUserTitle(user.id, value)}
-                    disabled={false}
                   >
                     <SelectTrigger className="w-[120px]">
                       <SelectValue />

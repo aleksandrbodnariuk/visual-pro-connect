@@ -1,182 +1,182 @@
 
-import React, { useState, useEffect } from "react";
-import { PostCard } from "./PostCard";
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Image, Video, Users, Send } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useLanguage } from "@/context/LanguageContext";
-import { translations } from "@/lib/translations";
+import { PostCard } from "./PostCard";
 import { supabase } from "@/integrations/supabase/client";
 
 export function NewsFeed() {
   const [posts, setPosts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { language } = useLanguage();
-  const t = translations[language];
+  const [loading, setLoading] = useState(true);
+  const [newPostContent, setNewPostContent] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      setIsLoading(true);
-      try {
-        // Спочатку очищуємо демо-контент з localStorage
-        const storedPosts = JSON.parse(localStorage.getItem('posts') || '[]');
-        const cleanedPosts = storedPosts.filter((post: any) => 
-          !post.content?.includes("Опис нової фотосесії для молодят") &&
-          !post.content?.includes("Деталі про новий музичний кліп") &&
-          !post.content?.includes("демо") &&
-          !post.content?.includes("тест") &&
-          post.author !== "Олександр Петренко" && 
-          post.author !== "Марія Коваленко"
-        );
-        
-        // Зберігаємо очищені пости
-        localStorage.setItem('posts', JSON.stringify(cleanedPosts));
-
-        // Завантажуємо з Supabase
-        const { data: supabasePosts, error } = await supabase
-          .from('posts')
-          .select('*, user:user_id(*)')
-          .order('created_at', { ascending: false });
-
-        if (error && error.code !== 'PGRST116') {
-          console.error("Помилка завантаження постів з Supabase:", error);
-          setPosts(cleanedPosts);
-        } else if (supabasePosts && supabasePosts.length > 0) {
-          // Фільтруємо демо-пости з Supabase
-          const filteredSupabasePosts = supabasePosts.filter((post: any) => 
-            !post.content?.includes("Опис нової фотосесії для молодят") &&
-            !post.content?.includes("Деталі про новий музичний кліп") &&
-            !post.content?.includes("демо") &&
-            !post.content?.includes("тест") &&
-            post.user?.full_name !== "Олександр Петренко" && 
-            post.user?.full_name !== "Марія Коваленко"
-          );
-          
-          setPosts(filteredSupabasePosts);
-        } else {
-          setPosts(cleanedPosts);
-        }
-      } catch (error) {
-        console.error("Помилка завантаження постів:", error);
-        setPosts([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchPosts();
+    loadPosts();
   }, []);
 
-  const transformPostToProps = (post: any) => {
-    return {
-      id: post.id,
-      author: {
-        id: post.user_id || post.userId || post.user?.id || '',
-        name: post.user?.full_name || post.author || 'Користувач',
-        username: post.user?.phone_number || 'user',
-        avatarUrl: post.user?.avatar_url || '',
-        profession: post.category 
-          ? post.category === 'photo' 
-            ? 'Photographer' 
-            : post.category === 'video' 
-              ? 'Videographer' 
-              : post.category === 'music' 
-                ? 'Musician' 
-                : undefined
-          : undefined
-      },
-      imageUrl: post.media_url || post.mediaUrl || '',
-      caption: post.content || '',
-      likes: post.likes_count || 0,
-      comments: post.comments_count || 0,
-      timeAgo: post.created_at 
-        ? new Date(post.created_at).toLocaleDateString() 
-        : 'нещодавно'
-    };
+  const loadPosts = async () => {
+    try {
+      setLoading(true);
+      
+      // Спробуємо завантажити з Supabase
+      const { data: supabasePosts, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error && error.code !== 'PGRST116') {
+        console.error("Помилка завантаження постів з Supabase:", error);
+      }
+
+      if (supabasePosts && supabasePosts.length > 0) {
+        setPosts(supabasePosts);
+      } else {
+        // Якщо немає постів в Supabase, показуємо порожню стрічку
+        setPosts([]);
+      }
+    } catch (error) {
+      console.error("Помилка завантаження постів:", error);
+      setPosts([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">{t.feed}</h2>
+  const handleCreatePost = async () => {
+    if (!newPostContent.trim()) return;
+
+    try {
+      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      
+      const newPost = {
+        content: newPostContent,
+        user_id: currentUser.id || 'demo-user',
+        created_at: new Date().toISOString(),
+        likes_count: 0,
+        comments_count: 0,
+        category: activeCategory === 'all' ? null : activeCategory
+      };
+
+      // Спробуємо додати до Supabase
+      try {
+        const { data, error } = await supabase
+          .from('posts')
+          .insert([newPost])
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Помилка створення поста в Supabase:", error);
+        } else if (data) {
+          setPosts([data, ...posts]);
+          setNewPostContent("");
+          return;
+        }
+      } catch (supabaseError) {
+        console.warn("Не вдалося створити пост в Supabase:", supabaseError);
+      }
+
+      // Якщо Supabase не працює, додаємо локально
+      const localPost = {
+        ...newPost,
+        id: `local-${Date.now()}`,
+      };
+      
+      setPosts([localPost, ...posts]);
+      setNewPostContent("");
+    } catch (error) {
+      console.error("Помилка створення поста:", error);
+    }
+  };
+
+  const filteredPosts = posts.filter(post => {
+    if (activeCategory === "all") return true;
+    return post.category === activeCategory;
+  });
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="animate-pulse">
+          <div className="h-32 bg-gray-200 rounded-lg mb-4"></div>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-20 bg-gray-200 rounded-lg"></div>
+            ))}
+          </div>
+        </div>
       </div>
+    );
+  }
 
-      <Tabs defaultValue="all">
-        <TabsList className="w-full max-w-md mx-auto mb-4">
-          <TabsTrigger value="all" className="flex-1">{t.allPosts}</TabsTrigger>
-          <TabsTrigger value="photo" className="flex-1">{t.photoPosts}</TabsTrigger>
-          <TabsTrigger value="video" className="flex-1">{t.videoPosts}</TabsTrigger>
-          <TabsTrigger value="music" className="flex-1">{t.musicPosts}</TabsTrigger>
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Створення нового поста */}
+      <Card>
+        <CardContent className="p-6">
+          <Textarea
+            placeholder="Що у вас нового?"
+            value={newPostContent}
+            onChange={(e) => setNewPostContent(e.target.value)}
+            className="min-h-[100px] resize-none border-0 focus-visible:ring-0 text-lg"
+          />
+          <div className="flex justify-between items-center mt-4 pt-4 border-t">
+            <div className="flex space-x-4">
+              <Button variant="ghost" size="sm">
+                <Image className="h-4 w-4 mr-2" />
+                Фото
+              </Button>
+              <Button variant="ghost" size="sm">
+                <Video className="h-4 w-4 mr-2" />
+                Відео
+              </Button>
+              <Button variant="ghost" size="sm">
+                <Users className="h-4 w-4 mr-2" />
+                Подія
+              </Button>
+            </div>
+            <Button 
+              onClick={handleCreatePost} 
+              disabled={!newPostContent.trim()}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Опублікувати
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Фільтри категорій */}
+      <Tabs value={activeCategory} onValueChange={setActiveCategory}>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="all">Усі</TabsTrigger>
+          <TabsTrigger value="photo">Фото</TabsTrigger>
+          <TabsTrigger value="video">Відео</TabsTrigger>
+          <TabsTrigger value="music">Музика</TabsTrigger>
+          <TabsTrigger value="event">Події</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="all">
-          {isLoading ? (
-            <div className="text-center py-10">Завантаження постів...</div>
-          ) : posts.length > 0 ? (
-            <div className="space-y-6">
-              {posts.map((post) => (
-                <PostCard key={post.id} {...transformPostToProps(post)} />
-              ))}
-            </div>
+        
+        <TabsContent value={activeCategory} className="space-y-6 mt-6">
+          {filteredPosts.length > 0 ? (
+            filteredPosts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))
           ) : (
-            <div className="text-center py-10">
-              <p className="text-muted-foreground mb-4">
-                Поки що немає публікацій
-              </p>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="photo">
-          {isLoading ? (
-            <div className="text-center py-10">Завантаження...</div>
-          ) : posts.filter(post => post.category === 'photo').length > 0 ? (
-            <div className="space-y-6">
-              {posts
-                .filter(post => post.category === 'photo')
-                .map((post) => (
-                  <PostCard key={post.id} {...transformPostToProps(post)} />
-                ))}
-            </div>
-          ) : (
-            <div className="text-center py-10">
-              <p className="text-muted-foreground">Немає постів у категорії "Фото"</p>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="video">
-          {isLoading ? (
-            <div className="text-center py-10">Завантаження...</div>
-          ) : posts.filter(post => post.category === 'video').length > 0 ? (
-            <div className="space-y-6">
-              {posts
-                .filter(post => post.category === 'video')
-                .map((post) => (
-                  <PostCard key={post.id} {...transformPostToProps(post)} />
-                ))}
-            </div>
-          ) : (
-            <div className="text-center py-10">
-              <p className="text-muted-foreground">Немає постів у категорії "Відео"</p>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="music">
-          {isLoading ? (
-            <div className="text-center py-10">Завантаження...</div>
-          ) : posts.filter(post => post.category === 'music').length > 0 ? (
-            <div className="space-y-6">
-              {posts
-                .filter(post => post.category === 'music')
-                .map((post) => (
-                  <PostCard key={post.id} {...transformPostToProps(post)} />
-                ))}
-            </div>
-          ) : (
-            <div className="text-center py-10">
-              <p className="text-muted-foreground">Немає постів у категорії "Музика"</p>
-            </div>
+            <Card>
+              <CardContent className="p-8 text-center">
+                <div className="text-muted-foreground">
+                  {activeCategory === "all" 
+                    ? "Поки що немає публікацій. Створіть першу!" 
+                    : `Немає публікацій у категорії "${activeCategory}"`
+                  }
+                </div>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
       </Tabs>
