@@ -4,49 +4,66 @@ import { NavLink } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
 export function NavbarLogo() {
-  const [logoUrl, setLogoUrl] = useState<string | null>(localStorage.getItem('customLogo') || null);
-  const [siteName, setSiteName] = useState<string>(localStorage.getItem('siteName') || 'Спільнота B&C');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [siteName, setSiteName] = useState<string>('Спільнота B&C');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load logo from site_settings if available
     const loadLogoAndSiteName = async () => {
       try {
-        // Try to get logo URL
-        const { data: logoData, error: logoError } = await supabase
-          .from('site_settings')
-          .select('value')
-          .eq('id', 'site-logo')
-          .single();
-
-        if (!logoError && logoData) {
-          setLogoUrl(logoData.value);
-          localStorage.setItem('customLogo', logoData.value);
+        setIsLoading(true);
+        
+        // Спочатку завантажуємо з localStorage для швидкого відображення
+        const cachedLogo = localStorage.getItem('customLogo');
+        const cachedSiteName = localStorage.getItem('siteName');
+        
+        if (cachedLogo) {
+          setLogoUrl(cachedLogo);
+        }
+        if (cachedSiteName) {
+          setSiteName(cachedSiteName);
         }
 
-        // Try to get site name
-        const { data: nameData, error: nameError } = await supabase
-          .from('site_settings')
-          .select('value')
-          .eq('id', 'site-name')
-          .single();
+        // Потім перевіряємо Supabase
+        try {
+          const { data: logoData } = await supabase
+            .from('site_settings')
+            .select('value')
+            .eq('id', 'site-logo')
+            .maybeSingle();
 
-        if (!nameError && nameData) {
-          setSiteName(nameData.value);
-          localStorage.setItem('siteName', nameData.value);
+          if (logoData?.value) {
+            setLogoUrl(logoData.value);
+            localStorage.setItem('customLogo', logoData.value);
+          }
+
+          const { data: nameData } = await supabase
+            .from('site_settings')
+            .select('value')
+            .eq('id', 'site-name')
+            .maybeSingle();
+
+          if (nameData?.value) {
+            setSiteName(nameData.value);
+            localStorage.setItem('siteName', nameData.value);
+          }
+        } catch (supabaseError) {
+          console.warn('Не вдалося завантажити дані з Supabase:', supabaseError);
         }
       } catch (error) {
-        console.error('Failed to load logo or site name:', error);
+        console.error('Помилка завантаження логотипу:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     loadLogoAndSiteName();
 
-    // Listen for logo updates
+    // Слухачі подій для оновлень
     const handleLogoUpdate = (e: CustomEvent) => {
       setLogoUrl(e.detail.logoUrl);
     };
 
-    // Listen for site name updates
     const handleSiteNameUpdate = (e: CustomEvent) => {
       setSiteName(e.detail.siteName);
     };
@@ -62,15 +79,17 @@ export function NavbarLogo() {
 
   return (
     <NavLink to="/" className="flex items-center space-x-2">
-      {logoUrl ? (
+      {isLoading ? (
+        <div className="h-8 w-24 bg-gray-200 animate-pulse rounded"></div>
+      ) : logoUrl ? (
         <img 
           src={logoUrl} 
           alt={siteName}
           className="h-8 max-w-[120px] object-contain"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
-            target.onerror = null;
             target.style.display = 'none';
+            setLogoUrl(null);
           }}
         />
       ) : (

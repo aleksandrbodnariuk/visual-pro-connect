@@ -5,9 +5,6 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { NewsFeed } from "@/components/feed/NewsFeed";
 import { Hero } from "@/components/home/Hero";
 import { useLanguage } from "@/context/LanguageContext";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { syncAllUsersToSupabase } from "@/hooks/users/usersSync";
 
 export default function Index() {
   const { language } = useLanguage();
@@ -15,111 +12,30 @@ export default function Index() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const syncUserData = async () => {
-      setIsLoading(true);
+    const checkAuth = () => {
       try {
-        // Check if user is authenticated
         const currentUser = localStorage.getItem('currentUser');
-        const isUserLoggedIn = !!currentUser;
-        
-        setIsLoggedIn(isUserLoggedIn);
-        
-        // If user is logged in, try to get their data from Supabase
-        if (isUserLoggedIn) {
-          try {
-            const userData = JSON.parse(currentUser || "{}");
-            
-            // Check if user exists in Supabase
-            const { data: userFromDb, error } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', userData.id)
-              .maybeSingle();
-            
-            if (error && error.code !== 'PGRST116') {
-              console.error("Error fetching user from Supabase:", error);
-            }
-            
-            // If user doesn't exist in Supabase but is in localStorage
-            if (!userFromDb && userData.id) {
-              // Create record in Supabase
-              const { error: insertError } = await supabase
-                .from('users')
-                .insert({
-                  id: userData.id,
-                  full_name: userData.firstName && userData.lastName ? 
-                    `${userData.firstName} ${userData.lastName}` : userData.full_name || '',
-                  phone_number: userData.phoneNumber || '',
-                  is_admin: userData.isAdmin || userData.role === 'admin' || userData.role === 'admin-founder',
-                  is_shareholder: userData.isShareHolder || userData.role === 'shareholder',
-                  founder_admin: userData.isFounder || userData.role === 'admin-founder' || 
-                    userData.phoneNumber === '0507068007',
-                  avatar_url: userData.avatarUrl || '',
-                  banner_url: userData.bannerUrl || '',
-                  title: userData.title || '',
-                  password: userData.password || '',
-                  categories: userData.categories || [],
-                  bio: userData.bio || '',
-                  website: userData.website || '',
-                  instagram: userData.instagram || '',
-                  facebook: userData.facebook || '',
-                  viber: userData.viber || '',
-                  city: userData.city || '',
-                  country: userData.country || ''
-                });
-              
-              if (insertError) {
-                console.error("Error creating user in Supabase:", insertError);
-              } else {
-                console.log("User successfully created in Supabase");
-              }
-            } else if (userFromDb) {
-              // If user exists in Supabase but data might be outdated in localStorage
-              // Update localStorage with fresh data
-              const updatedUser = {
-                ...userData,
-                id: userFromDb.id,
-                firstName: userData.firstName || userFromDb.full_name?.split(' ')[0] || '',
-                lastName: userData.lastName || userFromDb.full_name?.split(' ')[1] || '',
-                phoneNumber: userData.phoneNumber || userFromDb.phone_number || '',
-                password: userFromDb.password || userData.password || '',
-                isAdmin: userFromDb.is_admin || userData.isAdmin || false,
-                isFounder: userFromDb.founder_admin || userData.isFounder || false,
-                isShareHolder: userFromDb.is_shareholder || userData.isShareHolder || false,
-                avatarUrl: userData.avatarUrl || userFromDb.avatar_url || '',
-                bannerUrl: userData.bannerUrl || userFromDb.banner_url || '',
-                title: userData.title || userFromDb.title || '',
-                categories: userFromDb.categories || userData.categories || [],
-                bio: userFromDb.bio || userData.bio || '',
-                website: userFromDb.website || userData.website || '',
-                instagram: userFromDb.instagram || userData.instagram || '',
-                facebook: userFromDb.facebook || userData.facebook || '',
-                viber: userFromDb.viber || userData.viber || '',
-                city: userFromDb.city || userData.city || '',
-                country: userFromDb.country || userData.country || ''
-              };
-              
-              localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-            }
-            
-            // Sync all users from localStorage to Supabase
-            await syncAllUsersToSupabase();
-          } catch (error) {
-            console.error("Error processing user data:", error);
-          }
-        }
+        setIsLoggedIn(!!currentUser);
       } catch (error) {
-        console.error("Error checking authentication status:", error);
+        console.error("Помилка перевірки авторизації:", error);
+        setIsLoggedIn(false);
       } finally {
         setIsLoading(false);
       }
     };
     
-    syncUserData();
+    checkAuth();
   }, []);
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Завантаження...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Завантаження...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

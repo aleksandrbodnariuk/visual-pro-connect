@@ -13,95 +13,51 @@ export function NewsFeed() {
   const { language } = useLanguage();
   const t = translations[language];
 
-  // Завантаження постів з Supabase або localStorage
   useEffect(() => {
     const fetchPosts = async () => {
       setIsLoading(true);
       try {
-        // Спробуємо отримати пости з Supabase
+        // Спочатку очищуємо демо-контент з localStorage
+        const storedPosts = JSON.parse(localStorage.getItem('posts') || '[]');
+        const cleanedPosts = storedPosts.filter((post: any) => 
+          !post.content?.includes("Опис нової фотосесії для молодят") &&
+          !post.content?.includes("Деталі про новий музичний кліп") &&
+          !post.content?.includes("демо") &&
+          !post.content?.includes("тест") &&
+          post.author !== "Олександр Петренко" && 
+          post.author !== "Марія Коваленко"
+        );
+        
+        // Зберігаємо очищені пости
+        localStorage.setItem('posts', JSON.stringify(cleanedPosts));
+
+        // Завантажуємо з Supabase
         const { data: supabasePosts, error } = await supabase
           .from('posts')
           .select('*, user:user_id(*)')
           .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error("Помилка отримання постів з Supabase:", error);
-          throw error;
-        }
-
-        if (supabasePosts && supabasePosts.length > 0) {
-          // Фільтруємо тестові пости 
-          const filteredPosts = supabasePosts.filter((post: any) => 
+        if (error && error.code !== 'PGRST116') {
+          console.error("Помилка завантаження постів з Supabase:", error);
+          setPosts(cleanedPosts);
+        } else if (supabasePosts && supabasePosts.length > 0) {
+          // Фільтруємо демо-пости з Supabase
+          const filteredSupabasePosts = supabasePosts.filter((post: any) => 
+            !post.content?.includes("Опис нової фотосесії для молодят") &&
+            !post.content?.includes("Деталі про новий музичний кліп") &&
+            !post.content?.includes("демо") &&
+            !post.content?.includes("тест") &&
             post.user?.full_name !== "Олександр Петренко" && 
-            post.user?.full_name !== "Марія Коваленко" &&
-            !post.content?.includes("Опис нової фотосесії для молодят") &&
-            !post.content?.includes("Деталі про новий музичний кліп")
+            post.user?.full_name !== "Марія Коваленко"
           );
           
-          setPosts(filteredPosts);
-          localStorage.setItem('posts', JSON.stringify(filteredPosts));
+          setPosts(filteredSupabasePosts);
         } else {
-          // Якщо у Supabase немає постів, перевіряємо localStorage
-          const storedPosts = JSON.parse(localStorage.getItem('posts') || '[]');
-          
-          // Видаляємо зразки постів з localStorage
-          const filteredPosts = storedPosts.filter((post: any) => 
-            post.author !== "Олександр Петренко" && 
-            post.author !== "Марія Коваленко" && 
-            !post.title?.includes("Нова фотосесія") &&
-            !post.title?.includes("Відеомонтаж кліпу") &&
-            !post.content?.includes("Опис нової фотосесії для молодят") &&
-            !post.content?.includes("Деталі про новий музичний кліп")
-          );
-          
-          // Зберігаємо очищені пости
-          localStorage.setItem('posts', JSON.stringify(filteredPosts));
-          setPosts(filteredPosts);
-          
-          // Спроба перенесення постів з localStorage у Supabase
-          if (filteredPosts.length > 0) {
-            for (const post of filteredPosts) {
-              try {
-                const { error: insertError } = await supabase
-                  .from('posts')
-                  .insert({
-                    id: post.id || crypto.randomUUID(),
-                    content: post.content,
-                    media_url: post.media_url || post.mediaUrl,
-                    user_id: post.user_id || post.userId,
-                    category: post.category,
-                    likes_count: post.likes_count || 0,
-                    comments_count: post.comments_count || 0
-                  });
-                
-                if (insertError) {
-                  console.warn("Помилка при додаванні поста в Supabase:", insertError);
-                }
-              } catch (insertErr) {
-                console.error("Помилка при додаванні поста в Supabase:", insertErr);
-              }
-            }
-          }
+          setPosts(cleanedPosts);
         }
       } catch (error) {
-        console.error("Помилка при завантаженні постів:", error);
-        
-        // Використовуємо дані з localStorage як запасний варіант
-        const storedPosts = JSON.parse(localStorage.getItem('posts') || '[]');
-        
-        // Видаляємо зразки постів з localStorage
-        const filteredPosts = storedPosts.filter((post: any) => 
-          post.author !== "Олександр Петренко" && 
-          post.author !== "Марія Коваленко" && 
-          !post.title?.includes("Нова фотосесія") &&
-          !post.title?.includes("Відеомонтаж кліпу") &&
-          !post.content?.includes("Опис нової фотосесії для молодят") &&
-          !post.content?.includes("Деталі про новий музичний кліп")
-        );
-        
-        // Зберігаємо очищені пости
-        localStorage.setItem('posts', JSON.stringify(filteredPosts));
-        setPosts(filteredPosts);
+        console.error("Помилка завантаження постів:", error);
+        setPosts([]);
       } finally {
         setIsLoading(false);
       }
@@ -110,7 +66,6 @@ export function NewsFeed() {
     fetchPosts();
   }, []);
 
-  // Helper function to transform post data to match PostCard props
   const transformPostToProps = (post: any) => {
     return {
       id: post.id,
@@ -165,9 +120,8 @@ export function NewsFeed() {
           ) : (
             <div className="text-center py-10">
               <p className="text-muted-foreground mb-4">
-                {t.noPostsYet}
+                Поки що немає публікацій
               </p>
-              <Button>{t.createPost}</Button>
             </div>
           )}
         </TabsContent>
