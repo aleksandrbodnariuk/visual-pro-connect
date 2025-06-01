@@ -5,8 +5,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+
+const AVAILABLE_TITLES = [
+  "Акціонер",
+  "Магнат", 
+  "Барон",
+  "Граф", 
+  "Маркіз",
+  "Лорд",
+  "Герцог",
+  "Імператор"
+];
+
+const AVAILABLE_ROLES = [
+  "Учасник",
+  "Акціонер", 
+  "Модератор",
+  "Адміністратор"
+];
 
 export function UsersTab() {
   const [users, setUsers] = useState<any[]>([]);
@@ -132,6 +151,98 @@ export function UsersTab() {
     }
   };
 
+  const changeUserTitle = async (userId: string, newTitle: string) => {
+    try {
+      // Оновлюємо в Supabase
+      try {
+        const { error } = await supabase
+          .from('users')
+          .update({ title: newTitle })
+          .eq('id', userId);
+
+        if (error) {
+          console.error("Помилка оновлення титулу в Supabase:", error);
+        }
+      } catch (supabaseError) {
+        console.warn("Не вдалося оновити титул в Supabase:", supabaseError);
+      }
+
+      // Оновлюємо локальний стан
+      const updatedUsers = users.map(user => 
+        user.id === userId 
+          ? { ...user, title: newTitle }
+          : user
+      );
+      
+      setUsers(updatedUsers);
+      
+      // Оновлюємо localStorage
+      localStorage.setItem('users', JSON.stringify(updatedUsers));
+      
+      toast.success(`Титул змінено на "${newTitle}"`);
+    } catch (error) {
+      console.error("Помилка зміни титулу:", error);
+      toast.error("Помилка зміни титулу");
+    }
+  };
+
+  const changeUserRole = async (userId: string, newRole: string) => {
+    try {
+      // Автоматично встановлюємо статуси залежно від ролі
+      const updates: any = {};
+      
+      if (newRole === "Адміністратор") {
+        updates.is_admin = true;
+      } else {
+        updates.is_admin = false;
+      }
+      
+      if (newRole === "Акціонер" || newRole === "Адміністратор") {
+        updates.is_shareholder = true;
+      } else {
+        updates.is_shareholder = false;
+      }
+
+      // Оновлюємо в Supabase
+      try {
+        const { error } = await supabase
+          .from('users')
+          .update(updates)
+          .eq('id', userId);
+
+        if (error) {
+          console.error("Помилка оновлення ролі в Supabase:", error);
+        }
+      } catch (supabaseError) {
+        console.warn("Не вдалося оновити роль в Supabase:", supabaseError);
+      }
+
+      // Оновлюємо локальний стан
+      const updatedUsers = users.map(user => 
+        user.id === userId 
+          ? { 
+              ...user, 
+              role: newRole,
+              is_admin: updates.is_admin,
+              isAdmin: updates.is_admin,
+              is_shareholder: updates.is_shareholder,
+              isShareHolder: updates.is_shareholder
+            }
+          : user
+      );
+      
+      setUsers(updatedUsers);
+      
+      // Оновлюємо localStorage
+      localStorage.setItem('users', JSON.stringify(updatedUsers));
+      
+      toast.success(`Роль змінено на "${newRole}"`);
+    } catch (error) {
+      console.error("Помилка зміни ролі:", error);
+      toast.error("Помилка зміни ролі");
+    }
+  };
+
   const deleteUser = async (userId: string) => {
     if (!confirm("Ви впевнені, що хочете видалити цього користувача?")) {
       return;
@@ -172,6 +283,13 @@ export function UsersTab() {
     return matchesSearch;
   });
 
+  const getUserRole = (user: any) => {
+    if (user.founder_admin) return "Засновник";
+    if (user.is_admin || user.isAdmin) return "Адміністратор";
+    if (user.is_shareholder || user.isShareHolder) return "Акціонер";
+    return user.role || "Учасник";
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -197,24 +315,63 @@ export function UsersTab() {
         </div>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-7 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
+          <div className="grid grid-cols-8 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
             <div>ID</div>
             <div>Ім'я</div>
             <div>Телефон</div>
-            <div>Статус</div>
+            <div>Роль</div>
+            <div>Титул</div>
             <div>Акціонер</div>
             <div>Дії</div>
           </div>
 
           {filteredUsers.map((user) => (
-            <div key={user.id} className="grid grid-cols-7 gap-4 items-center py-2 border-b">
+            <div key={user.id} className="grid grid-cols-8 gap-4 items-center py-2 border-b">
               <div className="text-sm font-mono">{user.id.slice(0, 8)}...</div>
               <div>{user.full_name || 'Не вказано'}</div>
               <div>{user.phone_number || 'Не вказано'}</div>
               <div>
-                {user.is_admin && <Badge>Адміністратор</Badge>}
-                {user.founder_admin && <Badge variant="destructive">Засновник</Badge>}
-                {!user.is_admin && !user.founder_admin && <Badge variant="outline">Активний</Badge>}
+                {!user.founder_admin ? (
+                  <Select 
+                    value={getUserRole(user)} 
+                    onValueChange={(value) => changeUserRole(user.id, value)}
+                  >
+                    <SelectTrigger className="w-[130px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AVAILABLE_ROLES.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Badge variant="destructive">Засновник</Badge>
+                )}
+              </div>
+              <div>
+                {(user.is_shareholder || user.isShareHolder || user.founder_admin) ? (
+                  <Select 
+                    value={user.title || "Акціонер"} 
+                    onValueChange={(value) => changeUserTitle(user.id, value)}
+                    disabled={user.founder_admin}
+                  >
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AVAILABLE_TITLES.map((title) => (
+                        <SelectItem key={title} value={title}>
+                          {title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
               </div>
               <div>
                 <Switch

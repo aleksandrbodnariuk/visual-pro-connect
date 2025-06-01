@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Upload, Save, X, Image } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { createStorageBuckets, uploadToStorage } from "@/lib/storage";
 
 export function LogoUpload() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -14,41 +13,34 @@ export function LogoUpload() {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Ensure storage buckets exist on component mount
-  useEffect(() => {
-    createStorageBuckets().catch(console.error);
-  }, []);
-
-  // Load the current logo when the component mounts
+  // Завантажуємо поточний логотип при завантаженні компонента
   useEffect(() => {
     const loadLogo = async () => {
-      // Check local storage first
+      // Спочатку перевіряємо localStorage для швидкого відображення
       const storedLogo = localStorage.getItem("customLogo");
       if (storedLogo) {
         setLogoUrl(storedLogo);
-        return;
       }
       
-      // If not in local storage, try to get from Supabase
+      // Потім перевіряємо Supabase
       try {
         const { data, error } = await supabase
           .from("site_settings")
           .select("value")
           .eq("id", "site-logo")
-          .single();
+          .maybeSingle();
           
         if (error && error.code !== 'PGRST116') {
-          console.error("Error loading logo:", error);
+          console.error("Помилка завантаження логотипу:", error);
           return;
         }
         
-        if (data) {
+        if (data?.value) {
           setLogoUrl(data.value);
-          // Also store in localStorage for components that use it
           localStorage.setItem("customLogo", data.value);
         }
       } catch (error) {
-        console.error("Failed to load logo from database:", error);
+        console.error("Не вдалося завантажити логотип з бази даних:", error);
       }
     };
     
@@ -59,24 +51,55 @@ export function LogoUpload() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
+    // Перевірка типу файлу
     if (!file.type.startsWith('image/')) {
       toast.error('Будь ласка, виберіть зображення');
       return;
     }
 
-    // Validate file size (2MB limit)
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Розмір файлу не повинен перевищувати 2MB');
+    // Перевірка розміру файлу (5MB ліміт)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Розмір файлу не повинен перевищувати 5MB');
       return;
     }
 
-    // Create preview
+    // Створюємо превью
     const reader = new FileReader();
     reader.onload = (event) => {
       setPreviewUrl(event.target?.result as string);
     };
     reader.readAsDataURL(file);
+  };
+
+  const ensureStorageBucket = async () => {
+    try {
+      // Перевіряємо, чи існує bucket
+      const { data: bucket, error: bucketError } = await supabase.storage.getBucket('logos');
+      
+      if (bucketError && bucketError.message.includes('does not exist')) {
+        // Створюємо bucket, якщо його немає
+        console.log('Створюємо bucket для логотипів...');
+        const { error: createError } = await supabase.storage.createBucket('logos', {
+          public: true,
+          fileSizeLimit: 5242880, // 5MB
+        });
+        
+        if (createError) {
+          console.error('Помилка створення bucket:', createError);
+          throw createError;
+        }
+        
+        console.log('Bucket для логотипів успішно створено');
+      } else if (bucketError) {
+        console.error('Помилка перевірки bucket:', bucketError);
+        throw bucketError;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Помилка роботи з bucket:', error);
+      return false;
+    }
   };
 
   const handleUploadLogo = async () => {
@@ -89,18 +112,45 @@ export function LogoUpload() {
     const file = fileInputRef.current.files[0];
 
     try {
-      // Generate a unique filename with timestamp
-      const uniqueFileName = `site-logo-${Date.now()}`;
+      // Переконуємося, що bucket існує
+      const bucketExists = await ensureStorageBucket();
+      if (!bucketExists) {
+        throw new Error('Не вдалося підготувати сховище для завантаження');
+      }
+
+      // Генеруємо унікальне ім'я файлу з timestamp
+      const fileExtension = file.name.split('.').pop() || 'png';
+      const uniqueFileName = `site-logo-${Date.now()}.${fileExtension}`;
       
-      // Upload file to storage using our utility function
+      // Завантажуємо файл
       console.log(`Завантаження логотипу ${uniqueFileName}...`);
-      const publicUrl = await uploadToStorage('logos', uniqueFileName, file, file.type);
       
-      console.log('Логотип успішно завантажено, URL:', publicUrl);
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(uniqueFileName, file, {
+          upsert: true,
+          contentType: file.type,
+          cacheControl: '3600',
+        });
+        
+      if (uploadError) {
+        console.error("Помилка завантаження файлу:", uploadError);
+        throw uploadError;
+      }
       
-      // Save to site_settings table
+      console.log('Файл успішно завантажено:', uploadData);
+      
+      // Отримуємо публічний URL
+      const { data: urlData } = supabase.storage
+        .from('logos')
+        .getPublicUrl(uniqueFileName);
+      
+      const publicUrl = urlData.publicUrl;
+      console.log('Публічний URL логотипу:', publicUrl);
+      
+      // Зберігаємо в таблицю site_settings
       try {
-        const { error } = await supabase
+        const { error: dbError } = await supabase
           .from('site_settings')
           .upsert({ 
             id: 'site-logo', 
@@ -108,28 +158,28 @@ export function LogoUpload() {
             updated_at: new Date().toISOString()
           });
           
-        if (error) {
-          console.error("Помилка збереження логотипу в базі даних:", error);
-          throw error;
+        if (dbError) {
+          console.error("Помилка збереження логотипу в базі даних:", dbError);
+          throw dbError;
         }
       } catch (dbError) {
         console.error("Помилка з'єднання з базою даних:", dbError);
         throw dbError;
       }
 
-      // Update local storage and state
+      // Оновлюємо локальний стан і localStorage
       localStorage.setItem("customLogo", publicUrl);
       setLogoUrl(publicUrl);
       setPreviewUrl(null);
       
-      // Clear the file input
+      // Очищуємо інпут
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
       
       toast.success('Логотип успішно оновлено');
       
-      // Dispatch an event to notify other components about logo update
+      // Відправляємо подію для оновлення інших компонентів
       const logoUpdateEvent = new CustomEvent('logo-updated', { 
         detail: { logoUrl: publicUrl }
       });
@@ -137,7 +187,7 @@ export function LogoUpload() {
       
     } catch (error) {
       console.error('Помилка при завантаженні логотипу:', error);
-      toast.error('Не вдалося завантажити логотип. Спробуйте ще раз.');
+      toast.error(`Не вдалося завантажити логотип: ${error.message}`);
     } finally {
       setIsUploading(false);
     }
@@ -168,8 +218,8 @@ export function LogoUpload() {
                   className="max-h-24 object-contain"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.src = '/placeholder.svg';
-                    target.onerror = null;
+                    target.style.display = 'none';
+                    setLogoUrl(null);
                   }}
                 />
               ) : (

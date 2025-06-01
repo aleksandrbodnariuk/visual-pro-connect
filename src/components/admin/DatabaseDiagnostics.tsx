@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 export function DatabaseDiagnostics() {
   const [isChecking, setIsChecking] = useState(false);
+  const [isFixing, setIsFixing] = useState(false);
   const [diagnostics, setDiagnostics] = useState<any>({
     supabase: null,
     github: null,
@@ -32,7 +33,7 @@ export function DatabaseDiagnostics() {
       return {
         status: 'success',
         message: 'З\'єднання успішне',
-        details: `Знайдено записів: ${data?.length || 0}`
+        details: `База даних працює коректно`
       };
     } catch (error) {
       return {
@@ -63,7 +64,8 @@ export function DatabaseDiagnostics() {
         return {
           status: 'warning',
           message: `Відсутні bucket'и: ${missingBuckets.join(', ')}`,
-          details: `Існуючі: ${existingBuckets.join(', ')}`
+          details: `Існуючі: ${existingBuckets.join(', ')}`,
+          missingBuckets
         };
       }
       
@@ -122,7 +124,16 @@ export function DatabaseDiagnostics() {
   };
 
   const fixStorageBuckets = async () => {
+    setIsFixing(true);
+    
     try {
+      const storageResult = diagnostics.supabase?.storage;
+      if (!storageResult?.missingBuckets || storageResult.missingBuckets.length === 0) {
+        toast.info("Немає проблем для виправлення");
+        setIsFixing(false);
+        return;
+      }
+      
       const requiredBuckets = [
         { name: 'avatars', public: true },
         { name: 'banners', public: true },
@@ -131,26 +142,49 @@ export function DatabaseDiagnostics() {
         { name: 'portfolio', public: true }
       ];
       
+      let fixedCount = 0;
+      
       for (const bucket of requiredBuckets) {
-        try {
-          const { error } = await supabase.storage.createBucket(bucket.name, {
-            public: bucket.public
-          });
-          
-          if (error && !error.message.includes('already exists')) {
-            console.error(`Помилка створення bucket ${bucket.name}:`, error);
+        if (storageResult.missingBuckets.includes(bucket.name)) {
+          try {
+            console.log(`Створюємо bucket ${bucket.name}...`);
+            const { data, error } = await supabase.storage.createBucket(bucket.name, {
+              public: bucket.public,
+              fileSizeLimit: 52428800 // 50MB
+            });
+            
+            if (error) {
+              if (error.message.includes('already exists')) {
+                console.log(`Bucket ${bucket.name} вже існує`);
+                fixedCount++;
+              } else {
+                console.error(`Помилка створення bucket ${bucket.name}:`, error);
+                throw error;
+              }
+            } else {
+              console.log(`Bucket ${bucket.name} успішно створено:`, data);
+              fixedCount++;
+            }
+          } catch (bucketError) {
+            console.error(`Не вдалося створити bucket ${bucket.name}:`, bucketError);
+            toast.error(`Помилка створення ${bucket.name}: ${bucketError.message}`);
           }
-        } catch (bucketError) {
-          console.warn(`Не вдалося створити bucket ${bucket.name}:`, bucketError);
         }
       }
       
-      toast.success("Спроба виправлення Storage завершена");
-      // Повторюємо діагностику
-      runDiagnostics();
+      if (fixedCount > 0) {
+        toast.success(`Виправлено ${fixedCount} проблем Storage`);
+        // Повторюємо діагностику після виправлення
+        await runDiagnostics();
+      } else {
+        toast.warning("Не вдалося виправити проблеми Storage");
+      }
+      
     } catch (error) {
       console.error("Помилка виправлення Storage:", error);
-      toast.error("Помилка виправлення Storage");
+      toast.error(`Помилка виправлення Storage: ${error.message}`);
+    } finally {
+      setIsFixing(false);
     }
   };
 
@@ -230,9 +264,21 @@ export function DatabaseDiagnostics() {
                 </div>
                 <div className="flex items-center gap-2">
                   {getStatusBadge(diagnostics.supabase.storage.status)}
-                  {diagnostics.supabase.storage.status !== 'success' && (
-                    <Button size="sm" variant="outline" onClick={fixStorageBuckets}>
-                      Виправити
+                  {diagnostics.supabase.storage.status === 'warning' && (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={fixStorageBuckets}
+                      disabled={isFixing}
+                    >
+                      {isFixing ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                          Виправляю...
+                        </>
+                      ) : (
+                        'Виправити'
+                      )}
                     </Button>
                   )}
                 </div>
