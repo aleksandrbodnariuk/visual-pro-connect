@@ -143,6 +143,7 @@ export function DatabaseDiagnostics() {
       ];
       
       let fixedCount = 0;
+      const results: string[] = [];
       
       for (const bucket of requiredBuckets) {
         if (storageResult.missingBuckets.includes(bucket.name)) {
@@ -156,31 +157,37 @@ export function DatabaseDiagnostics() {
             if (error) {
               if (error.message.includes('already exists')) {
                 console.log(`Bucket ${bucket.name} вже існує`);
+                results.push(`${bucket.name}: вже існує`);
                 fixedCount++;
               } else {
                 console.error(`Помилка створення bucket ${bucket.name}:`, error);
-                throw error;
+                results.push(`${bucket.name}: помилка - ${error.message}`);
               }
             } else {
               console.log(`Bucket ${bucket.name} успішно створено:`, data);
+              results.push(`${bucket.name}: успішно створено`);
               fixedCount++;
             }
-          } catch (bucketError) {
+          } catch (bucketError: any) {
             console.error(`Не вдалося створити bucket ${bucket.name}:`, bucketError);
-            toast.error(`Помилка створення ${bucket.name}: ${bucketError.message}`);
+            results.push(`${bucket.name}: критична помилка`);
           }
         }
       }
       
+      console.log('Результати створення bucket\'ів:', results);
+      
       if (fixedCount > 0) {
-        toast.success(`Виправлено ${fixedCount} проблем Storage`);
-        // Повторюємо діагностику після виправлення
-        await runDiagnostics();
+        toast.success(`Успішно створено/перевірено ${fixedCount} bucket'ів`);
+        // Повторюємо діагностику через невелику затримку
+        setTimeout(() => {
+          runDiagnostics();
+        }, 1000);
       } else {
-        toast.warning("Не вдалося виправити проблеми Storage");
+        toast.error("Не вдалося створити жодного bucket'а");
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Помилка виправлення Storage:", error);
       toast.error(`Помилка виправлення Storage: ${error.message}`);
     } finally {

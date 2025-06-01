@@ -51,16 +51,13 @@ export function UsersTab() {
 
       if (supabaseUsers && supabaseUsers.length > 0) {
         setUsers(supabaseUsers);
-        // Також оновлюємо localStorage
         localStorage.setItem('users', JSON.stringify(supabaseUsers));
       } else {
-        // Використовуємо localStorage як резерв
         const localUsers = JSON.parse(localStorage.getItem('users') || '[]');
         setUsers(localUsers);
       }
     } catch (error) {
       console.error("Помилка завантаження користувачів:", error);
-      // Використовуємо localStorage при помилці
       const localUsers = JSON.parse(localStorage.getItem('users') || '[]');
       setUsers(localUsers);
     }
@@ -92,8 +89,6 @@ export function UsersTab() {
       );
       
       setUsers(updatedUsers);
-      
-      // Оновлюємо localStorage
       localStorage.setItem('users', JSON.stringify(updatedUsers));
       
       // Оновлюємо поточного користувача, якщо це він
@@ -140,8 +135,6 @@ export function UsersTab() {
       );
       
       setUsers(updatedUsers);
-      
-      // Оновлюємо localStorage
       localStorage.setItem('users', JSON.stringify(updatedUsers));
       
       toast.success(`Статус адміністратора ${newStatus ? 'надано' : 'знято'}`);
@@ -175,8 +168,6 @@ export function UsersTab() {
       );
       
       setUsers(updatedUsers);
-      
-      // Оновлюємо localStorage
       localStorage.setItem('users', JSON.stringify(updatedUsers));
       
       toast.success(`Титул змінено на "${newTitle}"`);
@@ -232,8 +223,6 @@ export function UsersTab() {
       );
       
       setUsers(updatedUsers);
-      
-      // Оновлюємо localStorage
       localStorage.setItem('users', JSON.stringify(updatedUsers));
       
       toast.success(`Роль змінено на "${newRole}"`);
@@ -266,8 +255,6 @@ export function UsersTab() {
       // Видаляємо з локального стану
       const updatedUsers = users.filter(user => user.id !== userId);
       setUsers(updatedUsers);
-      
-      // Оновлюємо localStorage
       localStorage.setItem('users', JSON.stringify(updatedUsers));
       
       toast.success("Користувача видалено");
@@ -356,7 +343,7 @@ export function UsersTab() {
                   <Select 
                     value={user.title || "Акціонер"} 
                     onValueChange={(value) => changeUserTitle(user.id, value)}
-                    disabled={user.founder_admin}
+                    disabled={false}
                   >
                     <SelectTrigger className="w-[120px]">
                       <SelectValue />
