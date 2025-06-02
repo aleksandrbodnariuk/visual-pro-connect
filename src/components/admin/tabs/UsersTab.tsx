@@ -38,6 +38,8 @@ export function UsersTab() {
 
   const loadUsers = async () => {
     try {
+      console.log("Завантаження користувачів...");
+      
       // Завантажуємо з Supabase
       const { data: supabaseUsers, error } = await supabase
         .from('users')
@@ -50,10 +52,13 @@ export function UsersTab() {
       }
 
       if (supabaseUsers && supabaseUsers.length > 0) {
+        console.log("Завантажено з Supabase:", supabaseUsers.length, "користувачів");
         setUsers(supabaseUsers);
         localStorage.setItem('users', JSON.stringify(supabaseUsers));
       } else {
+        console.log("Завантаження з localStorage...");
         const localUsers = JSON.parse(localStorage.getItem('users') || '[]');
+        console.log("Завантажено з localStorage:", localUsers.length, "користувачів");
         setUsers(localUsers);
       }
     } catch (error) {
@@ -65,29 +70,45 @@ export function UsersTab() {
 
   const toggleShareholderStatus = async (userId: string) => {
     try {
-      console.log(`Зміна статусу акціонера для користувача: ${userId}`);
+      console.log(`=== Зміна статусу акціонера для користувача: ${userId} ===`);
       
       // Знаходимо поточного користувача
       const currentUser = users.find(user => user.id === userId);
       if (!currentUser) {
-        console.error("Користувача не знайдено");
+        console.error("Користувача не знайдено в масиві users");
+        toast.error("Користувача не знайдено");
         return;
       }
       
-      const currentStatus = currentUser.is_shareholder || false;
+      console.log("Поточний користувач:", currentUser);
+      
+      // Перевіряємо чи це засновник
+      if (currentUser.founder_admin || currentUser.phone_number === '0507068007') {
+        console.log("Це засновник - статус не можна змінювати");
+        toast.error("Неможливо змінити статус засновника");
+        return;
+      }
+      
+      const currentStatus = currentUser.is_shareholder || currentUser.isShareHolder || false;
       const newStatus = !currentStatus;
       
-      console.log(`Поточний статус: ${currentStatus}, новий статус: ${newStatus}`);
+      console.log(`Поточний статус акціонера: ${currentStatus}`);
+      console.log(`Новий статус акціонера: ${newStatus}`);
       
       // Оновлюємо в Supabase
       try {
+        console.log("Оновлення в Supabase...");
         const { error } = await supabase
           .from('users')
-          .update({ is_shareholder: newStatus })
+          .update({ 
+            is_shareholder: newStatus,
+            updated_at: new Date().toISOString()
+          })
           .eq('id', userId);
 
         if (error) {
           console.error("Помилка оновлення статусу акціонера в Supabase:", error);
+          throw error;
         } else {
           console.log("Статус акціонера успішно оновлено в Supabase");
         }
@@ -96,11 +117,19 @@ export function UsersTab() {
       }
 
       // Оновлюємо локальний стан
-      const updatedUsers = users.map(user => 
-        user.id === userId 
-          ? { ...user, is_shareholder: newStatus, isShareHolder: newStatus }
-          : user
-      );
+      console.log("Оновлення локального стану...");
+      const updatedUsers = users.map(user => {
+        if (user.id === userId) {
+          const updatedUser = { 
+            ...user, 
+            is_shareholder: newStatus, 
+            isShareHolder: newStatus 
+          };
+          console.log("Оновлений користувач:", updatedUser);
+          return updatedUser;
+        }
+        return user;
+      });
       
       setUsers(updatedUsers);
       localStorage.setItem('users', JSON.stringify(updatedUsers));
@@ -108,15 +137,18 @@ export function UsersTab() {
       // Оновлюємо поточного користувача, якщо це він
       const currentUserData = JSON.parse(localStorage.getItem('currentUser') || '{}');
       if (currentUserData.id === userId) {
+        console.log("Оновлення поточного користувача в localStorage...");
         const updatedCurrentUser = { 
           ...currentUserData, 
           isShareHolder: newStatus,
           is_shareholder: newStatus
         };
         localStorage.setItem('currentUser', JSON.stringify(updatedCurrentUser));
+        console.log("Поточний користувач оновлено:", updatedCurrentUser);
       }
       
       toast.success(`Статус акціонера ${newStatus ? 'надано' : 'знято'}`);
+      console.log(`=== Операція завершена успішно ===`);
     } catch (error) {
       console.error("Помилка зміни статусу акціонера:", error);
       toast.error("Помилка зміни статусу акціонера");
@@ -291,6 +323,14 @@ export function UsersTab() {
     return user.role || "Учасник";
   };
 
+  const isShareholderSwitchDisabled = (user: any) => {
+    return user.founder_admin || user.phone_number === '0507068007';
+  };
+
+  const getShareholderStatus = (user: any) => {
+    return user.is_shareholder || user.isShareHolder || false;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -353,7 +393,7 @@ export function UsersTab() {
                 )}
               </div>
               <div>
-                {(user.is_shareholder || user.isShareHolder || user.founder_admin) ? (
+                {(getShareholderStatus(user) || user.founder_admin) ? (
                   <Select 
                     value={user.title || "Акціонер"} 
                     onValueChange={(value) => changeUserTitle(user.id, value)}
@@ -375,10 +415,13 @@ export function UsersTab() {
               </div>
               <div>
                 <Switch
-                  checked={user.is_shareholder || user.isShareHolder || false}
+                  checked={getShareholderStatus(user)}
                   onCheckedChange={() => toggleShareholderStatus(user.id)}
-                  disabled={user.founder_admin}
+                  disabled={isShareholderSwitchDisabled(user)}
                 />
+                {isShareholderSwitchDisabled(user) && (
+                  <span className="text-xs text-muted-foreground ml-2">Засновник</span>
+                )}
               </div>
               <div className="flex space-x-2">
                 {!user.founder_admin && (
