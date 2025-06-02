@@ -164,7 +164,22 @@ export function NewsFeed() {
         <TabsContent value={activeCategory} className="space-y-6 mt-6">
           {filteredPosts.length > 0 ? (
             filteredPosts.map((post) => (
-              <PostCard key={post.id} post={post} />
+              <PostCard 
+                key={post.id}
+                id={post.id}
+                author={{
+                  id: post.user_id || 'demo-user',
+                  name: 'Користувач',
+                  username: 'user',
+                  avatarUrl: '',
+                  profession: ''
+                }}
+                imageUrl="/placeholder.svg"
+                caption={post.content || ''}
+                likes={post.likes_count || 0}
+                comments={post.comments_count || 0}
+                timeAgo="щойно"
+              />
             ))
           ) : (
             <Card>
