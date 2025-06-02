@@ -1,20 +1,25 @@
 
-import { Navbar } from "@/components/layout/Navbar";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { Hero } from "@/components/home/Hero";
 import { NewsFeed } from "@/components/feed/NewsFeed";
+import { Sidebar } from "@/components/layout/Sidebar";
 
-export default function Index() {
+const Index = () => {
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+    <div className="min-h-screen bg-gray-50">
       <div className="flex">
+        {/* Sidebar */}
         <Sidebar />
-        <main className="flex-1 ml-64">
-          <div className="container py-6">
+        
+        {/* Main content */}
+        <div className="flex-1 ml-64">
+          <Hero />
+          <div className="container mx-auto px-4 py-8">
             <NewsFeed />
           </div>
-        </main>
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default Index;
