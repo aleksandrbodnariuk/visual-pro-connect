@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,10 +62,21 @@ export function UsersTab() {
     }
   };
 
-  const toggleShareholderStatus = async (userId: string, currentStatus: boolean) => {
+  const toggleShareholderStatus = async (userId: string) => {
     try {
+      console.log(`Зміна статусу акціонера для користувача: ${userId}`);
+      
+      // Знаходимо поточного користувача
+      const currentUser = users.find(user => user.id === userId);
+      if (!currentUser) {
+        console.error("Користувача не знайдено");
+        return;
+      }
+      
+      const currentStatus = currentUser.is_shareholder || false;
       const newStatus = !currentStatus;
-      console.log(`Зміна статусу акціонера для ${userId}: ${currentStatus} -> ${newStatus}`);
+      
+      console.log(`Поточний статус: ${currentStatus}, новий статус: ${newStatus}`);
       
       // Оновлюємо в Supabase
       try {
@@ -95,10 +105,10 @@ export function UsersTab() {
       localStorage.setItem('users', JSON.stringify(updatedUsers));
       
       // Оновлюємо поточного користувача, якщо це він
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      if (currentUser.id === userId) {
+      const currentUserData = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      if (currentUserData.id === userId) {
         const updatedCurrentUser = { 
-          ...currentUser, 
+          ...currentUserData, 
           isShareHolder: newStatus,
           is_shareholder: newStatus
         };
@@ -365,7 +375,7 @@ export function UsersTab() {
               <div>
                 <Switch
                   checked={user.is_shareholder || user.isShareHolder || false}
-                  onCheckedChange={() => toggleShareholderStatus(user.id, user.is_shareholder || user.isShareHolder)}
+                  onCheckedChange={() => toggleShareholderStatus(user.id)}
                   disabled={user.founder_admin}
                 />
               </div>
