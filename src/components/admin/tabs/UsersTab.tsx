@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -80,10 +81,10 @@ export function UsersTab() {
       
       console.log("Поточний користувач:", currentUser);
       
-      // Перевіряємо, чи це засновник
-      if (currentUser.founder_admin || currentUser.phone_number === '0507068007') {
-        console.log("Це засновник - статус не можна змінювати");
-        toast.error("Неможливо змінити статус засновника");
+      // Перевіряємо, чи це засновник (за номером телефону)
+      if (currentUser.phone_number === '0507068007' || currentUser.founder_admin) {
+        console.log("Це засновник - статус акціонера незмінний");
+        toast.error("Неможливо змінити статус акціонера для засновника");
         return;
       }
       
@@ -310,17 +311,26 @@ export function UsersTab() {
   });
 
   const getUserRole = (user: any) => {
-    if (user.founder_admin) return "Засновник";
+    if (user.founder_admin || user.phone_number === '0507068007') return "Засновник";
     if (user.is_admin || user.isAdmin) return "Адміністратор";
     if (user.is_shareholder || user.isShareHolder) return "Акціонер";
     return user.role || "Учасник";
   };
 
+  // Перемикач акціонера активний для всіх, крім засновника
   const isShareholderSwitchDisabled = (user: any) => {
     return user.founder_admin || user.phone_number === '0507068007';
   };
 
   const getShareholderStatus = (user: any) => {
+    return Boolean(user.is_shareholder);
+  };
+
+  // Засновник завжди є акціонером
+  const getFounderShareholderStatus = (user: any) => {
+    if (user.founder_admin || user.phone_number === '0507068007') {
+      return true; // Засновник завжди акціонер
+    }
     return Boolean(user.is_shareholder);
   };
 
@@ -365,7 +375,7 @@ export function UsersTab() {
               <div>{user.full_name || 'Не вказано'}</div>
               <div>{user.phone_number || 'Не вказано'}</div>
               <div>
-                {!user.founder_admin ? (
+                {!(user.founder_admin || user.phone_number === '0507068007') ? (
                   <Select 
                     value={getUserRole(user)} 
                     onValueChange={(value) => changeUserRole(user.id, value)}
@@ -386,7 +396,7 @@ export function UsersTab() {
                 )}
               </div>
               <div>
-                {(getShareholderStatus(user) || user.founder_admin) ? (
+                {(getFounderShareholderStatus(user) || user.founder_admin) ? (
                   <Select 
                     value={user.title || "Акціонер"} 
                     onValueChange={(value) => changeUserTitle(user.id, value)}
@@ -406,9 +416,9 @@ export function UsersTab() {
                   <span className="text-muted-foreground">-</span>
                 )}
               </div>
-              <div>
+              <div className="flex items-center">
                 <Switch
-                  checked={getShareholderStatus(user)}
+                  checked={getFounderShareholderStatus(user)}
                   onCheckedChange={() => toggleShareholderStatus(user.id)}
                   disabled={isShareholderSwitchDisabled(user)}
                 />
@@ -417,7 +427,7 @@ export function UsersTab() {
                 )}
               </div>
               <div className="flex space-x-2">
-                {!user.founder_admin && (
+                {!(user.founder_admin || user.phone_number === '0507068007') && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -426,7 +436,7 @@ export function UsersTab() {
                     {user.is_admin || user.isAdmin ? 'Зняти адміна' : 'Зробити адміном'}
                   </Button>
                 )}
-                {!user.founder_admin && (
+                {!(user.founder_admin || user.phone_number === '0507068007') && (
                   <Button
                     variant="destructive"
                     size="sm"

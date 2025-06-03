@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 import { useAuthState } from '@/hooks/auth/useAuthState';
+import { Hero } from '@/components/home/Hero';
 
 import LoginForm from '@/components/auth/LoginForm';
 import RegisterForm from '@/components/auth/RegisterForm';
@@ -44,13 +45,21 @@ export default function Auth() {
   };
   
   return (
-    <AuthStepManager 
-      authStep={authStep}
-      isLogin={isLogin}
-      setIsLogin={setIsLogin}
-      setAuthStep={setAuthStep}
-      resetPhoneNumber={resetPhoneNumber}
-      onCodeVerified={handleCodeVerified}
-    />
+    <div className="min-h-screen">
+      {/* Hero секція для неавторизованих користувачів */}
+      <Hero />
+      
+      {/* Форми авторизації */}
+      <div className="container py-8">
+        <AuthStepManager 
+          authStep={authStep}
+          isLogin={isLogin}
+          setIsLogin={setIsLogin}
+          setAuthStep={setAuthStep}
+          resetPhoneNumber={resetPhoneNumber}
+          onCodeVerified={handleCodeVerified}
+        />
+      </div>
+    </div>
   );
 }
