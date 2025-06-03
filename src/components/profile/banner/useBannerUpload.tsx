@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { uploadToStorage } from '@/lib/storage';
@@ -13,7 +14,6 @@ export function useBannerUpload(
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Update state if bannerUrl prop changes
   useEffect(() => {
     if (existingBannerUrl !== undefined) {
       setBannerUrl(existingBannerUrl);
@@ -24,18 +24,18 @@ export function useBannerUpload(
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // File validation
+    // Обмеження розміру файлу до 3MB для банерів
+    const maxSize = 3 * 1024 * 1024; // 3MB
+    if (file.size > maxSize) {
+      toast.error('Розмір файлу не повинен перевищувати 3MB для банера');
+      return;
+    }
+
     if (!file.type.startsWith('image/')) {
       toast.error('Будь ласка, виберіть зображення');
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Розмір файлу не повинен перевищувати 5MB');
-      return;
-    }
-
-    // Create a preview URL
     const fileReader = new FileReader();
     fileReader.onload = (event) => {
       setPreviewUrl(event.target?.result as string);
@@ -43,11 +43,10 @@ export function useBannerUpload(
     fileReader.readAsDataURL(file);
   };
 
-  // Update handleUpload to return a string (the URL) instead of void
   const handleUpload = async (): Promise<string> => {
     if (!fileInputRef.current?.files?.length) {
       toast.error('Будь ласка, виберіть файл');
-      return ''; // Return empty string on error
+      return '';
     }
 
     const file = fileInputRef.current.files[0];
@@ -55,49 +54,17 @@ export function useBannerUpload(
     let uploadedUrl = '';
 
     try {
-      console.log('Перевіряю наявність бакета banners...');
+      console.log('Завантаження банера для користувача:', userId);
       
-      // Ensure banner bucket exists
-      try {
-        const { data: bucket, error } = await supabase.storage.getBucket('banners');
-        
-        if (error && !error.message.includes('does not exist')) {
-          console.error('Помилка перевірки бакета banners:', error);
-        }
-        
-        if (!bucket) {
-          console.log('Створюю бакет banners...');
-          const { error: createError } = await supabase.storage.createBucket('banners', {
-            public: true,
-            fileSizeLimit: 5242880, // 5MB
-          });
-          
-          if (createError) {
-            console.error('Помилка створення бакета banners:', createError);
-            throw createError;
-          } else {
-            console.log('Бакет banners успішно створено');
-          }
-        } else {
-          console.log('Бакет banners вже існує');
-        }
-      } catch (bucketError) {
-        console.error('Помилка при перевірці/створенні бакета:', bucketError);
-      }
-
-      // Create a unique filename
-      const uniqueFileName = `${userId}-${Date.now()}`;
+      const fileExtension = file.name.split('.').pop() || 'jpg';
+      const uniqueFileName = `${userId}-${Date.now()}.${fileExtension}`;
       const filePath = `banners/${uniqueFileName}`;
       
-      console.log(`Завантаження банера для користувача ${userId}...`);
-      
-      // Upload using the improved storage utility
       const publicUrl = await uploadToStorage('banners', filePath, file, file.type);
       uploadedUrl = publicUrl;
       
       console.log('Банер успішно завантажено, URL:', publicUrl);
 
-      // Update the banner URL in the database
       try {
         const { error: updateError } = await supabase
           .from('users')
@@ -106,27 +73,24 @@ export function useBannerUpload(
         
         if (updateError) {
           console.error('Помилка оновлення банера в профілі користувача:', updateError);
-          throw updateError;
         }
       } catch (dbError) {
-        console.error('Помилка з\'єднання з базою даних:', dbError);
+        console.warn('Не вдалося оновити в базі даних:', dbError);
       }
 
-      // Update the banner URL in localStorage for the current user
+      // Оновлюємо localStorage
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
       if (currentUser && currentUser.id === userId) {
         currentUser.banner_url = publicUrl;
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
       }
 
-      // Update state and callback
       setBannerUrl(publicUrl);
       setPreviewUrl(null);
       if (onComplete) {
         onComplete(publicUrl);
       }
 
-      // Clear the file input and reset preview
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -134,12 +98,12 @@ export function useBannerUpload(
       toast.success('Банер успішно оновлено');
     } catch (error) {
       console.error('Помилка при завантаженні банера:', error);
-      toast.error('Не вдалося завантажити банер');
+      toast.error('Не вдалося завантажити банер. Спробуйте зменшити розмір файлу до 3MB.');
     } finally {
       setIsUploading(false);
     }
 
-    return uploadedUrl; // Return the uploaded URL
+    return uploadedUrl;
   };
 
   const handleCancel = () => {
@@ -149,13 +113,11 @@ export function useBannerUpload(
     }
   };
 
-  // Update removeBanner to return a boolean instead of void
   const removeBanner = async (): Promise<boolean> => {
     setIsUploading(true);
     let success = false;
 
     try {
-      // Remove the banner URL from the database
       const { error } = await supabase
         .from('users')
         .update({ banner_url: null })
@@ -166,14 +128,12 @@ export function useBannerUpload(
         throw error;
       }
 
-      // Update the banner URL in localStorage for the current user
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
       if (currentUser && currentUser.id === userId) {
         currentUser.banner_url = null;
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
       }
 
-      // Update state
       setBannerUrl(null);
       setPreviewUrl(null);
 

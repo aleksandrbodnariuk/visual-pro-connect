@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Upload, Save, X, Image } from "lucide-react";
 import { toast } from "sonner";
+import { uploadToStorage } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 
 export function LogoUpload() {
@@ -13,16 +14,13 @@ export function LogoUpload() {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Завантажуємо поточний логотип при завантаженні компонента
   useEffect(() => {
     const loadLogo = async () => {
-      // Спочатку перевіряємо localStorage для швидкого відображення
       const storedLogo = localStorage.getItem("customLogo");
       if (storedLogo) {
         setLogoUrl(storedLogo);
       }
       
-      // Потім перевіряємо Supabase
       try {
         const { data, error } = await supabase
           .from("site_settings")
@@ -51,63 +49,23 @@ export function LogoUpload() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Перевірка типу файлу
     if (!file.type.startsWith('image/')) {
       toast.error('Будь ласка, виберіть зображення');
       return;
     }
 
-    // Перевірка розміру файлу (5MB ліміт)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Розмір файлу не повинен перевищувати 5MB');
+    // Обмеження розміру до 1MB для логотипу
+    const maxSize = 1 * 1024 * 1024; // 1MB
+    if (file.size > maxSize) {
+      toast.error('Розмір файлу не повинен перевищувати 1MB для логотипу');
       return;
     }
 
-    // Створюємо превью
     const reader = new FileReader();
     reader.onload = (event) => {
       setPreviewUrl(event.target?.result as string);
     };
     reader.readAsDataURL(file);
-  };
-
-  const ensureStorageBucket = async () => {
-    try {
-      console.log('Перевіряємо наявність bucket для логотипів...');
-      
-      // Перевіряємо, чи існує bucket
-      const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-      
-      if (listError) {
-        console.error('Помилка отримання списку bucket\'ів:', listError);
-        throw listError;
-      }
-      
-      const logoBucket = buckets?.find(bucket => bucket.name === 'logos');
-      
-      if (!logoBucket) {
-        // Створюємо bucket, якщо його немає
-        console.log('Створюємо bucket для логотипів...');
-        const { data: createData, error: createError } = await supabase.storage.createBucket('logos', {
-          public: true,
-          fileSizeLimit: 5242880, // 5MB
-        });
-        
-        if (createError) {
-          console.error('Помилка створення bucket:', createError);
-          throw createError;
-        }
-        
-        console.log('Bucket для логотипів успішно створено:', createData);
-      } else {
-        console.log('Bucket для логотипів вже існує');
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Помилка роботи з bucket:', error);
-      throw error;
-    }
   };
 
   const handleUploadLogo = async () => {
@@ -120,40 +78,16 @@ export function LogoUpload() {
     const file = fileInputRef.current.files[0];
 
     try {
-      // Переконуємося, що bucket існує
-      await ensureStorageBucket();
-
-      // Генеруємо унікальне ім'я файлу з timestamp
       const fileExtension = file.name.split('.').pop() || 'png';
       const uniqueFileName = `site-logo-${Date.now()}.${fileExtension}`;
+      const filePath = `logos/${uniqueFileName}`;
       
-      // Завантажуємо файл
       console.log(`Завантаження логотипу ${uniqueFileName}...`);
       
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('logos')
-        .upload(uniqueFileName, file, {
-          upsert: true,
-          contentType: file.type,
-          cacheControl: '3600',
-        });
-        
-      if (uploadError) {
-        console.error("Помилка завантаження файлу:", uploadError);
-        throw uploadError;
-      }
+      const publicUrl = await uploadToStorage('logos', filePath, file, file.type);
       
-      console.log('Файл успішно завантажено:', uploadData);
-      
-      // Отримуємо публічний URL
-      const { data: urlData } = supabase.storage
-        .from('logos')
-        .getPublicUrl(uniqueFileName);
-      
-      const publicUrl = urlData.publicUrl;
       console.log('Публічний URL логотипу:', publicUrl);
       
-      // Зберігаємо в таблицю site_settings
       try {
         const { error: dbError } = await supabase
           .from('site_settings')
@@ -165,26 +99,21 @@ export function LogoUpload() {
           
         if (dbError) {
           console.error("Помилка збереження логотипу в базі даних:", dbError);
-          throw dbError;
         }
       } catch (dbError) {
-        console.error("Помилка з'єднання з базою даних:", dbError);
-        throw dbError;
+        console.warn("Не вдалося зберегти в базі даних:", dbError);
       }
 
-      // Оновлюємо локальний стан і localStorage
       localStorage.setItem("customLogo", publicUrl);
       setLogoUrl(publicUrl);
       setPreviewUrl(null);
       
-      // Очищуємо інпут
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
       
       toast.success('Логотип успішно оновлено');
       
-      // Відправляємо подію для оновлення інших компонентів
       const logoUpdateEvent = new CustomEvent('logo-updated', { 
         detail: { logoUrl: publicUrl }
       });
@@ -192,7 +121,7 @@ export function LogoUpload() {
       
     } catch (error: any) {
       console.error('Помилка при завантаженні логотипу:', error);
-      toast.error(`Не вдалося завантажити логотип: ${error.message}`);
+      toast.error('Не вдалося завантажити логотип. Спробуйте зменшити розмір файлу до 1MB.');
     } finally {
       setIsUploading(false);
     }
@@ -209,7 +138,7 @@ export function LogoUpload() {
     <Card>
       <CardHeader>
         <CardTitle>Завантаження логотипу</CardTitle>
-        <CardDescription>Змініть логотип сайту</CardDescription>
+        <CardDescription>Змініть логотип сайту (рекомендований розмір: до 1MB, формат: PNG/JPG)</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
@@ -251,7 +180,7 @@ export function LogoUpload() {
               onClick={() => fileInputRef.current?.click()}
               className="w-full"
             >
-              <Upload className="mr-2 h-4 w-4" /> Вибрати логотип
+              <Upload className="mr-2 h-4 w-4" /> Вибрати логотип (до 1MB)
             </Button>
           </div>
 

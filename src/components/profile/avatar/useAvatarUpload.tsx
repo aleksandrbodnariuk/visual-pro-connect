@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { uploadToStorage } from '@/lib/storage';
@@ -12,73 +13,44 @@ export function useAvatarUpload(
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // This effect ensures we update the URL if it changes externally
   useEffect(() => {
     if (initialAvatarUrl !== undefined) {
       setAvatarUrl(initialAvatarUrl);
     }
   }, [initialAvatarUrl]);
 
-  // Handle file upload for avatar
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // File validation
-    if (!file.type.startsWith('image/')) {
-      toast.error('Будь ласка, виберіть зображення');
+    // Обмеження розміру файлу до 2MB для аватарів
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      toast.error('Розмір файлу не повинен перевищувати 2MB');
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Розмір файлу не повинен перевищувати 5MB');
+    if (!file.type.startsWith('image/')) {
+      toast.error('Будь ласка, виберіть зображення');
       return;
     }
 
     setIsUploading(true);
 
     try {
-      console.log('Створюємо бакет avatars якщо він не існує...');
+      console.log('Завантаження аватара для користувача:', userId);
       
-      // Ensure avatar bucket exists
-      try {
-        const { data: bucket, error } = await supabase.storage.getBucket('avatars');
-        
-        if (error && !error.message.includes('does not exist')) {
-          console.error('Помилка перевірки бакета avatars:', error);
-        }
-        
-        if (!bucket) {
-          const { error: createError } = await supabase.storage.createBucket('avatars', {
-            public: true,
-            fileSizeLimit: 5242880, // 5MB
-          });
-          
-          if (createError) {
-            console.error('Помилка створення бакета avatars:', createError);
-            throw createError;
-          } else {
-            console.log('Бакет avatars успішно створено');
-          }
-        } else {
-          console.log('Бакет avatars вже існує');
-        }
-      } catch (bucketError) {
-        console.error('Помилка при перевірці/створенні бакета:', bucketError);
-      }
-
-      // Use timestamp to ensure unique file name
-      const uniqueFileName = `${userId}-${Date.now()}`;
+      // Створюємо унікальне ім'я файлу
+      const fileExtension = file.name.split('.').pop() || 'jpg';
+      const uniqueFileName = `${userId}-${Date.now()}.${fileExtension}`;
       const filePath = `avatars/${uniqueFileName}`;
       
-      console.log(`Завантаження аватара для користувача ${userId}...`);
-      
-      // Upload the file
+      // Використовуємо uploadToStorage з lib/storage
       const publicUrl = await uploadToStorage('avatars', filePath, file, file.type);
       
       console.log('Аватар успішно завантажено, URL:', publicUrl);
 
-      // Update the avatar URL in the database
+      // Оновлюємо URL аватара в базі даних
       try {
         const { error: updateError } = await supabase
           .from('users')
@@ -87,20 +59,27 @@ export function useAvatarUpload(
         
         if (updateError) {
           console.error('Помилка оновлення аватара користувача:', updateError);
-          throw updateError;
         }
       } catch (dbError) {
-        console.error('Помилка з\'єднання з базою даних:', dbError);
+        console.warn('Не вдалося оновити в базі даних:', dbError);
       }
 
-      // Update the avatar URL in localStorage for the current user
+      // Оновлюємо localStorage
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
       if (currentUser && currentUser.id === userId) {
         currentUser.avatar_url = publicUrl;
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
       }
 
-      // Update state and callback
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const updatedUsers = users.map((user: any) => {
+        if (user.id === userId) {
+          return { ...user, avatar_url: publicUrl };
+        }
+        return user;
+      });
+      localStorage.setItem('users', JSON.stringify(updatedUsers));
+
       setAvatarUrl(publicUrl);
       if (onAvatarChange) {
         onAvatarChange(publicUrl);
@@ -109,7 +88,7 @@ export function useAvatarUpload(
       toast.success('Аватар успішно оновлено');
     } catch (error) {
       console.error('Помилка при завантаженні аватара:', error);
-      toast.error('Не вдалося завантажити аватар');
+      toast.error('Не вдалося завантажити аватар. Спробуйте зменшити розмір файлу.');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {

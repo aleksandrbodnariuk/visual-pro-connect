@@ -93,28 +93,7 @@ export function UsersTab() {
       console.log(`Поточний статус акціонера: ${currentStatus}`);
       console.log(`Новий статус акціонера: ${newStatus}`);
       
-      // Оновлюємо в Supabase
-      try {
-        console.log("Оновлення в Supabase...");
-        const { error } = await supabase
-          .from('users')
-          .update({ 
-            is_shareholder: newStatus
-          })
-          .eq('id', userId);
-
-        if (error) {
-          console.error("Помилка оновлення статусу акціонера в Supabase:", error);
-          throw error;
-        } else {
-          console.log("Статус акціонера успішно оновлено в Supabase");
-        }
-      } catch (supabaseError) {
-        console.warn("Не вдалося оновити в Supabase, оновлюємо локально:", supabaseError);
-      }
-
-      // Оновлюємо локальний стан
-      console.log("Оновлення локального стану...");
+      // Оновлюємо локальний стан СПОЧАТКУ
       const updatedUsers = users.map(user => {
         if (user.id === userId) {
           const updatedUser = { 
@@ -140,6 +119,25 @@ export function UsersTab() {
         };
         localStorage.setItem('currentUser', JSON.stringify(updatedCurrentUser));
         console.log("Поточний користувач оновлено:", updatedCurrentUser);
+      }
+
+      // Потім намагаємося оновити в Supabase
+      try {
+        console.log("Оновлення в Supabase...");
+        const { error } = await supabase
+          .from('users')
+          .update({ 
+            is_shareholder: newStatus
+          })
+          .eq('id', userId);
+
+        if (error) {
+          console.error("Помилка оновлення статусу акціонера в Supabase:", error);
+        } else {
+          console.log("Статус акціонера успішно оновлено в Supabase");
+        }
+      } catch (supabaseError) {
+        console.warn("Не вдалося оновити в Supabase, але локальні зміни збережено:", supabaseError);
       }
       
       toast.success(`Статус акціонера ${newStatus ? 'надано' : 'знято'}`);
