@@ -80,6 +80,7 @@ export function UsersTab() {
       
       console.log("Поточний користувач:", currentUser);
       
+      // Перевіряємо, чи це засновник
       if (currentUser.founder_admin || currentUser.phone_number === '0507068007') {
         console.log("Це засновник - статус не можна змінювати");
         toast.error("Неможливо змінити статус засновника");
@@ -98,8 +99,7 @@ export function UsersTab() {
         const { error } = await supabase
           .from('users')
           .update({ 
-            is_shareholder: newStatus,
-            updated_at: new Date().toISOString()
+            is_shareholder: newStatus
           })
           .eq('id', userId);
 

@@ -163,24 +163,31 @@ export function NewsFeed() {
         
         <TabsContent value={activeCategory} className="space-y-6 mt-6">
           {filteredPosts.length > 0 ? (
-            filteredPosts.map((post) => (
-              <PostCard 
-                key={post.id}
-                id={post.id}
-                author={{
-                  id: post.user_id || 'demo-user',
-                  name: 'Користувач',
-                  username: 'user',
-                  avatarUrl: '',
-                  profession: ''
-                }}
-                imageUrl="/placeholder.svg"
-                caption={post.content || ''}
-                likes={post.likes_count || 0}
-                comments={post.comments_count || 0}
-                timeAgo="щойно"
-              />
-            ))
+            filteredPosts.map((post) => {
+              // Отримуємо дані користувача з localStorage
+              const users = JSON.parse(localStorage.getItem('users') || '[]');
+              const postUser = users.find((user: any) => user.id === post.user_id);
+              
+              return (
+                <PostCard 
+                  key={post.id}
+                  id={post.id}
+                  author={{
+                    id: post.user_id || 'demo-user',
+                    name: postUser?.full_name || postUser?.firstName && postUser?.lastName ? 
+                          `${postUser.firstName} ${postUser.lastName}` : 'Користувач',
+                    username: postUser?.phone_number || 'user',
+                    avatarUrl: postUser?.avatar_url || '',
+                    profession: postUser?.bio || ''
+                  }}
+                  imageUrl={post.media_url || "/placeholder.svg"}
+                  caption={post.content || ''}
+                  likes={post.likes_count || 0}
+                  comments={post.comments_count || 0}
+                  timeAgo="щойно"
+                />
+              );
+            })
           ) : (
             <Card>
               <CardContent className="p-8 text-center">

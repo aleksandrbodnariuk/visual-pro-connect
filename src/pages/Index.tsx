@@ -11,6 +11,7 @@ const Index = () => {
       <div className="flex">
         <Sidebar />
         <div className="flex-1 ml-64">
+          <Hero />
           <div className="container mx-auto px-4 py-8">
             <NewsFeed />
           </div>
