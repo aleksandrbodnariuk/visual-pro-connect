@@ -1,17 +1,33 @@
 
-import { Hero } from "@/components/home/Hero";
 import { NewsFeed } from "@/components/feed/NewsFeed";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
+import { Hero } from "@/components/home/Hero";
+import { useAuthState } from "@/hooks/auth/useAuthState";
 
 const Index = () => {
+  const { getCurrentUser } = useAuthState();
+  const currentUser = getCurrentUser();
+  
+  // Якщо користувач не авторизований, показуємо Hero секцію
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <Hero />
+      </div>
+    );
+  }
+  
+  // Для авторизованих користувачів показуємо основний інтерфейс
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="flex">
-        <Sidebar />
+        <div className="w-64 fixed left-0 top-16 h-[calc(100vh-4rem)] overflow-y-auto">
+          <Sidebar />
+        </div>
         <div className="flex-1 ml-64">
-          <Hero />
           <div className="container mx-auto px-4 py-8">
             <NewsFeed />
           </div>
