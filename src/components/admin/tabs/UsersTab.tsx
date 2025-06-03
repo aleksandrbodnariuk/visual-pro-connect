@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -72,7 +71,6 @@ export function UsersTab() {
     try {
       console.log(`=== Зміна статусу акціонера для користувача: ${userId} ===`);
       
-      // Знаходимо поточного користувача
       const currentUser = users.find(user => user.id === userId);
       if (!currentUser) {
         console.error("Користувача не знайдено в масиві users");
@@ -82,14 +80,13 @@ export function UsersTab() {
       
       console.log("Поточний користувач:", currentUser);
       
-      // Перевіряємо чи це засновник
       if (currentUser.founder_admin || currentUser.phone_number === '0507068007') {
         console.log("Це засновник - статус не можна змінювати");
         toast.error("Неможливо змінити статус засновника");
         return;
       }
       
-      const currentStatus = currentUser.is_shareholder || currentUser.isShareHolder || false;
+      const currentStatus = Boolean(currentUser.is_shareholder);
       const newStatus = !currentStatus;
       
       console.log(`Поточний статус акціонера: ${currentStatus}`);
@@ -122,8 +119,7 @@ export function UsersTab() {
         if (user.id === userId) {
           const updatedUser = { 
             ...user, 
-            is_shareholder: newStatus, 
-            isShareHolder: newStatus 
+            is_shareholder: newStatus
           };
           console.log("Оновлений користувач:", updatedUser);
           return updatedUser;
@@ -140,7 +136,6 @@ export function UsersTab() {
         console.log("Оновлення поточного користувача в localStorage...");
         const updatedCurrentUser = { 
           ...currentUserData, 
-          isShareHolder: newStatus,
           is_shareholder: newStatus
         };
         localStorage.setItem('currentUser', JSON.stringify(updatedCurrentUser));
@@ -328,7 +323,7 @@ export function UsersTab() {
   };
 
   const getShareholderStatus = (user: any) => {
-    return user.is_shareholder || user.isShareHolder || false;
+    return Boolean(user.is_shareholder);
   };
 
   return (

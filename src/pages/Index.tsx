@@ -9,10 +9,7 @@ const Index = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="flex">
-        {/* Sidebar */}
         <Sidebar />
-        
-        {/* Main content */}
         <div className="flex-1 ml-64">
           <div className="container mx-auto px-4 py-8">
             <NewsFeed />
