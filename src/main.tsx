@@ -6,7 +6,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import App from "./App"; // Використовуємо default import
 import "./index.css";
-import { createStorageBuckets } from "./lib/storage";
 import { supabase } from "./integrations/supabase/client";
 
 // Ініціалізуємо сховище
@@ -26,9 +25,9 @@ const initializeStorage = async () => {
     
     await checkAndCreateBucket('avatars');
     await checkAndCreateBucket('portfolio');
-    
-    // Викликаємо створення інших бакетів
-    await createStorageBuckets();
+    await checkAndCreateBucket('banners');
+    await checkAndCreateBucket('logos');
+    await checkAndCreateBucket('posts');
   } catch (error) {
     console.error("Error initializing storage:", error);
   }
