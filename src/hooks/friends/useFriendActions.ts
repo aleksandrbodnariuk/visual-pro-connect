@@ -34,6 +34,8 @@ export function useFriendActions({
       return;
     }
 
+    console.log("Sending friend request from", currentUser.id, "to", receiverId);
+
     try {
       // Check if a request already exists
       const existingRequest = friendRequests.find(
@@ -47,8 +49,9 @@ export function useFriendActions({
       }
 
       // Create new request object
+      const newRequestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const newRequest: FriendRequest = {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: newRequestId,
         sender_id: currentUser.id,
         receiver_id: receiverId,
         status: 'pending' as FriendRequestStatus,
@@ -56,21 +59,29 @@ export function useFriendActions({
         created_at: new Date().toISOString()
       };
 
-      // Try to add the request to Supabase
-      const { data, error } = await supabase
-        .from('friend_requests')
-        .insert([
-          {
-            sender_id: currentUser.id,
-            receiver_id: receiverId,
-            status: 'pending'
-          }
-        ])
-        .select();
+      console.log("Created new friend request:", newRequest);
 
-      if (error) {
-        console.error("Error adding friend request to Supabase:", error);
-        // Continue with local storage approach if Supabase fails
+      // Try to add the request to Supabase
+      try {
+        const { data, error } = await supabase
+          .from('friend_requests')
+          .insert([
+            {
+              id: newRequestId,
+              sender_id: currentUser.id,
+              receiver_id: receiverId,
+              status: 'pending'
+            }
+          ])
+          .select();
+
+        if (error) {
+          console.error("Error adding friend request to Supabase:", error);
+        } else {
+          console.log("Successfully added to Supabase:", data);
+        }
+      } catch (supabaseError) {
+        console.warn("Supabase not available, using localStorage only:", supabaseError);
       }
 
       // Update local state and storage
@@ -78,7 +89,9 @@ export function useFriendActions({
       setFriendRequests(updatedRequests as FriendRequest[]);
       localStorage.setItem('friendRequests', JSON.stringify(updatedRequests));
 
-      // Update UI
+      console.log("Updated friend requests:", updatedRequests);
+
+      // Show success message
       toast.success("Запит у друзі відправлено!");
       
       // Refresh requests
@@ -96,6 +109,8 @@ export function useFriendActions({
       return;
     }
 
+    console.log("Responding to friend request:", requestId, "with status:", status);
+
     try {
       // Find the request in the local state
       const request = friendRequests.find(req => req.id === requestId);
@@ -105,15 +120,20 @@ export function useFriendActions({
         return;
       }
 
-      // Update request in Supabase
-      const { error } = await supabase
-        .from('friend_requests')
-        .update({ status })
-        .eq('id', requestId);
+      console.log("Found request:", request);
 
-      if (error) {
-        console.error("Error updating friend request in Supabase:", error);
-        // Continue with local storage approach
+      // Update request in Supabase
+      try {
+        const { error } = await supabase
+          .from('friend_requests')
+          .update({ status })
+          .eq('id', requestId);
+
+        if (error) {
+          console.error("Error updating friend request in Supabase:", error);
+        }
+      } catch (supabaseError) {
+        console.warn("Supabase not available, using localStorage only:", supabaseError);
       }
 
       // Update request in local state
@@ -124,15 +144,20 @@ export function useFriendActions({
       setFriendRequests(updatedRequests);
       localStorage.setItem('friendRequests', JSON.stringify(updatedRequests));
 
+      console.log("Updated requests:", updatedRequests);
+
       // If request was accepted, add the user to friends list
       if (status === 'accepted') {
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
         const newFriend = request.sender_id === currentUser.id ? 
           request.receiver : request.sender;
         
+        console.log("Adding new friend:", newFriend);
+        
         if (newFriend && !friends.some(friend => friend?.id === newFriend.id)) {
           const updatedFriends = [...friends, newFriend];
           setFriends(updatedFriends as Friend[]);
+          console.log("Updated friends list:", updatedFriends);
         }
       }
 
@@ -173,13 +198,17 @@ export function useFriendActions({
       }
       
       // Update the request status in Supabase
-      const { error } = await supabase
-        .from('friend_requests')
-        .update({ status: 'rejected' })
-        .eq('id', request.id);
-      
-      if (error) {
-        console.error("Error removing friend in Supabase:", error);
+      try {
+        const { error } = await supabase
+          .from('friend_requests')
+          .update({ status: 'rejected' })
+          .eq('id', request.id);
+        
+        if (error) {
+          console.error("Error removing friend in Supabase:", error);
+        }
+      } catch (supabaseError) {
+        console.warn("Supabase not available, using localStorage only:", supabaseError);
       }
       
       // Update local state

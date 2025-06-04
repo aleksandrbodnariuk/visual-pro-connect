@@ -25,7 +25,8 @@ export async function uploadToStorage(
       console.log(`Створюю bucket: ${bucketName}`);
       const { error: createError } = await supabase.storage.createBucket(bucketName, {
         public: true,
-        fileSizeLimit: 10485760, // 10MB
+        fileSizeLimit: 52428800, // 50MB замість 10MB
+        allowedMimeTypes: ['image/*', 'video/*']
       });
       
       if (createError) {
@@ -41,8 +42,7 @@ export async function uploadToStorage(
       .upload(filePath, file, {
         upsert: true,
         contentType: contentType,
-        cacheControl: '3600',
-        duplex: 'half' as any, // Додаємо duplex для великих файлів
+        cacheControl: '3600'
       });
     
     if (uploadError) {

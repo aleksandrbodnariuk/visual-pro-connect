@@ -34,7 +34,9 @@ export class MessagesService {
     activeChat?: ChatItem
   }> {
     try {
-      // Отримуємо всі повідомлення користувача
+      console.log("Fetching chats for user:", userId, "with receiver:", receiverId);
+      
+      // Отримуємо всі повідомлення користувача з Supabase
       const { data: messageData, error: messagesError } = await supabase
         .from('messages')
         .select('*, sender:sender_id(*), receiver:receiver_id(*)')
@@ -43,13 +45,18 @@ export class MessagesService {
         
       if (messagesError) {
         console.error("Помилка при завантаженні повідомлень:", messagesError);
-        // Використовуємо демо-дані, якщо є помилка
-        return MessagesService.getDefaultChatsAndMessages(userId, receiverId);
+        // Якщо є receiverId, створюємо новий чат
+        if (receiverId) {
+          return MessagesService.createNewChat(receiverId, []);
+        }
+        return { chats: [] };
       }
       
       // Якщо є повідомлення в Supabase
       if (messageData && messageData.length > 0) {
-        // Спочатку створюємо об'єкт унікальних користувачів для чатів
+        console.log("Found messages in Supabase:", messageData);
+        
+        // Створюємо об'єкт унікальних користувачів для чатів
         const chatUsers = new Map();
         
         // Проходимося по всім повідомленням і групуємо їх по користувачам
@@ -118,12 +125,19 @@ export class MessagesService {
           activeChat: selectedChat || (chatsArray.length > 0 ? chatsArray[0] : undefined)
         };
       } else {
-        // Якщо немає повідомлень, використовуємо демо-дані
-        return MessagesService.getDefaultChatsAndMessages(userId, receiverId);
+        // Якщо немає повідомлень, але є receiverId, створюємо новий чат
+        if (receiverId) {
+          return MessagesService.createNewChat(receiverId, []);
+        }
+        return { chats: [] };
       }
     } catch (error) {
       console.error("Помилка при завантаженні чатів та повідомлень:", error);
-      return MessagesService.getDefaultChatsAndMessages(userId, receiverId);
+      // Якщо є receiverId, створюємо новий чат
+      if (receiverId) {
+        return MessagesService.createNewChat(receiverId, []);
+      }
+      return { chats: [] };
     }
   }
 
@@ -132,7 +146,9 @@ export class MessagesService {
     activeChat?: ChatItem
   }> {
     try {
-      // Отримуємо дані користувача
+      console.log("Creating new chat with user:", receiverId);
+      
+      // Отримуємо дані користувача з Supabase
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
@@ -141,10 +157,41 @@ export class MessagesService {
         
       if (userError) {
         console.error("Помилка при отриманні даних користувача:", userError);
+        
+        // Спробуємо знайти користувача в localStorage
+        const localUsers = JSON.parse(localStorage.getItem('users') || '[]');
+        const localUser = localUsers.find((user: any) => user.id === receiverId);
+        
+        if (localUser) {
+          console.log("Found user in localStorage:", localUser);
+          const newChat = {
+            id: `chat-${receiverId}`,
+            user: {
+              id: receiverId,
+              name: localUser.full_name || `${localUser.firstName || ''} ${localUser.lastName || ''}`.trim() || 'Користувач',
+              username: localUser.phone_number || localUser.phoneNumber || 'user',
+              avatarUrl: localUser.avatar_url || localUser.avatarUrl || '',
+              lastSeen: 'Онлайн',
+              unreadCount: 0
+            },
+            messages: [],
+            lastMessage: {
+              text: "Почніть розмову",
+              timestamp: "Щойно"
+            }
+          };
+          
+          return {
+            chats: [newChat, ...existingChats],
+            activeChat: newChat
+          };
+        }
+        
         return { chats: existingChats };
       }
       
       if (userData) {
+        console.log("Found user in Supabase:", userData);
         // Створюємо новий чат
         const newChat = {
           id: `chat-${receiverId}`,
@@ -176,112 +223,6 @@ export class MessagesService {
     }
   }
 
-  static getDefaultChatsAndMessages(userId: string, receiverId: string | null): {
-    chats: ChatItem[],
-    activeChat?: ChatItem
-  } {
-    const defaultChats: ChatItem[] = [
-      {
-        id: "chat1",
-        user: {
-          id: "user2",
-          name: "Марія Коваленко",
-          username: "maria_video",
-          avatarUrl: "https://i.pravatar.cc/150?img=5",
-          lastSeen: "Онлайн",
-          unreadCount: 2
-        },
-        messages: [
-          {
-            id: "msg1",
-            text: "Привіт! Мені сподобалися ваші фотографії у портфоліо. Чи можете ви зняти корпоративний захід наступного місяця?",
-            timestamp: "10:30",
-            isSender: false
-          },
-          {
-            id: "msg2",
-            text: "Доброго дня! Дякую за інтерес до моїх робіт. Так, я доступний для зйомки корпоративних заходів. Чи можете ви надати більше деталей?",
-            timestamp: "10:35",
-            isSender: true
-          },
-          {
-            id: "msg3",
-            text: "Звичайно. Це буде корпоративний захід на 100 людей, у конференц-центрі в центрі міста. Нам потрібні як фотографії, так і відео для соціальних мереж.",
-            timestamp: "10:40",
-            isSender: false
-          },
-          {
-            id: "msg4",
-            text: "Так, я можу зняти відео для вашого заходу. Коли він відбудеться?",
-            timestamp: "10:42",
-            isSender: false
-          }
-        ],
-        lastMessage: {
-          text: "Так, я можу зняти відео для вашого заходу. Коли він відбудеться?",
-          timestamp: "10:42"
-        }
-      },
-      {
-        id: "chat2",
-        user: {
-          id: "user3",
-          name: "Ігор Мельник",
-          username: "igor_music",
-          avatarUrl: "https://i.pravatar.cc/150?img=8",
-          lastSeen: "30 хв тому",
-          unreadCount: 0
-        },
-        messages: [
-          {
-            id: "msg5",
-            text: "Привіт! Чи можете ви надати музичне забезпечення для весілля?",
-            timestamp: "Вчора",
-            isSender: false
-          },
-          {
-            id: "msg6",
-            text: "Доброго дня! Так, звичайно. Я спеціалізуюся на такому форматі заходів. Коли планується весілля?",
-            timestamp: "Вчора",
-            isSender: true
-          },
-          {
-            id: "msg7",
-            text: "Плануємо на 15 червня. Це субота. Нам потрібен ді-джей та ведучий.",
-            timestamp: "Вчора",
-            isSender: false
-          },
-          {
-            id: "msg8",
-            text: "Дякую за співпрацю! Буду радий попрацювати з вами знову.",
-            timestamp: "Вчора",
-            isSender: true
-          }
-        ],
-        lastMessage: {
-          text: "Дякую за співпрацю! Буду радий попрацювати з вами знову.",
-          timestamp: "Вчора"
-        }
-      }
-    ];
-    
-    let selectedChat;
-    
-    if (receiverId) {
-      // Шукаємо чат з вказаним користувачем
-      selectedChat = defaultChats.find(chat => chat.user.id === receiverId);
-    }
-    
-    if (!selectedChat && defaultChats.length > 0) {
-      selectedChat = defaultChats[0];
-    }
-    
-    return {
-      chats: defaultChats,
-      activeChat: selectedChat
-    };
-  }
-
   static async sendMessage(currentUser: any, receiverId: string, messageText: string): Promise<{
     success: boolean;
     newMessage?: Message;
@@ -289,6 +230,8 @@ export class MessagesService {
     if (!messageText.trim() || !currentUser) {
       return { success: false };
     }
+    
+    console.log("Sending message from", currentUser.id, "to", receiverId, ":", messageText);
     
     // Створюємо нове повідомлення
     const newMessage = {
@@ -313,6 +256,8 @@ export class MessagesService {
           
         if (error) {
           console.error("Помилка при відправленні повідомлення:", error);
+        } else {
+          console.log("Message sent to Supabase successfully");
         }
       }
       

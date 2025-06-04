@@ -1,48 +1,48 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, UserPlus } from "lucide-react";
+import { MessageCircle, UserPlus } from "lucide-react";
+import { AddFriendButton } from "@/components/profile/AddFriendButton";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface ProfileActionsProps {
-  isCurrentUser: boolean;
-  onEditProfile?: () => void;
-  onAddFriend?: () => void;
-  isFriend?: boolean;
-  isSendingRequest?: boolean;
+  userId: string;
+  isOwnProfile: boolean;
+  userName?: string;
 }
 
-export function ProfileActions({ 
-  isCurrentUser, 
-  onEditProfile, 
-  onAddFriend,
-  isFriend = false,
-  isSendingRequest = false
-}: ProfileActionsProps) {
+export function ProfileActions({ userId, isOwnProfile, userName }: ProfileActionsProps) {
+  const navigate = useNavigate();
+
+  const handleSendMessage = () => {
+    if (!userId) {
+      toast.error("Не вдалося відкрити чат. ID користувача не знайдено.");
+      return;
+    }
+    
+    // Зберігаємо ID отримувача для відкриття чату
+    localStorage.setItem("currentChatReceiverId", userId);
+    
+    // Переходимо на сторінку повідомлень
+    navigate("/messages");
+  };
+
+  if (isOwnProfile) {
+    return null;
+  }
+
   return (
-    <div className="flex items-center gap-2">
-      {isCurrentUser ? (
-        <Button 
-          variant="outline" 
-          className="gap-2"
-          onClick={onEditProfile}
-        >
-          <Edit className="h-4 w-4" />
-          <span>Редагувати профіль</span>
-        </Button>
-      ) : (
-        <div className="flex gap-2">
-          <Button className="bg-gradient-purple">Підписатися</Button>
-          {!isFriend && (
-            <Button 
-              variant="secondary" 
-              onClick={onAddFriend}
-              disabled={isSendingRequest}
-            >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Додати в друзі
-            </Button>
-          )}
-        </div>
-      )}
+    <div className="flex gap-2">
+      <Button 
+        onClick={handleSendMessage}
+        variant="outline"
+        className="flex-1"
+      >
+        <MessageCircle className="w-4 h-4 mr-2" />
+        Написати
+      </Button>
+      
+      <AddFriendButton userId={userId} userName={userName} />
     </div>
   );
 }

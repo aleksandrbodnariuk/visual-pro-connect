@@ -19,71 +19,72 @@ export function useFetchFriends() {
         return;
       }
 
-      // Fetch friend requests from Supabase
-      const { data: requestsData, error: requestsError } = await supabase
-        .from('friend_requests')
-        .select('*, sender:sender_id(*), receiver:receiver_id(*)')
-        .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
+      console.log("Refreshing friend requests for user:", currentUser.id);
 
-      if (requestsError) {
-        console.error('Error fetching friend requests:', requestsError);
-        // Use local storage if Supabase fails
-        const storedRequests = JSON.parse(localStorage.getItem('friendRequests') || '[]');
-        setFriendRequests(storedRequests as FriendRequest[]);
-      } else {
-        // Ensure data is correctly typed before setting state
-        const typedRequests = requestsData.map(req => ({
-          ...req,
-          status: req.status as FriendRequestStatus
-        })) as FriendRequest[];
-        
-        setFriendRequests(typedRequests);
-        // Update localStorage
-        localStorage.setItem('friendRequests', JSON.stringify(typedRequests));
+      // Спочатку завантажуємо з localStorage
+      const storedRequests = JSON.parse(localStorage.getItem('friendRequests') || '[]');
+      console.log("Stored requests from localStorage:", storedRequests);
+      
+      const typedStoredRequests = storedRequests.map((req: any) => ({
+        ...req,
+        status: req.status as FriendRequestStatus
+      })) as FriendRequest[];
+      
+      setFriendRequests(typedStoredRequests);
+
+      // Спробуємо завантажити з Supabase
+      try {
+        const { data: requestsData, error: requestsError } = await supabase
+          .from('friend_requests')
+          .select('*, sender:sender_id(*), receiver:receiver_id(*)')
+          .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
+
+        if (requestsError) {
+          console.error('Error fetching friend requests from Supabase:', requestsError);
+        } else if (requestsData && requestsData.length > 0) {
+          console.log("Requests from Supabase:", requestsData);
+          
+          const typedRequests = requestsData.map(req => ({
+            ...req,
+            status: req.status as FriendRequestStatus
+          })) as FriendRequest[];
+          
+          setFriendRequests(typedRequests);
+          localStorage.setItem('friendRequests', JSON.stringify(typedRequests));
+        }
+      } catch (supabaseError) {
+        console.warn("Supabase not available, using localStorage:", supabaseError);
       }
 
-      // Extract friends from accepted requests
-      const acceptedFriends = requestsData
-        ?.filter(request => request.status === 'accepted')
-        .map(request => {
-          if (request.sender_id === currentUser.id) {
-            return request.receiver;
-          } else {
-            return request.sender;
-          }
-        })
-        .filter(friend => friend !== null);
-
-      if (acceptedFriends) {
-        setFriends(acceptedFriends as Friend[]);
-      }
-
-      // Fetch from local storage as fallback
+      // Завантажуємо користувачів з localStorage для формування списку друзів
       const usersFromLocalStorage = JSON.parse(localStorage.getItem('users') || '[]');
+      console.log("Users from localStorage:", usersFromLocalStorage);
       
       if (usersFromLocalStorage.length > 0) {
         const currentUserId = currentUser.id;
-        const storedRequests = JSON.parse(localStorage.getItem('friendRequests') || '[]');
         
-        const typedStoredRequests = storedRequests.map((req: any) => ({
-          ...req,
-          status: req.status as FriendRequestStatus
-        })) as FriendRequest[];
+        // Отримуємо актуальні запити
+        const currentRequests = JSON.parse(localStorage.getItem('friendRequests') || '[]');
+        console.log("Current requests for friends extraction:", currentRequests);
         
-        setFriendRequests(typedStoredRequests);
-        
-        // Extract friends from localStorage
-        const localStorageFriends = typedStoredRequests
-          .filter(request => request.status === 'accepted')
-          .map(request => {
+        // Витягуємо друзів з прийнятих запитів
+        const localStorageFriends = currentRequests
+          .filter((request: any) => request.status === 'accepted')
+          .map((request: any) => {
+            console.log("Processing accepted request:", request);
             if (request.sender_id === currentUserId) {
-              return usersFromLocalStorage.find((user: any) => user.id === request.receiver_id);
+              const friend = usersFromLocalStorage.find((user: any) => user.id === request.receiver_id);
+              console.log("Found friend (receiver):", friend);
+              return friend;
             } else {
-              return usersFromLocalStorage.find((user: any) => user.id === request.sender_id);
+              const friend = usersFromLocalStorage.find((user: any) => user.id === request.sender_id);
+              console.log("Found friend (sender):", friend);
+              return friend;
             }
           })
           .filter((friend: any) => friend !== undefined);
           
+        console.log("Final friends list:", localStorageFriends);
         setFriends(localStorageFriends as Friend[]);
       }
     } catch (error) {

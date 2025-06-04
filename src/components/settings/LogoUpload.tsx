@@ -56,9 +56,9 @@ export function LogoUpload() {
       return;
     }
 
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 50 * 1024 * 1024; // 50MB
     if (file.size > maxSize) {
-      toast.error('Розмір файлу не повинен перевищувати 10MB для логотипу');
+      toast.error('Розмір файлу не повинен перевищувати 50MB для логотипу');
       return;
     }
 
@@ -146,7 +146,7 @@ export function LogoUpload() {
     <Card>
       <CardHeader>
         <CardTitle>Завантаження логотипу</CardTitle>
-        <CardDescription>Змініть логотип сайту (рекомендований розмір: до 10MB, формат: PNG/JPG)</CardDescription>
+        <CardDescription>Змініть логотип сайту (рекомендований розмір: до 50MB, формат: PNG/JPG)</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
@@ -168,7 +168,7 @@ export function LogoUpload() {
               onClick={() => fileInputRef.current?.click()}
               className="w-full"
             >
-              <Upload className="mr-2 h-4 w-4" /> Вибрати логотип (до 10MB)
+              <Upload className="mr-2 h-4 w-4" /> Вибрати логотип (до 50MB)
             </Button>
           </div>
 
