@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -141,39 +142,6 @@ export function UsersTab() {
     }
   };
 
-  const toggleAdminStatus = async (userId: string, currentStatus: boolean) => {
-    try {
-      const newStatus = !currentStatus;
-      
-      try {
-        const { error } = await supabase
-          .from('users')
-          .update({ is_admin: newStatus })
-          .eq('id', userId);
-
-        if (error) {
-          console.error("Помилка оновлення статусу адміна в Supabase:", error);
-        }
-      } catch (supabaseError) {
-        console.warn("Не вдалося оновити в Supabase, оновлюємо локально:", supabaseError);
-      }
-
-      const updatedUsers = users.map(user => 
-        user.id === userId 
-          ? { ...user, is_admin: newStatus, isAdmin: newStatus }
-          : user
-      );
-      
-      setUsers(updatedUsers);
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
-      
-      toast.success(`Статус адміністратора ${newStatus ? 'надано' : 'знято'}`);
-    } catch (error) {
-      console.error("Помилка зміни статусу адміністратора:", error);
-      toast.error("Помилка зміни статусу адміністратора");
-    }
-  };
-
   const changeUserTitle = async (userId: string, newTitle: string) => {
     try {
       try {
@@ -249,6 +217,15 @@ export function UsersTab() {
       
       setUsers(updatedUsers);
       localStorage.setItem('users', JSON.stringify(updatedUsers));
+      
+      // Відправляємо подію для оновлення статистики
+      const statusUpdateEvent = new CustomEvent('shareholder-status-updated', { 
+        detail: { 
+          userId: userId,
+          isShareHolder: updates.is_shareholder 
+        }
+      });
+      window.dispatchEvent(statusUpdateEvent);
       
       toast.success(`Роль змінено на "${newRole}"`);
     } catch (error) {
@@ -338,7 +315,6 @@ export function UsersTab() {
               <ShareholderToggle user={user} onToggleShareholder={toggleShareholderStatus} />
               <UserActions 
                 user={user} 
-                onToggleAdmin={toggleAdminStatus} 
                 onDeleteUser={deleteUser} 
               />
             </div>

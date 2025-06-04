@@ -25,11 +25,13 @@ export default function Admin() {
     console.log("Завантажені користувачі:", storedUsers);
     setUsers(storedUsers);
     
-    // Фільтруємо акціонерів - тільки ті, хто має is_shareholder: true
+    // Фільтруємо акціонерів - тільки ті, хто має is_shareholder: true або є засновником
     const shareholdersData = storedUsers.filter((user: any) => {
+      const isFounder = user.founder_admin || user.phone_number === '0507068007';
       const isShareholder = user.is_shareholder === true || user.isShareHolder === true;
-      console.log(`Користувач ${user.full_name || user.firstName}: is_shareholder=${user.is_shareholder}, isShareHolder=${user.isShareHolder}, result=${isShareholder}`);
-      return isShareholder;
+      const result = isFounder || isShareholder;
+      console.log(`Користувач ${user.full_name || user.firstName}: isFounder=${isFounder}, is_shareholder=${user.is_shareholder}, isShareHolder=${user.isShareHolder}, result=${result}`);
+      return result;
     });
     
     console.log("Відфільтровані акціонери:", shareholdersData);

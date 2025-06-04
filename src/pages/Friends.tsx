@@ -2,6 +2,7 @@
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FriendsList } from "@/components/profile/FriendsList";
+import { FriendRequestsList } from "@/components/profile/FriendRequestsList";
 
 export default function Friends() {
   return (
@@ -19,7 +20,10 @@ export default function Friends() {
                 <p className="text-gray-600">Знаходьте та спілкуйтеся з друзями</p>
               </div>
               
-              <FriendsList />
+              <div className="space-y-6">
+                <FriendRequestsList />
+                <FriendsList />
+              </div>
             </div>
           </div>
         </div>
