@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -81,7 +80,8 @@ export function UsersTab() {
         if (user.id === userId) {
           const updatedUser = { 
             ...user, 
-            is_shareholder: newStatus
+            is_shareholder: newStatus,
+            isShareHolder: newStatus
           };
           console.log("Оновлений користувач:", updatedUser);
           return updatedUser;
@@ -98,7 +98,8 @@ export function UsersTab() {
         console.log("Оновлення поточного користувача в localStorage...");
         const updatedCurrentUser = { 
           ...currentUserData, 
-          is_shareholder: newStatus
+          is_shareholder: newStatus,
+          isShareHolder: newStatus
         };
         localStorage.setItem('currentUser', JSON.stringify(updatedCurrentUser));
         console.log("Поточний користувач оновлено:", updatedCurrentUser);
@@ -122,6 +123,15 @@ export function UsersTab() {
       } catch (supabaseError) {
         console.warn("Не вдалося оновити в Supabase, але локальні зміни збережено:", supabaseError);
       }
+      
+      // Відправляємо подію для оновлення статистики
+      const statusUpdateEvent = new CustomEvent('shareholder-status-updated', { 
+        detail: { 
+          userId: userId,
+          isShareHolder: newStatus 
+        }
+      });
+      window.dispatchEvent(statusUpdateEvent);
       
       toast.success(`Статус акціонера ${newStatus ? 'надано' : 'знято'}`);
       console.log(`=== Операція завершена успішно ===`);

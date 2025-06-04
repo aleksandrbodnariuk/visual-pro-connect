@@ -19,6 +19,23 @@ export default function Admin() {
   const navigate = useNavigate();
   const { tabName } = useParams<{ tabName: string }>();
   
+  const loadUsersData = () => {
+    // Завантажуємо користувачів
+    const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
+    console.log("Завантажені користувачі:", storedUsers);
+    setUsers(storedUsers);
+    
+    // Фільтруємо акціонерів - тільки ті, хто має is_shareholder: true
+    const shareholdersData = storedUsers.filter((user: any) => {
+      const isShareholder = user.is_shareholder === true || user.isShareHolder === true;
+      console.log(`Користувач ${user.full_name || user.firstName}: is_shareholder=${user.is_shareholder}, isShareHolder=${user.isShareHolder}, result=${isShareholder}`);
+      return isShareholder;
+    });
+    
+    console.log("Відфільтровані акціонери:", shareholdersData);
+    setShareholders(shareholdersData);
+  };
+
   useEffect(() => {
     const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
     
@@ -34,17 +51,19 @@ export default function Admin() {
     
     // Перевіряємо, чи це засновник
     const isFounderAdmin = currentUser.role === "admin-founder" || 
-                          (currentUser.phoneNumber === "0507068007" && currentUser.isFounder);
+                          (currentUser.phoneNumber === "0507068007" && currentUser.isFounder) ||
+                          currentUser.phone_number === "0507068007";
     setIsFounder(isFounderAdmin);
     
     // Оновлюємо роль користувача, якщо він має номер засновника
-    if (currentUser.phoneNumber === "0507068007" && !isFounderAdmin) {
+    if ((currentUser.phoneNumber === "0507068007" || currentUser.phone_number === "0507068007") && !isFounderAdmin) {
       const updatedUser = {
         ...currentUser,
         isAdmin: true,
         isFounder: true,
         role: "admin-founder",
-        isShareHolder: true
+        isShareHolder: true,
+        is_shareholder: true
       };
       
       // Оновлюємо дані в localStorage
@@ -53,13 +72,16 @@ export default function Admin() {
       // Оновлюємо список користувачів
       const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
       const updatedUsers = storedUsers.map((user: any) => {
-        if (user.phoneNumber === "0507068007" || user.id === currentUser.id) {
+        if (user.phoneNumber === "0507068007" || user.phone_number === "0507068007" || user.id === currentUser.id) {
           return {
             ...user,
             isAdmin: true,
             isFounder: true,
             role: "admin-founder",
             isShareHolder: true,
+            is_shareholder: true,
+            founder_admin: true,
+            is_admin: true,
             status: "Адміністратор-засновник"
           };
         }
@@ -77,15 +99,8 @@ export default function Admin() {
       navigate("/admin/users");
     }
     
-    // Завантажуємо усіх користувачів
-    const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-    setUsers(storedUsers);
-    
-    // Фільтруємо акціонерів
-    const shareholdersData = storedUsers.filter((user: any) => 
-      user.isShareHolder === true || user.status === "Акціонер" || user.role === "shareholder"
-    );
-    setShareholders(shareholdersData);
+    // Завантажуємо дані користувачів
+    loadUsersData();
     
     // Завантажуємо замовлення
     const storedOrders = JSON.parse(localStorage.getItem("orders") || "[]");
@@ -98,6 +113,20 @@ export default function Admin() {
     } else {
       localStorage.setItem("stockPrice", stockPrice);
     }
+
+    // Слухач для оновлення статистики при зміні статусу акціонера
+    const handleShareholderUpdate = () => {
+      console.log("Отримано подію оновлення акціонера, перезавантажуємо дані...");
+      loadUsersData();
+    };
+
+    window.addEventListener('shareholder-status-updated', handleShareholderUpdate);
+    window.addEventListener('storage', loadUsersData);
+
+    return () => {
+      window.removeEventListener('shareholder-status-updated', handleShareholderUpdate);
+      window.removeEventListener('storage', loadUsersData);
+    };
   }, [navigate, stockPrice, tabName]);
 
   if (!isAdmin) {
