@@ -9,6 +9,7 @@ export async function uploadToStorage(
 ): Promise<string> {
   try {
     console.log(`Спроба завантаження файлу в bucket: ${bucketName}, шлях: ${filePath}`);
+    console.log(`Розмір файлу: ${file.size} байт, тип: ${contentType}`);
     
     // Перевіряємо, чи існує bucket
     const { data: buckets, error: listError } = await supabase.storage.listBuckets();
@@ -24,22 +25,24 @@ export async function uploadToStorage(
       console.log(`Створюю bucket: ${bucketName}`);
       const { error: createError } = await supabase.storage.createBucket(bucketName, {
         public: true,
-        fileSizeLimit: 5242880, // 5MB
+        fileSizeLimit: 10485760, // 10MB
       });
       
       if (createError) {
         console.error(`Помилка створення bucket ${bucketName}:`, createError);
-        throw new Error(`Не вдалося створити bucket ${bucketName}`);
+        throw new Error(`Не вдалося створити bucket ${bucketName}: ${createError.message}`);
       }
+      console.log(`Bucket ${bucketName} успішно створено`);
     }
     
-    // Завантажуємо файл
+    // Завантажуємо файл з покращеними налаштуваннями
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucketName)
       .upload(filePath, file, {
         upsert: true,
         contentType: contentType,
         cacheControl: '3600',
+        duplex: 'half' as any, // Додаємо duplex для великих файлів
       });
     
     if (uploadError) {
@@ -56,6 +59,11 @@ export async function uploadToStorage(
     
     const publicUrl = urlData.publicUrl;
     console.log(`Публічний URL файлу: ${publicUrl}`);
+    
+    // Перевіряємо, чи URL дійсно доступний
+    if (!publicUrl || !publicUrl.includes(filePath)) {
+      throw new Error('Не вдалося отримати коректний публічний URL');
+    }
     
     return publicUrl;
   } catch (error) {

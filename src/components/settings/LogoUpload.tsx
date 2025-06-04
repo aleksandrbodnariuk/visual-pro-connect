@@ -54,12 +54,14 @@ export function LogoUpload() {
       return;
     }
 
-    // Обмеження розміру до 1MB для логотипу
-    const maxSize = 1 * 1024 * 1024; // 1MB
+    // Збільшуємо обмеження розміру до 5MB для логотипу
+    const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
-      toast.error('Розмір файлу не повинен перевищувати 1MB для логотипу');
+      toast.error('Розмір файлу не повинен перевищувати 5MB для логотипу');
       return;
     }
+
+    console.log('Вибрано файл логотипу:', file.name, 'розмір:', file.size, 'байт');
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -83,6 +85,9 @@ export function LogoUpload() {
       const filePath = `logos/${uniqueFileName}`;
       
       console.log(`Завантаження логотипу ${uniqueFileName}...`);
+      console.log('Розмір файлу логотипу:', file.size, 'байт');
+      console.log('Тип файлу логотипу:', file.type);
+      console.log('Шлях файлу логотипу:', filePath);
       
       const publicUrl = await uploadToStorage('logos', filePath, file, file.type);
       
@@ -99,6 +104,8 @@ export function LogoUpload() {
           
         if (dbError) {
           console.error("Помилка збереження логотипу в базі даних:", dbError);
+        } else {
+          console.log('Логотип успішно збережено в базі даних');
         }
       } catch (dbError) {
         console.warn("Не вдалося зберегти в базі даних:", dbError);
@@ -121,7 +128,7 @@ export function LogoUpload() {
       
     } catch (error: any) {
       console.error('Помилка при завантаженні логотипу:', error);
-      toast.error('Не вдалося завантажити логотип. Спробуйте зменшити розмір файлу до 1MB.');
+      toast.error('Не вдалося завантажити логотип. Перевірте підключення до інтернету та спробуйте ще раз.');
     } finally {
       setIsUploading(false);
     }
@@ -138,7 +145,7 @@ export function LogoUpload() {
     <Card>
       <CardHeader>
         <CardTitle>Завантаження логотипу</CardTitle>
-        <CardDescription>Змініть логотип сайту (рекомендований розмір: до 1MB, формат: PNG/JPG)</CardDescription>
+        <CardDescription>Змініть логотип сайту (рекомендований розмір: до 5MB, формат: PNG/JPG)</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
@@ -180,7 +187,7 @@ export function LogoUpload() {
               onClick={() => fileInputRef.current?.click()}
               className="w-full"
             >
-              <Upload className="mr-2 h-4 w-4" /> Вибрати логотип (до 1MB)
+              <Upload className="mr-2 h-4 w-4" /> Вибрати логотип (до 5MB)
             </Button>
           </div>
 

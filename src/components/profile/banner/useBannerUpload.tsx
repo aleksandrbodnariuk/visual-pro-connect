@@ -24,10 +24,10 @@ export function useBannerUpload(
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Обмеження розміру файлу до 3MB для банерів
-    const maxSize = 3 * 1024 * 1024; // 3MB
+    // Збільшуємо обмеження розміру файлу до 10MB для банерів
+    const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
-      toast.error('Розмір файлу не повинен перевищувати 3MB для банера');
+      toast.error('Розмір файлу не повинен перевищувати 10MB для банера');
       return;
     }
 
@@ -35,6 +35,8 @@ export function useBannerUpload(
       toast.error('Будь ласка, виберіть зображення');
       return;
     }
+
+    console.log('Вибрано файл банера:', file.name, 'розмір:', file.size, 'байт');
 
     const fileReader = new FileReader();
     fileReader.onload = (event) => {
@@ -55,10 +57,14 @@ export function useBannerUpload(
 
     try {
       console.log('Завантаження банера для користувача:', userId);
+      console.log('Розмір файлу банера:', file.size, 'байт');
+      console.log('Тип файлу банера:', file.type);
       
       const fileExtension = file.name.split('.').pop() || 'jpg';
       const uniqueFileName = `${userId}-${Date.now()}.${fileExtension}`;
       const filePath = `banners/${uniqueFileName}`;
+      
+      console.log('Шлях файлу банера:', filePath);
       
       const publicUrl = await uploadToStorage('banners', filePath, file, file.type);
       uploadedUrl = publicUrl;
@@ -73,6 +79,8 @@ export function useBannerUpload(
         
         if (updateError) {
           console.error('Помилка оновлення банера в профілі користувача:', updateError);
+        } else {
+          console.log('Банер успішно оновлено в базі даних');
         }
       } catch (dbError) {
         console.warn('Не вдалося оновити в базі даних:', dbError);
@@ -83,6 +91,7 @@ export function useBannerUpload(
       if (currentUser && currentUser.id === userId) {
         currentUser.banner_url = publicUrl;
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        console.log('Оновлено поточного користувача в localStorage');
       }
 
       setBannerUrl(publicUrl);
@@ -98,7 +107,7 @@ export function useBannerUpload(
       toast.success('Банер успішно оновлено');
     } catch (error) {
       console.error('Помилка при завантаженні банера:', error);
-      toast.error('Не вдалося завантажити банер. Спробуйте зменшити розмір файлу до 3MB.');
+      toast.error('Не вдалося завантажити банер. Перевірте підключення до інтернету та спробуйте ще раз.');
     } finally {
       setIsUploading(false);
     }

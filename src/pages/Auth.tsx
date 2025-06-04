@@ -46,9 +46,6 @@ export default function Auth() {
   
   return (
     <div className="min-h-screen">
-      {/* Hero секція для неавторизованих користувачів */}
-      <Hero />
-      
       {/* Форми авторизації */}
       <div className="container py-8">
         <AuthStepManager 
@@ -59,6 +56,11 @@ export default function Auth() {
           resetPhoneNumber={resetPhoneNumber}
           onCodeVerified={handleCodeVerified}
         />
+      </div>
+      
+      {/* Hero секція для неавторизованих користувачів - перенесено вниз */}
+      <div className="py-16">
+        <Hero />
       </div>
     </div>
   );
