@@ -1,30 +1,14 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-
-const AVAILABLE_TITLES = [
-  "Акціонер",
-  "Магнат", 
-  "Барон",
-  "Граф", 
-  "Маркіз",
-  "Лорд",
-  "Герцог",
-  "Імператор"
-];
-
-const AVAILABLE_ROLES = [
-  "Учасник",
-  "Акціонер", 
-  "Модератор",
-  "Адміністратор"
-];
+import { UserRole } from "@/components/admin/users/UserRole";
+import { UserTitle } from "@/components/admin/users/UserTitle";
+import { ShareholderToggle } from "@/components/admin/users/ShareholderToggle";
+import { UserActions } from "@/components/admin/users/UserActions";
 
 export function UsersTab() {
   const [users, setUsers] = useState<any[]>([]);
@@ -39,7 +23,6 @@ export function UsersTab() {
     try {
       console.log("Завантаження користувачів...");
       
-      // Завантажуємо з Supabase
       const { data: supabaseUsers, error } = await supabase
         .from('users')
         .select('*')
@@ -67,9 +50,9 @@ export function UsersTab() {
     }
   };
 
-  const toggleInvestorStatus = async (userId: string) => {
+  const toggleShareholderStatus = async (userId: string) => {
     try {
-      console.log(`=== Зміна статусу інвестора для користувача: ${userId} ===`);
+      console.log(`=== Зміна статусу акціонера для користувача: ${userId} ===`);
       
       const currentUser = users.find(user => user.id === userId);
       if (!currentUser) {
@@ -80,20 +63,20 @@ export function UsersTab() {
       
       console.log("Поточний користувач:", currentUser);
       
-      // Перевіряємо, чи це засновник (за номером телефону)
+      // Перевіряємо, чи це засновник
       if (currentUser.phone_number === '0507068007' || currentUser.founder_admin) {
-        console.log("Це засновник - статус інвестора незмінний (завжди true)");
-        toast.error("Неможливо змінити статус інвестора для засновника");
+        console.log("Це засновник - статус акціонера незмінний (завжди true)");
+        toast.error("Неможливо змінити статус акціонера для засновника");
         return;
       }
       
       const currentStatus = Boolean(currentUser.is_shareholder);
       const newStatus = !currentStatus;
       
-      console.log(`Поточний статус інвестора: ${currentStatus}`);
-      console.log(`Новий статус інвестора: ${newStatus}`);
+      console.log(`Поточний статус акціонера: ${currentStatus}`);
+      console.log(`Новий статус акціонера: ${newStatus}`);
       
-      // Оновлюємо локальний стан СПОЧАТКУ
+      // Оновлюємо локальний стан
       const updatedUsers = users.map(user => {
         if (user.id === userId) {
           const updatedUser = { 
@@ -121,7 +104,7 @@ export function UsersTab() {
         console.log("Поточний користувач оновлено:", updatedCurrentUser);
       }
 
-      // Потім намагаємося оновити в Supabase
+      // Оновлюємо в Supabase
       try {
         console.log("Оновлення в Supabase...");
         const { error } = await supabase
@@ -132,19 +115,19 @@ export function UsersTab() {
           .eq('id', userId);
 
         if (error) {
-          console.error("Помилка оновлення статусу інвестора в Supabase:", error);
+          console.error("Помилка оновлення статусу акціонера в Supabase:", error);
         } else {
-          console.log("Статус інвестора успішно оновлено в Supabase");
+          console.log("Статус акціонера успішно оновлено в Supabase");
         }
       } catch (supabaseError) {
         console.warn("Не вдалося оновити в Supabase, але локальні зміни збережено:", supabaseError);
       }
       
-      toast.success(`Статус інвестора ${newStatus ? 'надано' : 'знято'}`);
+      toast.success(`Статус акціонера ${newStatus ? 'надано' : 'знято'}`);
       console.log(`=== Операція завершена успішно ===`);
     } catch (error) {
-      console.error("Помилка зміни статусу інвестора:", error);
-      toast.error("Помилка зміни статусу інвестора");
+      console.error("Помилка зміни статусу акціонера:", error);
+      toast.error("Помилка зміни статусу акціонера");
     }
   };
 
@@ -152,7 +135,6 @@ export function UsersTab() {
     try {
       const newStatus = !currentStatus;
       
-      // Оновлюємо в Supabase
       try {
         const { error } = await supabase
           .from('users')
@@ -166,7 +148,6 @@ export function UsersTab() {
         console.warn("Не вдалося оновити в Supabase, оновлюємо локально:", supabaseError);
       }
 
-      // Оновлюємо локальний стан
       const updatedUsers = users.map(user => 
         user.id === userId 
           ? { ...user, is_admin: newStatus, isAdmin: newStatus }
@@ -185,7 +166,6 @@ export function UsersTab() {
 
   const changeUserTitle = async (userId: string, newTitle: string) => {
     try {
-      // Оновлюємо в Supabase
       try {
         const { error } = await supabase
           .from('users')
@@ -199,7 +179,6 @@ export function UsersTab() {
         console.warn("Не вдалося оновити титул в Supabase:", supabaseError);
       }
 
-      // Оновлюємо локальний стан
       const updatedUsers = users.map(user => 
         user.id === userId 
           ? { ...user, title: newTitle }
@@ -218,7 +197,6 @@ export function UsersTab() {
 
   const changeUserRole = async (userId: string, newRole: string) => {
     try {
-      // Автоматично встановлюємо статуси залежно від ролі
       const updates: any = { role: newRole };
       
       if (newRole === "Адміністратор") {
@@ -233,7 +211,6 @@ export function UsersTab() {
         updates.is_shareholder = false;
       }
 
-      // Оновлюємо в Supabase
       try {
         const { error } = await supabase
           .from('users')
@@ -247,7 +224,6 @@ export function UsersTab() {
         console.warn("Не вдалося оновити роль в Supabase:", supabaseError);
       }
 
-      // Оновлюємо локальний стан
       const updatedUsers = users.map(user => 
         user.id === userId 
           ? { 
@@ -277,7 +253,6 @@ export function UsersTab() {
     }
 
     try {
-      // Видаляємо з Supabase
       try {
         const { error } = await supabase
           .from('users')
@@ -291,7 +266,6 @@ export function UsersTab() {
         console.warn("Не вдалося видалити з Supabase, видаляємо локально:", supabaseError);
       }
 
-      // Видаляємо з локального стану
       const updatedUsers = users.filter(user => user.id !== userId);
       setUsers(updatedUsers);
       localStorage.setItem('users', JSON.stringify(updatedUsers));
@@ -308,26 +282,6 @@ export function UsersTab() {
                          user.phone_number?.includes(searchTerm);
     return matchesSearch;
   });
-
-  const getUserRole = (user: any) => {
-    if (user.founder_admin || user.phone_number === '0507068007') return "Засновник";
-    if (user.is_admin || user.isAdmin) return "Адміністратор";
-    if (user.is_shareholder || user.isShareHolder) return "Акціонер";
-    return user.role || "Учасник";
-  };
-
-  // Перемикач інвестора неактивний тільки для засновника
-  const isInvestorSwitchDisabled = (user: any) => {
-    return user.founder_admin || user.phone_number === '0507068007';
-  };
-
-  // Засновник завжди є інвестором
-  const getInvestorStatus = (user: any) => {
-    if (user.founder_admin || user.phone_number === '0507068007') {
-      return true; // Засновник завжди інвестор
-    }
-    return Boolean(user.is_shareholder);
-  };
 
   return (
     <Card>
@@ -360,7 +314,7 @@ export function UsersTab() {
             <div>Телефон</div>
             <div>Роль</div>
             <div>Титул</div>
-            <div>Інвестор</div>
+            <div>Акціонер</div>
             <div>Дії</div>
           </div>
 
@@ -369,78 +323,14 @@ export function UsersTab() {
               <div className="text-sm font-mono">{user.id.slice(0, 8)}...</div>
               <div>{user.full_name || 'Не вказано'}</div>
               <div>{user.phone_number || 'Не вказано'}</div>
-              <div>
-                {!(user.founder_admin || user.phone_number === '0507068007') ? (
-                  <Select 
-                    value={getUserRole(user)} 
-                    onValueChange={(value) => changeUserRole(user.id, value)}
-                  >
-                    <SelectTrigger className="w-[130px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {AVAILABLE_ROLES.map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {role}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Badge variant="destructive">Засновник</Badge>
-                )}
-              </div>
-              <div>
-                {(getInvestorStatus(user) || user.founder_admin) ? (
-                  <Select 
-                    value={user.title || "Акціонер"} 
-                    onValueChange={(value) => changeUserTitle(user.id, value)}
-                  >
-                    <SelectTrigger className="w-[120px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {AVAILABLE_TITLES.map((title) => (
-                        <SelectItem key={title} value={title}>
-                          {title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <span className="text-muted-foreground">-</span>
-                )}
-              </div>
-              <div className="flex items-center">
-                <Switch
-                  checked={getInvestorStatus(user)}
-                  onCheckedChange={() => toggleInvestorStatus(user.id)}
-                  disabled={isInvestorSwitchDisabled(user)}
-                />
-                {isInvestorSwitchDisabled(user) && (
-                  <span className="text-xs text-muted-foreground ml-2">Засновник</span>
-                )}
-              </div>
-              <div className="flex space-x-2">
-                {!(user.founder_admin || user.phone_number === '0507068007') && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => toggleAdminStatus(user.id, user.is_admin || user.isAdmin)}
-                  >
-                    {user.is_admin || user.isAdmin ? 'Зняти адміна' : 'Зробити адміном'}
-                  </Button>
-                )}
-                {!(user.founder_admin || user.phone_number === '0507068007') && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => deleteUser(user.id)}
-                  >
-                    Видалити
-                  </Button>
-                )}
-              </div>
+              <UserRole user={user} onRoleChange={changeUserRole} />
+              <UserTitle user={user} onTitleChange={changeUserTitle} />
+              <ShareholderToggle user={user} onToggleShareholder={toggleShareholderStatus} />
+              <UserActions 
+                user={user} 
+                onToggleAdmin={toggleAdminStatus} 
+                onDeleteUser={deleteUser} 
+              />
             </div>
           ))}
 
