@@ -174,10 +174,51 @@ export function useFriendActions() {
     }
   };
 
+  const respondToFriendRequest = async (requestId: string, action: 'accept' | 'reject') => {
+    if (action === 'accept') {
+      return await acceptFriendRequest(requestId);
+    } else {
+      return await rejectFriendRequest(requestId);
+    }
+  };
+
+  const removeFriend = async (friendId: string) => {
+    setIsLoading(true);
+    try {
+      console.log("Removing friend:", friendId);
+      
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      
+      // Видаляємо з друзів у localStorage
+      const existingFriends = JSON.parse(localStorage.getItem('friends') || '[]');
+      const updatedFriends = existingFriends.filter((friend: any) => friend.id !== friendId);
+      localStorage.setItem('friends', JSON.stringify(updatedFriends));
+
+      // Видаляємо запит на дружбу
+      const existingRequests = JSON.parse(localStorage.getItem('friendRequests') || '[]');
+      const updatedRequests = existingRequests.filter((req: any) => 
+        !((req.sender_id === currentUser.id && req.receiver_id === friendId) ||
+          (req.sender_id === friendId && req.receiver_id === currentUser.id))
+      );
+      localStorage.setItem('friendRequests', JSON.stringify(updatedRequests));
+
+      toast.success("Друга видалено");
+      return true;
+    } catch (error) {
+      console.error('Error removing friend:', error);
+      toast.error("Помилка при видаленні друга");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     sendFriendRequest,
     acceptFriendRequest,
     rejectFriendRequest,
+    respondToFriendRequest,
+    removeFriend,
     isLoading
   };
 }

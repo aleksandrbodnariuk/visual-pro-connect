@@ -17,15 +17,11 @@ export function useFriendRequests() {
 
   const {
     sendFriendRequest,
+    acceptFriendRequest,
+    rejectFriendRequest,
     respondToFriendRequest,
     removeFriend
-  } = useFriendActions({
-    friendRequests,
-    setFriendRequests,
-    friends,
-    setFriends,
-    refreshFriendRequests
-  });
+  } = useFriendActions();
 
   const {
     checkFriendshipStatus
@@ -44,6 +40,8 @@ export function useFriendRequests() {
     isLoading,
     refreshFriendRequests,
     sendFriendRequest,
+    acceptFriendRequest,
+    rejectFriendRequest,
     respondToFriendRequest,
     removeFriend,
     checkFriendshipStatus

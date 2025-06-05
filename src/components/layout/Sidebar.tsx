@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -198,7 +197,6 @@ export function Sidebar({ className }: SidebarProps) {
           open={isCreateModalOpen}
           onOpenChange={setIsCreateModalOpen}
           userId={currentUser.id}
-          userName={`${currentUser.firstName || ''} ${currentUser.lastName || ''}`}
           onSuccess={() => {
             setIsCreateModalOpen(false);
             toast.success("Публікацію створено");
