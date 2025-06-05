@@ -140,7 +140,7 @@ export function FriendsList({ userId }: { userId?: string }) {
                     <div className="flex gap-2">
                       <Button 
                         size="sm" 
-                        onClick={() => respondToFriendRequest(request.id, 'accepted')}
+                        onClick={() => respondToFriendRequest(request.id, 'accept')}
                       >
                         <Check className="w-4 h-4 mr-1" />
                         Прийняти
@@ -148,7 +148,7 @@ export function FriendsList({ userId }: { userId?: string }) {
                       <Button 
                         size="sm" 
                         variant="destructive"
-                        onClick={() => respondToFriendRequest(request.id, 'rejected')}
+                        onClick={() => respondToFriendRequest(request.id, 'reject')}
                       >
                         <X className="w-4 h-4 mr-1" />
                         Відхилити
