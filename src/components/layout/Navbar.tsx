@@ -1,53 +1,46 @@
 
-import { NavbarSearch } from "./NavbarSearch";
-import { NavbarNavigation } from "./NavbarNavigation";
-import { NavbarActions } from "./NavbarActions";
+import React, { useState, useEffect } from "react";
 import { NavbarLogo } from "./NavbarLogo";
-import { UserMenu } from "./UserMenu";
-import { useAuthState } from "@/hooks/auth/useAuthState";
+import { NavbarNavigation } from "./NavbarNavigation";
+import { NavbarSearch } from "./NavbarSearch";
+import { NavbarActions } from "./NavbarActions";
 
-interface NavbarProps {
-  className?: string;
-  variant?: "default" | "simple";
-  showSearch?: boolean;
-  showNav?: boolean;
-  showActions?: boolean;
-}
+export function Navbar() {
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
-export function Navbar({ 
-  className = "", 
-  variant = "default",
-  showSearch = true,
-  showNav = true,
-  showActions = true
-}: NavbarProps) {
-  const { getCurrentUser } = useAuthState();
-  const currentUser = getCurrentUser();
-  
+  useEffect(() => {
+    const user = localStorage.getItem('currentUser');
+    if (user) {
+      setCurrentUser(JSON.parse(user));
+    }
+    
+    const handleUserUpdate = () => {
+      const user = localStorage.getItem('currentUser');
+      if (user) {
+        setCurrentUser(JSON.parse(user));
+      }
+    };
+
+    window.addEventListener('userUpdated', handleUserUpdate);
+    return () => window.removeEventListener('userUpdated', handleUserUpdate);
+  }, []);
+
+  // Перевіряємо чи користувач є адміністратором
+  const isAdmin = currentUser?.is_admin === true || currentUser?.role === 'admin';
+
   return (
-    <header className={`sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur ${className}`}>
+    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-6">
           <NavbarLogo />
-          {showNav && variant === "default" && 
-            <NavbarNavigation 
-              className="hidden md:flex" 
-              currentUser={currentUser}
-            />
-          }
+          <NavbarNavigation isAdmin={isAdmin} />
         </div>
         
         <div className="flex items-center gap-4">
-          {showSearch && <NavbarSearch />}
-          
-          {showActions && (
-            <div className="flex items-center">
-              <NavbarActions />
-              <UserMenu currentUser={currentUser} />
-            </div>
-          )}
+          <NavbarSearch />
+          <NavbarActions />
         </div>
       </div>
-    </header>
+    </nav>
   );
 }

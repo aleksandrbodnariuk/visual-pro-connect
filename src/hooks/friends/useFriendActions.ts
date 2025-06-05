@@ -1,240 +1,183 @@
 
-import { useCallback } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { FriendRequest, FriendRequestStatus, Friend } from './types';
 
-interface UseFriendActionsProps {
-  friendRequests: FriendRequest[];
-  setFriendRequests: React.Dispatch<React.SetStateAction<FriendRequest[]>>;
-  friends: Friend[];
-  setFriends: React.Dispatch<React.SetStateAction<Friend[]>>;
-  refreshFriendRequests: () => Promise<void>;
-}
+export function useFriendActions() {
+  const [isLoading, setIsLoading] = useState(false);
 
-export function useFriendActions({
-  friendRequests,
-  setFriendRequests,
-  friends,
-  setFriends,
-  refreshFriendRequests
-}: UseFriendActionsProps) {
-
-  // Send a friend request to another user
-  const sendFriendRequest = useCallback(async (receiverId: string) => {
-    if (!receiverId) {
-      toast.error("Не вдалося відправити запит. Отримувач не вказаний.");
-      return;
-    }
-
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    
-    if (!currentUser.id) {
-      toast.error("Авторизуйтесь щоб відправляти запити у друзі.");
-      return;
-    }
-
-    console.log("Sending friend request from", currentUser.id, "to", receiverId);
-
+  const sendFriendRequest = async (receiverId: string, userName?: string) => {
+    setIsLoading(true);
     try {
-      // Check if a request already exists
-      const existingRequest = friendRequests.find(
-        req => (req.sender_id === currentUser.id && req.receiver_id === receiverId) ||
-               (req.sender_id === receiverId && req.receiver_id === currentUser.id)
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      
+      if (!currentUser || !currentUser.id) {
+        console.error("No logged in user found");
+        toast.error("Потрібно авторизуватися для відправки запиту");
+        return false;
+      }
+
+      console.log("Sending friend request from", currentUser.id, "to", receiverId);
+
+      // Перевіряємо чи не надсилали ми вже запит цьому користувачу
+      const existingRequests = JSON.parse(localStorage.getItem('friendRequests') || '[]');
+      const existingRequest = existingRequests.find((req: any) => 
+        req.sender_id === currentUser.id && req.receiver_id === receiverId ||
+        req.sender_id === receiverId && req.receiver_id === currentUser.id
       );
 
       if (existingRequest) {
-        toast.error("Запит вже відправлено або ви вже є друзями.");
-        return;
+        if (existingRequest.status === 'pending') {
+          toast.error("Запит на дружбу вже надіслано");
+          return false;
+        } else if (existingRequest.status === 'accepted') {
+          toast.error("Ви вже друзі з цим користувачем");
+          return false;
+        }
       }
 
-      // Create new request object
-      const newRequestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const newRequest: FriendRequest = {
-        id: newRequestId,
+      // Створюємо новий запит
+      const newRequest = {
+        id: `req${crypto.randomUUID()}`,
         sender_id: currentUser.id,
         receiver_id: receiverId,
-        status: 'pending' as FriendRequestStatus,
-        sender: currentUser,
-        created_at: new Date().toISOString()
+        status: 'pending' as const,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
-      console.log("Created new friend request:", newRequest);
+      console.log("Created friend request:", newRequest);
 
-      // Try to add the request to Supabase
+      // Спробуємо зберегти в Supabase
       try {
         const { data, error } = await supabase
           .from('friend_requests')
-          .insert([
-            {
-              id: newRequestId,
-              sender_id: currentUser.id,
-              receiver_id: receiverId,
-              status: 'pending'
-            }
-          ])
-          .select();
-
+          .insert([newRequest]);
+          
         if (error) {
-          console.error("Error adding friend request to Supabase:", error);
+          console.error("Error saving to Supabase:", error);
         } else {
-          console.log("Successfully added to Supabase:", data);
+          console.log("Friend request saved to Supabase successfully");
         }
       } catch (supabaseError) {
-        console.warn("Supabase not available, using localStorage only:", supabaseError);
+        console.warn("Supabase not available, using localStorage:", supabaseError);
       }
 
-      // Update local state and storage
-      const updatedRequests = [...friendRequests, newRequest];
-      setFriendRequests(updatedRequests as FriendRequest[]);
+      // Зберігаємо в localStorage
+      const updatedRequests = [...existingRequests, newRequest];
+      localStorage.setItem('friendRequests', JSON.stringify(updatedRequests));
+      
+      // Створюємо повідомлення для отримувача
+      const notificationMessage = {
+        id: `notif${crypto.randomUUID()}`,
+        user_id: receiverId,
+        message: `${currentUser.full_name || currentUser.firstName + ' ' + currentUser.lastName || 'Користувач'} хоче додати вас у друзі`,
+        is_read: false,
+        created_at: new Date().toISOString(),
+        type: 'friend_request',
+        sender_id: currentUser.id
+      };
+
+      // Зберігаємо повідомлення
+      const existingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+      const updatedNotifications = [...existingNotifications, notificationMessage];
+      localStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+
+      console.log("Friend request sent successfully");
+      toast.success(`Запит на дружбу надіслано користувачу ${userName || 'користувачу'}`);
+      
+      return true;
+    } catch (error) {
+      console.error('Error sending friend request:', error);
+      toast.error("Помилка при надсиланні запиту на дружбу");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const acceptFriendRequest = async (requestId: string) => {
+    setIsLoading(true);
+    try {
+      console.log("Accepting friend request:", requestId);
+      
+      // Оновлюємо статус запиту в localStorage
+      const existingRequests = JSON.parse(localStorage.getItem('friendRequests') || '[]');
+      const updatedRequests = existingRequests.map((req: any) => 
+        req.id === requestId ? { ...req, status: 'accepted', updated_at: new Date().toISOString() } : req
+      );
       localStorage.setItem('friendRequests', JSON.stringify(updatedRequests));
 
-      console.log("Updated friend requests:", updatedRequests);
-
-      // Show success message
-      toast.success("Запит у друзі відправлено!");
-      
-      // Refresh requests
-      await refreshFriendRequests();
-    } catch (error) {
-      console.error("Error sending friend request:", error);
-      toast.error("Помилка при відправленні запиту у друзі.");
-    }
-  }, [friendRequests, setFriendRequests, refreshFriendRequests]);
-
-  // Respond to a friend request (accept or reject)
-  const respondToFriendRequest = useCallback(async (requestId: string, status: FriendRequestStatus) => {
-    if (!requestId) {
-      toast.error("ID запиту не вказаний.");
-      return;
-    }
-
-    console.log("Responding to friend request:", requestId, "with status:", status);
-
-    try {
-      // Find the request in the local state
-      const request = friendRequests.find(req => req.id === requestId);
-      
-      if (!request) {
-        toast.error("Запит не знайдено.");
-        return;
-      }
-
-      console.log("Found request:", request);
-
-      // Update request in Supabase
+      // Спробуємо оновити в Supabase
       try {
         const { error } = await supabase
           .from('friend_requests')
-          .update({ status })
+          .update({ status: 'accepted', updated_at: new Date().toISOString() })
           .eq('id', requestId);
-
+          
         if (error) {
-          console.error("Error updating friend request in Supabase:", error);
+          console.error("Error updating in Supabase:", error);
+        } else {
+          console.log("Friend request updated in Supabase successfully");
         }
       } catch (supabaseError) {
-        console.warn("Supabase not available, using localStorage only:", supabaseError);
+        console.warn("Supabase not available, using localStorage:", supabaseError);
       }
 
-      // Update request in local state
-      const updatedRequests = friendRequests.map(req => 
-        req.id === requestId ? { ...req, status } : req
-      );
+      toast.success("Запит на дружбу прийнято");
+      return true;
+    } catch (error) {
+      console.error('Error accepting friend request:', error);
+      toast.error("Помилка при прийнятті запиту");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const rejectFriendRequest = async (requestId: string) => {
+    setIsLoading(true);
+    try {
+      console.log("Rejecting friend request:", requestId);
       
-      setFriendRequests(updatedRequests);
+      // Оновлюємо статус запиту в localStorage
+      const existingRequests = JSON.parse(localStorage.getItem('friendRequests') || '[]');
+      const updatedRequests = existingRequests.map((req: any) => 
+        req.id === requestId ? { ...req, status: 'rejected', updated_at: new Date().toISOString() } : req
+      );
       localStorage.setItem('friendRequests', JSON.stringify(updatedRequests));
 
-      console.log("Updated requests:", updatedRequests);
-
-      // If request was accepted, add the user to friends list
-      if (status === 'accepted') {
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-        const newFriend = request.sender_id === currentUser.id ? 
-          request.receiver : request.sender;
-        
-        console.log("Adding new friend:", newFriend);
-        
-        if (newFriend && !friends.some(friend => friend?.id === newFriend.id)) {
-          const updatedFriends = [...friends, newFriend];
-          setFriends(updatedFriends as Friend[]);
-          console.log("Updated friends list:", updatedFriends);
-        }
-      }
-
-      // Show success message
-      const message = status === 'accepted' ? 
-        "Запит у друзі прийнято!" : "Запит у друзі відхилено.";
-      toast.success(message);
-      
-      // Refresh the list
-      await refreshFriendRequests();
-    } catch (error) {
-      console.error("Error responding to friend request:", error);
-      toast.error("Помилка при обробці запиту у друзі.");
-    }
-  }, [friendRequests, setFriendRequests, friends, setFriends, refreshFriendRequests]);
-
-  // Remove a user from friends
-  const removeFriend = useCallback(async (friendId: string) => {
-    if (!friendId) return;
-    
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    
-    if (!currentUser.id) {
-      toast.error("Авторизуйтесь щоб виконати цю дію.");
-      return;
-    }
-    
-    try {
-      // Find the friend request
-      const request = friendRequests.find(
-        req => (req.sender_id === currentUser.id && req.receiver_id === friendId) ||
-               (req.sender_id === friendId && req.receiver_id === currentUser.id)
-      );
-      
-      if (!request) {
-        toast.error("Запис про дружбу не знайдено.");
-        return;
-      }
-      
-      // Update the request status in Supabase
+      // Спробуємо оновити в Supabase
       try {
         const { error } = await supabase
           .from('friend_requests')
-          .update({ status: 'rejected' })
-          .eq('id', request.id);
-        
+          .update({ status: 'rejected', updated_at: new Date().toISOString() })
+          .eq('id', requestId);
+          
         if (error) {
-          console.error("Error removing friend in Supabase:", error);
+          console.error("Error updating in Supabase:", error);
+        } else {
+          console.log("Friend request updated in Supabase successfully");
         }
       } catch (supabaseError) {
-        console.warn("Supabase not available, using localStorage only:", supabaseError);
+        console.warn("Supabase not available, using localStorage:", supabaseError);
       }
-      
-      // Update local state
-      const updatedRequests = friendRequests.map(req =>
-        req.id === request.id ? { ...req, status: 'rejected' as FriendRequestStatus } : req
-      );
-      setFriendRequests(updatedRequests);
-      localStorage.setItem('friendRequests', JSON.stringify(updatedRequests));
-      
-      // Remove from friends list
-      const updatedFriends = friends.filter(friend => friend?.id !== friendId);
-      setFriends(updatedFriends);
-      
-      toast.success("Користувача видалено з друзів.");
-      
-      // Refresh the lists
-      await refreshFriendRequests();
+
+      toast.success("Запит на дружбу відхилено");
+      return true;
     } catch (error) {
-      console.error("Error removing friend:", error);
-      toast.error("Помилка при видаленні з друзів.");
+      console.error('Error rejecting friend request:', error);
+      toast.error("Помилка при відхиленні запиту");
+      return false;
+    } finally {
+      setIsLoading(false);
     }
-  }, [friendRequests, setFriendRequests, friends, setFriends, refreshFriendRequests]);
+  };
 
   return {
     sendFriendRequest,
-    respondToFriendRequest,
-    removeFriend
+    acceptFriendRequest,
+    rejectFriendRequest,
+    isLoading
   };
 }

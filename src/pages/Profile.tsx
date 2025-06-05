@@ -257,7 +257,7 @@ export default function Profile() {
     setPortfolioManagerOpen(true);
   };
 
-  const handleCreatePost = () => {
+  const handleCreatePost = async () => {
     setCreatePostOpen(true);
   };
 

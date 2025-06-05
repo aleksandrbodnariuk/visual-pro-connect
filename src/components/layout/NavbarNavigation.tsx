@@ -1,63 +1,71 @@
 
-import React from 'react';
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Bell, Home, MessageCircle, PlusSquare, Search } from "lucide-react";
-import { useLanguage } from "@/context/LanguageContext";
-import { translations } from "@/lib/translations";
-import { User } from "@/hooks/users/types";
+import React from "react";
+import { Link } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 interface NavbarNavigationProps {
-  currentUser: User | null;
-  onCreatePublication?: () => void;
-  className?: string; 
+  isAdmin: boolean;
 }
 
-export function NavbarNavigation({ currentUser, onCreatePublication, className = "" }: NavbarNavigationProps) {
-  const navigate = useNavigate();
-  const { language } = useLanguage();
-  const t = translations[language];
+export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
+  const location = useLocation();
 
-  const handleNavigate = (path: string) => {
-    try {
-      navigate(path);
-    } catch (error) {
-      console.error(`Помилка при навігації до ${path}:`, error);
-      window.location.href = path;
-    }
+  const isActive = (path: string) => {
+    return location.pathname === path;
   };
 
   return (
-    <div className={`flex items-center gap-1 md:gap-2 ${className}`}>
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className="rounded-full" 
-        onClick={() => handleNavigate('/')}
+    <div className="hidden md:flex items-center space-x-6">
+      <Link
+        to="/"
+        className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
+          isActive("/") ? "text-foreground" : "text-foreground/60"
+        }`}
       >
-        <Home className="h-5 w-5" />
-        <span className="sr-only">{t.home}</span>
-      </Button>
-      
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className="rounded-full" 
-        onClick={() => handleNavigate('/messages')}
+        Головна
+      </Link>
+      <Link
+        to="/search"
+        className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
+          isActive("/search") ? "text-foreground" : "text-foreground/60"
+        }`}
       >
-        <MessageCircle className="h-5 w-5" />
-        <span className="sr-only">{t.messages}</span>
-      </Button>
-      
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className="rounded-full" 
-        onClick={() => handleNavigate('/notifications')}
+        Знайти професіоналів
+      </Link>
+      <Link
+        to="/friends"
+        className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
+          isActive("/friends") ? "text-foreground" : "text-foreground/60"
+        }`}
       >
-        <Bell className="h-5 w-5" />
-        <span className="sr-only">{t.notifications}</span>
-      </Button>
+        Друзі
+      </Link>
+      <Link
+        to="/messages"
+        className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
+          isActive("/messages") ? "text-foreground" : "text-foreground/60"
+        }`}
+      >
+        Повідомлення
+      </Link>
+      <Link
+        to="/stock-market"
+        className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
+          isActive("/stock-market") ? "text-foreground" : "text-foreground/60"
+        }`}
+      >
+        Біржа
+      </Link>
+      {isAdmin && (
+        <Link
+          to="/admin"
+          className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
+            isActive("/admin") ? "text-foreground" : "text-foreground/60"
+          }`}
+        >
+          Адмін
+        </Link>
+      )}
     </div>
   );
 }

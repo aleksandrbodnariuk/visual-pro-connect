@@ -1,222 +1,246 @@
 
-import { useState } from "react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle,
-  DialogFooter
-} from "@/components/ui/dialog";
+import React, { useState, useRef } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Image, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Upload, X } from "lucide-react";
 import { toast } from "sonner";
+import { uploadToStorage } from "@/lib/storage";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CreatePublicationModalProps {
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   userId: string;
-  userName?: string;
   onSuccess?: () => void;
 }
 
 export function CreatePublicationModal({ 
   open, 
-  onOpenChange,
+  onOpenChange, 
   userId,
-  userName,
-  onSuccess
+  onSuccess 
 }: CreatePublicationModalProps) {
   const [content, setContent] = useState("");
-  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [category, setCategory] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setMediaFile(file);
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-  
-  const handleClearImage = () => {
-    setMediaFile(null);
-    setPreviewUrl(null);
-  };
-  
-  const handleSubmit = async () => {
-    if (!content.trim() && !mediaFile) {
-      toast.error("Додайте текст або зображення");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      toast.error('Підтримуються лише зображення та відео');
       return;
     }
+
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+      toast.error('Розмір файлу не повинен перевищувати 50MB');
+      return;
+    }
+
+    setSelectedFile(file);
     
-    setIsSubmitting(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setPreviewUrl(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmit = async () => {
+    if (!content.trim()) {
+      toast.error('Будь ласка, напишіть текст публікації');
+      return;
+    }
+
+    setIsUploading(true);
     
     try {
       let mediaUrl = null;
       
-      // Upload media if exists
-      if (mediaFile) {
-        try {
-          // Try to upload to Supabase Storage
-          const fileExt = mediaFile.name.split('.').pop();
-          const filePath = `${userId}/${Date.now()}.${fileExt}`;
-          
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('posts')
-            .upload(filePath, mediaFile);
-          
-          if (uploadError) throw uploadError;
-          
-          const { data: urlData } = supabase.storage
-            .from('posts')
-            .getPublicUrl(filePath);
-            
-          mediaUrl = urlData.publicUrl;
-        } catch (storageError) {
-          console.error("Error uploading to storage:", storageError);
-          
-          // Fallback: use base64 for demo/development
-          if (previewUrl) {
-            mediaUrl = previewUrl;
-          }
-        }
-      }
-      
-      // Create post in database
-      try {
-        const { error } = await supabase
-          .from('posts')
-          .insert({
-            user_id: userId,
-            content,
-            media_url: mediaUrl,
-            created_at: new Date().toISOString()
-          });
-          
-        if (error) throw error;
-      } catch (dbError) {
-        console.error("Error saving to database:", dbError);
+      // Завантажуємо медіа файл якщо він є
+      if (selectedFile) {
+        const fileExtension = selectedFile.name.split('.').pop() || 'jpg';
+        const uniqueFileName = `post-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExtension}`;
+        const filePath = `posts/${uniqueFileName}`;
         
-        // Fallback for demo: save to localStorage
-        const localPosts = JSON.parse(localStorage.getItem('posts') || '[]');
-        const newPost = {
-          id: `local_${Date.now()}`,
-          userId: userId,
-          content,
-          mediaUrl: mediaUrl,
-          createdAt: new Date().toISOString(),
-          likesCount: 0,
-          commentsCount: 0
-        };
-        
-        localPosts.unshift(newPost);
-        localStorage.setItem('posts', JSON.stringify(localPosts));
+        console.log('Завантаження файлу:', uniqueFileName);
+        mediaUrl = await uploadToStorage('posts', filePath, selectedFile, selectedFile.type);
+        console.log('Файл завантажено:', mediaUrl);
       }
+
+      // Зберігаємо публікацію в базі даних
+      const postData = {
+        user_id: userId,
+        content: content,
+        media_url: mediaUrl,
+        category: category || null,
+        likes_count: 0,
+        comments_count: 0
+      };
+
+      console.log('Створення публікації:', postData);
+
+      const { data, error } = await supabase
+        .from('posts')
+        .insert([postData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Помилка створення публікації:', error);
+        toast.error('Помилка при створенні публікації');
+        return;
+      }
+
+      console.log('Публікацію створено:', data);
+      toast.success('Публікацію успішно створено!');
       
-      // Reset form
+      // Очищаємо форму
       setContent("");
-      setMediaFile(null);
+      setCategory("");
+      setSelectedFile(null);
       setPreviewUrl(null);
       
+      // Закриваємо модальне вікно
+      onOpenChange(false);
+      
+      // Викликаємо callback для оновлення списку публікацій
       if (onSuccess) {
         onSuccess();
       }
       
-      if (onOpenChange) {
-        onOpenChange(false);
-      }
-      
-      toast.success("Публікацію створено");
     } catch (error) {
-      console.error("Error creating post:", error);
-      toast.error("Не вдалося створити публікацію");
+      console.error('Помилка при створенні публікації:', error);
+      toast.error('Не вдалося створити публікацію');
     } finally {
-      setIsSubmitting(false);
+      setIsUploading(false);
     }
   };
-  
+
+  const removeFile = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Створити публікацію</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4 py-4">
+        <div className="space-y-4">
           <div>
-            <Label htmlFor="content" className="sr-only">Текст публікації</Label>
+            <Label htmlFor="content">Текст публікації</Label>
             <Textarea
               id="content"
-              placeholder="Напишіть що у вас нового..."
-              rows={5}
+              placeholder="Поділіться своїми думками..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
+              rows={4}
+              className="resize-none"
             />
           </div>
-          
-          {previewUrl && (
-            <div className="relative rounded-md overflow-hidden">
-              <img 
-                src={previewUrl} 
-                alt="Попередній перегляд" 
-                className="w-full max-h-[300px] object-cover"
-              />
-              <Button
-                variant="destructive"
-                size="icon"
-                className="absolute top-2 right-2"
-                onClick={handleClearImage}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-          
+
           <div>
-            <Label htmlFor="media" className="block mb-2">Додати зображення</Label>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                className="flex items-center gap-2" 
-                onClick={() => document.getElementById('media')?.click()}
+            <Label htmlFor="category">Категорія (опціонально)</Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Оберіть категорію" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="photographer">Фотограф</SelectItem>
+                <SelectItem value="videographer">Відеограф</SelectItem>
+                <SelectItem value="musician">Музикант</SelectItem>
+                <SelectItem value="host">Ведучий</SelectItem>
+                <SelectItem value="pyrotechnician">Піротехнік</SelectItem>
+                <SelectItem value="other">Інше</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Медіафайл (опціонально)</Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,video/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            
+            {!selectedFile ? (
+              <Button
                 type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full"
               >
-                <Image className="h-4 w-4" />
-                Завантажити
+                <Upload className="mr-2 h-4 w-4" />
+                Додати зображення або відео (до 50MB)
               </Button>
-              <Input
-                id="media"
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <span className="text-sm text-muted-foreground">
-                {mediaFile ? mediaFile.name : 'Зображення не вибрано'}
-              </span>
-            </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="relative">
+                  {selectedFile.type.startsWith('image/') ? (
+                    <img 
+                      src={previewUrl || ''} 
+                      alt="Preview" 
+                      className="w-full h-32 object-cover rounded"
+                    />
+                  ) : (
+                    <video 
+                      src={previewUrl || ''} 
+                      className="w-full h-32 object-cover rounded"
+                      controls
+                    />
+                  )}
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={removeFile}
+                    className="absolute top-2 right-2"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button 
+              onClick={handleSubmit} 
+              disabled={isUploading || !content.trim()}
+              className="flex-1"
+            >
+              {isUploading ? "Створення..." : "Опублікувати"}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              disabled={isUploading}
+            >
+              Скасувати
+            </Button>
           </div>
         </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange && onOpenChange(false)}>
-            Скасувати
-          </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Створення...' : 'Опублікувати'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

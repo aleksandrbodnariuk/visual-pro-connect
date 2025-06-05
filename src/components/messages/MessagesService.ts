@@ -256,16 +256,20 @@ export class MessagesService {
           
         if (error) {
           console.error("Помилка при відправленні повідомлення:", error);
+          toast.error("Помилка відправки повідомлення");
+          return { success: false };
         } else {
           console.log("Message sent to Supabase successfully");
+          toast.success("Повідомлення надіслано");
+          return { success: true, newMessage };
         }
       }
       
-      toast.success("Повідомлення надіслано");
-      return { success: true, newMessage };
+      return { success: false };
     } catch (err) {
       console.error("Помилка при відправленні повідомлення:", err);
-      return { success: true, newMessage }; // Still return success for offline mode
+      toast.error("Помилка відправки повідомлення");
+      return { success: false };
     }
   }
 }
