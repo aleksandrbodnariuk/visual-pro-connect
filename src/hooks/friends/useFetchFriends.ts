@@ -32,7 +32,7 @@ export function useFetchFriends() {
       
       setFriendRequests(typedStoredRequests);
 
-      // Спробуємо завантажити з Supabase
+      // ЗАВЖДИ спробуємо завантажити з Supabase для актуальних даних
       try {
         const { data: requestsData, error: requestsError } = await supabase
           .from('friend_requests')
@@ -41,7 +41,8 @@ export function useFetchFriends() {
 
         if (requestsError) {
           console.error('Error fetching friend requests from Supabase:', requestsError);
-        } else if (requestsData && requestsData.length > 0) {
+          // У випадку помилки використовуємо localStorage
+        } else if (requestsData) {
           console.log("Requests from Supabase:", requestsData);
           
           const typedRequests = requestsData.map(req => ({
@@ -51,10 +52,17 @@ export function useFetchFriends() {
           
           setFriendRequests(typedRequests);
           localStorage.setItem('friendRequests', JSON.stringify(typedRequests));
+          
+          // Якщо дані з Supabase завантажились успішно, не використовуємо localStorage
+          return;
         }
       } catch (supabaseError) {
         console.warn("Supabase not available, using localStorage:", supabaseError);
       }
+      
+      // Використовуємо localStorage тільки якщо Supabase недоступний або дані не завантажились
+      console.log("Using localStorage friend requests");
+      setFriendRequests(typedStoredRequests);
 
       // Завантажуємо користувачів з localStorage для формування списку друзів
       const usersFromLocalStorage = JSON.parse(localStorage.getItem('users') || '[]');

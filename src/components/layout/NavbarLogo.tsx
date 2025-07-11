@@ -13,18 +13,7 @@ export function NavbarLogo() {
       try {
         setIsLoading(true);
         
-        // Спочатку завантажуємо з localStorage для швидкого відображення
-        const cachedLogo = localStorage.getItem('customLogo');
-        const cachedSiteName = localStorage.getItem('siteName');
-        
-        if (cachedLogo) {
-          setLogoUrl(cachedLogo);
-        }
-        if (cachedSiteName) {
-          setSiteName(cachedSiteName);
-        }
-
-        // Потім перевіряємо Supabase
+        // ЗАВЖДИ спочатку завантажуємо з Supabase для актуальних даних
         try {
           const { data: logoData } = await supabase
             .from('site_settings')
@@ -35,6 +24,12 @@ export function NavbarLogo() {
           if (logoData?.value) {
             setLogoUrl(logoData.value);
             localStorage.setItem('customLogo', logoData.value);
+          } else {
+            // Якщо в Supabase немає логотипу, перевіряємо localStorage
+            const cachedLogo = localStorage.getItem('customLogo');
+            if (cachedLogo) {
+              setLogoUrl(cachedLogo);
+            }
           }
 
           const { data: nameData } = await supabase
@@ -46,9 +41,25 @@ export function NavbarLogo() {
           if (nameData?.value) {
             setSiteName(nameData.value);
             localStorage.setItem('siteName', nameData.value);
+          } else {
+            // Якщо в Supabase немає назви, перевіряємо localStorage
+            const cachedSiteName = localStorage.getItem('siteName');
+            if (cachedSiteName) {
+              setSiteName(cachedSiteName);
+            }
           }
         } catch (supabaseError) {
-          console.warn('Не вдалося завантажити дані з Supabase:', supabaseError);
+          console.warn('Не вдалося завантажити дані з Supabase, використовуємо localStorage:', supabaseError);
+          // Fallback до localStorage тільки якщо Supabase недоступний
+          const cachedLogo = localStorage.getItem('customLogo');
+          const cachedSiteName = localStorage.getItem('siteName');
+          
+          if (cachedLogo) {
+            setLogoUrl(cachedLogo);
+          }
+          if (cachedSiteName) {
+            setSiteName(cachedSiteName);
+          }
         }
       } catch (error) {
         console.error('Помилка завантаження логотипу:', error);

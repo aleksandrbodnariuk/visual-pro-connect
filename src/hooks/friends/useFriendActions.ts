@@ -19,11 +19,17 @@ export function useFriendActions() {
 
       console.log("Sending friend request from", currentUser.id, "to", receiverId);
 
+      // Не можна надсилати запит самому собі
+      if (currentUser.id === receiverId) {
+        toast.error("Не можна додати себе в друзі");
+        return false;
+      }
+
       // Перевіряємо чи не надсилали ми вже запит цьому користувачу
       const existingRequests = JSON.parse(localStorage.getItem('friendRequests') || '[]');
       const existingRequest = existingRequests.find((req: any) => 
-        req.sender_id === currentUser.id && req.receiver_id === receiverId ||
-        req.sender_id === receiverId && req.receiver_id === currentUser.id
+        (req.sender_id === currentUser.id && req.receiver_id === receiverId) ||
+        (req.sender_id === receiverId && req.receiver_id === currentUser.id)
       );
 
       if (existingRequest) {
@@ -67,18 +73,33 @@ export function useFriendActions() {
       const updatedRequests = [...existingRequests, newRequest];
       localStorage.setItem('friendRequests', JSON.stringify(updatedRequests));
       
-      // Створюємо повідомлення для отримувача
+      // Створюємо повідомлення для отримувача (ТІЛЬКИ для отримувача, НЕ для себе)
       const notificationMessage = {
         id: `notif${crypto.randomUUID()}`,
-        user_id: receiverId,
-        message: `${currentUser.full_name || currentUser.firstName + ' ' + currentUser.lastName || 'Користувач'} хоче додати вас у друзі`,
+        user_id: receiverId, // Повідомлення йде тому, кого запрошуємо
+        message: `${currentUser.full_name || (currentUser.firstName + ' ' + (currentUser.lastName || '')) || 'Користувач'} хоче додати вас у друзі`,
         is_read: false,
         created_at: new Date().toISOString(),
         type: 'friend_request',
         sender_id: currentUser.id
       };
 
-      // Зберігаємо повідомлення
+      // Спробуємо зберегти повідомлення в Supabase
+      try {
+        const { error: notifError } = await supabase
+          .from('notifications')
+          .insert([notificationMessage]);
+          
+        if (notifError) {
+          console.error("Error saving notification to Supabase:", notifError);
+        } else {
+          console.log("Notification saved to Supabase successfully");
+        }
+      } catch (supabaseError) {
+        console.warn("Supabase not available for notifications:", supabaseError);
+      }
+
+      // Зберігаємо повідомлення в localStorage (тільки для отримувача)
       const existingNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
       const updatedNotifications = [...existingNotifications, notificationMessage];
       localStorage.setItem('notifications', JSON.stringify(updatedNotifications));
