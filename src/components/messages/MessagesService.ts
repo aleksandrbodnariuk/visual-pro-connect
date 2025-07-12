@@ -242,14 +242,10 @@ export class MessagesService {
     };
     
     try {
-      // Встановлюємо контекст користувача для RLS
-      await supabase.rpc('set_config', {
-        parameter: 'app.current_phone',
-        value: currentUser.phone_number || currentUser.phoneNumber
-      });
-
-      // Спроба зберегти в Supabase
+      // Спроба зберегти в Supabase з правильним auth.uid()
       if (currentUser?.id) {
+        console.log("Attempting to send message with auth.uid:", currentUser.id);
+        
         const { data, error } = await supabase
           .from('messages')
           .insert([
@@ -264,7 +260,7 @@ export class MessagesService {
           
         if (error) {
           console.error("Помилка при відправленні повідомлення:", error);
-          console.error("Error details:", error.message, error.details);
+          console.error("Error details:", error.message, error.details, error.hint);
           toast.error(`Помилка відправки: ${error.message}`);
           return { success: false };
         } else {
@@ -272,9 +268,11 @@ export class MessagesService {
           toast.success("Повідомлення надіслано");
           return { success: true, newMessage };
         }
+      } else {
+        console.error("No current user ID available");
+        toast.error("Користувач не авторизований");
+        return { success: false };
       }
-      
-      return { success: false };
     } catch (err) {
       console.error("Помилка при відправленні повідомлення:", err);
       toast.error("Помилка відправки повідомлення");

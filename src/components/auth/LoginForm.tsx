@@ -27,7 +27,7 @@ export default function LoginForm({ onForgotPassword, onSwitchToRegister }: Logi
     toast(t.useTemporaryPassword);
   };
 
-  const processUserLogin = (user: any) => {
+  const processUserLogin = async (user: any) => {
     // Конвертуємо користувача у формат, який використовується в додатку
     const currentUser: User = {
       id: user.id,
@@ -54,6 +54,18 @@ export default function LoginForm({ onForgotPassword, onSwitchToRegister }: Logi
     };
     
     localStorage.setItem("currentUser", JSON.stringify(currentUser));
+    
+    // Створюємо псевдо-сесію в Supabase для RLS
+    try {
+      await supabase.auth.signInAnonymously();
+      // Встановлюємо user_id контекст для RLS
+      await supabase.rpc('set_config', {
+        parameter: 'app.current_user_id',
+        value: currentUser.id
+      });
+    } catch (authError) {
+      console.warn('Не вдалося створити Supabase сесію:', authError);
+    }
     
     if (password === "00000000" && (!user.password || user.password === '')) {
       toast.success(t.temporaryPasswordLogin);
@@ -101,7 +113,7 @@ export default function LoginForm({ onForgotPassword, onSwitchToRegister }: Logi
         if (user) {
           if (user.password === password) {
             // Успішний вхід для засновника
-            processUserLogin({
+            await processUserLogin({
               ...user,
               is_admin: true,
               founder_admin: true,
@@ -120,7 +132,7 @@ export default function LoginForm({ onForgotPassword, onSwitchToRegister }: Logi
       if (user.password !== password) {
         // Перевірка тимчасового пароля
         if (password === "00000000" && (!user.password || user.password === '')) {
-          processUserLogin(user);
+          await processUserLogin(user);
           return;
         }
         
@@ -129,7 +141,7 @@ export default function LoginForm({ onForgotPassword, onSwitchToRegister }: Logi
       }
       
       // Успішний вхід
-      processUserLogin(user);
+      await processUserLogin(user);
       
     } catch (error) {
       console.error("Помилка при авторизації:", error);
