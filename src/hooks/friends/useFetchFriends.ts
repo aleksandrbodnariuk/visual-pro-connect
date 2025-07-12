@@ -80,17 +80,21 @@ export function useFetchFriends() {
           .filter((request: any) => request.status === 'accepted')
           .map((request: any) => {
             console.log("Processing accepted request:", request);
+            // Якщо я відправник запиту, то друг - це отримувач
             if (request.sender_id === currentUserId) {
               const friend = usersFromLocalStorage.find((user: any) => user.id === request.receiver_id);
               console.log("Found friend (receiver):", friend);
               return friend;
-            } else {
+            } 
+            // Якщо я отримувач запиту, то друг - це відправник
+            else if (request.receiver_id === currentUserId) {
               const friend = usersFromLocalStorage.find((user: any) => user.id === request.sender_id);
               console.log("Found friend (sender):", friend);
               return friend;
             }
+            return null;
           })
-          .filter((friend: any) => friend !== undefined);
+          .filter((friend: any) => friend !== undefined && friend !== null);
           
         console.log("Final friends list:", localStorageFriends);
         setFriends(localStorageFriends as Friend[]);
