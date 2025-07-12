@@ -242,6 +242,12 @@ export class MessagesService {
     };
     
     try {
+      // Встановлюємо контекст користувача для RLS
+      await supabase.rpc('set_config', {
+        parameter: 'app.current_phone',
+        value: currentUser.phone_number || currentUser.phoneNumber
+      });
+
       // Спроба зберегти в Supabase
       if (currentUser?.id) {
         const { data, error } = await supabase
@@ -250,16 +256,19 @@ export class MessagesService {
             {
               sender_id: currentUser.id,
               receiver_id: receiverId,
-              content: messageText
+              content: messageText,
+              read: false
             }
-          ]);
+          ])
+          .select();
           
         if (error) {
           console.error("Помилка при відправленні повідомлення:", error);
-          toast.error("Помилка відправки повідомлення");
+          console.error("Error details:", error.message, error.details);
+          toast.error(`Помилка відправки: ${error.message}`);
           return { success: false };
         } else {
-          console.log("Message sent to Supabase successfully");
+          console.log("Message sent to Supabase successfully:", data);
           toast.success("Повідомлення надіслано");
           return { success: true, newMessage };
         }

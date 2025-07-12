@@ -12,57 +12,60 @@ export function NavbarLogo() {
     const loadLogoAndSiteName = async () => {
       try {
         setIsLoading(true);
+        console.log('Loading logo and site name from Supabase...');
         
-        // ЗАВЖДИ спочатку завантажуємо з Supabase для актуальних даних
-        try {
-          const { data: logoData } = await supabase
-            .from('site_settings')
-            .select('value')
-            .eq('id', 'site-logo')
-            .maybeSingle();
+        // ЗАВЖДИ завантажуємо з Supabase (без аутентифікації для загальнодоступних налаштувань)
+        const { data: logoData, error: logoError } = await supabase
+          .from('site_settings')
+          .select('value')
+          .eq('id', 'site-logo')
+          .maybeSingle();
 
-          if (logoData?.value) {
-            setLogoUrl(logoData.value);
-            localStorage.setItem('customLogo', logoData.value);
-          } else {
-            // Якщо в Supabase немає логотипу, перевіряємо localStorage
-            const cachedLogo = localStorage.getItem('customLogo');
-            if (cachedLogo) {
-              setLogoUrl(cachedLogo);
-            }
-          }
-
-          const { data: nameData } = await supabase
-            .from('site_settings')
-            .select('value')
-            .eq('id', 'site-name')
-            .maybeSingle();
-
-          if (nameData?.value) {
-            setSiteName(nameData.value);
-            localStorage.setItem('siteName', nameData.value);
-          } else {
-            // Якщо в Supabase немає назви, перевіряємо localStorage
-            const cachedSiteName = localStorage.getItem('siteName');
-            if (cachedSiteName) {
-              setSiteName(cachedSiteName);
-            }
-          }
-        } catch (supabaseError) {
-          console.warn('Не вдалося завантажити дані з Supabase, використовуємо localStorage:', supabaseError);
-          // Fallback до localStorage тільки якщо Supabase недоступний
+        if (logoError) {
+          console.error('Помилка завантаження логотипу з Supabase:', logoError);
+        } else if (logoData?.value) {
+          console.log('Logo loaded from Supabase:', logoData.value);
+          setLogoUrl(logoData.value);
+          localStorage.setItem('customLogo', logoData.value);
+        } else {
+          console.log('No logo in Supabase, checking localStorage...');
           const cachedLogo = localStorage.getItem('customLogo');
-          const cachedSiteName = localStorage.getItem('siteName');
-          
           if (cachedLogo) {
             setLogoUrl(cachedLogo);
           }
+        }
+
+        const { data: nameData, error: nameError } = await supabase
+          .from('site_settings')
+          .select('value')
+          .eq('id', 'site-name')
+          .maybeSingle();
+
+        if (nameError) {
+          console.error('Помилка завантаження назви сайту з Supabase:', nameError);
+        } else if (nameData?.value) {
+          console.log('Site name loaded from Supabase:', nameData.value);
+          setSiteName(nameData.value);
+          localStorage.setItem('siteName', nameData.value);
+        } else {
+          console.log('No site name in Supabase, checking localStorage...');
+          const cachedSiteName = localStorage.getItem('siteName');
           if (cachedSiteName) {
             setSiteName(cachedSiteName);
           }
         }
       } catch (error) {
-        console.error('Помилка завантаження логотипу:', error);
+        console.error('Помилка завантаження налаштувань:', error);
+        // Fallback до localStorage
+        const cachedLogo = localStorage.getItem('customLogo');
+        const cachedSiteName = localStorage.getItem('siteName');
+        
+        if (cachedLogo) {
+          setLogoUrl(cachedLogo);
+        }
+        if (cachedSiteName) {
+          setSiteName(cachedSiteName);
+        }
       } finally {
         setIsLoading(false);
       }
