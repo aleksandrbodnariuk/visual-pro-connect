@@ -242,9 +242,15 @@ export class MessagesService {
     };
     
     try {
-      // Спроба зберегти в Supabase з правильним auth.uid()
+      // Встановлюємо контекст користувача перед відправкою
       if (currentUser?.id) {
-        console.log("Attempting to send message with auth.uid:", currentUser.id);
+        console.log("Setting user context for:", currentUser.id);
+        
+        await supabase.rpc('set_current_user_context', {
+          user_uuid: currentUser.id
+        });
+        
+        console.log("Attempting to send message with user context set");
         
         const { data, error } = await supabase
           .from('messages')
