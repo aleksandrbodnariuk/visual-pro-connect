@@ -28,11 +28,8 @@ export function NavbarLogo() {
           setLogoUrl(logoData.value);
           localStorage.setItem('customLogo', logoData.value);
         } else {
-          console.log('No logo in Supabase, checking localStorage...');
-          const cachedLogo = localStorage.getItem('customLogo');
-          if (cachedLogo) {
-            setLogoUrl(cachedLogo);
-          }
+          console.log('No logo in Supabase, using default logo...');
+          setLogoUrl('/default-logo.png');
         }
 
         const { data: nameData, error: nameError } = await supabase
@@ -56,12 +53,14 @@ export function NavbarLogo() {
         }
       } catch (error) {
         console.error('Помилка завантаження налаштувань:', error);
-        // Fallback до localStorage
+        // Fallback до localStorage або логотип за замовчуванням
         const cachedLogo = localStorage.getItem('customLogo');
         const cachedSiteName = localStorage.getItem('siteName');
         
         if (cachedLogo) {
           setLogoUrl(cachedLogo);
+        } else {
+          setLogoUrl('/default-logo.png');
         }
         if (cachedSiteName) {
           setSiteName(cachedSiteName);

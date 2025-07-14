@@ -59,9 +59,8 @@ export default function LoginForm({ onForgotPassword, onSwitchToRegister }: Logi
     try {
       await supabase.auth.signInAnonymously();
       // Встановлюємо user_id контекст для RLS
-      await supabase.rpc('set_config', {
-        parameter: 'app.current_user_id',
-        value: currentUser.id
+      await supabase.rpc('set_current_user_context', {
+        user_uuid: currentUser.id
       });
     } catch (authError) {
       console.warn('Не вдалося створити Supabase сесію:', authError);

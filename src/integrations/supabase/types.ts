@@ -426,6 +426,10 @@ export type Database = {
         Args: { parameter: string; value: string }
         Returns: undefined
       }
+      set_current_user_context: {
+        Args: { user_uuid: string }
+        Returns: undefined
+      }
       set_founder_admin_status: {
         Args: Record<PropertyKey, never>
         Returns: undefined
