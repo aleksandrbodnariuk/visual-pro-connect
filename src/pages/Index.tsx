@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Hero } from "@/components/home/Hero";
 import { useAuthState } from "@/hooks/auth/useAuthState";
+import { CreatePublicationButton } from "@/components/publications/CreatePublicationButton";
 
 const Index = () => {
   const { getCurrentUser } = useAuthState();
@@ -29,6 +30,10 @@ const Index = () => {
         </div>
         <div className="flex-1 ml-64">
           <div className="container mx-auto px-4 py-8">
+            <div className="mb-6 flex justify-between items-center">
+              <h1 className="text-2xl font-bold">Стрічка новин</h1>
+              <CreatePublicationButton />
+            </div>
             <NewsFeed />
           </div>
         </div>
