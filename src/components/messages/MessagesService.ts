@@ -242,42 +242,30 @@ export class MessagesService {
     };
     
     try {
-      // Встановлюємо контекст користувача перед відправкою
-      if (currentUser?.id) {
-        console.log("Setting user context for:", currentUser.id);
-        
-        await supabase.rpc('set_current_user_context', {
-          user_uuid: currentUser.id
-        });
-        
-        console.log("Attempting to send message with user context set");
-        
-        const { data, error } = await supabase
-          .from('messages')
-          .insert([
-            {
-              sender_id: currentUser.id,
-              receiver_id: receiverId,
-              content: messageText,
-              read: false
-            }
-          ])
-          .select();
+      // Відправляємо повідомлення безпосередньо в Supabase з правильним auth.uid()
+      console.log("Attempting to send message from user:", currentUser?.id, "to:", receiverId);
+      
+      const { data, error } = await supabase
+        .from('messages')
+        .insert([
+          {
+            sender_id: currentUser?.id,
+            receiver_id: receiverId,
+            content: messageText,
+            read: false
+          }
+        ])
+        .select();
           
-        if (error) {
-          console.error("Помилка при відправленні повідомлення:", error);
-          console.error("Error details:", error.message, error.details, error.hint);
-          toast.error(`Помилка відправки: ${error.message}`);
-          return { success: false };
-        } else {
-          console.log("Message sent to Supabase successfully:", data);
-          toast.success("Повідомлення надіслано");
-          return { success: true, newMessage };
-        }
-      } else {
-        console.error("No current user ID available");
-        toast.error("Користувач не авторизований");
+      if (error) {
+        console.error("Помилка при відправленні повідомлення:", error);
+        console.error("Error details:", error.message, error.details, error.hint);
+        toast.error(`Помилка відправки: ${error.message}`);
         return { success: false };
+      } else {
+        console.log("Message sent to Supabase successfully:", data);
+        toast.success("Повідомлення надіслано");
+        return { success: true, newMessage };
       }
     } catch (err) {
       console.error("Помилка при відправленні повідомлення:", err);
