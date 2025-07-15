@@ -164,21 +164,20 @@ export function NewsFeed() {
         <TabsContent value={activeCategory} className="space-y-6 mt-6">
           {filteredPosts.length > 0 ? (
             filteredPosts.map((post) => {
-              // Отримуємо дані користувача з localStorage
-              const users = JSON.parse(localStorage.getItem('users') || '[]');
-              const postUser = users.find((user: any) => user.id === post.user_id);
+              // Отримуємо дані користувача з localStorage та Supabase
+              const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
               
               return (
                 <PostCard 
                   key={post.id}
                   id={post.id}
                   author={{
-                    id: post.user_id || 'demo-user',
-                    name: postUser?.full_name || postUser?.firstName && postUser?.lastName ? 
-                          `${postUser.firstName} ${postUser.lastName}` : 'Користувач',
-                    username: postUser?.phone_number || 'user',
-                    avatarUrl: postUser?.avatar_url || '',
-                    profession: postUser?.bio || ''
+                    id: post.user_id || currentUser.id || 'demo-user',
+                    name: currentUser.full_name || currentUser.firstName && currentUser.lastName ? 
+                          `${currentUser.firstName} ${currentUser.lastName}` : 'Користувач',
+                    username: currentUser.phone_number || 'user',
+                    avatarUrl: currentUser.avatar_url || '',
+                    profession: currentUser.title || currentUser.bio || ''
                   }}
                   imageUrl={post.media_url || "/placeholder.svg"}
                   caption={post.content || ''}
