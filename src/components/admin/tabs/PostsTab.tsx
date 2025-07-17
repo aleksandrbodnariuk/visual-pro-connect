@@ -3,7 +3,8 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PenLine, Trash2, Eye } from "lucide-react";
+import { PenLine, Trash2, Eye, Plus } from "lucide-react";
+import { CreatePublicationButton } from "@/components/publications/CreatePublicationButton";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -96,8 +97,13 @@ export function PostsTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Управління публікаціями</CardTitle>
-        <CardDescription>Перегляд та модерація публікацій користувачів</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Управління публікаціями</CardTitle>
+            <CardDescription>Перегляд та модерація публікацій користувачів</CardDescription>
+          </div>
+          <CreatePublicationButton />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">

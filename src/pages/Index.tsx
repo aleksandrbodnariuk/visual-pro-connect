@@ -30,9 +30,8 @@ const Index = () => {
         </div>
         <div className="flex-1 ml-64">
           <div className="container mx-auto px-4 py-8">
-            <div className="mb-6 flex justify-between items-center">
+            <div className="mb-6">
               <h1 className="text-2xl font-bold">Стрічка новин</h1>
-              <CreatePublicationButton />
             </div>
             <NewsFeed />
           </div>

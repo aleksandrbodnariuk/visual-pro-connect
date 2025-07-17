@@ -15,7 +15,7 @@ export interface PostCardProps {
     avatarUrl?: string;
     profession?: string;
   };
-  imageUrl: string;
+  imageUrl?: string;
   caption: string;
   likes: number;
   comments: number;
@@ -74,14 +74,16 @@ export function PostCard({
         </Link>
       </div>
 
-      {/* Зображення */}
-      <div className="relative aspect-square overflow-hidden bg-muted">
-        <img
-          src={imageUrl}
-          alt={caption}
-          className="h-full w-full object-cover transition-all hover:scale-105"
-        />
-      </div>
+      {/* Зображення - показуємо тільки якщо є */}
+      {imageUrl && (
+        <div className="relative aspect-square overflow-hidden bg-muted">
+          <img
+            src={imageUrl}
+            alt={caption}
+            className="h-full w-full object-cover transition-all hover:scale-105"
+          />
+        </div>
+      )}
 
       {/* Дії */}
       <div className="p-3">

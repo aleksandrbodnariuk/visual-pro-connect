@@ -179,7 +179,7 @@ export function NewsFeed() {
                     avatarUrl: currentUser.avatar_url || '',
                     profession: currentUser.title || currentUser.bio || ''
                   }}
-                  imageUrl={post.media_url || "/placeholder.svg"}
+                  imageUrl={post.media_url || undefined}
                   caption={post.content || ''}
                   likes={post.likes_count || 0}
                   comments={post.comments_count || 0}
