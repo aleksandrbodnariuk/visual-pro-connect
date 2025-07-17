@@ -11,33 +11,7 @@ export async function uploadToStorage(
     console.log(`Спроба завантаження файлу в bucket: ${bucketName}, шлях: ${filePath}`);
     console.log(`Розмір файлу: ${file.size} байт, тип: ${contentType}`);
     
-    // Перевіряємо, чи існує bucket
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-    
-    if (listError) {
-      console.error('Помилка отримання списку buckets:', listError);
-      // Якщо не можемо отримати список, спробуємо створити bucket
-    }
-    
-    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
-    
-    if (!bucketExists) {
-      console.log(`Створюю bucket: ${bucketName}`);
-      const { error: createError } = await supabase.storage.createBucket(bucketName, {
-        public: true,
-        fileSizeLimit: 52428800, // 50MB
-        allowedMimeTypes: ['image/*', 'video/*']
-      });
-      
-      if (createError) {
-        console.error(`Помилка створення bucket ${bucketName}:`, createError);
-        // Продовжуємо, можливо bucket вже існує
-      } else {
-        console.log(`Bucket ${bucketName} успішно створено`);
-      }
-    }
-    
-    // Завантажуємо файл
+    // Завантажуємо файл без перевірки bucket (він вже має існувати)
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucketName)
       .upload(filePath, file, {

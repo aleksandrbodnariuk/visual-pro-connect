@@ -128,7 +128,8 @@ export default function Profile() {
           throw new Error('Не вдалося визначити ID користувача');
         }
         
-        setIsCurrentUser(currentUser && currentUser.id === targetUserId);
+        const isOwnProfile = currentUser && currentUser.id === targetUserId;
+        setIsCurrentUser(isOwnProfile);
         
         let userData = null;
         
@@ -181,7 +182,7 @@ export default function Profile() {
           profession: userData.categories && userData.categories.length > 0 ? userData.categories[0] : "",
           status: userData.is_shareholder ? "Акціонер" : (userData.is_admin ? "А��міністратор" : "Учасник"),
           role: userData.is_admin ? "admin" : (userData.is_shareholder ? "shareholder" : "user"),
-          isCurrentUser: isCurrentUser,
+          isCurrentUser: isOwnProfile,
           shares: userData.shares || 0,
           percentage: userData.percentage || 0,
           profit: userData.profit || 0,

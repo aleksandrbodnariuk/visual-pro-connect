@@ -164,20 +164,33 @@ export function NewsFeed() {
         <TabsContent value={activeCategory} className="space-y-6 mt-6">
           {filteredPosts.length > 0 ? (
             filteredPosts.map((post) => {
-              // Отримуємо дані користувача з localStorage та Supabase
+              // Отримуємо дані автора поста
               const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+              
+              // Намагаємося знайти автора поста
+              let postAuthor = null;
+              if (post.user_id === currentUser.id) {
+                postAuthor = currentUser;
+              } else {
+                // Шукаємо автора в списку користувачів
+                const users = JSON.parse(localStorage.getItem('users') || '[]');
+                postAuthor = users.find((user: any) => user.id === post.user_id);
+              }
+              
+              const authorName = postAuthor?.full_name || 
+                               (postAuthor?.firstName && postAuthor?.lastName ? 
+                                `${postAuthor.firstName} ${postAuthor.lastName}` : 'Користувач');
               
               return (
                 <PostCard 
                   key={post.id}
                   id={post.id}
                   author={{
-                    id: post.user_id || currentUser.id || 'demo-user',
-                    name: currentUser.full_name || currentUser.firstName && currentUser.lastName ? 
-                          `${currentUser.firstName} ${currentUser.lastName}` : 'Користувач',
-                    username: currentUser.phone_number || 'user',
-                    avatarUrl: currentUser.avatar_url || '',
-                    profession: currentUser.title || currentUser.bio || ''
+                    id: post.user_id || 'demo-user',
+                    name: authorName,
+                    username: postAuthor?.phone_number || postAuthor?.phoneNumber || 'user',
+                    avatarUrl: postAuthor?.avatar_url || postAuthor?.avatarUrl || '',
+                    profession: postAuthor?.title || postAuthor?.bio || ''
                   }}
                   imageUrl={post.media_url || undefined}
                   caption={post.content || ''}

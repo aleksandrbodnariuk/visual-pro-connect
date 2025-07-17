@@ -47,7 +47,9 @@ export function useFetchFriends() {
           
           const typedRequests = requestsData.map(req => ({
             ...req,
-            status: req.status as FriendRequestStatus
+            status: req.status as FriendRequestStatus,
+            sender: req.sender || { full_name: 'Користувач', firstName: 'Невідомий', lastName: '' },
+            receiver: req.receiver || { full_name: 'Користувач', firstName: 'Невідомий', lastName: '' }
           })) as FriendRequest[];
           
           setFriendRequests(typedRequests);
