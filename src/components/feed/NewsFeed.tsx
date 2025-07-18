@@ -25,7 +25,10 @@ export function NewsFeed() {
       // Спробуємо завантажити з Supabase
       const { data: supabasePosts, error } = await supabase
         .from('posts')
-        .select('*')
+        .select(`
+          *,
+          author:users!posts_user_id_fkey(*)
+        `)
         .order('created_at', { ascending: false });
 
       if (error && error.code !== 'PGRST116') {
@@ -167,19 +170,19 @@ export function NewsFeed() {
               // Отримуємо дані автора поста
               const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
               
-              // Намагаємося знайти автора поста
-              let postAuthor = null;
-              if (post.user_id === currentUser.id) {
-                postAuthor = currentUser;
-              } else {
-                // Шукаємо автора в списку користувачів
-                const users = JSON.parse(localStorage.getItem('users') || '[]');
-                postAuthor = users.find((user: any) => user.id === post.user_id);
+              // Використовуємо автора з бази даних або з localStorage
+              let postAuthor = post.author;
+              if (!postAuthor) {
+                if (post.user_id === currentUser.id) {
+                  postAuthor = currentUser;
+                } else {
+                  // Шукаємо автора в списку користувачів
+                  const users = JSON.parse(localStorage.getItem('users') || '[]');
+                  postAuthor = users.find((user: any) => user.id === post.user_id);
+                }
               }
               
-              const authorName = postAuthor?.full_name || 
-                               (postAuthor?.firstName && postAuthor?.lastName ? 
-                                `${postAuthor.firstName} ${postAuthor.lastName}` : 'Користувач');
+              const authorName = postAuthor?.full_name || 'Користувач';
               
               return (
                 <PostCard 

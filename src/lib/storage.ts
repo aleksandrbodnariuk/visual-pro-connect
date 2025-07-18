@@ -11,11 +11,14 @@ export async function uploadToStorage(
     console.log(`Спроба завантаження файлу в bucket: ${bucketName}, шлях: ${filePath}`);
     console.log(`Розмір файлу: ${file.size} байт, тип: ${contentType}`);
     
+    // Видаляємо старий файл, якщо він існує
+    await supabase.storage.from(bucketName).remove([filePath]);
+    
     // Завантажуємо файл без перевірки bucket (він вже має існувати)
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucketName)
       .upload(filePath, file, {
-        upsert: true,
+        upsert: false,
         contentType: contentType,
         cacheControl: '3600'
       });

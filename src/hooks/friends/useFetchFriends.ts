@@ -36,7 +36,11 @@ export function useFetchFriends() {
       try {
         const { data: requestsData, error: requestsError } = await supabase
           .from('friend_requests')
-          .select('*, sender:sender_id(*), receiver:receiver_id(*)')
+          .select(`
+            *,
+            sender:users!friend_requests_sender_id_fkey(*),
+            receiver:users!friend_requests_receiver_id_fkey(*)
+          `)
           .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
 
         if (requestsError) {
