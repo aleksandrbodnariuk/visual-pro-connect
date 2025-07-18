@@ -52,12 +52,31 @@ export function useFetchFriends() {
           const typedRequests = requestsData.map(req => ({
             ...req,
             status: req.status as FriendRequestStatus,
-            sender: req.sender || { full_name: 'Користувач', firstName: 'Невідомий', lastName: '' },
-            receiver: req.receiver || { full_name: 'Користувач', firstName: 'Невідомий', lastName: '' }
+            sender: req.sender || { id: req.sender_id, full_name: 'Користувач', firstName: 'Невідомий', lastName: '' },
+            receiver: req.receiver || { id: req.receiver_id, full_name: 'Користувач', firstName: 'Невідомий', lastName: '' }
           })) as FriendRequest[];
           
           setFriendRequests(typedRequests);
           localStorage.setItem('friendRequests', JSON.stringify(typedRequests));
+          
+          // Витягуємо друзів з прийнятих запитів
+          const currentUserId = currentUser.id;
+          const friendsList = typedRequests
+            .filter(request => request.status === 'accepted')
+            .map(request => {
+              // Якщо я відправник запиту, то друг - це отримувач
+              if (request.sender_id === currentUserId) {
+                return request.receiver;
+              } 
+              // Якщо я отримувач запиту, то друг - це відправник
+              else if (request.receiver_id === currentUserId) {
+                return request.sender;
+              }
+              return null;
+            })
+            .filter(friend => friend !== null);
+            
+          setFriends(friendsList as Friend[]);
           
           // Якщо дані з Supabase завантажились успішно, не використовуємо localStorage
           return;
