@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { FriendRequest, Friend, FriendRequestStatus } from './types';
@@ -36,11 +35,7 @@ export function useFetchFriends() {
       try {
         const { data: requestsData, error: requestsError } = await supabase
           .from('friend_requests')
-          .select(`
-            *,
-            sender:users!friend_requests_sender_id_fkey(*),
-            receiver:users!friend_requests_receiver_id_fkey(*)
-          `)
+          .select('*')
           .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
 
         if (requestsError) {
@@ -49,37 +44,55 @@ export function useFetchFriends() {
         } else if (requestsData) {
           console.log("Requests from Supabase:", requestsData);
           
-          const typedRequests = requestsData.map(req => ({
-            ...req,
-            status: req.status as FriendRequestStatus,
-            sender: req.sender || { id: req.sender_id, full_name: 'Користувач', firstName: 'Невідомий', lastName: '' },
-            receiver: req.receiver || { id: req.receiver_id, full_name: 'Користувач', firstName: 'Невідомий', lastName: '' }
-          })) as FriendRequest[];
+          // Завантажуємо дані користувачів окремо
+          const userIds = new Set<string>();
+          requestsData.forEach(req => {
+            userIds.add(req.sender_id);
+            userIds.add(req.receiver_id);
+          });
           
-          setFriendRequests(typedRequests);
-          localStorage.setItem('friendRequests', JSON.stringify(typedRequests));
+          const { data: usersData, error: usersError } = await supabase
+            .from('users')
+            .select('*')
+            .in('id', Array.from(userIds) as string[]);
           
-          // Витягуємо друзів з прийнятих запитів
-          const currentUserId = currentUser.id;
-          const friendsList = typedRequests
-            .filter(request => request.status === 'accepted')
-            .map(request => {
-              // Якщо я відправник запиту, то друг - це отримувач
-              if (request.sender_id === currentUserId) {
-                return request.receiver;
-              } 
-              // Якщо я отримувач запиту, то друг - це відправник
-              else if (request.receiver_id === currentUserId) {
-                return request.sender;
-              }
-              return null;
-            })
-            .filter(friend => friend !== null);
+          if (!usersError && usersData) {
+            // Мапимо користувачів
+            const usersMap = new Map();
+            usersData.forEach(user => usersMap.set(user.id, user));
             
-          setFriends(friendsList as Friend[]);
+            const typedRequests = requestsData.map(req => ({
+              ...req,
+              status: req.status as FriendRequestStatus,
+              sender: usersMap.get(req.sender_id) || { id: req.sender_id, full_name: 'Користувач' },
+              receiver: usersMap.get(req.receiver_id) || { id: req.receiver_id, full_name: 'Користувач' }
+            })) as FriendRequest[];
           
-          // Якщо дані з Supabase завантажились успішно, не використовуємо localStorage
-          return;
+            setFriendRequests(typedRequests);
+            localStorage.setItem('friendRequests', JSON.stringify(typedRequests));
+            
+            // Витягуємо друзів з прийнятих запитів
+            const currentUserId = currentUser.id;
+            const friendsList = typedRequests
+              .filter(request => request.status === 'accepted')
+              .map(request => {
+                // Якщо я відправник запиту, то друг - це отримувач
+                if (request.sender_id === currentUserId) {
+                  return request.receiver;
+                } 
+                // Якщо я отримувач запиту, то друг - це відправник
+                else if (request.receiver_id === currentUserId) {
+                  return request.sender;
+                }
+                return null;
+              })
+              .filter(friend => friend !== null);
+              
+            setFriends(friendsList as Friend[]);
+            
+            // Якщо дані з Supabase завантажились успішно, не використовуємо localStorage
+            return;
+          }
         }
       } catch (supabaseError) {
         console.warn("Supabase not available, using localStorage:", supabaseError);
