@@ -49,9 +49,8 @@ export function SearchCategories() {
     const fetchCategoryCounts = async () => {
       try {
         // Try to get counts from Supabase
-        const { data, error } = await supabase
-          .from('users')
-          .select('categories');
+        const { data, error } = await (supabase as any)
+          .rpc('get_public_profiles');
           
         if (error) throw error;
         

@@ -51,10 +51,8 @@ export function useFetchFriends() {
             userIds.add(req.receiver_id);
           });
           
-          const { data: usersData, error: usersError } = await supabase
-            .from('users')
-            .select('*')
-            .in('id', Array.from(userIds) as string[]);
+          const { data: usersData, error: usersError } = await (supabase as any)
+            .rpc('get_public_profiles_by_ids', { _ids: Array.from(userIds) });
           
           if (!usersError && usersData) {
             // Мапимо користувачів

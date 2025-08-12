@@ -56,11 +56,9 @@ export function FriendsList({ userId }: { userId?: string }) {
       localStorage.setItem("currentChatReceiverId", friendId);
       
       // Перевіряємо наявність користувача в Supabase
-      const { data: userInSupabase, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', friendId)
-        .maybeSingle();
+      const { data: profiles, error } = await (supabase as any)
+        .rpc('get_public_profiles_by_ids', { _ids: [friendId] });
+      const userInSupabase = profiles && Array.isArray(profiles) ? profiles[0] : null;
       
       if (error) {
         console.error("Помилка перевірки користувача в Supabase:", error);

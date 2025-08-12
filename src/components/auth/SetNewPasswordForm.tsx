@@ -34,11 +34,11 @@ export default function SetNewPasswordForm({ phoneNumber, onComplete }: SetNewPa
     
     try {
       setLoading(true);
-      // Оновлюємо пароль у Supabase
-      const { error } = await supabase
-        .from('users')
-        .update({ password: newPassword })
-        .eq('phone_number', phoneNumber);
+      // Оновлюємо пароль через безпечну RPC
+      const { data: ok, error } = await (supabase as any).rpc('set_user_password', {
+        _phone_number: phoneNumber,
+        _new_password: newPassword
+      });
         
       if (error) {
         console.error("Error updating password:", error);

@@ -65,9 +65,8 @@ export function SearchResults({ category }: { category: string }) {
         setIsLoading(true);
         
         // Спроба отримати дані з Supabase
-        const { data, error } = await supabase
-          .from('users')
-          .select('*');
+        const { data, error } = await (supabase as any)
+          .rpc('get_public_profiles');
         
         if (error) throw error;
         

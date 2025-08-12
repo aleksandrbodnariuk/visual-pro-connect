@@ -80,9 +80,8 @@ export default function Connect() {
       setIsLoading(true);
       
       // Спроба отримати користувачів з Supabase
-      const { data, error } = await supabase
-        .from('users')
-        .select('*');
+      const { data, error } = await (supabase as any)
+        .rpc('get_public_profiles');
       
       if (error) {
         console.error("Помилка при завантаженні користувачів:", error);

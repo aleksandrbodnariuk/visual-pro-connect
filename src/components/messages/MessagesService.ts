@@ -148,12 +148,9 @@ export class MessagesService {
     try {
       console.log("Creating new chat with user:", receiverId);
       
-      // Отримуємо дані користувача з Supabase
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', receiverId)
-        .maybeSingle();
+      const { data: profiles, error: userError } = await (supabase as any)
+        .rpc('get_public_profiles_by_ids', { _ids: [receiverId] });
+      const userData = profiles && Array.isArray(profiles) ? profiles[0] : null;
         
       if (userError) {
         console.error("Помилка при отриманні даних користувача:", userError);

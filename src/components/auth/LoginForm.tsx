@@ -34,7 +34,6 @@ export default function LoginForm({ onForgotPassword, onSwitchToRegister }: Logi
       firstName: user.full_name?.split(' ')[0] || '',
       lastName: user.full_name?.split(' ')[1] || '',
       phoneNumber: user.phone_number,
-      password: user.password,
       isAdmin: user.is_admin,
       isFounder: user.founder_admin,
       isShareHolder: user.is_shareholder,
@@ -66,7 +65,7 @@ export default function LoginForm({ onForgotPassword, onSwitchToRegister }: Logi
       console.warn('Не вдалося створити Supabase сесію:', authError);
     }
     
-    if (password === "00000000" && (!user.password || user.password === '')) {
+    if (password === "00000000" && user.has_password === false) {
       toast.success(t.temporaryPasswordLogin);
       toast.info(t.pleaseChangePassword);
       navigate("/settings");
@@ -85,61 +84,24 @@ export default function LoginForm({ onForgotPassword, onSwitchToRegister }: Logi
     try {
       setLoading(true);
       
-      // Перевіряємо користувача в Supabase
-      const { data: users, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('phone_number', phoneNumber);
+      // Перевіряємо користувача через безпечну RPC-функцію
+      const { data, error } = await (supabase as any).rpc('validate_user_credentials', {
+        _phone_number: phoneNumber,
+        _input_password: password
+      });
       
-      if (fetchError) {
-        console.error("Помилка при пошуку користувача:", fetchError);
+      if (error) {
+        console.error("Помилка при перевірці облікового запису:", error);
         toast.error("Помилка при перевірці облікового запису");
         return;
       }
 
-      console.log("Знайдено користувачів:", users);
-      
-      if (!users || users.length === 0) {
-        toast.error("Користувача з таким номером не знайдено");
-        return;
-      }
-      
-      const user = users[0]; // Беремо першого знайденого користувача
-      
-      // Спочатку перевіряємо чи це телефон засновника
-      if (phoneNumber === "0507068007") {
-        // Якщо засновник існує в базі, перевіряємо пароль
-        if (user) {
-          if (user.password === password) {
-            // Успішний вхід для засновника
-            await processUserLogin({
-              ...user,
-              is_admin: true,
-              founder_admin: true,
-              is_shareholder: true,
-              role: "admin-founder"
-            });
-            return;
-          } else {
-            toast.error(t.incorrectPhoneOrPassword);
-            return;
-          }
-        }
-      }
-      
-      // Перевірка пароля
-      if (user.password !== password) {
-        // Перевірка тимчасового пароля
-        if (password === "00000000" && (!user.password || user.password === '')) {
-          await processUserLogin(user);
-          return;
-        }
-        
+      if (!data || !Array.isArray(data) || data.length === 0) {
         toast.error(t.incorrectPhoneOrPassword);
         return;
       }
-      
-      // Успішний вхід
+
+      const user = data[0] as any;
       await processUserLogin(user);
       
     } catch (error) {

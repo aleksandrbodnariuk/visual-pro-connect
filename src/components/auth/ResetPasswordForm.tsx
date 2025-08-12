@@ -29,11 +29,10 @@ export default function ResetPasswordForm({ onBack, onCodeVerified }: ResetPassw
     
     try {
       setLoading(true);
-      // Перевірка чи існує користувач з таким номером
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('id')
-        .eq('phone_number', resetPhoneNumber);
+      // Перевірка чи існує користувач з таким номером через RPC
+      const { data: exists, error } = await (supabase as any).rpc('user_exists_by_phone', {
+        _phone_number: resetPhoneNumber
+      });
       
       if (error) {
         console.error("Error finding user for password reset:", error);
@@ -41,7 +40,7 @@ export default function ResetPasswordForm({ onBack, onCodeVerified }: ResetPassw
         return;
       }
       
-      if (!user || user.length === 0) {
+      if (!exists) {
         toast.error(t.phoneNotRegistered);
         return;
       }
