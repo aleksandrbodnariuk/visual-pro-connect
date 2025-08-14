@@ -374,7 +374,6 @@ export type Database = {
           instagram: string | null
           is_admin: boolean | null
           is_shareholder: boolean | null
-          password: string
           phone_number: string
           title: string | null
           viber: string | null
@@ -395,7 +394,6 @@ export type Database = {
           instagram?: string | null
           is_admin?: boolean | null
           is_shareholder?: boolean | null
-          password: string
           phone_number: string
           title?: string | null
           viber?: string | null
@@ -416,7 +414,6 @@ export type Database = {
           instagram?: string | null
           is_admin?: boolean | null
           is_shareholder?: boolean | null
-          password?: string
           phone_number?: string
           title?: string | null
           viber?: string | null
@@ -512,6 +509,29 @@ export type Database = {
           id: string
           instagram: string
           is_shareholder: boolean
+          title: string
+          viber: string
+          website: string
+        }[]
+      }
+      get_user_by_phone: {
+        Args: { _phone_number: string }
+        Returns: {
+          avatar_url: string
+          banner_url: string
+          bio: string
+          categories: string[]
+          city: string
+          country: string
+          created_at: string
+          facebook: string
+          founder_admin: boolean
+          full_name: string
+          id: string
+          instagram: string
+          is_admin: boolean
+          is_shareholder: boolean
+          phone_number: string
           title: string
           viber: string
           website: string
