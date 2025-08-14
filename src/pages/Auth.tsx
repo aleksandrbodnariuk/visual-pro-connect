@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
-import { useAuthState } from '@/hooks/auth/useAuthState';
+import { useSupabaseAuth } from '@/hooks/auth/useSupabaseAuth';
 import { Button } from "@/components/ui/button";
 
 import { AuthStepManager } from '@/components/auth/AuthStepManager';
@@ -23,14 +23,13 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [authStep, setAuthStep] = useState<AuthStep>(AuthStep.LOGIN_REGISTER);
   const [resetPhoneNumber, setResetPhoneNumber] = useState("");
-  const { checkAuthStatus } = useAuthState();
+  const { isAuthenticated } = useSupabaseAuth();
   
   useEffect(() => {
-    const isLoggedIn = checkAuthStatus();
-    if (isLoggedIn) {
+    if (isAuthenticated()) {
       navigate("/");
     }
-  }, [navigate, checkAuthStatus]);
+  }, [navigate, isAuthenticated]);
   
   const handleCodeVerified = (phoneNumber: string) => {
     setResetPhoneNumber(phoneNumber);

@@ -4,8 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 
-import LoginForm from '@/components/auth/LoginForm';
-import RegisterForm from '@/components/auth/RegisterForm';
+import SupabaseLoginForm from '@/components/auth/SupabaseLoginForm';
+import SupabaseRegisterForm from '@/components/auth/SupabaseRegisterForm';
 import ResetPasswordForm from '@/components/auth/ResetPasswordForm';
 import VerifyCodeForm from '@/components/auth/VerifyCodeForm';
 import SetNewPasswordForm from '@/components/auth/SetNewPasswordForm';
@@ -111,14 +111,14 @@ export function AuthStepManager({
           </TabsList>
           
           <TabsContent value="login" className="space-y-4 pt-2">
-            <LoginForm 
+            <SupabaseLoginForm 
               onForgotPassword={() => setAuthStep(AuthStep.RESET_PASSWORD)}
               onSwitchToRegister={() => setIsLogin(false)}
             />
           </TabsContent>
           
           <TabsContent value="register" className="space-y-4 pt-2">
-            <RegisterForm onSwitchToLogin={() => setIsLogin(true)} />
+            <SupabaseRegisterForm onSwitchToLogin={() => setIsLogin(true)} />
           </TabsContent>
         </Tabs>
       </div>

@@ -2,10 +2,10 @@
 import React from 'react';
 import { LanguageSelector } from './LanguageSelector';
 import { UserMenu } from './UserMenu';
-import { useAuthState } from '@/hooks/auth/useAuthState';
+import { useSupabaseAuth } from '@/hooks/auth/useSupabaseAuth';
 
 export function NavbarActions() {
-  const { getCurrentUser } = useAuthState();
+  const { getCurrentUser } = useSupabaseAuth();
   const currentUser = getCurrentUser();
 
   return (

@@ -1,63 +1,39 @@
 
 import { useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useSupabaseAuth } from './useSupabaseAuth';
 import { User } from '@/hooks/users/types';
-import { syncUserToSupabase } from '@/hooks/users/usersSync';
 
+// Legacy hook - redirects to new Supabase auth
 export function useAuthState() {
+  const { isAuthenticated, getCurrentUser: getSupabaseUser, signOut } = useSupabaseAuth();
+
   // Перевіряє чи користувач увійшов в систему
   const checkAuthStatus = useCallback(() => {
-    const currentUserJSON = localStorage.getItem('currentUser');
-    return !!currentUserJSON;
-  }, []);
+    return isAuthenticated();
+  }, [isAuthenticated]);
 
-  // Отримує поточного користувача
+  // Отримує поточного користувача (backward compatibility)
   const getCurrentUser = useCallback((): User | null => {
-    try {
-      const currentUserJSON = localStorage.getItem('currentUser');
-      if (!currentUserJSON) return null;
-      
-      return JSON.parse(currentUserJSON);
-    } catch (error) {
-      console.error("Error getting current user:", error);
-      return null;
-    }
+    return getSupabaseUser();
+  }, [getSupabaseUser]);
+
+  // Синхронізує користувача з Supabase (no longer needed)
+  const syncUser = useCallback(async () => {
+    // No longer needed with Supabase auth
+    return;
   }, []);
 
-  // Синхронізує користувача з Supabase
-  const syncUser = useCallback(async () => {
-    const currentUser = getCurrentUser();
-    if (currentUser) {
-      await syncUserToSupabase(currentUser);
-    }
-  }, [getCurrentUser]);
-
-  // Оновлює дані користувача і в локальному сховищі, і в Supabase
+  // Оновлює дані користувача (deprecated - use updateProfile from useSupabaseAuth)
   const updateUser = useCallback(async (userData: Partial<User>) => {
-    try {
-      const currentUser = getCurrentUser();
-      if (!currentUser) return null;
-      
-      const updatedUser = {
-        ...currentUser,
-        ...userData
-      };
-      
-      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-      await syncUserToSupabase(updatedUser);
-      
-      return updatedUser;
-    } catch (error) {
-      console.error("Error updating user:", error);
-      return null;
-    }
-  }, [getCurrentUser]);
+    console.warn('updateUser is deprecated, use updateProfile from useSupabaseAuth');
+    return null;
+  }, []);
 
   // Виконує вихід користувача з системи
-  const logout = useCallback(() => {
-    localStorage.removeItem('currentUser');
-    return true;
-  }, []);
+  const logout = useCallback(async () => {
+    const { error } = await signOut();
+    return !error;
+  }, [signOut]);
 
   return {
     checkAuthStatus,
