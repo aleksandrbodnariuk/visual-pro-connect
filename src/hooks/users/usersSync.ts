@@ -210,9 +210,7 @@ export async function syncAllUsersToSupabase(): Promise<User[]> {
       
       // Отримуємо останні дані користувачів з Supabase
       const { data: latestUsers, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .rpc('get_users_for_admin');
       
       if (!error && latestUsers) {
         console.log("Latest users from Supabase:", latestUsers);

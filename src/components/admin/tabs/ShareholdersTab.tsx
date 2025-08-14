@@ -34,10 +34,10 @@ export function ShareholdersTab() {
       
       try {
         // Отримуємо користувачів з Supabase, які є акціонерами
-        const { data: supabaseShareholders, error: usersError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('is_shareholder', true);
+        const { data: allUsers, error: usersError } = await supabase
+          .rpc('get_users_for_admin');
+        
+        const supabaseShareholders = allUsers?.filter(user => user.is_shareholder);
           
         if (usersError) {
           console.error("Error fetching shareholders:", usersError);

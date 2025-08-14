@@ -24,9 +24,7 @@ export function UsersTab() {
       console.log("Завантаження користувачів...");
       
       const { data: supabaseUsers, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .rpc('get_users_for_admin');
 
       if (error && error.code !== 'PGRST116') {
         console.error("Помилка завантаження користувачів з Supabase:", error);

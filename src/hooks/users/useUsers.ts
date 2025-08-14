@@ -27,9 +27,7 @@ export function useUsers(): UseUsersReturnType {
       
       // Try to get data from Supabase first
       const { data: supabaseUsers, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .rpc('get_users_for_admin');
       
       if (fetchError) {
         console.error("Error fetching users from Supabase:", fetchError);
@@ -42,20 +40,8 @@ export function useUsers(): UseUsersReturnType {
         // Make sure founder has correct status
         const updatedUsers = supabaseUsers.map(user => {
           if (user.phone_number === "0507068007") {
-            // If this is the founder, ensure correct status
-            supabase
-              .from('users')
-              .update({
-                founder_admin: true,
-                is_admin: true,
-                is_shareholder: true
-              })
-              .eq('id', user.id)
-              .then(({ error }) => {
-                if (error) {
-                  console.error("Error updating founder status:", error);
-                }
-              });
+            // Founder status is managed by database triggers and functions
+            // No need to manually update here
             
             return formatUserFromSupabase({
               ...user,

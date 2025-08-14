@@ -56,9 +56,9 @@ export function FriendsList({ userId }: { userId?: string }) {
       localStorage.setItem("currentChatReceiverId", friendId);
       
       // Перевіряємо наявність користувача в Supabase
-      const { data: profiles, error } = await (supabase as any)
-        .rpc('get_public_profiles_by_ids', { _ids: [friendId] });
-      const userInSupabase = profiles && Array.isArray(profiles) ? profiles[0] : null;
+      const { data: userInSupabase, error } = await (supabase as any)
+        .rpc('get_safe_user_profile', { user_uuid: friendId })
+        .single();
       
       if (error) {
         console.error("Помилка перевірки користувача в Supabase:", error);
@@ -70,22 +70,8 @@ export function FriendsList({ userId }: { userId?: string }) {
         const userToAdd = storedUsers.find((user: any) => user.id === friendId);
         
         if (userToAdd) {
-          const { error: insertError } = await supabase
-            .from('users')
-            .insert({
-              id: userToAdd.id,
-              full_name: userToAdd.firstName && userToAdd.lastName ? 
-                `${userToAdd.firstName} ${userToAdd.lastName}` : userToAdd.full_name || '',
-              phone_number: userToAdd.phoneNumber || '',
-              is_admin: userToAdd.isAdmin || false,
-              is_shareholder: userToAdd.isShareHolder || false,
-              avatar_url: userToAdd.avatarUrl || '',
-              password: userToAdd.password || 'defaultpassword'
-            });
-          
-          if (insertError && insertError.code !== '23505') { // Ігноруємо помилки унікальності
-            console.error("Помилка додавання користувача в Supabase:", insertError);
-          }
+          // User creation is now restricted to admin functions only
+          console.log("User not found in Supabase, cannot create due to security restrictions");
         }
       }
       

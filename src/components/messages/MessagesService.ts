@@ -148,9 +148,9 @@ export class MessagesService {
     try {
       console.log("Creating new chat with user:", receiverId);
       
-      const { data: profiles, error: userError } = await (supabase as any)
-        .rpc('get_public_profiles_by_ids', { _ids: [receiverId] });
-      const userData = profiles && Array.isArray(profiles) ? profiles[0] : null;
+      const { data: userData, error: userError } = await (supabase as any)
+        .rpc('get_safe_user_profile', { user_uuid: receiverId })
+        .single();
         
       if (userError) {
         console.error("Помилка при отриманні даних користувача:", userError);

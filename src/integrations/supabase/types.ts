@@ -7,10 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "13.0.4"
   }
   public: {
     Tables: {
@@ -433,6 +433,114 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      get_my_profile: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          avatar_url: string
+          banner_url: string
+          bio: string
+          categories: string[]
+          city: string
+          country: string
+          created_at: string
+          facebook: string
+          founder_admin: boolean
+          full_name: string
+          has_password: boolean
+          id: string
+          instagram: string
+          is_admin: boolean
+          is_shareholder: boolean
+          phone_number: string
+          title: string
+          viber: string
+          website: string
+        }[]
+      }
+      get_public_profiles: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          avatar_url: string
+          banner_url: string
+          bio: string
+          categories: string[]
+          city: string
+          country: string
+          created_at: string
+          facebook: string
+          full_name: string
+          id: string
+          instagram: string
+          is_shareholder: boolean
+          title: string
+          viber: string
+          website: string
+        }[]
+      }
+      get_public_profiles_by_ids: {
+        Args: { _ids: string[] }
+        Returns: {
+          avatar_url: string
+          banner_url: string
+          bio: string
+          categories: string[]
+          city: string
+          country: string
+          created_at: string
+          facebook: string
+          full_name: string
+          id: string
+          instagram: string
+          is_shareholder: boolean
+          title: string
+          viber: string
+          website: string
+        }[]
+      }
+      get_safe_user_profile: {
+        Args: { user_uuid: string }
+        Returns: {
+          avatar_url: string
+          banner_url: string
+          bio: string
+          categories: string[]
+          city: string
+          country: string
+          created_at: string
+          facebook: string
+          full_name: string
+          id: string
+          instagram: string
+          is_shareholder: boolean
+          title: string
+          viber: string
+          website: string
+        }[]
+      }
+      get_users_for_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          avatar_url: string
+          banner_url: string
+          bio: string
+          categories: string[]
+          city: string
+          country: string
+          created_at: string
+          facebook: string
+          founder_admin: boolean
+          full_name: string
+          has_password: boolean
+          id: string
+          instagram: string
+          is_admin: boolean
+          is_shareholder: boolean
+          phone_number: string
+          title: string
+          viber: string
+          website: string
+        }[]
+      }
       is_admin: {
         Args: { user_id: string }
         Returns: boolean
@@ -452,6 +560,42 @@ export type Database = {
       set_founder_admin_status: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      set_user_password: {
+        Args: { _new_password: string; _phone_number: string }
+        Returns: boolean
+      }
+      update_my_password: {
+        Args: { new_password: string; old_password: string }
+        Returns: boolean
+      }
+      user_exists_by_phone: {
+        Args: { _phone_number: string }
+        Returns: boolean
+      }
+      validate_user_credentials: {
+        Args: { _input_password: string; _phone_number: string }
+        Returns: {
+          avatar_url: string
+          banner_url: string
+          bio: string
+          categories: string[]
+          city: string
+          country: string
+          created_at: string
+          facebook: string
+          founder_admin: boolean
+          full_name: string
+          has_password: boolean
+          id: string
+          instagram: string
+          is_admin: boolean
+          is_shareholder: boolean
+          phone_number: string
+          title: string
+          viber: string
+          website: string
+        }[]
       }
     }
     Enums: {
