@@ -6,13 +6,15 @@ import { translations } from '@/lib/translations';
 
 import SupabaseLoginForm from '@/components/auth/SupabaseLoginForm';
 import SupabaseRegisterForm from '@/components/auth/SupabaseRegisterForm';
+import SupabaseResetPasswordForm from '@/components/auth/SupabaseResetPasswordForm';
 import ResetPasswordForm from '@/components/auth/ResetPasswordForm';
 import VerifyCodeForm from '@/components/auth/VerifyCodeForm';
 import SetNewPasswordForm from '@/components/auth/SetNewPasswordForm';
 
-enum AuthStep {
+export enum AuthStep {
   LOGIN_REGISTER,
   RESET_PASSWORD,
+  SUPABASE_RESET_PASSWORD,
   VERIFY_CODE,
   SET_NEW_PASSWORD
 }
@@ -38,6 +40,23 @@ export function AuthStepManager({
   const t = translations[language];
   
   // Рендеримо компонент відповідно до поточного кроку автентифікації
+  if (authStep === AuthStep.SUPABASE_RESET_PASSWORD) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold">Скидання паролю</h1>
+            <p className="mt-2 text-muted-foreground">Введіть вашу email адресу для скидання паролю</p>
+          </div>
+          
+          <SupabaseResetPasswordForm 
+            onBack={() => setAuthStep(AuthStep.LOGIN_REGISTER)}
+          />
+        </div>
+      </div>
+    );
+  }
+  
   if (authStep === AuthStep.RESET_PASSWORD) {
     return (
       <div className="flex h-screen flex-col items-center justify-center p-4">
@@ -112,7 +131,7 @@ export function AuthStepManager({
           
           <TabsContent value="login" className="space-y-4 pt-2">
             <SupabaseLoginForm 
-              onForgotPassword={() => setAuthStep(AuthStep.RESET_PASSWORD)}
+              onForgotPassword={() => setAuthStep(AuthStep.SUPABASE_RESET_PASSWORD)}
               onSwitchToRegister={() => setIsLogin(false)}
             />
           </TabsContent>

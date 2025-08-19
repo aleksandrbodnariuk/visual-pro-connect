@@ -6,14 +6,7 @@ import { translations } from '@/lib/translations';
 import { useSupabaseAuth } from '@/hooks/auth/useSupabaseAuth';
 import { Button } from "@/components/ui/button";
 
-import { AuthStepManager } from '@/components/auth/AuthStepManager';
-
-enum AuthStep {
-  LOGIN_REGISTER,
-  RESET_PASSWORD,
-  VERIFY_CODE,
-  SET_NEW_PASSWORD
-}
+import { AuthStepManager, AuthStep } from '@/components/auth/AuthStepManager';
 
 export default function Auth() {
   const { language } = useLanguage();

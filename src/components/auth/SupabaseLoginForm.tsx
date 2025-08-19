@@ -77,7 +77,7 @@ export default function SupabaseLoginForm({ onSwitchToRegister, onForgotPassword
       
       <div className="flex flex-col space-y-2">
         <Button variant="outline" className="w-full" onClick={onForgotPassword} disabled={loading}>
-          {t.forgotPassword}
+          Скинути пароль через email
         </Button>
         
         <Button variant="ghost" className="w-full" onClick={onSwitchToRegister} disabled={loading}>
