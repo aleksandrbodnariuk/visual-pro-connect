@@ -18,7 +18,7 @@ export function BannerPreview({ bannerUrl }: BannerPreviewProps) {
               // Handle image loading errors
               const target = e.target as HTMLImageElement;
               target.onerror = null;
-              target.src = "https://images.unsplash.com/photo-1487887235947-a955ef187fcc";
+              target.style.display = 'none';
             }}
           />
         ) : (

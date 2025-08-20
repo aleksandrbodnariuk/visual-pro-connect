@@ -57,7 +57,7 @@ export function NewsFeed() {
       
       const newPost = {
         content: newPostContent,
-        user_id: currentUser.id || 'demo-user',
+        user_id: currentUser.id,
         created_at: new Date().toISOString(),
         likes_count: 0,
         comments_count: 0,
@@ -189,7 +189,7 @@ export function NewsFeed() {
                   key={post.id}
                   id={post.id}
                   author={{
-                    id: post.user_id || 'demo-user',
+                    id: post.user_id,
                     name: authorName,
                     username: postAuthor?.phone_number || postAuthor?.phoneNumber || 'user',
                     avatarUrl: postAuthor?.avatar_url || postAuthor?.avatarUrl || '',

@@ -28,7 +28,7 @@ export function PortfolioManagementTab() {
         console.error("Помилка завантаження портфоліо з Supabase:", error);
         // Використовуємо localStorage як резерв
         const localPortfolio = JSON.parse(localStorage.getItem('portfolio') || '[]');
-        // Фільтруємо демо-контент
+        // Завантажуємо портфоліо
         const cleanedPortfolio = localPortfolio.filter((item: any) => 
           !item.title?.includes("Портретна фотосесія") &&
           !item.title?.includes("Відеопрезентація продукту") &&
@@ -40,7 +40,7 @@ export function PortfolioManagementTab() {
         setPortfolioItems(cleanedPortfolio);
         localStorage.setItem('portfolio', JSON.stringify(cleanedPortfolio));
       } else if (supabasePortfolio && supabasePortfolio.length > 0) {
-        // Фільтруємо демо-контент з Supabase
+        // Завантажуємо портфоліо з Supabase
         const filteredPortfolio = supabasePortfolio.filter((item: any) => 
           !item.title?.includes("Портретна фотосесія") &&
           !item.title?.includes("Відеопрезентація продукту") &&
@@ -51,7 +51,7 @@ export function PortfolioManagementTab() {
         );
         setPortfolioItems(filteredPortfolio);
       } else {
-        // Очищуємо localStorage від демо-контенту
+        // Оновлюємо localStorage
         const localPortfolio = JSON.parse(localStorage.getItem('portfolio') || '[]');
         const cleanedPortfolio = localPortfolio.filter((item: any) => 
           !item.title?.includes("Портретна фотосесія") &&
