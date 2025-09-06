@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
 import { User as UserType } from "@/hooks/users/types";
+import { useSupabaseAuth } from "@/hooks/auth/useSupabaseAuth";
 
 interface UserMenuProps {
   currentUser: UserType | null;
@@ -26,6 +27,7 @@ export function UserMenu({ currentUser }: UserMenuProps) {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const t = translations[language];
+  const { signOut } = useSupabaseAuth();
   const [avatar, setAvatar] = useState<string | null | undefined>(currentUser?.avatarUrl || currentUser?.avatar_url);
   
   // Listen for avatar updates
@@ -47,7 +49,8 @@ export function UserMenu({ currentUser }: UserMenuProps) {
   
   const handleLogout = async () => {
     try {
-      localStorage.removeItem("currentUser");
+      await signOut();
+      localStorage.removeItem("currentUser"); // Backward compatibility
       toast.success("Ви вийшли з системи");
       navigate("/");
     } catch (error) {
