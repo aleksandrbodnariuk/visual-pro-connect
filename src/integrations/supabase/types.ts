@@ -454,7 +454,7 @@ export type Database = {
           website: string
         }[]
       }
-      get_public_profiles: {
+      get_safe_public_profiles: {
         Args: Record<PropertyKey, never>
         Returns: {
           avatar_url: string
@@ -474,7 +474,7 @@ export type Database = {
           website: string
         }[]
       }
-      get_public_profiles_by_ids: {
+      get_safe_public_profiles_by_ids: {
         Args: { _ids: string[] }
         Returns: {
           avatar_url: string

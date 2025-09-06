@@ -52,7 +52,7 @@ export function useFetchFriends() {
           });
           
           const { data: usersData, error: usersError } = await (supabase as any)
-            .rpc('get_public_profiles_by_ids', { _ids: Array.from(userIds) });
+            .rpc('get_safe_public_profiles_by_ids', { _ids: Array.from(userIds) });
           
           if (!usersError && usersData) {
             // Мапимо користувачів

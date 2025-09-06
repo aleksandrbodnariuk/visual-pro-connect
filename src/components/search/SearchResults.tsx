@@ -66,7 +66,7 @@ export function SearchResults({ category }: { category: string }) {
         
         // Спроба отримати дані з Supabase
         const { data, error } = await (supabase as any)
-          .rpc('get_public_profiles');
+          .rpc('get_safe_public_profiles');
         
         if (error) throw error;
         
