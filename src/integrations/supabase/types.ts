@@ -426,6 +426,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_user_public_data: {
+        Args: { target_user_id: string }
+        Returns: boolean
+      }
       check_admin_access: {
         Args: Record<PropertyKey, never>
         Returns: boolean
