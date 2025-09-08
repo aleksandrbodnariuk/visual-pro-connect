@@ -7,10 +7,9 @@ import { AdminStats } from "@/components/admin/AdminStats";
 import { AdminTabs } from "@/components/admin/AdminTabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useSupabaseAuth } from "@/hooks/auth/useSupabaseAuth";
 
 export default function Admin() {
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isFounder, setIsFounder] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [shareholders, setShareholders] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
@@ -18,97 +17,66 @@ export default function Admin() {
   
   const navigate = useNavigate();
   const { tabName } = useParams<{ tabName: string }>();
+  const { getCurrentUser, isAuthenticated, loading } = useSupabaseAuth();
+  const currentUser = getCurrentUser();
   
-  const loadUsersData = () => {
-    // Завантажуємо користувачів
-    const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-    console.log("Завантажені користувачі:", storedUsers);
-    setUsers(storedUsers);
-    
-    // Фільтруємо акціонерів - тільки ті, хто має is_shareholder: true або є засновником
-    const shareholdersData = storedUsers.filter((user: any) => {
-      const isFounder = user.founder_admin || user.phone_number === '0507068007';
-      const isShareholder = user.is_shareholder === true || user.isShareHolder === true;
-      const result = isFounder || isShareholder;
-      console.log(`Користувач ${user.full_name || user.firstName}: isFounder=${isFounder}, is_shareholder=${user.is_shareholder}, isShareHolder=${user.isShareHolder}, result=${result}`);
-      return result;
-    });
-    
-    console.log("Відфільтровані акціонери:", shareholdersData);
-    setShareholders(shareholdersData);
+  const loadUsersData = async () => {
+    try {
+      // Загружаем пользователей из Supabase
+      const { data, error } = await supabase.rpc('get_users_for_admin');
+      if (error) {
+        console.error('Error loading users from Supabase:', error);
+        return;
+      }
+      
+      console.log("Загруженные пользователи из Supabase:", data);
+      setUsers(data || []);
+      
+      // Фильтруем акционеров
+      const shareholdersData = (data || []).filter((user: any) => {
+        const isFounder = user.founder_admin || user.phone_number === '0507068007';
+        const isShareholder = user.is_shareholder === true;
+        const result = isFounder || isShareholder;
+        console.log(`Пользователь ${user.full_name}: isFounder=${isFounder}, is_shareholder=${user.is_shareholder}, result=${result}`);
+        return result;
+      });
+      
+      console.log("Отфильтрованные акционеры:", shareholdersData);
+      setShareholders(shareholdersData);
+    } catch (error) {
+      console.error('Error in loadUsersData:', error);
+    }
   };
 
   useEffect(() => {
-    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+    // Проверяем аутентификацию и права доступа
+    if (loading) return;
     
-    // Перевірка на права доступу
-    if (!currentUser || !(currentUser.isAdmin || currentUser.role === "admin" || currentUser.role === "admin-founder")) {
-      toast.error("Доступ заборонено: Необхідні права адміністратора");
+    if (!isAuthenticated() || !currentUser) {
+      toast.error("Доступ запрещен: Необходимо войти в систему");
       navigate("/auth");
       return;
     }
     
-    // Встановлюємо статус адміністратора
-    setIsAdmin(true);
-    
-    // Перевіряємо, чи це засновник
-    const isFounderAdmin = currentUser.role === "admin-founder" || 
-                          (currentUser.phoneNumber === "0507068007" && currentUser.isFounder) ||
-                          currentUser.phone_number === "0507068007";
-    setIsFounder(isFounderAdmin);
-    
-    // Оновлюємо роль користувача, якщо він має номер засновника
-    if ((currentUser.phoneNumber === "0507068007" || currentUser.phone_number === "0507068007") && !isFounderAdmin) {
-      const updatedUser = {
-        ...currentUser,
-        isAdmin: true,
-        isFounder: true,
-        role: "admin-founder",
-        isShareHolder: true,
-        is_shareholder: true
-      };
-      
-      // Оновлюємо дані в localStorage
-      localStorage.setItem("currentUser", JSON.stringify(updatedUser));
-      
-      // Оновлюємо список користувачів
-      const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-      const updatedUsers = storedUsers.map((user: any) => {
-        if (user.phoneNumber === "0507068007" || user.phone_number === "0507068007" || user.id === currentUser.id) {
-          return {
-            ...user,
-            isAdmin: true,
-            isFounder: true,
-            role: "admin-founder",
-            isShareHolder: true,
-            is_shareholder: true,
-            founder_admin: true,
-            is_admin: true,
-            status: "Адміністратор-засновник"
-          };
-        }
-        return user;
-      });
-      
-      localStorage.setItem("users", JSON.stringify(updatedUsers));
-      
-      // Оновлюємо стан
-      setIsFounder(true);
+    if (!currentUser.isAdmin && !currentUser.founder_admin) {
+      toast.error("Доступ запрещен: Необходимы права администратора");
+      navigate("/");
+      return;
     }
     
-    // Якщо не вказано вкладку, перенаправляємо на вкладку "users"
+    // Если не указана вкладка, перенаправляем на вкладку "users"
     if (!tabName) {
       navigate("/admin/users");
     }
     
-    // Завантажуємо дані користувачів
+    // Загружаем данные пользователей
     loadUsersData();
     
-    // Завантажуємо замовлення
+    // Загружаем заказы из localStorage (для совместимости)
     const storedOrders = JSON.parse(localStorage.getItem("orders") || "[]");
     setOrders(storedOrders);
     
-    // Встановлюємо ціну акцій
+    // Устанавливаем цену акций
     const storedStockPrice = localStorage.getItem("stockPrice");
     if (storedStockPrice) {
       setStockPrice(storedStockPrice);
@@ -116,9 +84,9 @@ export default function Admin() {
       localStorage.setItem("stockPrice", stockPrice);
     }
 
-    // Слухач для оновлення статистики при зміні статусу акціонера
+    // Слушатель для обновления статистики при изменении статуса акционера
     const handleShareholderUpdate = () => {
-      console.log("Отримано подію оновлення акціонера, перезавантажуємо дані...");
+      console.log("Получено событие обновления акционера, перезагружаем данные...");
       loadUsersData();
     };
 
@@ -129,10 +97,18 @@ export default function Admin() {
       window.removeEventListener('shareholder-status-updated', handleShareholderUpdate);
       window.removeEventListener('storage', loadUsersData);
     };
-  }, [navigate, stockPrice, tabName]);
+  }, [navigate, stockPrice, tabName, loading, isAuthenticated, currentUser]);
 
-  if (!isAdmin) {
-    return <div className="container py-16 text-center">Перевірка прав доступу...</div>;
+  if (loading) {
+    return <div className="container py-16 text-center">Загрузка...</div>;
+  }
+
+  if (!isAuthenticated() || !currentUser) {
+    return <div className="container py-16 text-center">Перенаправление на страницу авторизации...</div>;
+  }
+
+  if (!currentUser.isAdmin && !currentUser.founder_admin) {
+    return <div className="container py-16 text-center">Доступ запрещен</div>;
   }
 
   return (
@@ -141,12 +117,12 @@ export default function Admin() {
       <div className="container py-8">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Панель адміністратора</h1>
-            <p className="text-muted-foreground">Управління сайтом Спільнота B&C</p>
+            <h1 className="text-3xl font-bold">Панель администратора</h1>
+            <p className="text-muted-foreground">Управление сайтом Спільнота B&C</p>
             
-            {isFounder && (
+            {currentUser.founder_admin && (
               <Badge variant="secondary" className="mt-2">
-                Адміністратор-засновник
+                Администратор-основатель
               </Badge>
             )}
           </div>

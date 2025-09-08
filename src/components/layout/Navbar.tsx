@@ -6,8 +6,20 @@ import { NavbarActions } from "./NavbarActions";
 import { useSupabaseAuth } from "@/hooks/auth/useSupabaseAuth";
 
 export function Navbar() {
-  const { getCurrentUser } = useSupabaseAuth();
+  const { getCurrentUser, isAuthenticated, loading } = useSupabaseAuth();
   const currentUser = getCurrentUser();
+
+  // Если пользователь не аутентифицирован через Supabase, но есть данные в localStorage
+  React.useEffect(() => {
+    if (!loading && !isAuthenticated()) {
+      const localUser = localStorage.getItem('currentUser');
+      if (localUser) {
+        // Очищаем старые данные и перенаправляем на авторизацию
+        localStorage.removeItem('currentUser');
+        window.location.href = '/auth';
+      }
+    }
+  }, [loading, isAuthenticated]);
 
   // Перевіряємо чи користувач є адміністратором
   const isAdmin = (currentUser?.isAdmin === true) || (currentUser?.founder_admin === true);
