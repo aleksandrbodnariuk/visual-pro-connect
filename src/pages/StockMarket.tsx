@@ -20,10 +20,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useSupabaseAuth } from "@/hooks/auth/useSupabaseAuth";
 
 export default function StockMarket() {
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [isShareHolder, setIsShareHolder] = useState(false);
   const [stockExchangeItems, setStockExchangeItems] = useState<any[]>([]);
   const [sharesTransactions, setSharesTransactions] = useState<any[]>([]);
   const [shareholders, setShareholders] = useState<any[]>([]);
@@ -39,19 +38,20 @@ export default function StockMarket() {
   const [openSellDialog, setOpenSellDialog] = useState(false);
   
   const navigate = useNavigate();
+  const { getCurrentUser, isAuthenticated, loading } = useSupabaseAuth();
+  const currentUser = getCurrentUser();
   
   useEffect(() => {
-    const user = localStorage.getItem("currentUser");
-    if (!user) {
+    // Проверяем аутентификацию через Supabase
+    if (loading) return;
+    
+    if (!isAuthenticated() || !currentUser) {
+      toast.error("Доступ заборонено: Необхідно увійти в систему");
       navigate("/auth");
       return;
     }
     
-    const parsedUser = JSON.parse(user);
-    setCurrentUser(parsedUser);
-    setIsShareHolder(parsedUser.isShareHolder || false);
-    
-    if (!parsedUser.isShareHolder) {
+    if (!currentUser.isShareHolder) {
       toast.error("Доступ заборонено: Необхідний статус акціонера");
       navigate("/");
       return;
@@ -78,7 +78,7 @@ export default function StockMarket() {
     }
     
     setSharePrice(storedPrice || "1000");
-  }, [navigate]);
+  }, [navigate, loading, isAuthenticated, currentUser]);
   
   const handleBuyOffer = (offer: any) => {
     if (offer.sellerId === currentUser.id) {
@@ -263,8 +263,16 @@ export default function StockMarket() {
     toast.success("Акції виставлено на продаж");
   };
   
-  if (!isShareHolder) {
-    return <div className="container py-16 text-center">Перевірка прав доступу...</div>;
+  if (loading) {
+    return <div className="container py-16 text-center">Завантаження...</div>;
+  }
+
+  if (!isAuthenticated() || !currentUser) {
+    return <div className="container py-16 text-center">Перенаправлення на сторінку авторизації...</div>;
+  }
+
+  if (!currentUser.isShareHolder) {
+    return <div className="container py-16 text-center">Доступ заборонено: потрібен статус акціонера</div>;
   }
 
   const myOffers = stockExchangeItems.filter(item => item.sellerId === currentUser.id);
