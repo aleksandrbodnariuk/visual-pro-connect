@@ -28,7 +28,7 @@ export function useSupabaseAuth() {
         lastName: profile.full_name?.split(' ').slice(1).join(' ') || '',
         phoneNumber: profile.phone_number || '',
         isAdmin: profile.is_admin || false,
-        founderAdmin: profile.founder_admin || false,
+        founder_admin: profile.founder_admin || false,
         isShareHolder: profile.is_shareholder || false,
         createdAt: profile.created_at,
         categories: profile.categories || [],
