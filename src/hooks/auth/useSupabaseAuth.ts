@@ -71,8 +71,21 @@ export function useSupabaseAuth() {
       }
     );
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Get initial session with error handling
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        // Clear corrupted auth data and redirect to login
+        console.error('Auth session error:', error);
+        localStorage.removeItem('supabase.auth.token');
+        localStorage.removeItem('currentUser');
+        setSession(null);
+        setUser(null);
+        setAppUser(null);
+        setLoading(false);
+        window.location.href = '/auth';
+        return;
+      }
+      
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -81,6 +94,16 @@ export function useSupabaseAuth() {
       }
       
       setLoading(false);
+    }).catch((error) => {
+      // Handle any other auth errors
+      console.error('Auth initialization error:', error);
+      localStorage.removeItem('supabase.auth.token');
+      localStorage.removeItem('currentUser');
+      setSession(null);
+      setUser(null);
+      setAppUser(null);
+      setLoading(false);
+      window.location.href = '/auth';
     });
 
     return () => subscription.unsubscribe();
