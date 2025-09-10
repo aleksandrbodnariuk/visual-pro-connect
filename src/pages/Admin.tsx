@@ -50,19 +50,36 @@ export default function Admin() {
 
   useEffect(() => {
     // Проверяем аутентификацию и права доступа
+    console.log('👨‍💼 Admin page: checking auth...', { 
+      loading, 
+      isAuthenticated: isAuthenticated(), 
+      currentUser: currentUser ? {
+        id: currentUser.id,
+        isAdmin: currentUser.isAdmin,
+        founder_admin: currentUser.founder_admin
+      } : null
+    });
+    
     if (loading) return;
     
     if (!isAuthenticated() || !currentUser) {
+      console.log('❌ Admin access denied: no auth');
       toast.error("Доступ запрещен: Необходимо войти в систему");
       navigate("/auth");
       return;
     }
     
     if (!currentUser.isAdmin && !currentUser.founder_admin) {
+      console.log('❌ Admin access denied: no admin rights', {
+        isAdmin: currentUser.isAdmin,
+        founder_admin: currentUser.founder_admin
+      });
       toast.error("Доступ запрещен: Необходимы права администратора");
       navigate("/");
       return;
     }
+    
+    console.log('✅ Admin access granted');
     
     // Если не указана вкладка, перенаправляем на вкладку "users"
     if (!tabName) {

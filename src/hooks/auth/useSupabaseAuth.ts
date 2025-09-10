@@ -51,19 +51,31 @@ export function useSupabaseAuth() {
 
   // Initialize auth state
   useEffect(() => {
+    console.log('🔐 Initializing Supabase auth...');
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('🔐 Auth state changed:', { event, user: session?.user?.email || 'none', hasSession: !!session });
+        
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          console.log('🔐 User found, fetching app data for:', session.user.id);
           // Fetch app user data asynchronously
           setTimeout(async () => {
             const userData = await getAppUser(session.user.id);
+            console.log('🔐 App user data loaded:', { 
+              id: userData?.id, 
+              isAdmin: userData?.isAdmin, 
+              founder_admin: userData?.founder_admin,
+              isShareHolder: userData?.isShareHolder 
+            });
             setAppUser(userData);
           }, 0);
         } else {
+          console.log('🔐 No user session found');
           setAppUser(null);
         }
         

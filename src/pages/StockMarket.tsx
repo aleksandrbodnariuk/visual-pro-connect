@@ -43,19 +43,34 @@ export default function StockMarket() {
   
   useEffect(() => {
     // Проверяем аутентификацию через Supabase
+    console.log('📈 Stock Market: checking auth...', { 
+      loading, 
+      isAuthenticated: isAuthenticated(), 
+      currentUser: currentUser ? {
+        id: currentUser.id,
+        isShareHolder: currentUser.isShareHolder
+      } : null
+    });
+    
     if (loading) return;
     
     if (!isAuthenticated() || !currentUser) {
+      console.log('❌ Stock Market access denied: no auth');
       toast.error("Доступ заборонено: Необхідно увійти в систему");
       navigate("/auth");
       return;
     }
     
     if (!currentUser.isShareHolder) {
+      console.log('❌ Stock Market access denied: no shareholder status', {
+        isShareHolder: currentUser.isShareHolder
+      });
       toast.error("Доступ заборонено: Необхідний статус акціонера");
       navigate("/");
       return;
     }
+    
+    console.log('✅ Stock Market access granted');
     
     const storedPrice = localStorage.getItem("stockPrice");
     setStockPrice(storedPrice ? parseFloat(storedPrice) : 1000);
