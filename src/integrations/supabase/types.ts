@@ -434,6 +434,36 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      get_detailed_profile: {
+        Args: { target_user_id: string }
+        Returns: {
+          avatar_url: string
+          banner_url: string
+          bio: string
+          categories: string[]
+          city: string
+          country: string
+          created_at: string
+          facebook: string
+          full_name: string
+          id: string
+          instagram: string
+          is_shareholder: boolean
+          title: string
+          viber: string
+          website: string
+        }[]
+      }
+      get_minimal_public_profiles: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          avatar_url: string
+          full_name: string
+          id: string
+          is_shareholder: boolean
+          title: string
+        }[]
+      }
       get_my_profile: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -462,60 +492,24 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           avatar_url: string
-          banner_url: string
           bio: string
-          categories: string[]
-          city: string
-          country: string
           created_at: string
-          facebook: string
           full_name: string
           id: string
-          instagram: string
           is_shareholder: boolean
           title: string
-          viber: string
-          website: string
         }[]
       }
       get_safe_public_profiles_by_ids: {
         Args: { _ids: string[] }
         Returns: {
           avatar_url: string
-          banner_url: string
           bio: string
-          categories: string[]
-          city: string
-          country: string
           created_at: string
-          facebook: string
           full_name: string
           id: string
-          instagram: string
           is_shareholder: boolean
           title: string
-          viber: string
-          website: string
-        }[]
-      }
-      get_safe_user_profile: {
-        Args: { user_uuid: string }
-        Returns: {
-          avatar_url: string
-          banner_url: string
-          bio: string
-          categories: string[]
-          city: string
-          country: string
-          created_at: string
-          facebook: string
-          full_name: string
-          id: string
-          instagram: string
-          is_shareholder: boolean
-          title: string
-          viber: string
-          website: string
         }[]
       }
       get_user_by_phone: {
@@ -572,6 +566,16 @@ export type Database = {
       is_admin_user: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      search_users_public: {
+        Args: { search_term: string }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          id: string
+          is_shareholder: boolean
+          title: string
+        }[]
       }
       set_config: {
         Args: { parameter: string; value: string }
