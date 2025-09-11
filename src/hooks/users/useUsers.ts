@@ -25,9 +25,23 @@ export function useUsers(): UseUsersReturnType {
       
       setIsFounder(isFounderAdmin);
       
-      // Try to get data from Supabase first
-      const { data: supabaseUsers, error: fetchError } = await supabase
-        .rpc('get_users_for_admin');
+      // Verify admin access before fetching sensitive data
+      const { data: adminCheck } = await supabase.rpc('check_admin_access');
+      
+      let supabaseUsers = null;
+      let fetchError = null;
+      
+      if (adminCheck) {
+        // Only admins can access full user data
+        const { data, error } = await supabase.rpc('get_users_for_admin');
+        supabaseUsers = data;
+        fetchError = error;
+      } else {
+        // Non-admins get safe public profiles only
+        const { data, error } = await supabase.rpc('get_safe_public_profiles');
+        supabaseUsers = data;
+        fetchError = error;
+      }
       
       if (fetchError) {
         console.error("Error fetching users from Supabase:", fetchError);

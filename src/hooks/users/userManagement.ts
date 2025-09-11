@@ -17,8 +17,11 @@ export const deleteUser = async (userId: string) => {
       localStorage.setItem("users", JSON.stringify(updatedUsers));
     }
     
-    // Also try to delete from Supabase
-    try {
+    // Check admin access before deletion
+    const { data: isAdmin } = await supabase.rpc('check_admin_access');
+    
+    if (isAdmin) {
+      // Only admins can delete users - use RLS-protected delete
       const { error } = await supabase
         .from('users')
         .delete()
@@ -27,8 +30,8 @@ export const deleteUser = async (userId: string) => {
       if (error) {
         console.warn("Error deleting user from Supabase:", error);
       }
-    } catch (supabaseError) {
-      console.warn("Supabase connection error:", supabaseError);
+    } else {
+      console.warn("Non-admin cannot delete users");
     }
     
     toast.success("Користувач успішно видалений");
@@ -55,18 +58,15 @@ export const changeUserStatus = async (userId: string, newStatus: string) => {
     
     localStorage.setItem("users", JSON.stringify(updatedUsers));
     
-    // Also try to update in Supabase - we use full_name field to store status since there's no status field
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({ full_name: newStatus })
-        .eq('id', userId);
-        
-      if (error) {
-        console.warn("Error updating user status in Supabase:", error);
-      }
-    } catch (supabaseError) {
-      console.warn("Supabase connection error:", supabaseError);
+    // Check admin access before updating status
+    const { data: isAdmin } = await supabase.rpc('check_admin_access');
+    
+    if (isAdmin) {
+      // Only admins can change user status - don't overwrite full_name with status
+      console.log("Status change attempted by admin for user:", userId);
+      // Note: We should not overwrite full_name with status - this was a security issue
+    } else {
+      console.warn("Non-admin cannot change user status");
     }
     
     toast.success("Статус користувача оновлено");
@@ -98,13 +98,14 @@ export const toggleShareholderStatus = async (userId: string, isShareHolder: boo
     
     localStorage.setItem("users", JSON.stringify(updatedUsers));
     
-    // Also try to update in Supabase
-    try {
+    // Check admin access before updating shareholder status
+    const { data: isAdmin } = await supabase.rpc('check_admin_access');
+    
+    if (isAdmin) {
       const { error } = await supabase
         .from('users')
         .update({ 
-          is_shareholder: isShareHolder,
-          isShareHolder: isShareHolder
+          is_shareholder: isShareHolder
         })
         .eq('id', userId);
         
@@ -112,7 +113,6 @@ export const toggleShareholderStatus = async (userId: string, isShareHolder: boo
         console.warn("Error updating shareholder status in Supabase:", error);
       } else {
         // Update was successful
-        // Dispatch an event to notify other components about the shareholder status update
         const statusUpdateEvent = new CustomEvent('shareholder-status-updated', { 
           detail: { 
             userId: userId,
@@ -121,8 +121,8 @@ export const toggleShareholderStatus = async (userId: string, isShareHolder: boo
         });
         window.dispatchEvent(statusUpdateEvent);
       }
-    } catch (supabaseError) {
-      console.warn("Supabase connection error:", supabaseError);
+    } else {
+      console.warn("Non-admin cannot change shareholder status");
     }
     
     // Update the current user if it's the same user
