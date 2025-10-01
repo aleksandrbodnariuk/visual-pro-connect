@@ -134,16 +134,25 @@ export default function Profile() {
         let userData = null;
         
         try {
-          const { data, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', targetUserId)
-            .single();
-          
-          if (data) {
-            userData = data;
-          } else if (error) {
-            console.warn("Помилка запиту до Supabase:", error);
+          // Use secure RPC function to get profile data with proper access control
+          if (isOwnProfile) {
+            // Get own profile with all data
+            const { data, error } = await supabase.rpc('get_my_profile');
+            if (data && data.length > 0) {
+              userData = data[0];
+            } else if (error) {
+              console.warn("Помилка запиту до Supabase:", error);
+            }
+          } else {
+            // Get detailed profile based on friendship status
+            const { data, error } = await supabase.rpc('get_detailed_profile', { 
+              target_user_id: targetUserId 
+            });
+            if (data && data.length > 0) {
+              userData = data[0];
+            } else if (error) {
+              console.warn("Помилка запиту до Supabase:", error);
+            }
           }
         } catch (supabaseError) {
           console.warn("Помилка з'єднання з Supabase:", supabaseError);

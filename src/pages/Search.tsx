@@ -66,9 +66,9 @@ export default function Search() {
       try {
         setIsLoading(true);
         
+        // Use secure RPC function that only returns safe public data
         const { data, error } = await supabase
-          .from("users")
-          .select("*");
+          .rpc('get_safe_public_profiles');
         
         if (error) throw error;
         
@@ -76,15 +76,13 @@ export default function Search() {
         const formattedData = data.map((user: any) => ({
           id: user.id,
           full_name: user.full_name || "Користувач без імені",
-          username: user.phone_number,
+          username: `user_${user.id.substring(0, 8)}`, // Don't expose phone numbers
           avatar_url: user.avatar_url,
           categories: user.categories || [],
           bio: user.bio || "Учасник спільноти B&C",
-          location: user.city && user.country 
-            ? `${user.city}, ${user.country}` 
-            : user.city || user.country || "Місцезнаходження не вказано",
-          country: user.country,
-          city: user.city
+          location: "Місцезнаходження приховано", // Location data not in safe public profiles
+          country: null,
+          city: null
         }));
         
         setProfessionals(formattedData);
