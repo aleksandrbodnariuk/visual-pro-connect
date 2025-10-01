@@ -120,6 +120,11 @@ export default function Admin() {
     return <div className="container py-16 text-center">Загрузка...</div>;
   }
 
+  // Show loading while user data is being fetched
+  if (isAuthenticated() && !currentUser) {
+    return <div className="container py-16 text-center">Завантаження даних користувача...</div>;
+  }
+
   if (!isAuthenticated() || !currentUser) {
     return <div className="container py-16 text-center">Перенаправление на страницу авторизации...</div>;
   }

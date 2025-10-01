@@ -282,6 +282,11 @@ export default function StockMarket() {
     return <div className="container py-16 text-center">Завантаження...</div>;
   }
 
+  // Show loading while user data is being fetched
+  if (isAuthenticated() && !currentUser) {
+    return <div className="container py-16 text-center">Завантаження даних користувача...</div>;
+  }
+
   if (!isAuthenticated() || !currentUser) {
     return <div className="container py-16 text-center">Перенаправлення на сторінку авторизації...</div>;
   }

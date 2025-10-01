@@ -12,14 +12,30 @@ export function useSupabaseAuth() {
   // Get app user data from our users table
   const getAppUser = useCallback(async (userId: string): Promise<AppUser | null> => {
     try {
+      // First try to get existing profile
       const { data, error } = await supabase.rpc('get_my_profile');
       if (error) {
         console.error('Error fetching app user:', error);
         return null;
       }
       
-      const profile = data?.[0];
-      if (!profile) return null;
+      let profile = data?.[0];
+      
+      // If profile doesn't exist, create it
+      if (!profile) {
+        console.log('📝 Profile not found, creating one...');
+        const { data: newProfileData, error: createError } = await supabase.rpc('ensure_user_profile');
+        if (createError) {
+          console.error('Error creating user profile:', createError);
+          return null;
+        }
+        profile = newProfileData?.[0];
+      }
+      
+      if (!profile) {
+        console.error('Failed to get or create profile');
+        return null;
+      }
       
       // Convert to AppUser format
       return {
@@ -63,28 +79,26 @@ export function useSupabaseAuth() {
         
         if (session?.user) {
           console.log('🔐 User found, fetching app data for:', session.user.id);
-          // Fetch app user data asynchronously
-          setTimeout(async () => {
-            const userData = await getAppUser(session.user.id);
-            console.log('🔐 App user data loaded:', { 
-              id: userData?.id, 
-              isAdmin: userData?.isAdmin, 
-              founder_admin: userData?.founder_admin,
-              isShareHolder: userData?.isShareHolder 
-            });
-            setAppUser(userData);
-          }, 0);
+          // Fetch app user data and wait for it to complete before setting loading to false
+          const userData = await getAppUser(session.user.id);
+          console.log('🔐 App user data loaded:', { 
+            id: userData?.id, 
+            isAdmin: userData?.isAdmin, 
+            founder_admin: userData?.founder_admin,
+            isShareHolder: userData?.isShareHolder 
+          });
+          setAppUser(userData);
+          setLoading(false);
         } else {
           console.log('🔐 No user session found');
           setAppUser(null);
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 
     // Get initial session with error handling
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
       if (error) {
         // Clear corrupted auth data and redirect to login
         console.error('Auth session error:', error);
@@ -102,7 +116,8 @@ export function useSupabaseAuth() {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        getAppUser(session.user.id).then(setAppUser);
+        const userData = await getAppUser(session.user.id);
+        setAppUser(userData);
       }
       
       setLoading(false);
