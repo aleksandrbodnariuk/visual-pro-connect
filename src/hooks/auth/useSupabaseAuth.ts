@@ -37,15 +37,23 @@ export function useSupabaseAuth() {
         return null;
       }
       
+      // Fetch user roles from user_roles table
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', profile.id);
+
+      const roles = rolesData?.map(r => r.role) || [];
+      
       // Convert to AppUser format
       return {
         id: profile.id,
         firstName: profile.full_name?.split(' ')[0] || '',
         lastName: profile.full_name?.split(' ').slice(1).join(' ') || '',
         phoneNumber: profile.phone_number || '',
-        isAdmin: profile.is_admin || false,
-        founder_admin: profile.founder_admin || false,
-        isShareHolder: profile.is_shareholder || false,
+        isAdmin: roles.includes('admin') || roles.includes('founder'),
+        founder_admin: roles.includes('founder'),
+        isShareHolder: roles.includes('shareholder'),
         createdAt: profile.created_at,
         categories: profile.categories || [],
         avatarUrl: profile.avatar_url || '',

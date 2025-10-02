@@ -108,13 +108,13 @@ export function formatUserFromSupabase(user: any): User {
     lastName: user.full_name?.split(' ')[1] || '',
     avatarUrl: user.avatar_url,
     bannerUrl: user.banner_url,
-    isAdmin: user.is_admin,
-    isShareHolder: user.is_shareholder,
-    isFounder: user.founder_admin,
+    isAdmin: user.roles?.includes('admin') || user.roles?.includes('founder') || false,
+    isShareHolder: user.roles?.includes('shareholder') || false,
+    isFounder: user.roles?.includes('founder') || false,
     phoneNumber: user.phone_number,
-    status: user.founder_admin ? "Адміністратор-засновник" : 
-           user.is_admin ? "Адміністратор" :
-           user.is_shareholder ? "Акціонер" : "Звичайний користувач",
+    status: user.roles?.includes('founder') ? "Адміністратор-засновник" : 
+           user.roles?.includes('admin') ? "Адміністратор" :
+           user.roles?.includes('shareholder') ? "Акціонер" : "Звичайний користувач",
     bio: user.bio || '',
     website: user.website || '',
     instagram: user.instagram || '',
