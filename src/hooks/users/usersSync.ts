@@ -10,7 +10,8 @@ export async function syncUserToSupabase(user: User): Promise<void> {
     // Only sync if user has admin access or is syncing their own data
     const { data: currentUserProfile } = await supabase.rpc('get_my_profile');
     const currentProfile = Array.isArray(currentUserProfile) ? currentUserProfile[0] : currentUserProfile;
-    const isAdmin = currentProfile?.is_admin || currentProfile?.founder_admin;
+    const roles = currentProfile?.roles || [];
+    const isAdmin = roles.includes('admin') || roles.includes('founder');
     const isSelfUpdate = currentProfile?.id === user.id;
     
     if (!isAdmin && !isSelfUpdate) {

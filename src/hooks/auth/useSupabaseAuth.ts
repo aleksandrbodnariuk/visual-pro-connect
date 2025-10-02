@@ -37,13 +37,7 @@ export function useSupabaseAuth() {
         return null;
       }
       
-      // Fetch user roles from user_roles table
-      const { data: rolesData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', profile.id);
-
-      const roles = rolesData?.map(r => r.role) || [];
+      const roles = profile.roles || [];
       
       // Convert to AppUser format
       return {

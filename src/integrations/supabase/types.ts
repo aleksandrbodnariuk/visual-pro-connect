@@ -466,14 +466,11 @@ export type Database = {
           country: string
           created_at: string
           facebook: string
-          founder_admin: boolean
           full_name: string
-          has_password: boolean
           id: string
           instagram: string
-          is_admin: boolean
-          is_shareholder: boolean
           phone_number: string
+          roles: string[]
           title: string
           viber: string
           website: string
@@ -520,14 +517,11 @@ export type Database = {
           country: string
           created_at: string
           facebook: string
-          founder_admin: boolean
           full_name: string
-          has_password: boolean
           id: string
           instagram: string
-          is_admin: boolean
-          is_shareholder: boolean
           phone_number: string
+          roles: string[]
           title: string
           viber: string
           website: string
@@ -580,6 +574,10 @@ export type Database = {
           website: string
         }[]
       }
+      get_user_roles_array: {
+        Args: { user_id: string }
+        Returns: string[]
+      }
       get_users_for_admin: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -591,14 +589,11 @@ export type Database = {
           country: string
           created_at: string
           facebook: string
-          founder_admin: boolean
           full_name: string
-          has_password: boolean
           id: string
           instagram: string
-          is_admin: boolean
-          is_shareholder: boolean
           phone_number: string
+          roles: string[]
           title: string
           viber: string
           website: string
