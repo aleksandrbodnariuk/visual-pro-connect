@@ -37,7 +37,7 @@ export function ShareholdersTab() {
         const { data: allUsers, error: usersError } = await supabase
           .rpc('get_users_for_admin');
         
-        const supabaseShareholders = allUsers?.filter(user => user.roles?.includes('shareholder'));
+        const supabaseShareholders = allUsers?.filter(user => user.is_shareholder === true);
           
         if (usersError) {
           console.error("Error fetching shareholders:", usersError);

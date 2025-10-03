@@ -37,7 +37,10 @@ export function useSupabaseAuth() {
         return null;
       }
       
-      const roles = profile.roles || [];
+      // Map boolean flags from RPC
+      const isAdminFlag = !!profile.is_admin;
+      const founderFlag = !!profile.founder_admin;
+      const shareholderFlag = !!profile.is_shareholder;
       
       // Convert to AppUser format
       return {
@@ -45,9 +48,9 @@ export function useSupabaseAuth() {
         firstName: profile.full_name?.split(' ')[0] || '',
         lastName: profile.full_name?.split(' ').slice(1).join(' ') || '',
         phoneNumber: profile.phone_number || '',
-        isAdmin: roles.includes('admin') || roles.includes('founder'),
-        founder_admin: roles.includes('founder'),
-        isShareHolder: roles.includes('shareholder'),
+        isAdmin: isAdminFlag,
+        founder_admin: founderFlag,
+        isShareHolder: shareholderFlag,
         createdAt: profile.created_at,
         categories: profile.categories || [],
         avatarUrl: profile.avatar_url || '',
