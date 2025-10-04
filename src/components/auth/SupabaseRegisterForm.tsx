@@ -37,7 +37,7 @@ export default function SupabaseRegisterForm({ onSwitchToLogin }: SupabaseRegist
     }
 
     if (password.length < 6) {
-      toast.error('Пароль повинен містити принаймні 6 символів');
+      toast.error(t.passwordMinLength);
       return;
     }
 
@@ -53,8 +53,10 @@ export default function SupabaseRegisterForm({ onSwitchToLogin }: SupabaseRegist
 
       if (error) {
         console.error("Registration error:", error);
-        if (error.message.includes('User already registered')) {
-          toast.error('Користувач з таким email вже зареєстрований');
+        if (error.message.includes('User already registered') || error.message.includes('already been registered')) {
+          toast.error(t.userAlreadyExists);
+        } else if (error.message.includes('Invalid email')) {
+          toast.error(t.invalidEmail);
         } else {
           toast.error(error.message);
         }
@@ -62,12 +64,13 @@ export default function SupabaseRegisterForm({ onSwitchToLogin }: SupabaseRegist
       }
 
       if (data?.user) {
-        toast.success('Реєстрація успішна! Перевірте ваш email для підтвердження.');
-        navigate('/');
+        toast.success(t.registrationSuccess);
+        // Don't navigate immediately - let the auth state change handle it
+        // The auth listener in useSupabaseAuth will handle profile creation
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error);
-      toast.error('Помилка реєстрації');
+      toast.error(error?.message || t.registrationError);
     } finally {
       setLoading(false);
     }
