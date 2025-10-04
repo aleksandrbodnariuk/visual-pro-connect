@@ -76,7 +76,7 @@ export function useSupabaseAuth() {
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('🔐 Auth state changed:', { event, user: session?.user?.email || 'none', hasSession: !!session });
         
         setSession(session);
@@ -84,16 +84,18 @@ export function useSupabaseAuth() {
         
         if (session?.user) {
           console.log('🔐 User found, fetching app data for:', session.user.id);
-          // Fetch app user data and wait for it to complete before setting loading to false
-          const userData = await getAppUser(session.user.id);
-          console.log('🔐 App user data loaded:', { 
-            id: userData?.id, 
-            isAdmin: userData?.isAdmin, 
-            founder_admin: userData?.founder_admin,
-            isShareHolder: userData?.isShareHolder 
-          });
-          setAppUser(userData);
-          setLoading(false);
+          // Defer Supabase calls to avoid deadlocks in the auth callback
+          setTimeout(async () => {
+            const userData = await getAppUser(session.user!.id);
+            console.log('🔐 App user data loaded:', { 
+              id: userData?.id, 
+              isAdmin: userData?.isAdmin, 
+              founder_admin: userData?.founder_admin,
+              isShareHolder: userData?.isShareHolder 
+            });
+            setAppUser(userData);
+            setLoading(false);
+          }, 0);
         } else {
           console.log('🔐 No user session found');
           setAppUser(null);
@@ -102,41 +104,35 @@ export function useSupabaseAuth() {
       }
     );
 
-    // Get initial session with error handling
-    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-      if (error) {
-        // Clear corrupted auth data and redirect to login
-        console.error('Auth session error:', error);
-        localStorage.removeItem('supabase.auth.token');
-        localStorage.removeItem('currentUser');
+    // Get initial session (listener above will handle fetching profile)
+    supabase.auth.getSession()
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          console.error('Auth session error:', error);
+          setSession(null);
+          setUser(null);
+          setAppUser(null);
+          setLoading(false);
+          return;
+        }
+        setSession(session);
+        setUser(session?.user ?? null);
+        // Do not fetch profile here to avoid duplicate calls; the auth listener will handle it.
+        if (!session?.user) {
+          setAppUser(null);
+        }
+        // If session exists, loading will be set to false when profile finishes loading via listener
+        if (!session?.user) {
+          setLoading(false);
+        }
+      })
+      .catch((error) => {
+        console.error('Auth initialization error:', error);
         setSession(null);
         setUser(null);
         setAppUser(null);
         setLoading(false);
-        window.location.href = '/auth';
-        return;
-      }
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        const userData = await getAppUser(session.user.id);
-        setAppUser(userData);
-      }
-      
-      setLoading(false);
-    }).catch((error) => {
-      // Handle any other auth errors
-      console.error('Auth initialization error:', error);
-      localStorage.removeItem('supabase.auth.token');
-      localStorage.removeItem('currentUser');
-      setSession(null);
-      setUser(null);
-      setAppUser(null);
-      setLoading(false);
-      window.location.href = '/auth';
-    });
+      });
 
     return () => subscription.unsubscribe();
   }, [getAppUser]);
