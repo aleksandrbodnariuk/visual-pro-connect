@@ -44,6 +44,7 @@ export default function SupabaseRegisterForm({ onSwitchToLogin }: SupabaseRegist
     setLoading(true);
 
     try {
+      console.log('🔐 Starting registration for:', email);
       const { data, error } = await signUp(email, password, {
         full_name: `${firstName} ${lastName}`,
         phone: phoneNumber,
@@ -51,8 +52,15 @@ export default function SupabaseRegisterForm({ onSwitchToLogin }: SupabaseRegist
         last_name: lastName
       });
 
+      console.log('🔐 Registration response:', { 
+        hasData: !!data, 
+        hasUser: !!data?.user,
+        userId: data?.user?.id,
+        error: error?.message 
+      });
+
       if (error) {
-        console.error("Registration error:", error);
+        console.error("❌ Registration error:", error);
         if (error.message.includes('User already registered') || error.message.includes('already been registered')) {
           toast.error(t.userAlreadyExists);
         } else if (error.message.includes('Invalid email')) {
@@ -64,12 +72,15 @@ export default function SupabaseRegisterForm({ onSwitchToLogin }: SupabaseRegist
       }
 
       if (data?.user) {
+        console.log('✅ User registered successfully:', data.user.id);
         toast.success(t.registrationSuccess);
         // Don't navigate immediately - let the auth state change handle it
         // The auth listener in useSupabaseAuth will handle profile creation
+      } else {
+        console.warn('⚠️ Registration succeeded but no user data returned');
       }
     } catch (error: any) {
-      console.error("Registration error:", error);
+      console.error("❌ Registration exception:", error);
       toast.error(error?.message || t.registrationError);
     } finally {
       setLoading(false);
