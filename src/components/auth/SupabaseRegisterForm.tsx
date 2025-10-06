@@ -61,24 +61,28 @@ export default function SupabaseRegisterForm({ onSwitchToLogin }: SupabaseRegist
 
       if (error) {
         console.error("❌ Registration error:", error);
-        if (error.message.includes('User already registered') || error.message.includes('already been registered')) {
+        const raw = (error as any);
+        const msg = typeof raw?.message === 'string' ? raw.message : '';
+        const code = (raw as any)?.code as string | undefined;
+
+        if (msg.includes('User already registered') || msg.includes('already been registered') || code === 'user_already_exists') {
           toast.error(t.userAlreadyExists);
-        } else if (error.message.includes('Invalid email')) {
+        } else if (msg.includes('Invalid email') || code === 'invalid_email') {
           toast.error(t.invalidEmail);
+        } else if (msg.toLowerCase().includes('redirect') || msg.toLowerCase().includes('site url')) {
+          toast.error(`${t.registrationError}: перевірте Redirect URLs у Supabase`);
         } else {
-          toast.error(error.message);
+          toast.error(msg || t.registrationError);
         }
         return;
       }
 
       if (data?.user) {
         console.log('✅ User registered successfully:', data.user.id);
-        toast.success(t.registrationSuccess);
-        // Don't navigate immediately - let the auth state change handle it
-        // The auth listener in useSupabaseAuth will handle profile creation
       } else {
-        console.warn('⚠️ Registration succeeded but no user data returned');
+        console.warn('⚠️ Registration succeeded but no user data returned (email confirmation may be required)');
       }
+      toast.success(t.registrationSuccess);
     } catch (error: any) {
       console.error("❌ Registration exception:", error);
       toast.error(error?.message || t.registrationError);
