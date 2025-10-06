@@ -69,6 +69,8 @@ export default function SupabaseRegisterForm({ onSwitchToLogin }: SupabaseRegist
           toast.error(t.userAlreadyExists);
         } else if (msg.includes('Invalid email') || code === 'invalid_email') {
           toast.error(t.invalidEmail);
+        } else if (msg.includes('Database error saving new user')) {
+          toast.error(t.databaseErrorSavingUser);
         } else if (msg.toLowerCase().includes('redirect') || msg.toLowerCase().includes('site url')) {
           toast.error(`${t.registrationError}: перевірте Redirect URLs у Supabase`);
         } else {
