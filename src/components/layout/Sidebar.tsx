@@ -97,8 +97,14 @@ export function Sidebar({ className }: SidebarProps) {
           <Button 
             variant="ghost" 
             className="w-full justify-start" 
-            onClick={() => handleNavigate('/profile')}
-            data-active={location.pathname === "/profile"}
+            onClick={() => {
+              if (currentUser?.id) {
+                handleNavigate(`/profile/${currentUser.id}`);
+              } else {
+                toast.error("Будь ласка, увійдіть в систему");
+              }
+            }}
+            data-active={location.pathname.includes("/profile")}
           >
             <User className="mr-2 h-4 w-4" />
             {t.profile}
