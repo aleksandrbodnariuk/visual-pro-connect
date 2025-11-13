@@ -125,8 +125,10 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
           className="h-full w-full bg-cover bg-center"
           style={{
             backgroundImage: coverUrl 
-              ? `url(${coverUrl})` 
+              ? `url(${coverUrl}?t=${Date.now()})` 
               : "url(https://images.unsplash.com/photo-1487887235947-a955ef187fcc)",
+            backgroundPosition: "center center",
+            backgroundSize: "cover"
           }}
           onError={handleCoverError}
         />
@@ -138,7 +140,7 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="flex flex-col items-start gap-4 md:flex-row md:items-end">
             <Avatar className="h-32 w-32 border-4 border-background">
-              <AvatarImage src={avatarUrl} alt={name} />
+              <AvatarImage src={avatarUrl ? `${avatarUrl}?t=${Date.now()}` : avatarUrl} alt={name} />
               <AvatarFallback className="text-4xl">
                 {name && name !== "undefined undefined"
                   ? name
