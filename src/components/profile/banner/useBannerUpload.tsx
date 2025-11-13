@@ -61,8 +61,8 @@ export function useBannerUpload(
       console.log('Тип файлу банера:', file.type);
       
       const fileExtension = file.name.split('.').pop() || 'jpg';
-      const uniqueFileName = `${userId}-${Date.now()}.${fileExtension}`;
-      const filePath = `banners/${uniqueFileName}`;
+      const uniqueFileName = `${Date.now()}.${fileExtension}`;
+      const filePath = `${userId}/${uniqueFileName}`;
       
       console.log('Шлях файлу банера:', filePath);
       
