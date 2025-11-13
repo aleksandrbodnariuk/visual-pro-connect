@@ -50,7 +50,7 @@ export function ProfileEditorDialog({
 
   const handleBannerComplete = (url: string) => {
     onSave({ bannerUrl: url });
-    toast.success(t.profileUpdated);
+    // Toast is already shown in onSave, no need to duplicate
     if (onUpdate) onUpdate();
   };
 

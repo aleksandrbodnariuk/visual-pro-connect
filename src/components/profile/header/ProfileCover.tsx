@@ -16,16 +16,19 @@ export function ProfileCover({ coverUrl, onError }: ProfileCoverProps) {
     if (onError) onError({} as React.SyntheticEvent<HTMLDivElement, Event>);
   };
   
-  const backgroundImage = hasError || !coverUrl 
+  // Add cache-busting timestamp to force reload of new banner
+  const cacheBustedCoverUrl = coverUrl ? `${coverUrl}?t=${Date.now()}` : null;
+  
+  const backgroundImage = hasError || !cacheBustedCoverUrl 
     ? `url(${fallbackImage})` 
-    : `url(${coverUrl})`;
+    : `url(${cacheBustedCoverUrl})`;
 
   return (
     <div className="relative h-44 w-full overflow-hidden rounded-b-lg md:h-64">
-      {coverUrl && !hasError && (
+      {cacheBustedCoverUrl && !hasError && (
         // Preload the image to check if it loads
         <img 
-          src={coverUrl}
+          src={cacheBustedCoverUrl}
           className="hidden"
           onError={handleImageError}
           alt=""
