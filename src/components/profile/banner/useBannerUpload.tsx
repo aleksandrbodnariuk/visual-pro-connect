@@ -86,10 +86,11 @@ export function useBannerUpload(
         console.warn('Не вдалося оновити в базі даних:', dbError);
       }
 
-      // Оновлюємо localStorage
+      // Оновлюємо localStorage (обидва формати для сумісності)
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
       if (currentUser && currentUser.id === userId) {
         currentUser.banner_url = publicUrl;
+        currentUser.bannerUrl = publicUrl;
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
         console.log('Оновлено поточного користувача в localStorage');
       }
@@ -140,6 +141,7 @@ export function useBannerUpload(
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
       if (currentUser && currentUser.id === userId) {
         currentUser.banner_url = null;
+        currentUser.bannerUrl = null;
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
       }
 
