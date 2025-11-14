@@ -48,56 +48,6 @@ const ErrorComponent = ({ message }: { message: string }) => (
   </div>
 );
 
-const PORTFOLIO_ITEMS = [
-  {
-    id: "port1",
-    type: "photo" as "photo",
-    thumbnailUrl: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
-    title: "Комерційна зйомка для бренду XYZ",
-    likes: 89,
-    comments: 12
-  },
-  {
-    id: "port2",
-    type: "photo" as "photo",
-    thumbnailUrl: "https://images.unsplash.com/photo-1500673922987-e212871fec22",
-    title: "Портрети в студії з природним світлом",
-    likes: 124,
-    comments: 18
-  },
-  {
-    id: "port3",
-    type: "video" as "video",
-    thumbnailUrl: "https://images.unsplash.com/photo-1487887235947-a955ef187fcc",
-    title: "Відеопрезентація нової колекції одягу",
-    likes: 76,
-    comments: 8
-  },
-  {
-    id: "port4",
-    type: "photo" as "photo",
-    thumbnailUrl: "https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b",
-    title: "Художня фотографія для виставки",
-    likes: 145,
-    comments: 24
-  },
-  {
-    id: "port5",
-    type: "photo" as "photo",
-    thumbnailUrl: "https://images.unsplash.com/photo-1500375592092-40eb2168fd21",
-    title: "Пейзажна фотографія узбережжя",
-    likes: 203,
-    comments: 32
-  },
-  {
-    id: "port6",
-    type: "video" as "video",
-    thumbnailUrl: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
-    title: "Промо-відео дл�� ресторану",
-    likes: 91,
-    comments: 14
-  }
-];
 
 export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
@@ -380,7 +330,7 @@ export default function Profile() {
               )}
               <Suspense fallback={<div>Завантаження портфоліо...</div>}>
                 <PortfolioGrid 
-                  items={PORTFOLIO_ITEMS} 
+                  items={[]} 
                   userId={user?.id} 
                   isOwner={isCurrentUser}
                 />
@@ -416,53 +366,14 @@ export default function Profile() {
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-bold">Відгуки клієнтів</h2>
                   <div className="flex items-center gap-1">
-                    <span className="text-lg font-bold">4.8</span>
-                    <div className="flex text-yellow-500">
-                      ★★★★★
-                    </div>
-                    <span className="text-sm text-muted-foreground">(32)</span>
+                    <span className="text-lg font-bold">0</span>
+                    <span className="text-sm text-muted-foreground">(0)</span>
                   </div>
                 </div>
                 
                 <div className="space-y-4">
-                  <div className="rounded-lg bg-muted p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <img 
-                          src="https://i.pravatar.cc/150?img=28" 
-                          alt="Марія К." 
-                          className="h-10 w-10 rounded-full"
-                        />
-                        <div>
-                          <h3 className="font-semibold">Марія К.</h3>
-                          <div className="flex text-yellow-500">★★★★★</div>
-                          <p className="mt-2 text-sm">
-                            Дуже професійний підхід до роботи! Результат перевершив усі очікування. Рекомендую для будь-яких зйомок.
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-xs text-muted-foreground">12 днів тому</span>
-                    </div>
-                  </div>
-                  
-                  <div className="rounded-lg bg-muted p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <img 
-                          src="https://i.pravatar.cc/150?img=51" 
-                          alt="Андрій В." 
-                          className="h-10 w-10 rounded-full"
-                        />
-                        <div>
-                          <h3 className="font-semibold">Андрій В.</h3>
-                          <div className="flex text-yellow-500">★★★★☆</div>
-                          <p className="mt-2 text-sm">
-                            Замовляв комерційну зйомку для свого бізнесу. Якість дуже висока, особливо сподобалась робота зі світлом. Єдине - хотілося б отримати результат трохи швидше.
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-xs text-muted-foreground">1 місяць тому</span>
-                    </div>
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Відгуків ще немає</p>
                   </div>
                 </div>
               </div>

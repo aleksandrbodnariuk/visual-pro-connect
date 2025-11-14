@@ -87,48 +87,7 @@ export function SearchResults({ category }: { category: string }) {
           
           setProfessionals(filteredData);
         } else {
-          // Демо дані, якщо немає даних в Supabase
-          const demoUsers = [
-            {
-              id: "demo1",
-              full_name: "Анна Коваленко",
-              categories: ["photographer"],
-              avatar_url: "https://i.pravatar.cc/150?img=1",
-              is_demo: true // Using is_demo for local tracking only
-            },
-            {
-              id: "demo2",
-              full_name: "Максим Шевченко",
-              categories: ["videographer"],
-              avatar_url: "https://i.pravatar.cc/150?img=3",
-              is_demo: true
-            },
-            {
-              id: "demo3",
-              full_name: "Олена Кравченко",
-              categories: ["musician"],
-              avatar_url: "https://i.pravatar.cc/150?img=5",
-              is_demo: true
-            },
-            {
-              id: "demo4",
-              full_name: "Іван Петренко",
-              categories: ["photographer"],
-              avatar_url: "https://i.pravatar.cc/150?img=7",
-              is_demo: true
-            }
-          ];
-          
-          // Фільтруємо демо дані за категорією
-          let filteredDemoData = demoUsers;
-          if (category && category !== 'all') {
-            filteredDemoData = demoUsers.filter(user => 
-              user.categories && 
-              user.categories.includes(category)
-            );
-          }
-          
-          setProfessionals(filteredDemoData);
+          setProfessionals([]);
         }
       } catch (error) {
         console.error('Error fetching professionals:', error);
