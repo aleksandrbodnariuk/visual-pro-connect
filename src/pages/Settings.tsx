@@ -9,6 +9,8 @@ import { translations } from '@/lib/translations';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { BannerUpload } from '@/components/profile/BannerUpload';
 import { useAuthState } from '@/hooks/auth/useAuthState';
+import { AccountSettings } from '@/components/settings/AccountSettings';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Settings() {
   const { language } = useLanguage();
@@ -16,6 +18,16 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState("general");
   const { getCurrentUser } = useAuthState();
   const currentUser = getCurrentUser();
+  const [userEmail, setUserEmail] = useState<string>('');
+
+  // Отримуємо email з auth
+  useState(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user?.email) {
+        setUserEmail(data.user.email);
+      }
+    });
+  });
   
   return (
     <div className="min-h-screen pb-10">
@@ -43,15 +55,16 @@ export default function Settings() {
             </TabsList>
             
             <TabsContent value="general">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Акаунт</CardTitle>
-                  <CardDescription>Налаштування вашого акаунту</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p>Налаштування для вашого акаунту.</p>
-                </CardContent>
-              </Card>
+              {currentUser && (
+                <AccountSettings 
+                  userId={currentUser.id}
+                  userData={{
+                    full_name: currentUser.full_name || currentUser.firstName + ' ' + currentUser.lastName,
+                    phone_number: currentUser.phone_number || currentUser.phoneNumber,
+                    email: userEmail,
+                  }}
+                />
+              )}
             </TabsContent>
             
             <TabsContent value="profile">
