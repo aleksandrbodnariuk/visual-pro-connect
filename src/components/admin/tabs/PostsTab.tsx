@@ -21,11 +21,7 @@ import { Label } from "@/components/ui/label";
 export function PostsTab() {
   const [posts, setPosts] = useState<any[]>(() => {
     const storedPosts = localStorage.getItem("posts");
-    return storedPosts ? JSON.parse(storedPosts) : [
-      { id: "1", author: "Олександр Петренко", title: "Нова фотосесія", content: "Опис нової фотосесії для молодят", status: "Активний" },
-      { id: "2", author: "Марія Коваленко", title: "Відеомонтаж кліпу", content: "Деталі про новий музичний кліп і процес монтажу", status: "Активний" },
-      { id: "3", author: "Ігор Мельник", title: "Музичний реліз", content: "Інформація про випуск нового альбому", status: "На розгляді" }
-    ];
+    return storedPosts ? JSON.parse(storedPosts) : [];
   });
 
   const [viewDialogOpen, setViewDialogOpen] = useState(false);

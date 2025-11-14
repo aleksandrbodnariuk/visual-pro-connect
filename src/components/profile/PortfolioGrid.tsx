@@ -68,16 +68,9 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
             });
             
             setPortfolioItems(formattedItems);
-          } else if (initialItems && initialItems.length > 0) {
-            // Fallback to initial items
-            setPortfolioItems(initialItems);
           }
         } catch (error) {
           console.error("Error fetching portfolio:", error);
-          // Fallback to initial items
-          if (initialItems && initialItems.length > 0) {
-            setPortfolioItems(initialItems);
-          }
         } finally {
           setLoading(false);
         }
