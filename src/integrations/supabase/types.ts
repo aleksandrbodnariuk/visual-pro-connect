@@ -451,12 +451,9 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: boolean
       }
-      check_admin_access: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      check_admin_access: { Args: never; Returns: boolean }
       ensure_user_profile: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           banner_url: string
@@ -500,7 +497,7 @@ export type Database = {
         }[]
       }
       get_minimal_public_profiles: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           full_name: string
@@ -510,7 +507,7 @@ export type Database = {
         }[]
       }
       get_my_profile: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           banner_url: string
@@ -534,7 +531,7 @@ export type Database = {
         }[]
       }
       get_safe_public_profiles: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           bio: string
@@ -580,12 +577,9 @@ export type Database = {
           website: string
         }[]
       }
-      get_user_roles_array: {
-        Args: { user_id: string }
-        Returns: string[]
-      }
+      get_user_roles_array: { Args: { user_id: string }; Returns: string[] }
       get_users_for_admin: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           banner_url: string
@@ -615,18 +609,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_admin: {
-        Args: { user_id: string }
-        Returns: boolean
-      }
-      is_admin_user: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_user_admin: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+      is_admin: { Args: { user_id: string }; Returns: boolean }
+      is_admin_user: { Args: never; Returns: boolean }
+      is_user_admin: { Args: { _user_id: string }; Returns: boolean }
       search_users_public: {
         Args: { search_term: string }
         Returns: {
@@ -645,10 +630,7 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: undefined
       }
-      set_founder_admin_status: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      set_founder_admin_status: { Args: never; Returns: undefined }
       set_user_password: {
         Args: { _new_password: string; _phone_number: string }
         Returns: boolean
