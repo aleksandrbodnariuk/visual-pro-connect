@@ -588,6 +588,7 @@ export type Database = {
           city: string
           country: string
           created_at: string
+          email: string
           facebook: string
           founder_admin: boolean
           full_name: string
