@@ -28,25 +28,24 @@ export function UsersTab() {
       const { data: supabaseUsers, error } = await supabase
         .rpc('get_users_for_admin');
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error("Помилка завантаження користувачів з Supabase:", error);
         throw error;
       }
 
       if (supabaseUsers && supabaseUsers.length > 0) {
         console.log("Завантажено з Supabase:", supabaseUsers.length, "користувачів");
+        console.log("Перший користувач:", supabaseUsers[0]);
         setUsers(supabaseUsers);
         localStorage.setItem('users', JSON.stringify(supabaseUsers));
       } else {
-        console.log("Завантаження з localStorage...");
-        const localUsers = JSON.parse(localStorage.getItem('users') || '[]');
-        console.log("Завантажено з localStorage:", localUsers.length, "користувачів");
-        setUsers(localUsers);
+        console.log("Немає користувачів в базі даних");
+        setUsers([]);
       }
     } catch (error) {
       console.error("Помилка завантаження користувачів:", error);
-      const localUsers = JSON.parse(localStorage.getItem('users') || '[]');
-      setUsers(localUsers);
+      toast.error("Помилка завантаження користувачів");
+      setUsers([]);
     }
   };
 
