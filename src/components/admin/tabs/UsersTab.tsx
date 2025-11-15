@@ -9,6 +9,8 @@ import { UserRole } from "@/components/admin/users/UserRole";
 import { UserTitle } from "@/components/admin/users/UserTitle";
 import { ShareholderToggle } from "@/components/admin/users/ShareholderToggle";
 import { UserActions } from "@/components/admin/users/UserActions";
+import { Copy } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function UsersTab() {
   const [users, setUsers] = useState<any[]>([]);
@@ -264,7 +266,8 @@ export function UsersTab() {
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.phone_number?.includes(searchTerm);
+                         user.phone_number?.includes(searchTerm) ||
+                         user.email?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
@@ -277,7 +280,7 @@ export function UsersTab() {
       <CardContent>
         <div className="flex justify-between items-center mb-4">
           <Input
-            placeholder="Пошук за ім'ям або номером телефону"
+            placeholder="Пошук за ім'ям, email або телефоном"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-sm"
@@ -293,8 +296,9 @@ export function UsersTab() {
         </div>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-7 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
+          <div className="grid grid-cols-8 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
             <div>ID</div>
+            <div>Email</div>
             <div>Ім'я</div>
             <div>Телефон</div>
             <div>Роль</div>
@@ -304,8 +308,26 @@ export function UsersTab() {
           </div>
 
           {filteredUsers.map((user) => (
-            <div key={user.id} className="grid grid-cols-7 gap-4 items-center py-2 border-b">
-              <div className="text-sm font-mono">{user.id.slice(0, 8)}...</div>
+            <div key={user.id} className="grid grid-cols-8 gap-4 items-center py-2 border-b">
+              <div className="text-xs font-mono flex items-center gap-1">
+                <span className="truncate max-w-[120px]" title={user.id}>
+                  {user.id}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => {
+                    navigator.clipboard.writeText(user.id);
+                    toast.success("ID скопійовано");
+                  }}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+              <div className="text-sm truncate" title={user.email || 'Не вказано'}>
+                {user.email || 'Не вказано'}
+              </div>
               <div>{user.full_name || 'Не вказано'}</div>
               <div>{user.phone_number || 'Не вказано'}</div>
               <UserRole user={user} onRoleChange={changeUserRole} />
