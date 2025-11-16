@@ -5,6 +5,8 @@ import { Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { usePostLikes } from "@/hooks/usePostLikes";
+import { usePostShares } from "@/hooks/usePostShares";
 
 export interface PostCardProps {
   id: string;
@@ -33,18 +35,11 @@ export function PostCard({
   timeAgo,
   className,
 }: PostCardProps) {
-  const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [likeCount, setLikeCount] = useState(likes);
-
-  const handleLike = () => {
-    if (liked) {
-      setLikeCount(likeCount - 1);
-    } else {
-      setLikeCount(likeCount + 1);
-    }
-    setLiked(!liked);
-  };
+  
+  // Використовуємо хуки для лайків та репостів
+  const { liked, likesCount, toggleLike, isLoading: likesLoading } = usePostLikes(id, likes);
+  const { shared, toggleShare, isLoading: sharesLoading } = usePostShares(id);
 
   return (
     <div className={cn("creative-card card-hover", className)}>
@@ -93,10 +88,11 @@ export function PostCard({
               variant="ghost" 
               size="icon" 
               className="rounded-full"
-              onClick={handleLike}
+              onClick={toggleLike}
+              disabled={likesLoading}
             >
               <Heart 
-                className={cn("h-5 w-5", liked && "fill-destructive text-destructive")} 
+                className={cn("h-5 w-5 transition-all", liked && "fill-destructive text-destructive")} 
               />
               <span className="sr-only">Лайк</span>
             </Button>
@@ -104,8 +100,16 @@ export function PostCard({
               <MessageCircle className="h-5 w-5" />
               <span className="sr-only">Коментар</span>
             </Button>
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Share2 className="h-5 w-5" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="rounded-full"
+              onClick={toggleShare}
+              disabled={sharesLoading}
+            >
+              <Share2 
+                className={cn("h-5 w-5 transition-all", shared && "fill-primary text-primary")} 
+              />
               <span className="sr-only">Поширити</span>
             </Button>
           </div>
@@ -124,7 +128,7 @@ export function PostCard({
 
         {/* Лайки */}
         <div className="mt-2">
-          <span className="text-sm font-semibold">{likeCount} вподобань</span>
+          <span className="text-sm font-semibold">{likesCount} вподобань</span>
         </div>
 
         {/* Опис */}
