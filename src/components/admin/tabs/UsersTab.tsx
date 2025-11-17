@@ -29,8 +29,57 @@ export function UsersTab() {
         .rpc('get_users_for_admin');
 
       if (error) {
-        console.error("Помилка завантаження користувачів з Supabase:", error);
-        throw error;
+        console.error("Помилка RPC get_users_for_admin:", error);
+        console.log("Спроба альтернативного методу завантаження...");
+        
+        // Запасний варіант: прямий запит до таблиці users
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast.error("Користувач не авторизований");
+          return;
+        }
+
+        const { data: directUsers, error: directError } = await supabase
+          .from('users')
+          .select(`
+            *
+          `)
+          .order('created_at', { ascending: false });
+
+        if (directError) {
+          console.error("Помилка прямого запиту:", directError);
+          throw directError;
+        }
+
+        if (directUsers && directUsers.length > 0) {
+          console.log("Завантажено через прямий запит:", directUsers.length, "користувачів");
+          
+          // Отримуємо email для кожного користувача
+          const usersWithEmail = await Promise.all(
+            directUsers.map(async (user) => {
+              try {
+                const { data: authUser } = await supabase.auth.admin.getUserById(user.id);
+                return {
+                  ...user,
+                  email: authUser?.user?.email || null,
+                  has_password: true,
+                  founder_admin: user.founder_admin || false
+                };
+              } catch (e) {
+                return {
+                  ...user,
+                  email: null,
+                  has_password: true,
+                  founder_admin: user.founder_admin || false
+                };
+              }
+            })
+          );
+          
+          setUsers(usersWithEmail);
+          localStorage.setItem('users', JSON.stringify(usersWithEmail));
+          return;
+        }
       }
 
       if (supabaseUsers && supabaseUsers.length > 0) {
@@ -44,7 +93,7 @@ export function UsersTab() {
       }
     } catch (error) {
       console.error("Помилка завантаження користувачів:", error);
-      toast.error("Помилка завантаження користувачів");
+      toast.error("Помилка завантаження користувачів. Деталі в консолі.");
       setUsers([]);
     }
   };
