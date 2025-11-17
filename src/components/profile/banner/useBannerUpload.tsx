@@ -86,19 +86,16 @@ export function useBannerUpload(
         console.warn('Не вдалося оновити в базі даних:', dbError);
       }
 
-      // Оновлюємо localStorage (обидва формати для сумісності)
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      if (currentUser && currentUser.id === userId) {
-        currentUser.banner_url = publicUrl;
-        currentUser.bannerUrl = publicUrl;
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        console.log('Оновлено поточного користувача в localStorage');
-      }
-
-      setBannerUrl(publicUrl);
+      // Видаляємо старий кеш користувача
+      localStorage.removeItem('currentUser');
+      
+      // Оновлюємо URL з timestamp для примусового оновлення
+      const urlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
+      setBannerUrl(urlWithTimestamp);
       setPreviewUrl(null);
+      
       if (onComplete) {
-        onComplete(publicUrl);
+        onComplete(urlWithTimestamp);
       }
 
       if (fileInputRef.current) {
@@ -106,6 +103,11 @@ export function useBannerUpload(
       }
 
       toast.success('Банер успішно оновлено');
+      
+      // Примусово оновити сторінку через 500ms для відображення нового банера
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     } catch (error) {
       console.error('Помилка при завантаженні банера:', error);
       toast.error('Не вдалося завантажити банер. Перевірте підключення до інтернету та спробуйте ще раз.');

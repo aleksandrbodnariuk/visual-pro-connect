@@ -8,7 +8,16 @@ interface ProfileCoverProps {
 
 export function ProfileCover({ coverUrl, onError }: ProfileCoverProps) {
   const [hasError, setHasError] = React.useState(false);
+  const [imageKey, setImageKey] = React.useState(Date.now());
   const fallbackImage = "https://images.unsplash.com/photo-1487887235947-a955ef187fcc";
+  
+  // Reset error and force reload when coverUrl changes
+  React.useEffect(() => {
+    if (coverUrl) {
+      setHasError(false);
+      setImageKey(Date.now());
+    }
+  }, [coverUrl]);
   
   // Handle image loading errors
   const handleImageError = () => {
@@ -16,8 +25,8 @@ export function ProfileCover({ coverUrl, onError }: ProfileCoverProps) {
     if (onError) onError({} as React.SyntheticEvent<HTMLDivElement, Event>);
   };
   
-  // Add cache-busting timestamp to force reload of new banner
-  const cacheBustedCoverUrl = coverUrl ? `${coverUrl}?t=${Date.now()}` : null;
+  // Aggressive cache-busting with multiple parameters
+  const cacheBustedCoverUrl = coverUrl ? `${coverUrl}?t=${imageKey}&v=${Math.random()}` : null;
   
   const backgroundImage = hasError || !cacheBustedCoverUrl 
     ? `url(${fallbackImage})` 
