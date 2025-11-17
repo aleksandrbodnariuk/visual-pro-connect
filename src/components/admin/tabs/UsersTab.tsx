@@ -23,63 +23,25 @@ export function UsersTab() {
 
   const loadUsers = async () => {
     try {
-      console.log("Завантаження користувачів...");
-      
-      const { data: supabaseUsers, error } = await supabase
-        .rpc('get_users_for_admin');
+      console.log("Завантаження користувачів через RPC get_users_for_admin...");
+
+      // Перевіряємо наявність сесії, без неї RPC поверне помилку та немає сенсу робити запасні методи
+      const { data: sessionData } = await supabase.auth.getSession();
+      const hasSession = Boolean(sessionData?.session);
+      if (!hasSession) {
+        console.warn("Користувач не авторизований — припиняємо завантаження користувачів");
+        toast.error("Потрібна авторизація для перегляду користувачів");
+        setUsers([]);
+        return;
+      }
+
+      const { data: supabaseUsers, error } = await supabase.rpc('get_users_for_admin');
 
       if (error) {
         console.error("Помилка RPC get_users_for_admin:", error);
-        console.log("Спроба альтернативного методу завантаження...");
-        
-        // Запасний варіант: прямий запит до таблиці users
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          toast.error("Користувач не авторизований");
-          return;
-        }
-
-        const { data: directUsers, error: directError } = await supabase
-          .from('users')
-          .select(`
-            *
-          `)
-          .order('created_at', { ascending: false });
-
-        if (directError) {
-          console.error("Помилка прямого запиту:", directError);
-          throw directError;
-        }
-
-        if (directUsers && directUsers.length > 0) {
-          console.log("Завантажено через прямий запит:", directUsers.length, "користувачів");
-          
-          // Отримуємо email для кожного користувача
-          const usersWithEmail = await Promise.all(
-            directUsers.map(async (user) => {
-              try {
-                const { data: authUser } = await supabase.auth.admin.getUserById(user.id);
-                return {
-                  ...user,
-                  email: authUser?.user?.email || null,
-                  has_password: true,
-                  founder_admin: user.founder_admin || false
-                };
-              } catch (e) {
-                return {
-                  ...user,
-                  email: null,
-                  has_password: true,
-                  founder_admin: user.founder_admin || false
-                };
-              }
-            })
-          );
-          
-          setUsers(usersWithEmail);
-          localStorage.setItem('users', JSON.stringify(usersWithEmail));
-          return;
-        }
+        toast.error("Помилка завантаження користувачів (RPC)");
+        setUsers([]);
+        return;
       }
 
       if (supabaseUsers && supabaseUsers.length > 0) {
