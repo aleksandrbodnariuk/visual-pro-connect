@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { usePostLikes } from "@/hooks/usePostLikes";
 import { usePostShares } from "@/hooks/usePostShares";
+import { PostMenu } from "@/components/profile/PostMenu";
+import { useAuthState } from "@/hooks/auth/useAuthState";
 
 export interface PostCardProps {
   id: string;
@@ -23,6 +25,8 @@ export interface PostCardProps {
   comments: number;
   timeAgo: string;
   className?: string;
+  onEdit?: (postId: string) => void;
+  onDelete?: (postId: string) => void;
 }
 
 export function PostCard({
@@ -34,12 +38,18 @@ export function PostCard({
   comments,
   timeAgo,
   className,
+  onEdit,
+  onDelete,
 }: PostCardProps) {
   const [saved, setSaved] = useState(false);
+  const { getCurrentUser } = useAuthState();
+  const currentUser = getCurrentUser();
   
   // Використовуємо хуки для лайків та репостів
   const { liked, likesCount, toggleLike, isLoading: likesLoading } = usePostLikes(id, likes);
   const { shared, toggleShare, isLoading: sharesLoading } = usePostShares(id);
+  
+  const isAuthor = currentUser?.id === author.id;
 
   return (
     <div className={cn("creative-card card-hover", className)}>
@@ -67,6 +77,12 @@ export function PostCard({
             </div>
           </div>
         </Link>
+        <PostMenu 
+          postId={id}
+          isAuthor={isAuthor}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       </div>
 
       {/* Зображення - показуємо тільки якщо є */}
