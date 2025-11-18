@@ -33,17 +33,16 @@ export function ShareholdersTab() {
       setLoading(true);
       
       try {
-        // Отримуємо користувачів з Supabase, які є акціонерами
+        // Отримуємо користувачів з Supabase через безпечну RPC функцію
         const { data: allUsers, error: usersError } = await supabase
           .rpc('get_users_for_admin');
         
-        const supabaseShareholders = allUsers?.filter(user => user.is_shareholder === true);
-          
         if (usersError) {
           console.error("Error fetching shareholders:", usersError);
+          // Fallback на локальне сховище
           const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
           const localShareholders = storedUsers.filter((user: any) => 
-            user.isShareHolder || user.role === "shareholder"
+            user.isShareHolder || user.is_shareholder || user.role === "shareholder"
           );
           
           const formattedShareholders = localShareholders.map((sh: any) => ({
@@ -54,9 +53,12 @@ export function ShareholdersTab() {
           }));
           
           setShareholders(formattedShareholders);
+          setLoading(false);
           return;
         }
         
+        const supabaseShareholders = allUsers?.filter(user => user.is_shareholder === true) || [];
+          
         // Отримуємо дані про акції кожного акціонера
         const shareholdersWithShares = [];
         

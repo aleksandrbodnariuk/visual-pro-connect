@@ -226,13 +226,40 @@ export default function Profile() {
     setServicesDialogOpen(true);
   };
 
-  const handleEditPost = (postId: string) => {
-    toast.info(`Редагування публікації ${postId}`);
+  const handleEditPost = async (postId: string) => {
+    // Знаходимо пост для редагування
+    const postToEdit = posts.find(p => p.id === postId);
+    if (!postToEdit) return;
+    
+    // Тут можна відкрити діалог редагування з даними поста
+    toast.info(`Редагування публікації: ${postToEdit.caption.substring(0, 30)}...`);
   };
 
-  const handleDeletePost = (postId: string) => {
-    setPosts(posts.filter(post => post.id !== postId));
-    toast.success("Публікацію видалено");
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm("Ви впевнені, що хочете видалити цю публікацію?")) {
+      return;
+    }
+
+    try {
+      // Видаляємо з Supabase
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postId);
+
+      if (error) {
+        console.error('Помилка видалення публікації:', error);
+        toast.error('Помилка при видаленні публікації');
+        return;
+      }
+
+      // Оновлюємо локальний стан
+      setPosts(posts.filter(post => post.id !== postId));
+      toast.success("Публікацію видалено");
+    } catch (error) {
+      console.error('Помилка видалення:', error);
+      toast.error('Помилка при видаленні публікації');
+    }
   };
 
   const handlePortfolioUpdate = () => {
