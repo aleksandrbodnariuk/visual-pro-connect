@@ -7,6 +7,7 @@ import { Image, Video, Users, Send } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "./PostCard";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 export function NewsFeed() {
   const [posts, setPosts] = useState<any[]>([]);
@@ -94,6 +95,27 @@ export function NewsFeed() {
     } catch (error) {
       console.error("Помилка створення поста:", error);
     }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postId);
+
+      if (error) throw error;
+
+      setPosts(posts.filter(p => p.id !== postId));
+      toast({ title: "Публікацію видалено" });
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      toast({ title: "Помилка видалення публікації", variant: "destructive" });
+    }
+  };
+
+  const handleEditPost = (postId: string) => {
+    toast({ title: "Редагування публікації в розробці" });
   };
 
   const filteredPosts = posts.filter(post => {
@@ -200,6 +222,8 @@ export function NewsFeed() {
                   likes={post.likes_count || 0}
                   comments={post.comments_count || 0}
                   timeAgo="щойно"
+                  onEdit={handleEditPost}
+                  onDelete={handleDeletePost}
                 />
               );
             })

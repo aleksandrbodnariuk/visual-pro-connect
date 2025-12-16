@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,7 @@ export function PostCard({
   onDelete,
 }: PostCardProps) {
   const [saved, setSaved] = useState(false);
+  const navigate = useNavigate();
   const { getCurrentUser } = useAuthState();
   const currentUser = getCurrentUser();
   
@@ -112,7 +113,12 @@ export function PostCard({
               />
               <span className="sr-only">Лайк</span>
             </Button>
-            <Button variant="ghost" size="icon" className="rounded-full">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="rounded-full"
+              onClick={() => navigate(`/post/${id}`)}
+            >
               <MessageCircle className="h-5 w-5" />
               <span className="sr-only">Коментар</span>
             </Button>
