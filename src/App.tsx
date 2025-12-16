@@ -17,6 +17,7 @@ import Notifications from "./pages/Notifications";
 import Friends from "./pages/Friends";
 import Admin from "./pages/Admin";
 import StockMarket from "./pages/StockMarket";
+import Post from "./pages/Post";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const AppContent = () => {
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/:tabName" element={<Admin />} />
             <Route path="/stock-market" element={<StockMarket />} />
+            <Route path="/post/:postId" element={<Post />} />
             <Route path="/category/:categoryId" element={<Search />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
