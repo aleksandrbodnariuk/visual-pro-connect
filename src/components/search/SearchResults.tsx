@@ -130,8 +130,8 @@ export function SearchResults({ category }: { category: string }) {
   }, [category]);
 
   const handleSendFriendRequest = (userId: string) => {
+    // Toast вже показується в sendFriendRequest
     sendFriendRequest(userId);
-    toast.success("Запит у друзі надіслано");
   };
 
   const isFriend = (userId: string) => {

@@ -120,14 +120,8 @@ export default function Connect() {
       toast.error("Ви повинні увійти в систему");
       return;
     }
-    
-    try {
-      await sendFriendRequest(userId);
-      toast.success("Запит у друзі надіслано");
-    } catch (error) {
-      console.error("Помилка при надсиланні запиту:", error);
-      toast.error("Помилка при надсиланні запиту у друзі");
-    }
+    // Toast вже показується в sendFriendRequest
+    await sendFriendRequest(userId);
   };
 
   const isFriend = (userId: string) => {

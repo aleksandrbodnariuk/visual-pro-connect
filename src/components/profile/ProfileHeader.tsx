@@ -99,16 +99,10 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
       return;
     }
     
-    try {
-      setIsSendingRequest(true);
-      await sendFriendRequest(userId);
-      toast.success('Запит у друзі надіслано');
-    } catch (error) {
-      console.error('Error sending friend request:', error);
-      toast.error('Помилка при надсиланні запиту');
-    } finally {
-      setIsSendingRequest(false);
-    }
+    setIsSendingRequest(true);
+    // Toast вже показується в sendFriendRequest
+    await sendFriendRequest(userId);
+    setIsSendingRequest(false);
   };
 
   // Fallback якщо не завантажується фон профілю
