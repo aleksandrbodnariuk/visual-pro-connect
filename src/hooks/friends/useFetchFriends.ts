@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { FriendRequest, Friend, FriendRequestStatus } from './types';
 
@@ -8,6 +8,7 @@ export function useFetchFriends() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const refreshFriendRequests = useCallback(async () => {
+    console.log("🔄 refreshFriendRequests called");
     setIsLoading(true);
     try {
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
@@ -141,6 +142,38 @@ export function useFetchFriends() {
       setIsLoading(false);
     }
   }, []);
+
+  // Real-time підписка на зміни в friend_requests
+  useEffect(() => {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    if (!currentUser?.id) return;
+
+    console.log("📡 Setting up real-time subscription for friend_requests");
+    
+    const channel = supabase
+      .channel('friend-requests-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'friend_requests'
+        },
+        (payload) => {
+          console.log('📥 Real-time friend request change:', payload);
+          // Автоматично оновлюємо при будь-яких змінах
+          refreshFriendRequests();
+        }
+      )
+      .subscribe((status) => {
+        console.log("📡 Realtime subscription status:", status);
+      });
+
+    return () => {
+      console.log("📡 Removing real-time subscription");
+      supabase.removeChannel(channel);
+    };
+  }, [refreshFriendRequests]);
 
   return {
     friendRequests,
