@@ -7,6 +7,7 @@ export function useFriendActions() {
   const [isLoading, setIsLoading] = useState(false);
 
   const sendFriendRequest = async (receiverId: string, userName?: string) => {
+    console.log("🚀🚀🚀 sendFriendRequest VERSION 2.0 - ", new Date().toISOString());
     setIsLoading(true);
     console.log("🚀 sendFriendRequest started", { receiverId, userName });
     
