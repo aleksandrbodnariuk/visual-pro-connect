@@ -4,13 +4,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { uploadToStorage } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
 
+// Validation schema for post content
+const postSchema = z.object({
+  content: z.string()
+    .min(1, "Текст публікації не може бути порожнім")
+    .max(10000, "Текст публікації не може перевищувати 10000 символів"),
+  category: z.string().max(50).optional().nullable()
+});
 interface CreatePublicationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -56,8 +63,10 @@ export function CreatePublicationModal({
   };
 
   const handleSubmit = async () => {
-    if (!content.trim()) {
-      toast.error('Будь ласка, напишіть текст публікації');
+    // Validate content with Zod
+    const validation = postSchema.safeParse({ content: content.trim(), category: category || null });
+    if (!validation.success) {
+      toast.error(validation.error.errors[0]?.message || "Помилка валідації");
       return;
     }
 
@@ -148,10 +157,12 @@ export function CreatePublicationModal({
               id="content"
               placeholder="Поділіться своїми думками..."
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e) => setContent(e.target.value.slice(0, 10000))}
               rows={4}
               className="resize-none"
+              maxLength={10000}
             />
+            <p className="text-xs text-muted-foreground mt-1">{content.length}/10000</p>
           </div>
 
           <div>
