@@ -16,10 +16,17 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { PortfolioManager } from "./PortfolioManager";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CATEGORIES } from "@/components/search/SearchCategories";
 import { Slider } from "@/components/ui/slider";
 import { User } from "@/hooks/users/types";
+import { z } from "zod";
+
+// Validation schema for profile fields
+const profileSchema = z.object({
+  country: z.string().max(100, "Країна не може перевищувати 100 символів").optional(),
+  city: z.string().max(100, "Місто не може перевищувати 100 символів").optional(),
+  categories: z.array(z.string()).optional()
+});
 
 interface ProfileEditorProps {
   user: any;
@@ -50,14 +57,21 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
   }, [user]);
 
   const handleUpdateProfile = async () => {
+    const userData = {
+      country: country.trim(),
+      city: city.trim(),
+      categories: selectedCategories
+    };
+
+    // Validate with Zod
+    const validation = profileSchema.safeParse(userData);
+    if (!validation.success) {
+      toast.error(validation.error.errors[0]?.message || "Помилка валідації");
+      return;
+    }
+
     try {
       setIsSaving(true);
-      
-      const userData = {
-        country,
-        city,
-        categories: selectedCategories
-      };
       
       // Call onSave with the updated data
       onSave(userData);
@@ -334,8 +348,9 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
                 <Input
                   id="country"
                   value={country}
-                  onChange={(e) => setCountry(e.target.value)}
+                  onChange={(e) => setCountry(e.target.value.slice(0, 100))}
                   placeholder="Введіть країну"
+                  maxLength={100}
                 />
               </div>
 
@@ -344,8 +359,9 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
                 <Input
                   id="city"
                   value={city}
-                  onChange={(e) => setCity(e.target.value)}
+                  onChange={(e) => setCity(e.target.value.slice(0, 100))}
                   placeholder="Введіть місто"
+                  maxLength={100}
                 />
               </div>
               
