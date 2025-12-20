@@ -34,7 +34,7 @@ export class MessagesService {
     activeChat?: ChatItem
   }> {
     try {
-      console.log("Fetching chats for user:", userId, "with receiver:", receiverId);
+      if (import.meta.env.DEV) console.log("Fetching chats for user:", userId, "with receiver:", receiverId);
       
       // Отримуємо всі повідомлення користувача з Supabase
       const { data: messageData, error: messagesError } = await supabase
@@ -44,7 +44,7 @@ export class MessagesService {
         .order('created_at', { ascending: true });
         
       if (messagesError) {
-        console.error("Помилка при завантаженні повідомлень:", messagesError);
+        if (import.meta.env.DEV) console.error("Помилка при завантаженні повідомлень:", messagesError);
         // Якщо є receiverId, створюємо новий чат
         if (receiverId) {
           return MessagesService.createNewChat(receiverId, []);
@@ -54,7 +54,7 @@ export class MessagesService {
       
       // Якщо є повідомлення в Supabase
       if (messageData && messageData.length > 0) {
-        console.log("Found messages in Supabase:", messageData);
+        if (import.meta.env.DEV) console.log("Found messages in Supabase:", messageData);
         
         // Створюємо об'єкт унікальних користувачів для чатів
         const chatUsers = new Map();
@@ -132,7 +132,7 @@ export class MessagesService {
         return { chats: [] };
       }
     } catch (error) {
-      console.error("Помилка при завантаженні чатів та повідомлень:", error);
+      if (import.meta.env.DEV) console.error("Помилка при завантаженні чатів та повідомлень:", error);
       // Якщо є receiverId, створюємо новий чат
       if (receiverId) {
         return MessagesService.createNewChat(receiverId, []);
@@ -146,21 +146,21 @@ export class MessagesService {
     activeChat?: ChatItem
   }> {
     try {
-      console.log("Creating new chat with user:", receiverId);
+      if (import.meta.env.DEV) console.log("Creating new chat with user:", receiverId);
       
       const { data: userData, error: userError } = await (supabase as any)
         .rpc('get_safe_user_profile', { user_uuid: receiverId })
         .single();
         
       if (userError) {
-        console.error("Помилка при отриманні даних користувача:", userError);
+        if (import.meta.env.DEV) console.error("Помилка при отриманні даних користувача:", userError);
         
         // Спробуємо знайти користувача в localStorage
         const localUsers = JSON.parse(localStorage.getItem('users') || '[]');
         const localUser = localUsers.find((user: any) => user.id === receiverId);
         
         if (localUser) {
-          console.log("Found user in localStorage:", localUser);
+          if (import.meta.env.DEV) console.log("Found user in localStorage:", localUser);
           const newChat = {
             id: `chat-${receiverId}`,
             user: {
@@ -188,7 +188,7 @@ export class MessagesService {
       }
       
       if (userData) {
-        console.log("Found user in Supabase:", userData);
+        if (import.meta.env.DEV) console.log("Found user in Supabase:", userData);
         // Створюємо новий чат
         const newChat = {
           id: `chat-${receiverId}`,
@@ -215,7 +215,7 @@ export class MessagesService {
       
       return { chats: existingChats };
     } catch (error) {
-      console.error("Помилка при створенні нового чату:", error);
+      if (import.meta.env.DEV) console.error("Помилка при створенні нового чату:", error);
       return { chats: existingChats };
     }
   }
@@ -228,7 +228,7 @@ export class MessagesService {
       return { success: false };
     }
     
-    console.log("Sending message from", currentUser.id, "to", receiverId, ":", messageText);
+    if (import.meta.env.DEV) console.log("Sending message from", currentUser.id, "to", receiverId);
     
     // Створюємо нове повідомлення
     const newMessage = {
@@ -240,7 +240,6 @@ export class MessagesService {
     
     try {
       // Відправляємо повідомлення безпосередньо в Supabase з правильним auth.uid()
-      console.log("Attempting to send message from user:", currentUser?.id, "to:", receiverId);
       
       const { data, error } = await supabase
         .from('messages')
@@ -255,17 +254,16 @@ export class MessagesService {
         .select();
           
       if (error) {
-        console.error("Помилка при відправленні повідомлення:", error);
-        console.error("Error details:", error.message, error.details, error.hint);
-        toast.error(`Помилка відправки: ${error.message}`);
+        if (import.meta.env.DEV) console.error("Помилка при відправленні повідомлення:", error);
+        toast.error("Не вдалося надіслати повідомлення. Спробуйте ще раз.");
         return { success: false };
       } else {
-        console.log("Message sent to Supabase successfully:", data);
+        if (import.meta.env.DEV) console.log("Message sent to Supabase successfully:", data);
         toast.success("Повідомлення надіслано");
         return { success: true, newMessage };
       }
     } catch (err) {
-      console.error("Помилка при відправленні повідомлення:", err);
+      if (import.meta.env.DEV) console.error("Помилка при відправленні повідомлення:", err);
       toast.error("Помилка відправки повідомлення");
       return { success: false };
     }
