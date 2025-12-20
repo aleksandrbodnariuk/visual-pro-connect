@@ -12,36 +12,29 @@ export function useSupabaseAuth() {
   // Get app user data from our users table
   const getAppUser = useCallback(async (userId: string): Promise<AppUser | null> => {
     try {
-      console.log('📊 Fetching profile for user:', userId);
-      
       // First try to get existing profile
       const { data, error } = await supabase.rpc('get_my_profile');
       if (error) {
-        console.error('❌ Error fetching app user:', error);
+        if (import.meta.env.DEV) console.error('Error fetching app user:', error);
         return null;
       }
       
-      console.log('📊 get_my_profile response:', { hasData: !!data, profileCount: data?.length });
       let profile = data?.[0];
       
       // If profile doesn't exist, create it
       if (!profile) {
-        console.log('📝 Profile not found, attempting to create via ensure_user_profile...');
         const { data: newProfileData, error: createError } = await supabase.rpc('ensure_user_profile');
         if (createError) {
-          console.error('❌ Error creating user profile:', createError);
+          if (import.meta.env.DEV) console.error('Error creating user profile:', createError);
           return null;
         }
-        console.log('📝 ensure_user_profile response:', { hasData: !!newProfileData, profileCount: newProfileData?.length });
         profile = newProfileData?.[0];
       }
       
       if (!profile) {
-        console.error('❌ Failed to get or create profile after all attempts');
+        if (import.meta.env.DEV) console.error('Failed to get or create profile after all attempts');
         return null;
       }
-      
-      console.log('✅ Profile loaded successfully:', { id: profile.id, fullName: profile.full_name });
       
       // Map boolean flags from RPC
       const isAdminFlag = !!profile.is_admin;
@@ -71,39 +64,27 @@ export function useSupabaseAuth() {
         city: profile.city || ''
       } as AppUser;
     } catch (error) {
-      console.error('Error in getAppUser:', error);
+      if (import.meta.env.DEV) console.error('Error in getAppUser:', error);
       return null;
     }
   }, []);
 
   // Initialize auth state
   useEffect(() => {
-    console.log('🔐 Initializing Supabase auth...');
-    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('🔐 Auth state changed:', { event, user: session?.user?.email || 'none', hasSession: !!session });
-        
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          console.log('🔐 User found, fetching app data for:', session.user.id);
           // Defer Supabase calls to avoid deadlocks in the auth callback
           setTimeout(async () => {
             const userData = await getAppUser(session.user!.id);
-            console.log('🔐 App user data loaded:', { 
-              id: userData?.id, 
-              isAdmin: userData?.isAdmin, 
-              founder_admin: userData?.founder_admin,
-              isShareHolder: userData?.isShareHolder 
-            });
             setAppUser(userData);
             setLoading(false);
           }, 0);
         } else {
-          console.log('🔐 No user session found');
           setAppUser(null);
           setLoading(false);
         }
@@ -114,7 +95,7 @@ export function useSupabaseAuth() {
     supabase.auth.getSession()
       .then(({ data: { session }, error }) => {
         if (error) {
-          console.error('Auth session error:', error);
+          if (import.meta.env.DEV) console.error('Auth session error:', error);
           setSession(null);
           setUser(null);
           setAppUser(null);
@@ -133,7 +114,7 @@ export function useSupabaseAuth() {
         }
       })
       .catch((error) => {
-        console.error('Auth initialization error:', error);
+        if (import.meta.env.DEV) console.error('Auth initialization error:', error);
         setSession(null);
         setUser(null);
         setAppUser(null);

@@ -7,46 +7,36 @@ export function useFriendActions() {
   const [isLoading, setIsLoading] = useState(false);
 
   const sendFriendRequest = async (receiverId: string, userName?: string) => {
-    console.log("🚀🚀🚀 sendFriendRequest VERSION 2.0 - ", new Date().toISOString());
     setIsLoading(true);
-    console.log("🚀 sendFriendRequest started", { receiverId, userName });
     
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
       if (authError) {
-        console.error("❌ Auth error:", authError);
+        if (import.meta.env.DEV) console.error("Auth error:", authError);
         toast.error("Помилка авторизації");
         return false;
       }
       
       if (!user) {
-        console.error("❌ No logged in user found");
         toast.error("Потрібно авторизуватися для відправки запиту");
         return false;
       }
 
-      console.log("📤 User authenticated:", { userId: user.id, receiverId });
-
       // Не можна надсилати запит самому собі
       if (user.id === receiverId) {
-        console.warn("⚠️ User tried to add themselves");
         toast.error("Не можна додати себе в друзі");
         return false;
       }
 
       // Перевіряємо чи не надсилали ми вже запит цьому користувачу
-      // Використовуємо простіший запит з фільтрацією в JS
-      console.log("🔍 Checking for existing requests...");
       const { data: allMyRequests, error: checkError } = await supabase
         .from('friend_requests')
         .select('*');
 
-      console.log("🔍 All requests result:", { data: allMyRequests, error: checkError });
-
       if (checkError) {
-        console.error("❌ Error checking existing requests:", checkError);
-        toast.error(`Помилка перевірки: ${checkError.message}`);
+        if (import.meta.env.DEV) console.error("Error checking existing requests:", checkError);
+        toast.error("Помилка перевірки запитів");
         return false;
       }
 
@@ -56,11 +46,8 @@ export function useFriendActions() {
         (req.sender_id === receiverId && req.receiver_id === user.id)
       ) || [];
 
-      console.log("🔍 Relevant requests found:", relevantRequests);
-
       if (relevantRequests.length > 0) {
         const existingRequest = relevantRequests[0];
-        console.log("⚠️ Existing request found:", existingRequest);
         if (existingRequest.status === 'pending') {
           toast.error("Запит на дружбу вже надіслано");
           return false;
@@ -71,28 +58,21 @@ export function useFriendActions() {
       }
 
       // Створюємо новий запит
-      console.log("➕ Inserting new friend request...");
-      const insertPayload = {
-        sender_id: user.id,
-        receiver_id: receiverId,
-        status: 'pending'
-      };
-      console.log("➕ Insert payload:", insertPayload);
-
       const { data, error } = await supabase
         .from('friend_requests')
-        .insert(insertPayload)
+        .insert({
+          sender_id: user.id,
+          receiver_id: receiverId,
+          status: 'pending'
+        })
         .select()
         .single();
           
       if (error) {
-        console.error("❌ Error inserting friend request:", error);
-        console.error("❌ Error details:", { code: error.code, message: error.message, details: error.details, hint: error.hint });
-        toast.error(`Помилка: ${error.message}`);
+        if (import.meta.env.DEV) console.error("Error inserting friend request:", error);
+        toast.error("Не вдалося надіслати запит. Спробуйте ще раз.");
         return false;
       }
-
-      console.log("✅ Friend request saved successfully:", data);
 
       // Отримуємо інформацію про користувача для повідомлення
       const { data: userData } = await supabase
@@ -110,21 +90,18 @@ export function useFriendActions() {
           is_read: false
         }]);
           
-      if (notifError) {
-        console.error("⚠️ Error saving notification:", notifError);
-      } else {
-        console.log("✅ Notification created");
+      if (import.meta.env.DEV && notifError) {
+        console.error("Error saving notification:", notifError);
       }
 
       toast.success(`Запит на дружбу відправлено${userName ? ` користувачу ${userName}` : ''}`);
       return true;
     } catch (error: any) {
-      console.error("❌ Unexpected error in sendFriendRequest:", error);
-      toast.error(error?.message || "Помилка відправки запиту на дружбу");
+      if (import.meta.env.DEV) console.error("Unexpected error in sendFriendRequest:", error);
+      toast.error("Помилка відправки запиту на дружбу");
       return false;
     } finally {
       setIsLoading(false);
-      console.log("🏁 sendFriendRequest finished");
     }
   };
 
@@ -138,8 +115,6 @@ export function useFriendActions() {
         return false;
       }
 
-      console.log("Accepting friend request:", requestId);
-
       const { error } = await supabase
         .from('friend_requests')
         .update({ status: 'accepted', updated_at: new Date().toISOString() })
@@ -147,15 +122,14 @@ export function useFriendActions() {
         .eq('receiver_id', user.id);
 
       if (error) {
-        console.error("Error accepting friend request:", error);
+        if (import.meta.env.DEV) console.error("Error accepting friend request:", error);
         throw error;
       }
 
-      console.log("Friend request accepted successfully");
       toast.success("Запит прийнято! Ви тепер друзі");
       return true;
     } catch (error) {
-      console.error("Error accepting friend request:", error);
+      if (import.meta.env.DEV) console.error("Error accepting friend request:", error);
       toast.error("Помилка прийняття запиту");
       return false;
     } finally {
@@ -173,8 +147,6 @@ export function useFriendActions() {
         return false;
       }
 
-      console.log("Rejecting friend request:", requestId);
-
       const { error } = await supabase
         .from('friend_requests')
         .update({ status: 'rejected', updated_at: new Date().toISOString() })
@@ -182,15 +154,13 @@ export function useFriendActions() {
         .eq('receiver_id', user.id);
 
       if (error) {
-        console.error("Error rejecting friend request:", error);
+        if (import.meta.env.DEV) console.error("Error rejecting friend request:", error);
         throw error;
       }
-
-      console.log("Friend request rejected successfully");
       toast.success("Запит відхилено");
       return true;
     } catch (error) {
-      console.error("Error rejecting friend request:", error);
+      if (import.meta.env.DEV) console.error("Error rejecting friend request:", error);
       toast.error("Помилка відхилення запиту");
       return false;
     } finally {
@@ -216,8 +186,6 @@ export function useFriendActions() {
         return false;
       }
 
-      console.log("Removing friend:", friendId);
-
       // Видаляємо запит на дружбу
       const { error } = await supabase
         .from('friend_requests')
@@ -226,15 +194,14 @@ export function useFriendActions() {
         .eq('status', 'accepted');
 
       if (error) {
-        console.error("Error removing friend:", error);
+        if (import.meta.env.DEV) console.error("Error removing friend:", error);
         throw error;
       }
 
-      console.log("Friend removed successfully");
       toast.success("Друга видалено");
       return true;
     } catch (error) {
-      console.error("Error removing friend:", error);
+      if (import.meta.env.DEV) console.error("Error removing friend:", error);
       toast.error("Помилка видалення друга");
       return false;
     } finally {
