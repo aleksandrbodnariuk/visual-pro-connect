@@ -1,12 +1,12 @@
-
 import { Button } from "@/components/ui/button";
-import { UserPlus } from "lucide-react";
+import { UserPlus, MessageCircle } from "lucide-react";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
-import { Camera, MapPin, Link as LinkIcon, Calendar, Edit } from "lucide-react";
+import { MapPin, Link as LinkIcon, Calendar, Edit } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 export interface ProfileHeaderProps {
   user: {
@@ -33,6 +33,7 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isFriend, setIsFriend] = useState(false);
   const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const navigate = useNavigate();
   
   const {
     id: userId,
@@ -103,6 +104,19 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
     // Toast вже показується в sendFriendRequest
     await sendFriendRequest(userId);
     setIsSendingRequest(false);
+  };
+
+  const handleSendMessage = () => {
+    if (!userId) {
+      toast.error('Не вдалося відкрити чат. ID користувача не знайдено.');
+      return;
+    }
+    
+    // Зберігаємо ID отримувача для відкриття чату
+    localStorage.setItem("currentChatReceiverId", userId);
+    
+    // Переходимо на сторінку повідомлень
+    navigate("/messages");
   };
 
   // Fallback якщо не завантажується фон профілю
@@ -194,6 +208,13 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
               </Button>
             ) : (
               <div className="flex gap-2">
+                <Button 
+                  variant="outline"
+                  onClick={handleSendMessage}
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Написати
+                </Button>
                 <Button className="bg-gradient-purple">Підписатися</Button>
                 {!isFriend && currentUserId && !isCurrentUser && (
                   <Button 
