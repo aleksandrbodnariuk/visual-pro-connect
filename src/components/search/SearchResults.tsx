@@ -29,30 +29,23 @@ export function SearchResults({ category }: { category: string }) {
   const { sendFriendRequest, friends } = useFriendRequests();
 
   useEffect(() => {
-    // Check if current user is admin
+    // Check if current user is admin - server-side only
     const checkAdmin = async () => {
       try {
         const { data } = await supabase.auth.getUser();
         if (data?.user?.id) {
-          const { data: userData, error } = await supabase
-            .from('users')
-            .select('is_admin')
-            .eq('id', data.user.id)
-            .single();
+          // Use RPC to check admin status securely
+          const { data: isAdminResult, error } = await supabase
+            .rpc('is_user_admin', { _user_id: data.user.id });
             
-          if (!error && userData) {
-            setIsAdmin(userData.is_admin === true);
-          }
-        } else {
-          // Fallback to local storage
-          const currentUser = localStorage.getItem('currentUser');
-          if (currentUser) {
-            const user = JSON.parse(currentUser);
-            setIsAdmin(user.is_admin === true || user.role === 'admin');
+          if (!error) {
+            setIsAdmin(isAdminResult === true);
           }
         }
+        // No fallback to localStorage - admin status must be verified server-side
       } catch (error) {
         console.error('Error checking admin status:', error);
+        setIsAdmin(false);
       }
     };
     
