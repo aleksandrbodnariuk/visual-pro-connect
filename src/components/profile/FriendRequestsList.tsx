@@ -1,20 +1,34 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Check, X } from "lucide-react";
+import { Check, X, Loader2 } from "lucide-react";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export function FriendRequestsList() {
-  const { friendRequests, respondToFriendRequest } = useFriendRequests();
+  const { friendRequests, respondToFriendRequest, isLoading } = useFriendRequests();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
-  // Отримуємо поточного користувача
-  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  // Get current user from Supabase Auth
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    };
+    getCurrentUser();
+  }, []);
   
-  // Фільтруємо запити, які надійшли до поточного користувача
+  // Filter requests that came to the current user
   const incomingRequests = friendRequests.filter(
-    request => request.status === 'pending' && request.receiver_id === currentUser.id
+    request => request.status === 'pending' && request.receiver_id === currentUserId
   );
+
+  console.log("📋 FriendRequestsList - currentUserId:", currentUserId);
+  console.log("📋 FriendRequestsList - all friendRequests:", friendRequests);
+  console.log("📋 FriendRequestsList - incomingRequests:", incomingRequests);
 
   const getInitials = (name: string | null): string => {
     if (!name) return 'К';
@@ -24,6 +38,19 @@ export function FriendRequestsList() {
     }
     return name.charAt(0);
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Запити у друзі</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (incomingRequests.length === 0) {
     return (
