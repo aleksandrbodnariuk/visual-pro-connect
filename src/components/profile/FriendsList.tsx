@@ -116,10 +116,7 @@ export function FriendsList({ userId }: { userId?: string }) {
                           </AvatarFallback>
                         )}
                       </Avatar>
-                      <span>{request.sender?.full_name || 
-                           request.sender?.firstName && request.sender?.lastName ? 
-                           `${request.sender.firstName} ${request.sender.lastName}` : 
-                           'Новий запит у друзі'}</span>
+                      <span>{request.sender?.full_name || 'Новий запит у друзі'}</span>
                     </div>
                     <div className="flex gap-2">
                       <Button 
@@ -161,9 +158,7 @@ export function FriendsList({ userId }: { userId?: string }) {
                       )}
                     </Avatar>
                     <span>
-                      {friend?.full_name || 
-                       friend?.firstName && friend?.lastName ? 
-                       `${friend.firstName} ${friend.lastName}` : 'Користувач'}
+                      {friend?.full_name || 'Користувач'}
                     </span>
                   </div>
                   <div className="flex gap-2">
