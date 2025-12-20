@@ -736,14 +736,6 @@ export type Database = {
         Returns: undefined
       }
       set_founder_admin_status: { Args: never; Returns: undefined }
-      set_user_password: {
-        Args: { _new_password: string; _phone_number: string }
-        Returns: boolean
-      }
-      update_my_password: {
-        Args: { new_password: string; old_password: string }
-        Returns: boolean
-      }
       user_exists_by_phone: {
         Args: { _phone_number: string }
         Returns: boolean
