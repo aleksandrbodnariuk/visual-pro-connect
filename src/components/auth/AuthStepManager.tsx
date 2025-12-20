@@ -7,16 +7,10 @@ import { translations } from '@/lib/translations';
 import SupabaseLoginForm from '@/components/auth/SupabaseLoginForm';
 import SupabaseRegisterForm from '@/components/auth/SupabaseRegisterForm';
 import SupabaseResetPasswordForm from '@/components/auth/SupabaseResetPasswordForm';
-import ResetPasswordForm from '@/components/auth/ResetPasswordForm';
-import VerifyCodeForm from '@/components/auth/VerifyCodeForm';
-import SetNewPasswordForm from '@/components/auth/SetNewPasswordForm';
 
 export enum AuthStep {
   LOGIN_REGISTER,
-  RESET_PASSWORD,
-  SUPABASE_RESET_PASSWORD,
-  VERIFY_CODE,
-  SET_NEW_PASSWORD
+  SUPABASE_RESET_PASSWORD
 }
 
 interface AuthStepManagerProps {
@@ -24,8 +18,8 @@ interface AuthStepManagerProps {
   isLogin: boolean;
   setIsLogin: (isLogin: boolean) => void;
   setAuthStep: (step: AuthStep) => void;
-  resetPhoneNumber: string;
-  onCodeVerified: (phoneNumber: string) => void;
+  resetPhoneNumber?: string;
+  onCodeVerified?: (phoneNumber: string) => void;
 }
 
 export function AuthStepManager({
@@ -33,8 +27,6 @@ export function AuthStepManager({
   isLogin,
   setIsLogin,
   setAuthStep,
-  resetPhoneNumber,
-  onCodeVerified
 }: AuthStepManagerProps) {
   const { language } = useLanguage();
   const t = translations[language];
@@ -51,60 +43,6 @@ export function AuthStepManager({
           
           <SupabaseResetPasswordForm 
             onBack={() => setAuthStep(AuthStep.LOGIN_REGISTER)}
-          />
-        </div>
-      </div>
-    );
-  }
-  
-  if (authStep === AuthStep.RESET_PASSWORD) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">{t.resetPassword}</h1>
-            <p className="mt-2 text-muted-foreground">{t.enterPhone}</p>
-          </div>
-          
-          <ResetPasswordForm 
-            onBack={() => setAuthStep(AuthStep.LOGIN_REGISTER)}
-            onCodeVerified={onCodeVerified}
-          />
-        </div>
-      </div>
-    );
-  }
-  
-  if (authStep === AuthStep.VERIFY_CODE) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">{t.verifyCode}</h1>
-            <p className="mt-2 text-muted-foreground">{t.enterVerificationCode}</p>
-          </div>
-          
-          <VerifyCodeForm
-            onBack={() => setAuthStep(AuthStep.RESET_PASSWORD)}
-            onVerified={() => setAuthStep(AuthStep.SET_NEW_PASSWORD)}
-          />
-        </div>
-      </div>
-    );
-  }
-  
-  if (authStep === AuthStep.SET_NEW_PASSWORD) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">{t.resetPassword}</h1>
-            <p className="mt-2 text-muted-foreground">{t.enterNewPassword}</p>
-          </div>
-          
-          <SetNewPasswordForm
-            phoneNumber={resetPhoneNumber}
-            onComplete={() => setAuthStep(AuthStep.LOGIN_REGISTER)}
           />
         </div>
       </div>

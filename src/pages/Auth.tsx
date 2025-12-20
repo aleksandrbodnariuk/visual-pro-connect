@@ -15,7 +15,6 @@ export default function Auth() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [authStep, setAuthStep] = useState<AuthStep>(AuthStep.LOGIN_REGISTER);
-  const [resetPhoneNumber, setResetPhoneNumber] = useState("");
   const { isAuthenticated } = useSupabaseAuth();
   
   useEffect(() => {
@@ -23,11 +22,6 @@ export default function Auth() {
       navigate("/");
     }
   }, [navigate, isAuthenticated]);
-  
-  const handleCodeVerified = (phoneNumber: string) => {
-    setResetPhoneNumber(phoneNumber);
-    setAuthStep(AuthStep.VERIFY_CODE);
-  };
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -59,8 +53,6 @@ export default function Auth() {
                 isLogin={isLogin}
                 setIsLogin={setIsLogin}
                 setAuthStep={setAuthStep}
-                resetPhoneNumber={resetPhoneNumber}
-                onCodeVerified={handleCodeVerified}
               />
             </div>
           </div>
