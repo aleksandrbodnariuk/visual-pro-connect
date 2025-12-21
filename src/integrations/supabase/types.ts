@@ -727,6 +727,10 @@ export type Database = {
           title: string
         }[]
       }
+      send_friend_request_notification: {
+        Args: { p_receiver_id: string; p_sender_name: string }
+        Returns: undefined
+      }
       set_config: {
         Args: { parameter: string; value: string }
         Returns: undefined
