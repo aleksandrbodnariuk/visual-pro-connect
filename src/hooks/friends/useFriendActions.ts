@@ -81,14 +81,12 @@ export function useFriendActions() {
         .eq('id', user.id)
         .single();
 
-      // Створюємо повідомлення для отримувача
+      // Створюємо повідомлення для отримувача через захищену функцію
       const { error: notifError } = await supabase
-        .from('notifications')
-        .insert([{
-          user_id: receiverId,
-          message: `${userData?.full_name || 'Користувач'} хоче додати вас у друзі`,
-          is_read: false
-        }]);
+        .rpc('send_friend_request_notification', {
+          p_receiver_id: receiverId,
+          p_sender_name: userData?.full_name || 'Користувач'
+        });
           
       if (import.meta.env.DEV && notifError) {
         console.error("Error saving notification:", notifError);
