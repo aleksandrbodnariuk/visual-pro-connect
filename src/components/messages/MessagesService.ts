@@ -148,54 +148,26 @@ export class MessagesService {
     try {
       if (import.meta.env.DEV) console.log("Creating new chat with user:", receiverId);
       
-      const { data: userData, error: userError } = await (supabase as any)
-        .rpc('get_safe_user_profile', { user_uuid: receiverId })
-        .single();
+      // Використовуємо get_safe_public_profiles_by_ids замість видаленої get_safe_user_profile
+      const { data: usersData, error: userError } = await supabase
+        .rpc('get_safe_public_profiles_by_ids', { _ids: [receiverId] });
         
       if (userError) {
         if (import.meta.env.DEV) console.error("Помилка при отриманні даних користувача:", userError);
-        
-        // Спробуємо знайти користувача в localStorage
-        const localUsers = JSON.parse(localStorage.getItem('users') || '[]');
-        const localUser = localUsers.find((user: any) => user.id === receiverId);
-        
-        if (localUser) {
-          if (import.meta.env.DEV) console.log("Found user in localStorage:", localUser);
-          const newChat = {
-            id: `chat-${receiverId}`,
-            user: {
-              id: receiverId,
-              name: localUser.full_name || `${localUser.firstName || ''} ${localUser.lastName || ''}`.trim() || 'Користувач',
-              username: localUser.phone_number || localUser.phoneNumber || 'user',
-              avatarUrl: localUser.avatar_url || localUser.avatarUrl || '',
-              lastSeen: 'Онлайн',
-              unreadCount: 0
-            },
-            messages: [],
-            lastMessage: {
-              text: "Почніть розмову",
-              timestamp: "Щойно"
-            }
-          };
-          
-          return {
-            chats: [newChat, ...existingChats],
-            activeChat: newChat
-          };
-        }
-        
         return { chats: existingChats };
       }
+      
+      const userData = usersData?.[0];
       
       if (userData) {
         if (import.meta.env.DEV) console.log("Found user in Supabase:", userData);
         // Створюємо новий чат
-        const newChat = {
+        const newChat: ChatItem = {
           id: `chat-${receiverId}`,
           user: {
             id: receiverId,
             name: userData.full_name || 'Користувач',
-            username: userData.phone_number || 'user',
+            username: 'user',
             avatarUrl: userData.avatar_url || '',
             lastSeen: 'Онлайн',
             unreadCount: 0
