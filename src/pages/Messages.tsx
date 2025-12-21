@@ -1,5 +1,5 @@
-
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,24 +16,45 @@ export default function Messages() {
   const [chats, setChats] = useState<ChatItem[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Отримуємо дані поточного користувача
-    const user = localStorage.getItem("currentUser");
-    const receiverId = localStorage.getItem("currentChatReceiverId");
+    const initializeMessages = async () => {
+      try {
+        // Отримуємо сесію користувача з Supabase Auth
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Помилка при отриманні сесії:", sessionError);
+          toast.error("Помилка авторизації");
+          setIsLoading(false);
+          return;
+        }
+        
+        if (!session?.user) {
+          toast.error("Будь ласка, увійдіть в систему для перегляду повідомлень");
+          setIsLoading(false);
+          navigate("/auth");
+          return;
+        }
+        
+        const receiverId = localStorage.getItem("currentChatReceiverId");
+        setCurrentUser(session.user);
+        
+        // Завантажуємо всі чати та повідомлення
+        await loadChatsAndMessages(session.user.id, receiverId);
+      } catch (error) {
+        console.error("Помилка ініціалізації повідомлень:", error);
+        toast.error("Не вдалося завантажити повідомлення");
+        setIsLoading(false);
+      }
+    };
     
-    if (user) {
-      const userData = JSON.parse(user);
-      setCurrentUser(userData);
-      
-      // Завантажуємо всі чати та повідомлення
-      loadChatsAndMessages(userData.id, receiverId);
-    }
-  }, []);
+    initializeMessages();
+  }, [navigate]);
   
   // Завантаження чатів та повідомлень
   const loadChatsAndMessages = async (userId: string, receiverId: string | null) => {
-    setIsLoading(true);
     try {
       const { chats: loadedChats, activeChat: selectedChat } = 
         await MessagesService.fetchChatsAndMessages(userId, receiverId);
