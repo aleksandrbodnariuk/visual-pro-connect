@@ -116,6 +116,52 @@ export default function Messages() {
     setChats(updatedChats);
   };
 
+  const handleEditMessage = async (messageId: string, newText: string) => {
+    const success = await MessagesService.editMessage(messageId, newText);
+    if (success) {
+      const updatedMessages = messages.map(msg =>
+        msg.id === messageId
+          ? { ...msg, text: newText, isEdited: true }
+          : msg
+      );
+      setMessages(updatedMessages);
+
+      // Оновлюємо чати якщо це останнє повідомлення
+      if (activeChat) {
+        const updatedChats = chats.map(chat =>
+          chat.id === activeChat.id
+            ? { ...chat, messages: updatedMessages }
+            : chat
+        );
+        setChats(updatedChats);
+      }
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    const success = await MessagesService.deleteMessage(messageId);
+    if (success) {
+      const updatedMessages = messages.filter(msg => msg.id !== messageId);
+      setMessages(updatedMessages);
+
+      // Оновлюємо чати
+      if (activeChat) {
+        const updatedChats = chats.map(chat =>
+          chat.id === activeChat.id
+            ? {
+                ...chat,
+                messages: updatedMessages,
+                lastMessage: updatedMessages.length > 0
+                  ? { text: updatedMessages[updatedMessages.length - 1].text, timestamp: updatedMessages[updatedMessages.length - 1].timestamp }
+                  : { text: "Почніть розмову", timestamp: "" }
+              }
+            : chat
+        );
+        setChats(updatedChats);
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen">
@@ -152,6 +198,8 @@ export default function Messages() {
                   <MessageList 
                     messages={messages} 
                     emptyStateMessage={`Початок розмови з ${activeChat.user.name}`}
+                    onEditMessage={handleEditMessage}
+                    onDeleteMessage={handleDeleteMessage}
                   />
                   
                   <MessageInput onSendMessage={handleSendMessage} />
