@@ -16,6 +16,8 @@ export interface Message {
   text: string;
   timestamp: string;
   isSender: boolean;
+  isEdited?: boolean;
+  editedAt?: string;
 }
 
 export interface ChatItem {
@@ -39,7 +41,7 @@ export class MessagesService {
       // Отримуємо всі повідомлення користувача з Supabase (без join)
       const { data: messageData, error: messagesError } = await supabase
         .from('messages')
-        .select('id, sender_id, receiver_id, content, read, created_at')
+        .select('id, sender_id, receiver_id, content, read, created_at, is_edited, edited_at')
         .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
         .order('created_at', { ascending: true });
         
@@ -119,7 +121,9 @@ export class MessagesService {
               id: msg.id,
               text: msg.content,
               timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              isSender: msg.sender_id === userId
+              isSender: msg.sender_id === userId,
+              isEdited: msg.is_edited || false,
+              editedAt: msg.edited_at ? new Date(msg.edited_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined
             })),
             lastMessage: {
               text: lastMessage.content,
@@ -253,6 +257,54 @@ export class MessagesService {
       if (import.meta.env.DEV) console.error("Помилка при відправленні повідомлення:", err);
       toast.error("Помилка відправки повідомлення");
       return { success: false };
+    }
+  }
+
+  static async editMessage(messageId: string, newContent: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({
+          content: newContent,
+          is_edited: true,
+          edited_at: new Date().toISOString()
+        })
+        .eq('id', messageId);
+
+      if (error) {
+        if (import.meta.env.DEV) console.error("Помилка при редагуванні повідомлення:", error);
+        toast.error("Не вдалося редагувати повідомлення");
+        return false;
+      }
+
+      toast.success("Повідомлення відредаговано");
+      return true;
+    } catch (err) {
+      if (import.meta.env.DEV) console.error("Помилка при редагуванні повідомлення:", err);
+      toast.error("Помилка редагування повідомлення");
+      return false;
+    }
+  }
+
+  static async deleteMessage(messageId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .delete()
+        .eq('id', messageId);
+
+      if (error) {
+        if (import.meta.env.DEV) console.error("Помилка при видаленні повідомлення:", error);
+        toast.error("Не вдалося видалити повідомлення");
+        return false;
+      }
+
+      toast.success("Повідомлення видалено");
+      return true;
+    } catch (err) {
+      if (import.meta.env.DEV) console.error("Помилка при видаленні повідомлення:", err);
+      toast.error("Помилка видалення повідомлення");
+      return false;
     }
   }
 }
