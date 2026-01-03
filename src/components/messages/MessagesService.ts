@@ -36,16 +36,15 @@ export class MessagesService {
     try {
       if (import.meta.env.DEV) console.log("Fetching chats for user:", userId, "with receiver:", receiverId);
       
-      // Отримуємо всі повідомлення користувача з Supabase
+      // Отримуємо всі повідомлення користувача з Supabase (без join)
       const { data: messageData, error: messagesError } = await supabase
         .from('messages')
-        .select('*, sender:sender_id(*), receiver:receiver_id(*)')
+        .select('id, sender_id, receiver_id, content, read, created_at')
         .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
         .order('created_at', { ascending: true });
         
       if (messagesError) {
         if (import.meta.env.DEV) console.error("Помилка при завантаженні повідомлень:", messagesError);
-        // Якщо є receiverId, створюємо новий чат
         if (receiverId) {
           return MessagesService.createNewChat(receiverId, []);
         }
@@ -56,47 +55,67 @@ export class MessagesService {
       if (messageData && messageData.length > 0) {
         if (import.meta.env.DEV) console.log("Found messages in Supabase:", messageData);
         
-        // Створюємо об'єкт унікальних користувачів для чатів
-        const chatUsers = new Map();
+        // Збираємо унікальні ID користувачів (крім поточного)
+        const userIds = new Set<string>();
+        messageData.forEach(msg => {
+          if (msg.sender_id !== userId) userIds.add(msg.sender_id);
+          if (msg.receiver_id !== userId) userIds.add(msg.receiver_id);
+        });
         
-        // Проходимося по всім повідомленням і групуємо їх по користувачам
+        // Отримуємо профілі користувачів через RPC
+        const { data: profilesData, error: profilesError } = await supabase
+          .rpc('get_safe_public_profiles_by_ids', { _ids: Array.from(userIds) });
+        
+        if (profilesError) {
+          if (import.meta.env.DEV) console.error("Помилка при отриманні профілів:", profilesError);
+        }
+        
+        // Створюємо Map профілів для швидкого доступу
+        const profilesMap = new Map<string, any>();
+        if (profilesData) {
+          profilesData.forEach((profile: any) => {
+            profilesMap.set(profile.id, profile);
+          });
+        }
+        
+        // Групуємо повідомлення по користувачам
+        const chatUsers = new Map<string, { id: string; messages: any[] }>();
+        
         messageData.forEach(message => {
           const chatPartnerId = message.sender_id === userId ? message.receiver_id : message.sender_id;
-          const chatPartner = message.sender_id === userId ? message.receiver : message.sender;
           
           if (!chatUsers.has(chatPartnerId)) {
             chatUsers.set(chatPartnerId, {
               id: chatPartnerId,
-              user: chatPartner,
-              messages: [],
-              lastMessage: null
+              messages: []
             });
           }
           
-          chatUsers.get(chatPartnerId).messages.push(message);
+          chatUsers.get(chatPartnerId)!.messages.push(message);
         });
         
-        // Перетворюємо Map в масив чатів та сортуємо за часом останнього повідомлення
-        const chatsArray = Array.from(chatUsers.values()).map(chat => {
+        // Перетворюємо Map в масив чатів
+        const chatsArray: ChatItem[] = Array.from(chatUsers.values()).map(chat => {
+          const profile = profilesMap.get(chat.id);
+          
           // Сортуємо повідомлення за часом
-          const sortedMessages = chat.messages.sort((a: any, b: any) => 
+          const sortedMessages = chat.messages.sort((a, b) => 
             new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
           );
           
-          // Беремо останнє повідомлення
           const lastMessage = sortedMessages[sortedMessages.length - 1];
           
           return {
             id: `chat-${chat.id}`,
             user: {
               id: chat.id,
-              name: chat.user?.full_name || 'Користувач',
-              username: chat.user?.phone_number || 'user',
-              avatarUrl: chat.user?.avatar_url || '',
+              name: profile?.full_name || 'Користувач',
+              username: 'user',
+              avatarUrl: profile?.avatar_url || '',
               lastSeen: 'Онлайн',
               unreadCount: 0
             },
-            messages: sortedMessages.map((msg: any) => ({
+            messages: sortedMessages.map((msg) => ({
               id: msg.id,
               text: msg.content,
               timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -111,11 +130,9 @@ export class MessagesService {
         
         let selectedChat;
         
-        // Якщо є активний чат або новий отримувач, встановлюємо активний чат
         if (receiverId) {
           selectedChat = chatsArray.find(chat => chat.user.id === receiverId);
           if (!selectedChat) {
-            // Якщо чат з цим користувачем ще не існує, створюємо новий
             return MessagesService.createNewChat(receiverId, chatsArray);
           }
         }
@@ -125,7 +142,6 @@ export class MessagesService {
           activeChat: selectedChat || (chatsArray.length > 0 ? chatsArray[0] : undefined)
         };
       } else {
-        // Якщо немає повідомлень, але є receiverId, створюємо новий чат
         if (receiverId) {
           return MessagesService.createNewChat(receiverId, []);
         }
@@ -133,7 +149,6 @@ export class MessagesService {
       }
     } catch (error) {
       if (import.meta.env.DEV) console.error("Помилка при завантаженні чатів та повідомлень:", error);
-      // Якщо є receiverId, створюємо новий чат
       if (receiverId) {
         return MessagesService.createNewChat(receiverId, []);
       }
