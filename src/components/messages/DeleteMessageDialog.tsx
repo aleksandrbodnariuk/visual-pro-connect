@@ -22,10 +22,10 @@ export function DeleteMessageDialog({
 }: DeleteMessageDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className="bg-white text-black">
         <AlertDialogHeader>
-          <AlertDialogTitle>Видалити повідомлення?</AlertDialogTitle>
-          <AlertDialogDescription>
+          <AlertDialogTitle className="text-black">Видалити повідомлення?</AlertDialogTitle>
+          <AlertDialogDescription className="text-gray-600">
             Це повідомлення буде видалено назавжди. Цю дію неможливо скасувати.
           </AlertDialogDescription>
         </AlertDialogHeader>

@@ -47,18 +47,18 @@ export function EditMessageDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" onKeyDown={handleKeyDown}>
+      <DialogContent className="sm:max-w-md bg-white text-black" onKeyDown={handleKeyDown}>
         <DialogHeader>
-          <DialogTitle>Редагувати повідомлення</DialogTitle>
+          <DialogTitle className="text-black">Редагувати повідомлення</DialogTitle>
         </DialogHeader>
         <div className="py-4">
           <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="min-h-[100px] resize-none"
+            className="min-h-[100px] resize-none bg-gray-50 border-gray-300 text-black"
             autoFocus
           />
-          <p className="text-xs text-muted-foreground mt-2">
+          <p className="text-xs text-gray-500 mt-2">
             {text.length} / 2000 символів
           </p>
         </div>
