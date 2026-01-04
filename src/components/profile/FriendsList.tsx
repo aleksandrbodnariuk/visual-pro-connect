@@ -1,8 +1,7 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Check, X, UserPlus, MessageCircle, User } from "lucide-react";
+import { MessageCircle, User } from "lucide-react";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -11,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 // userId –– можна не подавати, якщо треба відобразити друзів авторизованого користувача
 export function FriendsList({ userId }: { userId?: string }) {
-  const { friendRequests, friends, respondToFriendRequest, refreshFriendRequests } = useFriendRequests();
+  const { friends, refreshFriendRequests } = useFriendRequests();
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   
@@ -25,15 +24,8 @@ export function FriendsList({ userId }: { userId?: string }) {
     loadFriendData();
   }, [userId, refreshFriendRequests]);
   
-  // Запити на додавання, які чекають підтвердження
-  const pendingRequests = friendRequests.filter(
-    request => request.status === 'pending'
-      && (!userId || request.receiver_id === userId)
-  );
-  
   // Друзі (тільки accepted)
   const friendsList = friends.filter(friend => friend !== null);
-
   // Функція для отримання ініціалів
   const getInitials = (name: string | null): string => {
     if (!name) return 'К';
@@ -99,48 +91,6 @@ export function FriendsList({ userId }: { userId?: string }) {
     <Card>
       <CardContent className="p-4">
         <div className="space-y-4">
-          {pendingRequests.length > 0 && (
-            <div>
-              <h3 className="font-semibold mb-2">Запити у друзі</h3>
-              <div className="space-y-2">
-                {pendingRequests.map((request) => (
-                  <div key={request.id} className="flex items-center justify-between p-3 border rounded-md">
-                    <div className="flex items-center gap-2">
-                      <Avatar>
-                        {request.sender?.avatar_url ? (
-                          <AvatarImage src={request.sender.avatar_url} />
-                        ) : (
-                          <AvatarFallback>
-                            {request.sender?.full_name ? getInitials(request.sender.full_name) : 
-                             request.sender?.firstName ? getInitials(`${request.sender.firstName} ${request.sender.lastName || ''}`) : 'К'}
-                          </AvatarFallback>
-                        )}
-                      </Avatar>
-                      <span>{request.sender?.full_name || 'Новий запит у друзі'}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        onClick={() => respondToFriendRequest(request.id, 'accept')}
-                      >
-                        <Check className="w-4 h-4 mr-1" />
-                        Прийняти
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="destructive"
-                        onClick={() => respondToFriendRequest(request.id, 'reject')}
-                      >
-                        <X className="w-4 h-4 mr-1" />
-                        Відхилити
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           <h3 className="font-semibold">Друзі</h3>
           {friendsList && friendsList.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
