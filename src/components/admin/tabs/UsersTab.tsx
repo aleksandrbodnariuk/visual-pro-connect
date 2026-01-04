@@ -119,18 +119,48 @@ export function UsersTab() {
       // Оновлюємо в Supabase
       try {
         console.log("Оновлення в Supabase...");
-        const { error } = await supabase
+        
+        // 1. Оновлюємо колонку is_shareholder в таблиці users
+        const { error: usersError } = await supabase
           .from('users')
-          .update({ 
-            is_shareholder: newStatus
-          })
+          .update({ is_shareholder: newStatus })
           .eq('id', userId);
 
-        if (error) {
-          console.error("Помилка оновлення статусу акціонера в Supabase:", error);
-        } else {
-          console.log("Статус акціонера успішно оновлено в Supabase");
+        if (usersError) {
+          console.error("Помилка оновлення статусу акціонера в users:", usersError);
         }
+        
+        // 2. Синхронізуємо з таблицею user_roles
+        if (newStatus) {
+          // Додаємо роль 'shareholder' в user_roles
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .upsert(
+              { user_id: userId, role: 'shareholder' as const },
+              { onConflict: 'user_id,role' }
+            );
+          
+          if (roleError) {
+            console.error("Помилка додавання ролі shareholder:", roleError);
+          } else {
+            console.log("Роль shareholder додано в user_roles");
+          }
+        } else {
+          // Видаляємо роль 'shareholder' з user_roles
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .delete()
+            .eq('user_id', userId)
+            .eq('role', 'shareholder');
+          
+          if (roleError) {
+            console.error("Помилка видалення ролі shareholder:", roleError);
+          } else {
+            console.log("Роль shareholder видалено з user_roles");
+          }
+        }
+        
+        console.log("Статус акціонера успішно оновлено в Supabase");
       } catch (supabaseError) {
         console.warn("Не вдалося оновити в Supabase, але локальні зміни збережено:", supabaseError);
       }
@@ -154,19 +184,19 @@ export function UsersTab() {
 
   const changeUserTitle = async (userId: string, newTitle: string) => {
     try {
-      try {
-        const { error } = await supabase
-          .from('users')
-          .update({ title: newTitle })
-          .eq('id', userId);
+      // Спочатку зберігаємо в Supabase
+      const { error } = await supabase
+        .from('users')
+        .update({ title: newTitle })
+        .eq('id', userId);
 
-        if (error) {
-          console.error("Помилка оновлення титулу в Supabase:", error);
-        }
-      } catch (supabaseError) {
-        console.warn("Не вдалося оновити титул в Supabase:", supabaseError);
+      if (error) {
+        console.error("Помилка оновлення титулу в Supabase:", error);
+        toast.error("Не вдалося зберегти титул");
+        return; // Не оновлюємо локальний стан при помилці
       }
 
+      // Оновлюємо локальний стан тільки після успішного збереження
       const updatedUsers = users.map(user => 
         user.id === userId 
           ? { ...user, title: newTitle }
@@ -199,17 +229,40 @@ export function UsersTab() {
         updates.is_shareholder = false;
       }
 
-      try {
-        const { error } = await supabase
-          .from('users')
-          .update(updates)
-          .eq('id', userId);
+      // 1. Оновлюємо таблицю users
+      const { error: usersError } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', userId);
 
-        if (error) {
-          console.error("Помилка оновлення ролі в Supabase:", error);
+      if (usersError) {
+        console.error("Помилка оновлення ролі в Supabase:", usersError);
+        toast.error("Не вдалося зберегти роль");
+        return;
+      }
+      
+      // 2. Синхронізуємо з таблицею user_roles для статусу акціонера
+      if (updates.is_shareholder) {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .upsert(
+            { user_id: userId, role: 'shareholder' as const },
+            { onConflict: 'user_id,role' }
+          );
+        
+        if (roleError) {
+          console.error("Помилка додавання ролі shareholder:", roleError);
         }
-      } catch (supabaseError) {
-        console.warn("Не вдалося оновити роль в Supabase:", supabaseError);
+      } else {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId)
+          .eq('role', 'shareholder');
+        
+        if (roleError) {
+          console.error("Помилка видалення ролі shareholder:", roleError);
+        }
       }
 
       const updatedUsers = users.map(user => 
