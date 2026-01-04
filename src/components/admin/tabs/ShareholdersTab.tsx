@@ -220,24 +220,16 @@ export function ShareholdersTab() {
       
       localStorage.setItem("users", JSON.stringify(updatedUsers));
       
-      // Use an update object that matches the database schema
-      const updateData: Record<string, any> = {
-        // Use the title property in a custom metadata field
-        // since title is not in the database schema
-        categories: [newTitle] // Store the title in categories array
-      };
-      
-      // Пробуємо оновити запис в Supabase
-      const user = updatedShareholders.find(sh => sh.id === userId);
-      if (user) {
-        const { error } = await supabase
-          .from('users')
-          .update(updateData)
-          .eq('id', userId);
-          
-        if (error) {
-          console.error("Error updating title in Supabase:", error);
-        }
+      // Оновлюємо колонку title в таблиці users
+      const { error } = await supabase
+        .from('users')
+        .update({ title: newTitle })
+        .eq('id', userId);
+        
+      if (error) {
+        console.error("Error updating title in Supabase:", error);
+        toast.error("Не вдалося зберегти титул в базі даних");
+        return;
       }
       
       toast.success(`Титул акціонера змінено на "${newTitle}"`);
