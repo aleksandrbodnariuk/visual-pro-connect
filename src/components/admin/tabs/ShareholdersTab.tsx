@@ -86,12 +86,8 @@ export function ShareholdersTab() {
           const percentage = totalShares > 0 ? ((shares / totalShares) * 100) : 0;
           const percentageFormatted = percentage.toFixed(2);
           
-          // Визначаємо титул на основі відсотка
-          const titleInfo = TITLE_PERCENTAGES.find(
-            range => percentage >= range.min && percentage <= range.max
-          );
-          
-          const title = titleInfo ? titleInfo.title : "Акціонер";
+          // Використовуємо титул з бази даних, якщо він є
+          const title = user.title || "Акціонер";
           
           // Додаємо користувача до списку
           shareholdersWithShares.push({
@@ -120,47 +116,23 @@ export function ShareholdersTab() {
     fetchShareholders();
   }, [totalShares]);
 
-  // Recalculate percentages whenever shareholders or totalShares change
-  useEffect(() => {
+  // Recalculate percentages only (не змінюємо титули автоматично)
+  const recalculatePercentagesOnly = () => {
     if (totalShares <= 0 || shareholders.length === 0) return;
     
     const updatedShareholders = shareholders.map(sh => {
       const percentage = ((sh.shares / totalShares) * 100);
       const percentageFormatted = percentage.toFixed(2);
       
-      // Find the appropriate title based on percentage
-      const titleInfo = TITLE_PERCENTAGES.find(
-        range => percentage >= range.min && percentage <= range.max
-      );
-      
-      const newTitle = titleInfo ? titleInfo.title : "Акціонер";
-      
+      // Титул НЕ змінюємо автоматично - залишаємо з бази даних
       return { 
         ...sh, 
-        percentage: percentageFormatted,
-        title: newTitle
+        percentage: percentageFormatted
       };
     });
     
     setShareholders(updatedShareholders);
-    
-    // Update users in localStorage with new titles
-    const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-    const updatedUsers = storedUsers.map((user: any) => {
-      const updatedShareholder = updatedShareholders.find(sh => sh.id === user.id);
-      if (updatedShareholder) {
-        return { 
-          ...user, 
-          percentage: updatedShareholder.percentage,
-          title: updatedShareholder.title,
-          shares: updatedShareholder.shares
-        };
-      }
-      return user;
-    });
-    
-    localStorage.setItem("users", JSON.stringify(updatedUsers));
-  }, [shareholders, totalShares]);
+  };
   
   const saveTotalShares = async () => {
     if (isNaN(totalShares) || totalShares <= 0) {
@@ -182,17 +154,10 @@ export function ShareholdersTab() {
       const percentage = total > 0 ? ((sh.shares / total) * 100) : 0;
       const percentageFormatted = percentage.toFixed(2);
       
-      // Find the appropriate title based on percentage
-      const titleInfo = TITLE_PERCENTAGES.find(
-        range => percentage >= range.min && percentage <= range.max
-      );
-      
-      const newTitle = titleInfo ? titleInfo.title : "Акціонер";
-      
+      // Титул НЕ змінюємо автоматично - залишаємо з бази даних
       return { 
         ...sh, 
-        percentage: percentageFormatted,
-        title: newTitle
+        percentage: percentageFormatted
       };
     });
   };
