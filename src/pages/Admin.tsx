@@ -107,11 +107,19 @@ export default function Admin() {
       loadUsersData();
     };
 
+    // Слухач для оновлення ціни акції
+    const handleStockPriceUpdate = (event: CustomEvent) => {
+      console.log("Отримано оновлення ціни акції:", event.detail.price);
+      setStockPrice(event.detail.price);
+    };
+
     window.addEventListener('shareholder-status-updated', handleShareholderUpdate);
+    window.addEventListener('stock-price-updated', handleStockPriceUpdate as EventListener);
     window.addEventListener('storage', loadUsersData);
 
     return () => {
       window.removeEventListener('shareholder-status-updated', handleShareholderUpdate);
+      window.removeEventListener('stock-price-updated', handleStockPriceUpdate as EventListener);
       window.removeEventListener('storage', loadUsersData);
     };
   }, [navigate, stockPrice, tabName, loading, isAuthenticated, currentUser]);
