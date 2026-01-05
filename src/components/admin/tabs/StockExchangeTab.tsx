@@ -47,6 +47,12 @@ export function StockExchangeTab() {
     }
     
     localStorage.setItem("stockPrice", stockPrice);
+    
+    // Оповіщаємо про зміну ціни
+    window.dispatchEvent(new CustomEvent('stock-price-updated', { 
+      detail: { price: stockPrice } 
+    }));
+    
     toast.success(`Ціну акції оновлено: ${stockPrice} грн`);
   };
 
