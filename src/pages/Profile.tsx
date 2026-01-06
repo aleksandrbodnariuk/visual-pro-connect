@@ -20,6 +20,7 @@ import { ShareholderSection } from "@/components/profile/ShareholderSection";
 import { PortfolioManager } from "@/components/profile/PortfolioManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
+import { EditPublicationModal } from "@/components/publications/EditPublicationModal";
 import { FriendsList } from "@/components/profile/FriendsList";
 
 const LoadingSpinner = () => (
@@ -60,6 +61,8 @@ export default function Profile() {
   const [portfolioManagerOpen, setPortfolioManagerOpen] = useState(false);
   const [createPostOpen, setCreatePostOpen] = useState(false);
   const [servicesDialogOpen, setServicesDialogOpen] = useState(false);
+  const [editPostOpen, setEditPostOpen] = useState(false);
+  const [postToEdit, setPostToEdit] = useState<any>(null);
   const navigate = useNavigate();
   const { language } = useLanguage();
   const t = translations[language];
@@ -227,12 +230,34 @@ export default function Profile() {
   };
 
   const handleEditPost = async (postId: string) => {
-    // Знаходимо пост для редагування
-    const postToEdit = posts.find(p => p.id === postId);
-    if (!postToEdit) return;
-    
-    // Тут можна відкрити діалог редагування з даними поста
-    toast.info(`Редагування публікації: ${postToEdit.caption.substring(0, 30)}...`);
+    try {
+      // Отримуємо повні дані поста з Supabase
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('id', postId)
+        .single();
+
+      if (error || !data) {
+        toast.error('Не вдалося завантажити публікацію');
+        return;
+      }
+
+      setPostToEdit({
+        id: data.id,
+        content: data.content,
+        media_url: data.media_url,
+        category: data.category
+      });
+      setEditPostOpen(true);
+    } catch (error) {
+      console.error('Помилка завантаження публікації:', error);
+      toast.error('Помилка при завантаженні публікації');
+    }
+  };
+
+  const handleEditSuccess = () => {
+    window.location.reload();
   };
 
   const handleDeletePost = async (postId: string) => {
@@ -440,6 +465,13 @@ export default function Profile() {
               window.location.reload();
               toast.success("Публікацію створено");
             }}
+          />
+
+          <EditPublicationModal
+            open={editPostOpen}
+            onOpenChange={setEditPostOpen}
+            post={postToEdit}
+            onSuccess={handleEditSuccess}
           />
           
           <Dialog open={servicesDialogOpen} onOpenChange={setServicesDialogOpen}>
