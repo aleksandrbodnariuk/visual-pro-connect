@@ -9,6 +9,8 @@ import { usePostLikes } from "@/hooks/usePostLikes";
 import { usePostShares } from "@/hooks/usePostShares";
 import { PostMenu } from "@/components/profile/PostMenu";
 import { useAuthState } from "@/hooks/auth/useAuthState";
+import { extractVideoEmbed } from "@/lib/videoEmbed";
+import { VideoPreview } from "./VideoPreview";
 
 export interface PostCardProps {
   id: string;
@@ -51,6 +53,9 @@ export function PostCard({
   const { shared, toggleShare, isLoading: sharesLoading } = usePostShares(id);
   
   const isAuthor = currentUser?.id === author.id;
+  
+  // Виявлення вбудованого відео/посилання
+  const videoEmbed = extractVideoEmbed(caption);
 
   return (
     <div className={cn("creative-card card-hover", className)}>
@@ -161,6 +166,9 @@ export function PostCard({
             </Link>{" "}
             {caption}
           </p>
+          
+          {/* Вбудоване відео превʼю */}
+          {videoEmbed && <VideoPreview embed={videoEmbed} />}
         </div>
 
         {/* Коментарі та час */}
