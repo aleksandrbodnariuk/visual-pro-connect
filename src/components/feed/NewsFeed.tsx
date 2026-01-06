@@ -8,12 +8,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "./PostCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { EditPublicationModal } from "@/components/publications/EditPublicationModal";
 
 export function NewsFeed() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [newPostContent, setNewPostContent] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
+  const [editPostOpen, setEditPostOpen] = useState(false);
+  const [postToEdit, setPostToEdit] = useState<any>(null);
 
   useEffect(() => {
     loadPosts();
@@ -115,7 +118,20 @@ export function NewsFeed() {
   };
 
   const handleEditPost = (postId: string) => {
-    toast({ title: "Редагування публікації в розробці" });
+    const post = posts.find(p => p.id === postId);
+    if (post) {
+      setPostToEdit({
+        id: post.id,
+        content: post.content,
+        media_url: post.media_url,
+        category: post.category
+      });
+      setEditPostOpen(true);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    loadPosts();
   };
 
   const filteredPosts = posts.filter(post => {
@@ -241,6 +257,13 @@ export function NewsFeed() {
           )}
         </TabsContent>
       </Tabs>
+
+      <EditPublicationModal
+        open={editPostOpen}
+        onOpenChange={setEditPostOpen}
+        post={postToEdit}
+        onSuccess={handleEditSuccess}
+      />
     </div>
   );
 }
