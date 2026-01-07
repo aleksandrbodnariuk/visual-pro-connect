@@ -18,6 +18,8 @@ export interface Message {
   isSender: boolean;
   isEdited?: boolean;
   editedAt?: string;
+  attachmentUrl?: string;
+  attachmentType?: string;
 }
 
 export interface ChatItem {
@@ -41,7 +43,7 @@ export class MessagesService {
       // Отримуємо всі повідомлення користувача з Supabase (без join)
       const { data: messageData, error: messagesError } = await supabase
         .from('messages')
-        .select('id, sender_id, receiver_id, content, read, created_at, is_edited, edited_at')
+        .select('id, sender_id, receiver_id, content, read, created_at, is_edited, edited_at, attachment_url, attachment_type')
         .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
         .order('created_at', { ascending: true });
         
@@ -123,7 +125,9 @@ export class MessagesService {
               timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               isSender: msg.sender_id === userId,
               isEdited: msg.is_edited || false,
-              editedAt: msg.edited_at ? new Date(msg.edited_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined
+              editedAt: msg.edited_at ? new Date(msg.edited_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
+              attachmentUrl: msg.attachment_url || undefined,
+              attachmentType: msg.attachment_type || undefined
             })),
             lastMessage: {
               text: lastMessage.content,
@@ -211,27 +215,33 @@ export class MessagesService {
     }
   }
 
-  static async sendMessage(currentUser: any, receiverId: string, messageText: string): Promise<{
+  static async sendMessage(
+    currentUser: any, 
+    receiverId: string, 
+    messageText: string,
+    attachmentUrl?: string,
+    attachmentType?: string
+  ): Promise<{
     success: boolean;
     newMessage?: Message;
   }> {
-    if (!messageText.trim() || !currentUser) {
+    if ((!messageText.trim() && !attachmentUrl) || !currentUser) {
       return { success: false };
     }
     
     if (import.meta.env.DEV) console.log("Sending message from", currentUser.id, "to", receiverId);
     
     // Створюємо нове повідомлення
-    const newMessage = {
+    const newMessage: Message = {
       id: `msg${crypto.randomUUID()}`,
       text: messageText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isSender: true
+      isSender: true,
+      attachmentUrl,
+      attachmentType
     };
     
     try {
-      // Відправляємо повідомлення безпосередньо в Supabase з правильним auth.uid()
-      
       const { data, error } = await supabase
         .from('messages')
         .insert([
@@ -239,7 +249,9 @@ export class MessagesService {
             sender_id: currentUser?.id,
             receiver_id: receiverId,
             content: messageText,
-            read: false
+            read: false,
+            attachment_url: attachmentUrl || null,
+            attachment_type: attachmentType || null
           }
         ])
         .select();

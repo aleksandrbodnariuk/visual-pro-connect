@@ -75,11 +75,11 @@ export default function Messages() {
     }
   };
 
-  const handleSendMessage = async (messageText: string) => {
+  const handleSendMessage = async (messageText: string, attachmentUrl?: string, attachmentType?: string) => {
     if (!activeChat || !currentUser) return;
     
     const { success, newMessage } = 
-      await MessagesService.sendMessage(currentUser, activeChat.user.id, messageText);
+      await MessagesService.sendMessage(currentUser, activeChat.user.id, messageText, attachmentUrl, attachmentType);
     
     if (success && newMessage) {
       // Оновлюємо локальний стан
@@ -87,13 +87,14 @@ export default function Messages() {
       setMessages(updatedMessages);
       
       // Оновлюємо останнє повідомлення в чаті
+      const lastMessageText = messageText || (attachmentUrl ? "📷 Фото" : "");
       const updatedChats = chats.map(chat => 
         chat.id === activeChat.id 
           ? {
               ...chat,
               messages: updatedMessages,
               lastMessage: {
-                text: messageText,
+                text: lastMessageText,
                 timestamp: "Щойно"
               }
             }
