@@ -231,16 +231,6 @@ export class MessagesService {
     
     if (import.meta.env.DEV) console.log("Sending message from", currentUser.id, "to", receiverId);
     
-    // Створюємо нове повідомлення
-    const newMessage: Message = {
-      id: `msg${crypto.randomUUID()}`,
-      text: messageText,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isSender: true,
-      attachmentUrl,
-      attachmentType
-    };
-    
     try {
       const { data, error } = await supabase
         .from('messages')
@@ -254,17 +244,28 @@ export class MessagesService {
             attachment_type: attachmentType || null
           }
         ])
-        .select();
+        .select()
+        .single();
           
       if (error) {
         if (import.meta.env.DEV) console.error("Помилка при відправленні повідомлення:", error);
         toast.error("Не вдалося надіслати повідомлення. Спробуйте ще раз.");
         return { success: false };
-      } else {
-        if (import.meta.env.DEV) console.log("Message sent to Supabase successfully:", data);
-        toast.success("Повідомлення надіслано");
-        return { success: true, newMessage };
       }
+      
+      // Використовуємо реальний ID з бази даних
+      const newMessage: Message = {
+        id: data.id,
+        text: messageText,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isSender: true,
+        attachmentUrl,
+        attachmentType
+      };
+      
+      if (import.meta.env.DEV) console.log("Message sent to Supabase successfully:", data);
+      toast.success("Повідомлення надіслано");
+      return { success: true, newMessage };
     } catch (err) {
       if (import.meta.env.DEV) console.error("Помилка при відправленні повідомлення:", err);
       toast.error("Помилка відправки повідомлення");

@@ -32,7 +32,8 @@ export function EditMessageDialog({
 
   const handleSave = () => {
     const trimmedText = text.trim();
-    if (trimmedText && trimmedText !== messageText) {
+    // Дозволяємо зберігати пустий текст, якщо є вкладення
+    if (trimmedText !== messageText) {
       onSave(trimmedText);
     } else {
       onOpenChange(false);
@@ -68,7 +69,7 @@ export function EditMessageDialog({
           </Button>
           <Button 
             onClick={handleSave}
-            disabled={!text.trim() || text.length > 2000}
+            disabled={text.length > 2000}
           >
             Зберегти
           </Button>
