@@ -1,7 +1,7 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 interface NavbarNavigationProps {
   isAdmin: boolean;
@@ -9,6 +9,7 @@ interface NavbarNavigationProps {
 
 export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
   const location = useLocation();
+  const { unreadCount } = useUnreadMessages();
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -42,11 +43,16 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
       </Link>
       <Link
         to="/messages"
-        className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
+        className={`relative text-sm font-medium transition-colors hover:text-foreground/80 ${
           isActive("/messages") ? "text-foreground" : "text-foreground/60"
         }`}
       >
         Повідомлення
+        {unreadCount > 0 && (
+          <span className="absolute -top-2 -right-4 bg-destructive text-destructive-foreground text-xs rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
       </Link>
       <Link
         to="/stock-market"
