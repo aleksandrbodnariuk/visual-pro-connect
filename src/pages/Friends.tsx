@@ -6,27 +6,23 @@ import { FriendRequestsList } from "@/components/profile/FriendRequestsList";
 
 export default function Friends() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="flex">
-        <div className="w-64 fixed left-0 top-16 h-[calc(100vh-4rem)] overflow-y-auto">
-          <Sidebar />
-        </div>
-        <div className="flex-1 ml-64">
-          <div className="container mx-auto px-4 py-8">
-            <div className="max-w-4xl mx-auto">
-              <div className="mb-6">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Друзі</h1>
-                <p className="text-gray-600">Знаходьте та спілкуйтеся з друзями</p>
-              </div>
-              
-              <div className="space-y-6">
-                <FriendRequestsList />
-                <FriendsList />
-              </div>
+      <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
+        <Sidebar className="hidden lg:block col-span-3 sticky top-20 h-fit" />
+        <main className="col-span-12 lg:col-span-9">
+          <div className="max-w-4xl">
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-foreground mb-2">Друзі</h1>
+              <p className="text-muted-foreground">Знаходьте та спілкуйтеся з друзями</p>
+            </div>
+            
+            <div className="space-y-6">
+              <FriendRequestsList />
+              <FriendsList />
             </div>
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );

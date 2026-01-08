@@ -22,20 +22,16 @@ const Index = () => {
   
   // Для авторизованих користувачів показуємо основний інтерфейс
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="flex">
-        <div className="w-64 fixed left-0 top-16 h-[calc(100vh-4rem)] overflow-y-auto">
-          <Sidebar />
-        </div>
-        <div className="flex-1 ml-64">
-          <div className="container mx-auto px-4 py-8">
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold">Стрічка новин</h1>
-            </div>
-            <NewsFeed />
+      <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
+        <Sidebar className="hidden lg:block col-span-3 sticky top-20 h-fit" />
+        <main className="col-span-12 lg:col-span-9">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold">Стрічка новин</h1>
           </div>
-        </div>
+          <NewsFeed />
+        </main>
       </div>
     </div>
   );
