@@ -320,4 +320,25 @@ export class MessagesService {
       return false;
     }
   }
+
+  static async markMessagesAsRead(userId: string, chatUserId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ read: true })
+        .eq('receiver_id', userId)
+        .eq('sender_id', chatUserId)
+        .eq('read', false);
+
+      if (error) {
+        if (import.meta.env.DEV) console.error("Помилка при позначенні повідомлень:", error);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      if (import.meta.env.DEV) console.error("Помилка при позначенні повідомлень:", err);
+      return false;
+    }
+  }
 }

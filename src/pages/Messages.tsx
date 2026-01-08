@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
 import { toast } from "sonner";
@@ -8,15 +8,22 @@ import { ChatHeader } from "@/components/messages/ChatHeader";
 import { MessageList } from "@/components/messages/MessageList";
 import { MessageInput } from "@/components/messages/MessageInput";
 import { EmptyChat } from "@/components/messages/EmptyChat";
-import { MessagesService, ChatItem } from "@/components/messages/MessagesService";
+import { MessagesService, ChatItem, Message } from "@/components/messages/MessagesService";
+import { playNotificationSound } from "@/lib/sounds";
 
 export default function Messages() {
   const [activeChat, setActiveChat] = useState<ChatItem | null>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [chats, setChats] = useState<ChatItem[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const activeChatRef = useRef<ChatItem | null>(null);
+
+  // Тримаємо ref актуальним
+  useEffect(() => {
+    activeChatRef.current = activeChat;
+  }, [activeChat]);
 
   useEffect(() => {
     const initializeMessages = async () => {
@@ -104,9 +111,14 @@ export default function Messages() {
     }
   };
   
-  const selectChat = (chat: ChatItem) => {
+  const selectChat = async (chat: ChatItem) => {
     setActiveChat(chat);
     setMessages(chat.messages);
+    
+    // Позначаємо повідомлення як прочитані в БД
+    if (currentUser) {
+      await MessagesService.markMessagesAsRead(currentUser.id, chat.user.id);
+    }
     
     // Оновлюємо кількість непрочитаних повідомлень
     const updatedChats = chats.map(c => 
@@ -116,6 +128,101 @@ export default function Messages() {
     );
     setChats(updatedChats);
   };
+
+  // Realtime підписка на нові повідомлення
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const channel = supabase
+      .channel('messages-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiver_id=eq.${currentUser.id}`,
+        },
+        async (payload) => {
+          const newMsg = payload.new as any;
+          
+          // Отримуємо профіль відправника
+          const { data: profiles } = await supabase
+            .rpc('get_safe_public_profiles_by_ids', { _ids: [newMsg.sender_id] });
+          
+          const senderProfile = profiles?.[0];
+          const currentActiveChat = activeChatRef.current;
+
+          const messageForUI: Message = {
+            id: newMsg.id,
+            text: newMsg.content,
+            timestamp: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isSender: false,
+            attachmentUrl: newMsg.attachment_url || undefined,
+            attachmentType: newMsg.attachment_type || undefined
+          };
+
+          // Якщо це активний чат - додаємо повідомлення і позначаємо прочитаним
+          if (currentActiveChat && currentActiveChat.user.id === newMsg.sender_id) {
+            setMessages(prev => [...prev, messageForUI]);
+            await MessagesService.markMessagesAsRead(currentUser.id, newMsg.sender_id);
+          } else {
+            // Інакше - оновлюємо unreadCount у списку чатів та грає звук
+            playNotificationSound();
+          }
+
+          // Оновлюємо список чатів
+          setChats(prevChats => {
+            const existingChatIndex = prevChats.findIndex(c => c.user.id === newMsg.sender_id);
+            
+            if (existingChatIndex !== -1) {
+              return prevChats.map((chat, idx) => {
+                if (idx === existingChatIndex) {
+                  const isCurrentActive = currentActiveChat?.user.id === newMsg.sender_id;
+                  return {
+                    ...chat,
+                    messages: [...chat.messages, messageForUI],
+                    lastMessage: {
+                      text: newMsg.content || (newMsg.attachment_url ? "📷 Фото" : ""),
+                      timestamp: "Щойно"
+                    },
+                    user: {
+                      ...chat.user,
+                      unreadCount: isCurrentActive ? 0 : chat.user.unreadCount + 1
+                    }
+                  };
+                }
+                return chat;
+              });
+            } else {
+              // Новий чат
+              const newChat: ChatItem = {
+                id: `chat-${newMsg.sender_id}`,
+                user: {
+                  id: newMsg.sender_id,
+                  name: senderProfile?.full_name || 'Користувач',
+                  username: 'user',
+                  avatarUrl: senderProfile?.avatar_url || '',
+                  lastSeen: 'Онлайн',
+                  unreadCount: 1
+                },
+                messages: [messageForUI],
+                lastMessage: {
+                  text: newMsg.content || "📷 Фото",
+                  timestamp: "Щойно"
+                }
+              };
+              return [newChat, ...prevChats];
+            }
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser?.id]);
 
   const handleEditMessage = async (messageId: string, newText: string) => {
     const success = await MessagesService.editMessage(messageId, newText);
