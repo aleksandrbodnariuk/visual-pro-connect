@@ -8,6 +8,7 @@ import { translations } from '@/lib/translations';
 import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
 import { useAuthState } from "@/hooks/auth/useAuthState";
 import { toast } from "sonner";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 interface SidebarProps {
   className?: string;
@@ -20,6 +21,7 @@ export function Sidebar({ className }: SidebarProps) {
   const navigate = useNavigate();
   const { getCurrentUser } = useAuthState();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const { unreadCount } = useUnreadMessages();
   
   const currentUser = getCurrentUser();
   
@@ -87,12 +89,17 @@ export function Sidebar({ className }: SidebarProps) {
           </Button>
           <Button 
             variant="ghost" 
-            className="w-full justify-start" 
+            className="w-full justify-start relative" 
             onClick={() => handleNavigate('/messages')}
             data-active={location.pathname === "/messages"}
           >
             <MessageSquare className="mr-2 h-4 w-4" />
             {t.messages}
+            {unreadCount > 0 && (
+              <span className="absolute right-2 bg-destructive text-destructive-foreground text-xs rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </Button>
           <Button 
             variant="ghost" 
