@@ -117,7 +117,11 @@ export default function Messages() {
     
     // Позначаємо повідомлення як прочитані в БД
     if (currentUser) {
-      await MessagesService.markMessagesAsRead(currentUser.id, chat.user.id);
+      const success = await MessagesService.markMessagesAsRead(currentUser.id, chat.user.id);
+      // Сповіщаємо всі компоненти про оновлення лічильника
+      if (success) {
+        window.dispatchEvent(new CustomEvent('messages-read'));
+      }
     }
     
     // Оновлюємо кількість непрочитаних повідомлень
@@ -166,6 +170,8 @@ export default function Messages() {
           if (currentActiveChat && currentActiveChat.user.id === newMsg.sender_id) {
             setMessages(prev => [...prev, messageForUI]);
             await MessagesService.markMessagesAsRead(currentUser.id, newMsg.sender_id);
+            // Примусово оновлюємо глобальний лічильник
+            window.dispatchEvent(new CustomEvent('messages-read'));
           } else {
             // Інакше - оновлюємо unreadCount у списку чатів та грає звук
             playNotificationSound();
