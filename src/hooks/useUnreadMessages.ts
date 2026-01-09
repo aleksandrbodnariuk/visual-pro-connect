@@ -67,5 +67,17 @@ export function useUnreadMessages() {
     };
   }, [userId, fetchUnreadCount]);
 
+  // Слухаємо кастомну подію для примусового оновлення лічильника
+  useEffect(() => {
+    const handleMessagesRead = () => {
+      if (userId) {
+        fetchUnreadCount(userId);
+      }
+    };
+
+    window.addEventListener('messages-read', handleMessagesRead);
+    return () => window.removeEventListener('messages-read', handleMessagesRead);
+  }, [userId, fetchUnreadCount]);
+
   return { unreadCount, refreshUnreadCount: () => userId && fetchUnreadCount(userId) };
 }
