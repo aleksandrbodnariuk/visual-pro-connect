@@ -88,8 +88,8 @@ export function ChatList({ chats, activeChat, onSelectChat, isLoading }: ChatLis
                     {chat.lastMessage.text}
                   </p>
                   {chat.user.unreadCount > 0 && (
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-xs text-white">
-                      {chat.user.unreadCount}
+                    <span className="flex h-5 min-w-5 px-1 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-medium">
+                      {chat.user.unreadCount > 9 ? "9+" : chat.user.unreadCount}
                     </span>
                   )}
                 </div>

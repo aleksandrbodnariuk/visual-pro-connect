@@ -37,6 +37,7 @@ export class MessagesService {
     chats: ChatItem[],
     activeChat?: ChatItem
   }> {
+    // Зберігаємо userId для підрахунку непрочитаних
     try {
       if (import.meta.env.DEV) console.log("Fetching chats for user:", userId, "with receiver:", receiverId);
       
@@ -109,6 +110,11 @@ export class MessagesService {
           
           const lastMessage = sortedMessages[sortedMessages.length - 1];
           
+          // Підрахунок непрочитаних повідомлень (де receiver = поточний користувач, read = false)
+          const unreadMessages = sortedMessages.filter(
+            msg => msg.receiver_id === userId && msg.read === false
+          );
+          
           return {
             id: `chat-${chat.id}`,
             user: {
@@ -117,7 +123,7 @@ export class MessagesService {
               username: 'user',
               avatarUrl: profile?.avatar_url || '',
               lastSeen: 'Онлайн',
-              unreadCount: 0
+              unreadCount: unreadMessages.length
             },
             messages: sortedMessages.map((msg) => ({
               id: msg.id,
