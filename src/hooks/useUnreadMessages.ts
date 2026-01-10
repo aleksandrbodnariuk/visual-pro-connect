@@ -1,10 +1,12 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export function useUnreadMessages() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
+  // Унікальний ID для цієї інстанції хука, щоб уникнути конфліктів каналів
+  const instanceId = useRef(`unread-messages-${Math.random().toString(36).substring(7)}`);
 
   const fetchUnreadCount = useCallback(async (uid: string) => {
     const { count, error } = await supabase
@@ -47,7 +49,7 @@ export function useUnreadMessages() {
     if (!userId) return;
 
     const channel = supabase
-      .channel('unread-messages')
+      .channel(instanceId.current)
       .on(
         'postgres_changes',
         {
