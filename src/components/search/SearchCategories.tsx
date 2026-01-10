@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Camera, Music, Video, Users, Sparkles } from "lucide-react";
+import { Camera, Music, Video, Users, Sparkles, UtensilsCrossed, Car, Cake, Flower2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,19 +10,19 @@ export const CATEGORIES = [
     id: "photographer",
     name: "Фотографи",
     icon: Camera,
-    color: "bg-gradient-blue from-blue-500 to-cyan-500"
+    color: "from-blue-500 to-cyan-500"
   },
   {
     id: "videographer",
     name: "Відеографи",
     icon: Video,
-    color: "bg-gradient-purple from-purple-500 to-violet-500"
+    color: "from-purple-500 to-violet-500"
   },
   {
     id: "musician",
     name: "Музиканти",
     icon: Music,
-    color: "bg-gradient-orange from-orange-500 to-amber-500"
+    color: "from-orange-500 to-amber-500"
   },
   {
     id: "host",
@@ -35,6 +35,30 @@ export const CATEGORIES = [
     name: "Піротехніки",
     icon: Sparkles,
     color: "from-red-500 to-rose-500"
+  },
+  {
+    id: "restaurant",
+    name: "Ресторани",
+    icon: UtensilsCrossed,
+    color: "from-amber-500 to-yellow-500"
+  },
+  {
+    id: "transport",
+    name: "Транспорт",
+    icon: Car,
+    color: "from-slate-500 to-gray-600"
+  },
+  {
+    id: "confectionery",
+    name: "Кондитери",
+    icon: Cake,
+    color: "from-pink-400 to-rose-400"
+  },
+  {
+    id: "florist",
+    name: "Флористи",
+    icon: Flower2,
+    color: "from-green-500 to-emerald-500"
   },
 ];
 

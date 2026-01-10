@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Search, Bell, MessageSquare, User, Settings, Users, Image, Music, Video, Zap } from 'lucide-react';
+import { Home, Search, Bell, MessageSquare, User, Settings, Users, Camera, Music, Video, Sparkles, UtensilsCrossed, Car, Cake, Flower2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
@@ -143,15 +143,15 @@ export function Sidebar({ className }: SidebarProps) {
           <Button 
             variant="ghost" 
             className="w-full justify-start" 
-            onClick={() => handleNavigate('/category/photographers')}
+            onClick={() => handleNavigate('/category/photographer')}
           >
-            <Image className="mr-2 h-4 w-4" />
+            <Camera className="mr-2 h-4 w-4" />
             {t.photographers}
           </Button>
           <Button 
             variant="ghost" 
             className="w-full justify-start" 
-            onClick={() => handleNavigate('/category/videographers')}
+            onClick={() => handleNavigate('/category/videographer')}
           >
             <Video className="mr-2 h-4 w-4" />
             {t.videographers}
@@ -159,7 +159,7 @@ export function Sidebar({ className }: SidebarProps) {
           <Button 
             variant="ghost" 
             className="w-full justify-start" 
-            onClick={() => handleNavigate('/category/musicians')}
+            onClick={() => handleNavigate('/category/musician')}
           >
             <Music className="mr-2 h-4 w-4" />
             {t.musicians}
@@ -167,7 +167,7 @@ export function Sidebar({ className }: SidebarProps) {
           <Button 
             variant="ghost" 
             className="w-full justify-start" 
-            onClick={() => handleNavigate('/category/hosts')}
+            onClick={() => handleNavigate('/category/host')}
           >
             <Users className="mr-2 h-4 w-4" />
             {t.hosts}
@@ -175,10 +175,34 @@ export function Sidebar({ className }: SidebarProps) {
           <Button 
             variant="ghost" 
             className="w-full justify-start" 
-            onClick={() => handleNavigate('/category/pyrotechnics')}
+            onClick={() => handleNavigate('/category/pyrotechnician')}
           >
-            <Zap className="mr-2 h-4 w-4" />
+            <Sparkles className="mr-2 h-4 w-4" />
             {t.pyrotechnicians}
+          </Button>
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start" 
+            onClick={() => handleNavigate('/category/restaurant')}
+          >
+            <UtensilsCrossed className="mr-2 h-4 w-4" />
+            Ресторани
+          </Button>
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start" 
+            onClick={() => handleNavigate('/category/transport')}
+          >
+            <Car className="mr-2 h-4 w-4" />
+            Транспорт
+          </Button>
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start" 
+            onClick={() => handleNavigate('/category/florist')}
+          >
+            <Flower2 className="mr-2 h-4 w-4" />
+            Флористи
           </Button>
         </nav>
       </div>

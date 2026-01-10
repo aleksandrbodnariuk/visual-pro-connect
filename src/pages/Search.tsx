@@ -25,8 +25,24 @@ import {
 } from "lucide-react";
 import { SearchCategories, CATEGORIES } from "@/components/search/SearchCategories";
 import { supabase } from "@/integrations/supabase/client";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+
+// Функція нормалізації ID категорії (множина -> однина)
+const normalizeCategoryId = (id: string): string => {
+  const mapping: Record<string, string> = {
+    'photographers': 'photographer',
+    'videographers': 'videographer', 
+    'musicians': 'musician',
+    'hosts': 'host',
+    'pyrotechnics': 'pyrotechnician',
+    'restaurants': 'restaurant',
+    'transport': 'transport',
+    'confectionery': 'confectionery',
+    'florists': 'florist'
+  };
+  return mapping[id] || id;
+};
 
 interface Professional {
   id: string;
@@ -50,15 +66,23 @@ export default function Search() {
   
   const location = useLocation();
   const navigate = useNavigate();
+  const { categoryId } = useParams<{ categoryId: string }>();
   const searchParams = new URLSearchParams(location.search);
   
-  // Отримуємо категорію з URL
+  // Отримуємо категорію з URL (пріоритет: path param > query param)
   useEffect(() => {
-    const categoryFromUrl = searchParams.get("category");
-    if (categoryFromUrl) {
-      setCategoryFilter(categoryFromUrl);
+    if (categoryId) {
+      // Категорія з /category/:categoryId
+      const normalizedCategory = normalizeCategoryId(categoryId);
+      setCategoryFilter(normalizedCategory);
+    } else {
+      // Категорія з ?category=...
+      const categoryFromUrl = searchParams.get("category");
+      if (categoryFromUrl) {
+        setCategoryFilter(categoryFromUrl);
+      }
     }
-  }, [location.search]);
+  }, [categoryId, location.search]);
   
   // Завантажуємо користувачів з бази даних
   useEffect(() => {
@@ -72,17 +96,19 @@ export default function Search() {
         
         if (error) throw error;
         
-        // Форматуємо дані
+        // Форматуємо дані (тепер RPC повертає categories, city, country)
         const formattedData = data.map((user: any) => ({
           id: user.id,
           full_name: user.full_name || "Користувач без імені",
-          username: `user_${user.id.substring(0, 8)}`, // Don't expose phone numbers
+          username: `user_${user.id.substring(0, 8)}`,
           avatar_url: user.avatar_url,
           categories: user.categories || [],
           bio: user.bio || "Учасник спільноти B&C",
-          location: "Місцезнаходження приховано", // Location data not in safe public profiles
-          country: null,
-          city: null
+          location: user.city && user.country 
+            ? `${user.city}, ${user.country}` 
+            : user.city || user.country || "",
+          country: user.country,
+          city: user.city
         }));
         
         setProfessionals(formattedData);

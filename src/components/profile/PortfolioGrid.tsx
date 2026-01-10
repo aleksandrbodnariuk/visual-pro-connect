@@ -97,9 +97,14 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
 
   if (portfolioItems.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        <Camera className="h-12 w-12 mx-auto mb-2 opacity-50" />
-        <p>У портфоліо ще немає елементів</p>
+      <div className="text-center py-12 text-muted-foreground">
+        <Camera className="h-16 w-16 mx-auto mb-4 opacity-50" />
+        <h3 className="text-lg font-medium mb-2">У портфоліо ще немає елементів</h3>
+        {isOwner && (
+          <p className="text-sm max-w-md mx-auto">
+            Натисніть "Додати в портфоліо" щоб завантажити свої роботи та показати їх потенційним клієнтам
+          </p>
+        )}
       </div>
     );
   }
