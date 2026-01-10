@@ -651,6 +651,9 @@ export type Database = {
         Returns: {
           avatar_url: string
           bio: string
+          categories: string[]
+          city: string
+          country: string
           created_at: string
           full_name: string
           id: string
