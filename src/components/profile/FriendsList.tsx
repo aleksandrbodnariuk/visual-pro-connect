@@ -1,18 +1,12 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { MessageCircle, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
 
-// userId –– можна не подавати, якщо треба відобразити друзів авторизованого користувача
 export function FriendsList({ userId }: { userId?: string }) {
   const { friends, refreshFriendRequests } = useFriendRequests();
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
   
   useEffect(() => {
     const loadFriendData = async () => {
@@ -24,9 +18,8 @@ export function FriendsList({ userId }: { userId?: string }) {
     loadFriendData();
   }, [userId, refreshFriendRequests]);
   
-  // Друзі (тільки accepted)
   const friendsList = friends.filter(friend => friend !== null);
-  // Функція для отримання ініціалів
+  
   const getInitials = (name: string | null): string => {
     if (!name) return 'К';
     const nameParts = name.split(' ');
@@ -36,51 +29,15 @@ export function FriendsList({ userId }: { userId?: string }) {
     return name.charAt(0);
   };
 
-  // Функція для відкриття чату з користувачем
-  const openChat = async (friendId: string | undefined) => {
-    if (!friendId) {
-      toast.error("Не вдалося відкрити чат. ID користувача не знайдено.");
-      return;
-    }
-    
-    try {
-      // Зберігаємо ID отримувача повідомлення для відкриття чату
-      localStorage.setItem("currentChatReceiverId", friendId);
-      
-      // Перевіряємо наявність користувача в Supabase
-      const { data: userInSupabase, error } = await (supabase as any)
-        .rpc('get_safe_user_profile', { user_uuid: friendId })
-        .single();
-      
-      if (error) {
-        console.error("Помилка перевірки користувача в Supabase:", error);
-      }
-      
-      // Якщо користувача немає в Supabase, спробуємо його створити
-      if (!userInSupabase) {
-        const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-        const userToAdd = storedUsers.find((user: any) => user.id === friendId);
-        
-        if (userToAdd) {
-          // User creation is now restricted to admin functions only
-          console.log("User not found in Supabase, cannot create due to security restrictions");
-        }
-      }
-      
-      // Переходимо на сторінку повідомлень
-      navigate("/messages");
-    } catch (error) {
-      console.error("Помилка при відкритті чату:", error);
-      toast.error("Сталася помилка при відкритті чату");
-    }
-  };
+  // Показуємо максимум 9 друзів у сітці
+  const displayedFriends = friendsList.slice(0, 9);
 
   if (isLoading) {
     return (
       <Card>
         <CardContent className="p-4">
           <div className="flex justify-center items-center h-20">
-            <p>Завантаження списку друзів...</p>
+            <p className="text-muted-foreground">Завантаження списку друзів...</p>
           </div>
         </CardContent>
       </Card>
@@ -90,54 +47,49 @@ export function FriendsList({ userId }: { userId?: string }) {
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="space-y-4">
-          <h3 className="font-semibold">Друзі</h3>
-          {friendsList && friendsList.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {friendsList.map((friend) => (
-                <div key={friend?.id} className="flex items-center justify-between p-3 border rounded-md">
-                  <div className="flex items-center gap-2">
-                    <Avatar>
-                      {friend?.avatar_url ? (
-                        <AvatarImage src={friend.avatar_url} />
-                      ) : (
-                        <AvatarFallback>
-                          {friend?.full_name ? getInitials(friend.full_name) : 
-                           friend?.firstName ? getInitials(`${friend.firstName} ${friend.lastName || ''}`) : 'К'}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    <span>
-                      {friend?.full_name || 'Користувач'}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openChat(friend?.id)}
-                    >
-                      <MessageCircle className="w-4 h-4 mr-1" />
-                      Написати
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      asChild
-                    >
-                      <Link to={`/profile/${friend?.id}`}>
-                        <User className="w-4 h-4 mr-1" />
-                        Профіль
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground">Поки що немає друзів</p>
+        {/* Заголовок з кількістю друзів */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-semibold text-lg">Друзі</h3>
+            <p className="text-sm text-muted-foreground">{friendsList.length} друзів</p>
+          </div>
+          {friendsList.length > 9 && (
+            <Button variant="link" asChild className="text-primary">
+              <Link to="/friends">Переглянути всіх друзів</Link>
+            </Button>
           )}
         </div>
+
+        {friendsList.length > 0 ? (
+          <div className="grid grid-cols-3 gap-3">
+            {displayedFriends.map((friend) => (
+              <Link 
+                key={friend?.id}
+                to={`/profile/${friend?.id}`}
+                className="group"
+              >
+                <div className="aspect-square overflow-hidden rounded-lg bg-muted">
+                  {friend?.avatar_url ? (
+                    <img 
+                      src={friend.avatar_url} 
+                      alt={friend.full_name || 'Друг'}
+                      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-3xl font-medium text-muted-foreground">
+                      {getInitials(friend?.full_name)}
+                    </div>
+                  )}
+                </div>
+                <p className="mt-2 text-sm font-medium truncate text-center">
+                  {friend?.full_name || 'Користувач'}
+                </p>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-8">Поки що немає друзів</p>
+        )}
       </CardContent>
     </Card>
   );
