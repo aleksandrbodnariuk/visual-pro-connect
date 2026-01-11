@@ -4,8 +4,13 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/lovable-uploads/4c2129b2-6d63-43a9-9c10-18cf11008adb.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover" />
     <meta http-equiv="Content-Security-Policy" content="img-src 'self' https: data:; default-src 'self' 'unsafe-inline' 'unsafe-eval' https:;">
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="theme-color" content="#1A1F2C" />
     <title>Спільнота B&C</title>
     <meta name="description" content="Спільнота фотографів, відеографів та музикантів B&C">
     <meta property="og:title" content="Спільнота B&C">
@@ -16,6 +21,8 @@
       html, body {
         height: 100%;
         overflow-x: hidden;
+        -webkit-text-size-adjust: 100%;
+        -webkit-tap-highlight-color: transparent;
       }
       
       #root {
@@ -29,6 +36,22 @@
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
+      }
+      
+      /* Safe area insets for notched devices */
+      @supports (padding: max(0px)) {
+        .safe-area-inset {
+          padding-left: max(1rem, env(safe-area-inset-left));
+          padding-right: max(1rem, env(safe-area-inset-right));
+          padding-bottom: max(0px, env(safe-area-inset-bottom));
+        }
+      }
+      
+      /* Larger touch targets for TV remote navigation */
+      @media (min-width: 1920px) {
+        button, a, [role="button"] {
+          min-height: 48px;
+        }
       }
     </style>
   </head>

@@ -12,10 +12,33 @@ export default {
 	theme: {
 		container: {
 			center: true,
-			padding: '2rem',
+			padding: {
+				DEFAULT: '1rem',
+				sm: '1.5rem',
+				md: '2rem',
+				lg: '2rem',
+				xl: '2rem',
+				'2xl': '2rem',
+				'3xl': '2rem',
+			},
 			screens: {
-				'2xl': '1400px'
+				sm: '640px',
+				md: '768px',
+				lg: '1024px',
+				xl: '1280px',
+				'2xl': '1400px',
+				'3xl': '1920px',
 			}
+		},
+		screens: {
+			'xs': '375px',      // Смартфон
+			'sm': '640px',      // Великий смартфон
+			'md': '768px',      // Планшет
+			'lg': '1024px',     // Малий ноутбук
+			'xl': '1280px',     // Десктоп
+			'2xl': '1536px',    // Великий монітор
+			'3xl': '1920px',    // Full HD / TV
+			'4xl': '2560px',    // 2K / TV
 		},
 		extend: {
 			colors: {

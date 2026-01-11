@@ -57,8 +57,8 @@ export function Sidebar({ className }: SidebarProps) {
 
   return (
     <aside className={cn("rounded-lg border bg-card overflow-hidden", className)}>
-      <div className="p-4 space-y-4">
-        <h2 className="text-lg font-semibold mb-4">{t.menu}</h2>
+      <div className="p-3 md:p-4 3xl:p-5 space-y-3 md:space-y-4">
+        <h2 className="text-base md:text-lg 3xl:text-xl font-semibold mb-3 md:mb-4">{t.menu}</h2>
         <nav className="space-y-2">
           <Button 
             variant="ghost" 
@@ -137,9 +137,9 @@ export function Sidebar({ className }: SidebarProps) {
         </nav>
       </div>
 
-      <div className="border-t p-4">
-        <h2 className="text-lg font-semibold mb-4">{t.categories}</h2>
-        <nav className="space-y-2">
+      <div className="border-t p-3 md:p-4 3xl:p-5">
+        <h2 className="text-base md:text-lg 3xl:text-xl font-semibold mb-3 md:mb-4">{t.categories}</h2>
+        <nav className="space-y-1 md:space-y-2">
           <Button 
             variant="ghost" 
             className="w-full justify-start" 

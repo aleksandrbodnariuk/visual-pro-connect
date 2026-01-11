@@ -61,7 +61,7 @@ export function FriendsList({ userId }: { userId?: string }) {
         </div>
 
         {friendsList.length > 0 ? (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-3 gap-2 sm:gap-3">
             {displayedFriends.map((friend) => (
               <Link 
                 key={friend?.id}
@@ -76,19 +76,19 @@ export function FriendsList({ userId }: { userId?: string }) {
                       className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
                     />
                   ) : (
-                    <div className="h-full w-full flex items-center justify-center text-3xl font-medium text-muted-foreground">
+                    <div className="h-full w-full flex items-center justify-center text-xl sm:text-2xl md:text-3xl font-medium text-muted-foreground">
                       {getInitials(friend?.full_name)}
                     </div>
                   )}
                 </div>
-                <p className="mt-2 text-sm font-medium truncate text-center">
+                <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-medium truncate text-center">
                   {friend?.full_name || 'Користувач'}
                 </p>
               </Link>
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground text-center py-8">Поки що немає друзів</p>
+          <p className="text-muted-foreground text-center py-6 sm:py-8">Поки що немає друзів</p>
         )}
       </CardContent>
     </Card>
