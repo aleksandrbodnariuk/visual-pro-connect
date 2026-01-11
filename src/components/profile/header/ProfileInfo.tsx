@@ -3,7 +3,7 @@ import { MapPin, Link as LinkIcon, Calendar } from "lucide-react";
 
 interface ProfileInfoProps {
   name: string;
-  username: string;
+  username?: string | null;
   profession?: string;
   location?: string;
   website?: string;
@@ -15,7 +15,9 @@ export function ProfileInfo({ name, username, profession, location, website, joi
     <div>
       <h1 className="text-2xl font-bold">{name !== "undefined undefined" ? name : "Користувач"}</h1>
       <div className="flex items-center gap-2">
-        <span className="text-muted-foreground">@{username}</span>
+        {username && !username.startsWith('user_') && (
+          <span className="text-muted-foreground">@{username}</span>
+        )}
         {profession && (
           <span className={`profession-badge profession-badge-${profession.toLowerCase()}`}>
             {profession}

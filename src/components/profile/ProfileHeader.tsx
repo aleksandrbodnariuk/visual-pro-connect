@@ -12,10 +12,10 @@ export interface ProfileHeaderProps {
   user: {
     id: string;
     name: string;
-    username: string;
+    username?: string | null;
     avatarUrl?: string;
     coverUrl?: string;
-    bio: string;
+    bio?: string;
     location?: string;
     website?: string;
     joinDate: string;
@@ -144,12 +144,12 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
       </div>
 
       {/* Інформація профілю */}
-      <div className="container relative -mt-20 px-4">
+      <div className="container relative -mt-16 px-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="flex flex-col items-start gap-4 md:flex-row md:items-end">
-            <Avatar className="h-32 w-32 border-4 border-background">
+            <Avatar className="h-40 w-40 border-4 border-background shadow-lg">
               <AvatarImage src={avatarUrl ? `${avatarUrl}?t=${Date.now()}` : avatarUrl} alt={name} />
-              <AvatarFallback className="text-4xl">
+              <AvatarFallback className="text-5xl">
                 {name && name !== "undefined undefined"
                   ? name
                       .split(" ")
@@ -158,10 +158,12 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
                   : "U"}
               </AvatarFallback>
             </Avatar>
-            <div>
+            <div className="mt-4">
               <h1 className="text-2xl font-bold">{name !== "undefined undefined" ? name : "Користувач"}</h1>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">@{username}</span>
+                {username && !username.startsWith('user_') && (
+                  <span className="text-muted-foreground">@{username}</span>
+                )}
                 {profession && (
                   <span className={`profession-badge profession-badge-${profession.toLowerCase()}`}>
                     {profession}
@@ -231,9 +233,11 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
           </div>
         </div>
 
-        <div className="mt-4">
-          <p className="max-w-2xl text-sm">{bio}</p>
-        </div>
+        {bio && bio.trim() !== "" && (
+          <div className="mt-4">
+            <p className="max-w-2xl text-sm">{bio}</p>
+          </div>
+        )}
 
         <div className="mt-6 flex flex-wrap items-center gap-6 border-b">
           <div className="mb-4 flex gap-4">

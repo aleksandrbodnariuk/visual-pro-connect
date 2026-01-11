@@ -93,12 +93,12 @@ export function NavbarLogo() {
   return (
     <NavLink to="/" className="flex items-center space-x-2">
       {isLoading ? (
-        <div className="h-8 w-24 bg-gray-200 animate-pulse rounded"></div>
+        <div className="h-10 w-32 bg-muted animate-pulse rounded"></div>
       ) : logoUrl ? (
         <img 
           src={logoUrl} 
           alt={siteName}
-          className="h-8 max-w-[120px] object-contain"
+          className="h-10 max-w-[180px] object-contain"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             target.style.display = 'none';
