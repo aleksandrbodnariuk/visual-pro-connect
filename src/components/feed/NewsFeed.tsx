@@ -155,35 +155,36 @@ export function NewsFeed() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="w-full max-w-2xl mx-auto space-y-4 md:space-y-6">
       {/* Створення нового поста */}
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-4 md:p-6">
           <Textarea
             placeholder="Що у вас нового?"
             value={newPostContent}
             onChange={(e) => setNewPostContent(e.target.value)}
-            className="min-h-[100px] resize-none border-0 focus-visible:ring-0 text-lg"
+            className="min-h-[80px] md:min-h-[100px] resize-none border-0 focus-visible:ring-0 text-base md:text-lg"
           />
-          <div className="flex justify-between items-center mt-4 pt-4 border-t">
-            <div className="flex space-x-4">
-              <Button variant="ghost" size="sm">
-                <Image className="h-4 w-4 mr-2" />
-                Фото
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mt-4 pt-4 border-t">
+            <div className="flex flex-wrap gap-2 sm:space-x-4 sm:gap-0">
+              <Button variant="ghost" size="sm" className="text-xs sm:text-sm">
+                <Image className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline">Фото</span>
               </Button>
-              <Button variant="ghost" size="sm">
-                <Video className="h-4 w-4 mr-2" />
-                Відео
+              <Button variant="ghost" size="sm" className="text-xs sm:text-sm">
+                <Video className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline">Відео</span>
               </Button>
-              <Button variant="ghost" size="sm">
-                <Users className="h-4 w-4 mr-2" />
-                Подія
+              <Button variant="ghost" size="sm" className="text-xs sm:text-sm">
+                <Users className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline">Подія</span>
               </Button>
             </div>
             <Button 
               onClick={handleCreatePost} 
               disabled={!newPostContent.trim()}
-              className="bg-primary hover:bg-primary/90"
+              className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
+              size="sm"
             >
               <Send className="h-4 w-4 mr-2" />
               Опублікувати
@@ -194,15 +195,15 @@ export function NewsFeed() {
 
       {/* Фільтри категорій */}
       <Tabs value={activeCategory} onValueChange={setActiveCategory}>
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="all">Усі</TabsTrigger>
-          <TabsTrigger value="photo">Фото</TabsTrigger>
-          <TabsTrigger value="video">Відео</TabsTrigger>
-          <TabsTrigger value="music">Музика</TabsTrigger>
-          <TabsTrigger value="event">Події</TabsTrigger>
+        <TabsList className="w-full flex overflow-x-auto scrollbar-hide">
+          <TabsTrigger value="all" className="flex-1 min-w-[60px] text-xs sm:text-sm">Усі</TabsTrigger>
+          <TabsTrigger value="photo" className="flex-1 min-w-[60px] text-xs sm:text-sm">Фото</TabsTrigger>
+          <TabsTrigger value="video" className="flex-1 min-w-[60px] text-xs sm:text-sm">Відео</TabsTrigger>
+          <TabsTrigger value="music" className="flex-1 min-w-[60px] text-xs sm:text-sm">Музика</TabsTrigger>
+          <TabsTrigger value="event" className="flex-1 min-w-[60px] text-xs sm:text-sm">Події</TabsTrigger>
         </TabsList>
         
-        <TabsContent value={activeCategory} className="space-y-6 mt-6">
+        <TabsContent value={activeCategory} className="space-y-4 md:space-y-6 mt-4 md:mt-6">
           {filteredPosts.length > 0 ? (
             filteredPosts.map((post) => {
               // Отримуємо дані автора поста

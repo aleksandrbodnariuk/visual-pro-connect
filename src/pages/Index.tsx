@@ -13,7 +13,7 @@ const Index = () => {
   // Якщо користувач не авторизований, показуємо Hero секцію
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-muted/30">
         <Navbar />
         <Hero />
       </div>
@@ -24,11 +24,14 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
-        <Sidebar className="hidden lg:block col-span-3 sticky top-20 h-fit" />
-        <main className="col-span-12 lg:col-span-9">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold">Стрічка новин</h1>
+      <div className="container grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 3xl:gap-8 px-3 sm:px-4 md:px-6 py-4 md:py-6">
+        {/* Sidebar - прихований на мобільних, видимий на планшеті+ */}
+        <Sidebar className="hidden md:block md:col-span-4 lg:col-span-3 sticky top-16 md:top-20 h-fit" />
+        
+        {/* Основний контент */}
+        <main className="col-span-1 md:col-span-8 lg:col-span-9">
+          <div className="mb-4 md:mb-6">
+            <h1 className="text-xl sm:text-2xl 3xl:text-3xl font-bold">Стрічка новин</h1>
           </div>
           <NewsFeed />
         </main>
