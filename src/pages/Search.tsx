@@ -196,7 +196,7 @@ export default function Search() {
   };
 
   return (
-    <div className="min-h-screen pb-10">
+    <div className="min-h-screen pb-20 md:pb-10">
       <Navbar />
       
       <div className="bg-gradient-to-b from-secondary/10 to-background/5 py-10">

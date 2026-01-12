@@ -219,12 +219,12 @@ export default function Notifications() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar />
       <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
-        <Sidebar className="hidden lg:block col-span-3" />
+        <Sidebar className="hidden md:block md:col-span-4 lg:col-span-3" />
         
-        <main className="col-span-12 lg:col-span-9">
+        <main className="col-span-12 md:col-span-8 lg:col-span-9">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center">
               <h1 className="text-3xl font-bold">Сповіщення</h1>
