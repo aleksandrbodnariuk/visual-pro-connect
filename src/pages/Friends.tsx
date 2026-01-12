@@ -6,11 +6,11 @@ import { FriendRequestsList } from "@/components/profile/FriendRequestsList";
 
 export default function Friends() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar />
       <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
-        <Sidebar className="hidden lg:block col-span-3 sticky top-20 h-fit" />
-        <main className="col-span-12 lg:col-span-9">
+        <Sidebar className="hidden md:block md:col-span-4 lg:col-span-3 sticky top-20 h-fit" />
+        <main className="col-span-12 md:col-span-8 lg:col-span-9">
           <div className="max-w-4xl">
             <div className="mb-6">
               <h1 className="text-3xl font-bold text-foreground mb-2">Друзі</h1>

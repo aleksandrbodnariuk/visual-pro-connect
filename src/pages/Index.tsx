@@ -22,7 +22,7 @@ const Index = () => {
   
   // Для авторизованих користувачів показуємо основний інтерфейс
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar />
       <div className="container grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 3xl:gap-8 px-3 sm:px-4 md:px-6 py-4 md:py-6">
         {/* Sidebar - прихований на мобільних, видимий на планшеті+ */}
