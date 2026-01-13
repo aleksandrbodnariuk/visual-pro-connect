@@ -304,7 +304,7 @@ export default function Messages() {
             </div>
             
             {/* Вікно чату */}
-            <div className="flex h-[80vh] flex-col md:col-span-2 lg:col-span-3">
+            <div className="flex h-[calc(100vh-12rem)] md:h-[80vh] flex-col md:col-span-2 lg:col-span-3 pb-16 md:pb-0">
               {activeChat ? (
                 <>
                   <ChatHeader user={activeChat.user} />
