@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Trash2, Edit, Image, FileVideo, Upload } from "lucide-react";
+import { Trash2, Edit, Image, FileVideo, Upload, Link, Music } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +15,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface PortfolioItem {
   id: string;
@@ -29,6 +29,33 @@ interface PortfolioManagerProps {
   userId: string;
   onUpdate: () => void;
 }
+
+// Функція парсингу YouTube/Vimeo посилань
+const parseVideoUrl = (url: string) => {
+  // YouTube
+  const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s?]+)/);
+  if (youtubeMatch) {
+    return {
+      type: 'youtube',
+      id: youtubeMatch[1],
+      thumbnail: `https://img.youtube.com/vi/${youtubeMatch[1]}/maxresdefault.jpg`,
+      embedUrl: `https://www.youtube.com/embed/${youtubeMatch[1]}`
+    };
+  }
+  
+  // Vimeo
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) {
+    return {
+      type: 'vimeo',
+      id: vimeoMatch[1],
+      thumbnail: '', // Vimeo потребує API для отримання thumbnail
+      embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}`
+    };
+  }
+  
+  return null;
+};
 
 export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   const [title, setTitle] = useState("");
@@ -44,6 +71,8 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
+  const [uploadType, setUploadType] = useState<"file" | "link">("file");
+  const [videoLink, setVideoLink] = useState("");
 
   useEffect(() => {
     fetchPortfolioItems();
@@ -96,6 +125,71 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   };
 
   const handleUpload = async () => {
+    // Перевірка для посилання
+    if (uploadType === "link") {
+      if (!videoLink || !title) {
+        toast.error("Будь ласка, заповніть назву та посилання");
+        return;
+      }
+      
+      const videoData = parseVideoUrl(videoLink);
+      if (!videoData) {
+        toast.error("Невірний формат посилання. Підтримуються YouTube та Vimeo");
+        return;
+      }
+      
+      try {
+        setIsUploading(true);
+        
+        const thumbnailUrl = videoData.thumbnail || videoData.embedUrl;
+        
+        // Спроба збереження в Supabase
+        try {
+          const { error: insertError } = await supabase
+            .from("portfolio")
+            .insert({
+              user_id: userId,
+              title,
+              description,
+              media_url: thumbnailUrl,
+              media_type: "video"
+            });
+
+          if (insertError) throw insertError;
+        } catch (supabaseError) {
+          console.warn("Не вдалося зберегти в Supabase:", supabaseError);
+          
+          // Зберігаємо в локальному сховищі
+          const newItem = {
+            id: `local_${Date.now()}`,
+            title,
+            description,
+            media_url: thumbnailUrl,
+            media_type: "video"
+          };
+          
+          const existingItems = JSON.parse(localStorage.getItem(`portfolio_${userId}`) || "[]");
+          const updatedItems = [newItem, ...existingItems];
+          localStorage.setItem(`portfolio_${userId}`, JSON.stringify(updatedItems));
+          setPortfolioItems(updatedItems);
+        }
+
+        toast.success("Відео успішно додано");
+        setTitle("");
+        setDescription("");
+        setVideoLink("");
+        fetchPortfolioItems();
+        onUpdate();
+      } catch (error: any) {
+        toast.error("Помилка при додаванні відео");
+        console.error(error);
+      } finally {
+        setIsUploading(false);
+      }
+      return;
+    }
+    
+    // Перевірка для файлу
     if (!file || !title) {
       toast.error("Будь ласка, заповніть всі обов'язкові поля");
       return;
@@ -103,7 +197,17 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
 
     try {
       setIsUploading(true);
-      const mediaType = file.type.startsWith("image/") ? "photo" : "video";
+      // Визначаємо тип медіа включаючи аудіо
+      let mediaType: string;
+      if (file.type.startsWith("image/")) {
+        mediaType = "photo";
+      } else if (file.type.startsWith("video/")) {
+        mediaType = "video";
+      } else if (file.type.startsWith("audio/")) {
+        mediaType = "audio";
+      } else {
+        mediaType = "photo"; // Default
+      }
       let mediaUrl = "";
       
       // Спроба завантаження в Supabase
@@ -361,6 +465,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       <div className="space-y-6">
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Додати нове медіа</h3>
+          
           <div>
             <Label htmlFor="title">Назва</Label>
             <Input
@@ -381,17 +486,51 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
               placeholder="Введіть опис"
             />
           </div>
-
-          <div>
-            <Label htmlFor="file">Файл</Label>
-            <Input
-              id="file"
-              type="file"
-              accept="image/*,video/*"
-              onChange={handleFileChange}
-              disabled={isUploading}
-            />
-          </div>
+          
+          <Tabs value={uploadType} onValueChange={(v) => setUploadType(v as "file" | "link")} className="w-full">
+            <TabsList className="w-full grid grid-cols-2">
+              <TabsTrigger value="file" className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                Завантажити файл
+              </TabsTrigger>
+              <TabsTrigger value="link" className="flex items-center gap-2">
+                <Link className="h-4 w-4" />
+                Посилання на відео
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="file" className="mt-4 space-y-4">
+              <div>
+                <Label htmlFor="file">Файл (фото, відео, аудіо)</Label>
+                <Input
+                  id="file"
+                  type="file"
+                  accept="image/*,video/*,audio/*"
+                  onChange={handleFileChange}
+                  disabled={isUploading}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Підтримуються: JPG, PNG, MP4, MP3, WAV та інші
+                </p>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="link" className="mt-4 space-y-4">
+              <div>
+                <Label htmlFor="videoLink">Посилання на відео</Label>
+                <Input
+                  id="videoLink"
+                  value={videoLink}
+                  onChange={(e) => setVideoLink(e.target.value)}
+                  placeholder="https://youtube.com/watch?v=..."
+                  disabled={isUploading}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Підтримуються: YouTube, Vimeo
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
 
           <Button onClick={handleUpload} disabled={isUploading} className="w-full">
             {isUploading ? "Завантаження..." : "Завантажити"}
@@ -411,6 +550,13 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
                         alt={item.title}
                         className="object-cover w-full h-full"
                       />
+                    ) : item.media_type === "audio" ? (
+                      <div className="flex items-center justify-center h-full bg-gradient-to-br from-purple-500 to-pink-500">
+                        <Music className="h-12 w-12 text-white" />
+                        <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                          Аудіо
+                        </span>
+                      </div>
                     ) : (
                       <div className="flex items-center justify-center h-full">
                         <FileVideo className="h-12 w-12 text-muted-foreground" />

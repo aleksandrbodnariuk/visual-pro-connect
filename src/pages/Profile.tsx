@@ -385,6 +385,7 @@ export default function Profile() {
                   items={[]} 
                   userId={user?.id} 
                   isOwner={isCurrentUser}
+                  onAddItem={handleAddToPortfolio}
                 />
               </Suspense>
             </TabsContent>
