@@ -1,5 +1,4 @@
-import { Link } from "react-router-dom";
-import { Camera, Music, Video, Play, Heart, MessageCircle, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { Camera, Music, Video, Play, Heart, MessageCircle, MoreHorizontal, Edit, Trash2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, memo } from "react";
 import { 
@@ -8,6 +7,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -25,10 +25,11 @@ interface PortfolioGridProps {
   className?: string;
   userId?: string;
   isOwner?: boolean;
+  onAddItem?: () => void;
 }
 
 // Use React.memo to prevent unnecessary re-renders
-export const PortfolioGrid = memo(({ items: initialItems, className, userId, isOwner = false }: PortfolioGridProps) => {
+export const PortfolioGrid = memo(({ items: initialItems, className, userId, isOwner = false, onAddItem }: PortfolioGridProps) => {
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(initialItems);
   const [loading, setLoading] = useState(false);
   
@@ -101,9 +102,15 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
         <Camera className="h-16 w-16 mx-auto mb-4 opacity-50" />
         <h3 className="text-lg font-medium mb-2">У портфоліо ще немає елементів</h3>
         {isOwner && (
-          <p className="text-sm max-w-md mx-auto">
-            Натисніть "Додати в портфоліо" щоб завантажити свої роботи та показати їх потенційним клієнтам
-          </p>
+          <>
+            <p className="text-sm max-w-md mx-auto mb-6">
+              Покажіть свої найкращі роботи потенційним клієнтам
+            </p>
+            <Button onClick={onAddItem} size="lg">
+              <Plus className="mr-2 h-5 w-5" />
+              Додати в портфоліо
+            </Button>
+          </>
         )}
       </div>
     );
@@ -114,12 +121,18 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
       {portfolioItems.map((item) => (
         <div key={item.id} className="group relative overflow-hidden rounded-lg">
           <div className="aspect-square w-full overflow-hidden">
-            <img
-              src={item.thumbnailUrl}
-              alt={item.title}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-              loading="lazy" // Add lazy loading for better performance
-            />
+            {item.type === "audio" ? (
+              <div className="h-full w-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <Music className="h-16 w-16 text-white" />
+              </div>
+            ) : (
+              <img
+                src={item.thumbnailUrl}
+                alt={item.title}
+                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                loading="lazy"
+              />
+            )}
           </div>
           
           {/* Тип медіа */}
