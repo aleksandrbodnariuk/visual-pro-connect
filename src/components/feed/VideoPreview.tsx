@@ -8,7 +8,7 @@ interface VideoPreviewProps {
 export function VideoPreview({ embed }: VideoPreviewProps) {
   if (embed.platform === 'youtube') {
     return (
-      <div className="mt-3 rounded-lg overflow-hidden border bg-muted">
+      <div className="rounded-lg overflow-hidden border bg-muted">
         <div className="aspect-video">
           <iframe
             src={embed.embedUrl}
@@ -27,7 +27,7 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
   
   if (embed.platform === 'instagram') {
     return (
-      <div className="mt-3 rounded-lg overflow-hidden border">
+      <div className="rounded-lg overflow-hidden border">
         <iframe
           src={embed.embedUrl}
           className="w-full min-h-[400px]"

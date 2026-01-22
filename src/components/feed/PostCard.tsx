@@ -102,6 +102,13 @@ export function PostCard({
         </div>
       )}
 
+      {/* Вбудоване відео превʼю - показуємо тільки якщо немає зображення */}
+      {!imageUrl && videoEmbed && (
+        <div className="px-3 pt-2">
+          <VideoPreview embed={videoEmbed} />
+        </div>
+      )}
+
       {/* Дії */}
       <div className="p-3">
         <div className="flex items-center justify-between">
@@ -166,9 +173,6 @@ export function PostCard({
             </Link>{" "}
             {caption}
           </p>
-          
-          {/* Вбудоване відео превʼю */}
-          {videoEmbed && <VideoPreview embed={videoEmbed} />}
         </div>
 
         {/* Коментарі та час */}
