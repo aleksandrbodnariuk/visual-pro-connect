@@ -1,5 +1,6 @@
-
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 interface ChatHeaderProps {
   user: {
@@ -7,12 +8,25 @@ interface ChatHeaderProps {
     avatarUrl: string;
     lastSeen: string;
   };
+  onBack?: () => void;
 }
 
-export function ChatHeader({ user }: ChatHeaderProps) {
+export function ChatHeader({ user, onBack }: ChatHeaderProps) {
   return (
     <div className="border-b p-3">
       <div className="flex items-center gap-3">
+        {/* Кнопка назад - тільки на мобільних */}
+        {onBack && (
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={onBack}
+            className="md:hidden"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        )}
+        
         <Avatar className="h-10 w-10">
           <AvatarImage src={user.avatarUrl} alt={user.name} />
           <AvatarFallback>

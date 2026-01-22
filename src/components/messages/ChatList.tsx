@@ -59,7 +59,7 @@ export function ChatList({ chats, activeChat, onSelectChat, isLoading }: ChatLis
         </div>
       </div>
       
-      <div className="h-[calc(80vh-120px)] overflow-y-auto">
+      <div className="h-[calc(100vh-12rem)] md:h-[calc(80vh-120px)] overflow-y-auto">
         {filteredChats.length > 0 ? (
           filteredChats.map((chat) => (
             <div 

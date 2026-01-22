@@ -133,6 +133,11 @@ export default function Messages() {
     setChats(updatedChats);
   };
 
+  // Обробник "Назад" для мобільних пристроїв
+  const handleBackToList = () => {
+    setActiveChat(null);
+  };
+
   // Realtime підписка на нові повідомлення
   useEffect(() => {
     if (!currentUser?.id) return;
@@ -294,8 +299,8 @@ export default function Messages() {
       <div className="container mt-8 pb-4 md:pb-10 px-2 sm:px-4 md:px-6">
         <div className="rounded-xl border">
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
-            {/* Список чатів */}
-            <div className="border-r md:col-span-1">
+            {/* Список чатів - приховувати на мобільному коли є activeChat */}
+            <div className={`border-r md:col-span-1 ${activeChat ? 'hidden md:block' : 'block'}`}>
               <ChatList 
                 chats={chats} 
                 activeChat={activeChat} 
@@ -303,11 +308,11 @@ export default function Messages() {
               />
             </div>
             
-            {/* Вікно чату */}
-            <div className="flex h-[calc(100vh-12rem)] md:h-[80vh] flex-col md:col-span-2 lg:col-span-3 pb-16 md:pb-0">
+            {/* Вікно чату - показувати тільки коли є activeChat на мобільному */}
+            <div className={`flex h-[calc(100vh-8rem)] md:h-[80vh] flex-col md:col-span-2 lg:col-span-3 pb-16 md:pb-0 ${!activeChat ? 'hidden md:flex' : 'flex'}`}>
               {activeChat ? (
                 <>
-                  <ChatHeader user={activeChat.user} />
+                  <ChatHeader user={activeChat.user} onBack={handleBackToList} />
                   
                   <MessageList 
                     messages={messages} 
