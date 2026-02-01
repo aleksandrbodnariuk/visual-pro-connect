@@ -1,294 +1,161 @@
 
 
-## План: Активація іконок Фото/Відео/Подія у стрічці новин (як у Facebook)
+## План: Виправлення фільтрів категорій та підтримка Facebook відео
 
 ---
 
-### Поточна проблема
+### Проблема 1: Фільтри категорій не працюють
 
-Кнопки "Фото", "Відео", "Подія" (рядки 170-181 в `NewsFeed.tsx`) є статичними:
-- Немає `onClick` обробників
-- Немає стану для вибраних файлів
-- Немає функціоналу завантаження медіа
+**Причина:** Пости не мають автоматично присвоєної категорії. При створенні поста категорія залишається `null`, тому фільтри "Фото", "Відео" показують "Немає публікацій".
+
+**Поточна логіка фільтрації (рядок 192-195):**
+```tsx
+const filteredPosts = posts.filter(post => {
+  if (activeCategory === "all") return true;
+  return post.category === activeCategory;  // ← Перевіряє тільки збережену категорію
+});
+```
+
+**Рішення:** Фільтрувати пости на основі їх контенту:
+- **Фото** - пости з зображеннями (`media_url` містить розширення зображення)
+- **Відео** - пости з відео файлами АБО посиланнями на YouTube/Facebook/TikTok
+- **Музика**, **Події** - за збереженою категорією
 
 ---
 
-### Рішення: Редизайн форми на компактний стиль Facebook
+### Проблема 2: Facebook посилання не мають превʼю
+
+**Причина:** У `videoEmbed.ts` немає регулярного виразу для Facebook Reels та відео.
+
+**Рішення:** Додати підтримку Facebook:
+- Facebook Reels: `facebook.com/reel/ID`
+- Facebook Watch: `facebook.com/watch/?v=ID`
+
+---
+
+### Файли для редагування
+
+#### 1. `src/lib/videoEmbed.ts` - Додати підтримку Facebook
+
+```tsx
+// Додати регулярний вираз для Facebook
+const FACEBOOK_REGEX = /facebook\.com\/(?:reel|watch\/?\?v=)\/(\d+)/;
+
+// Додати платформу 'facebook' до типу VideoEmbed
+export interface VideoEmbed {
+  platform: 'youtube' | 'instagram' | 'tiktok' | 'facebook' | 'link';
+  // ...
+}
+
+// Додати обробку Facebook у функції extractVideoEmbed
+const fbMatch = url.match(FACEBOOK_REGEX);
+if (fbMatch && fbMatch[1]) {
+  return {
+    platform: 'facebook',
+    videoId: fbMatch[1],
+    embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}`,
+    originalUrl: url
+  };
+}
+```
+
+#### 2. `src/components/feed/VideoPreview.tsx` - Додати рендеринг Facebook
+
+```tsx
+if (embed.platform === 'facebook') {
+  return (
+    <div className="rounded-lg overflow-hidden border bg-muted">
+      <div className="aspect-video">
+        <iframe
+          src={embed.embedUrl}
+          className="w-full h-full"
+          allowFullScreen
+          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
+          title="Facebook відео"
+        />
+      </div>
+      <div className="p-2 flex items-center gap-2 text-xs text-muted-foreground">
+        <span className="font-medium">FACEBOOK.COM</span>
+      </div>
+    </div>
+  );
+}
+```
+
+#### 3. `src/components/feed/NewsFeed.tsx` - Виправити логіку фільтрації
+
+```tsx
+import { extractVideoEmbed } from "@/lib/videoEmbed";
+
+const filteredPosts = posts.filter(post => {
+  if (activeCategory === "all") return true;
+  
+  // Фільтр "Фото" - пости із зображеннями
+  if (activeCategory === "photo") {
+    if (!post.media_url) return false;
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+    return imageExtensions.some(ext => post.media_url?.toLowerCase().endsWith(ext));
+  }
+  
+  // Фільтр "Відео" - пости з відео файлами або посиланнями на відео платформи
+  if (activeCategory === "video") {
+    // Перевіряємо media_url на відео файл
+    if (post.media_url) {
+      const videoExtensions = ['.mp4', '.webm', '.mov', '.avi'];
+      if (videoExtensions.some(ext => post.media_url?.toLowerCase().endsWith(ext))) {
+        return true;
+      }
+    }
+    // Перевіряємо контент на посилання YouTube/Facebook/TikTok
+    const videoEmbed = extractVideoEmbed(post.content);
+    if (videoEmbed && ['youtube', 'facebook', 'tiktok', 'instagram'].includes(videoEmbed.platform)) {
+      return true;
+    }
+    return false;
+  }
+  
+  // Інші категорії (музика, події) - за збереженою категорією
+  return post.category === activeCategory;
+});
+```
+
+---
+
+### Візуальна схема змін
 
 ```text
-ПОТОЧНИЙ (великий блок):
-┌────────────────────────────────────────────┐
-│ ┌────────────────────────────────────────┐ │
-│ │ Що у вас нового?                       │ │
-│ │                                        │ │
-│ └────────────────────────────────────────┘ │
-│ ─────────────────────────────────────────  │
-│ 📷 Фото  🎬 Відео  👥 Подія  [Опублікувати]│
-└────────────────────────────────────────────┘
+БУЛО:
+┌─────────────────────────────────────────────────────────────────┐
+│ Фільтр "Відео" → Шукає post.category === "video" → Немає постів │
+│                                                                 │
+│ Facebook посилання → platform: 'link' → Тільки текст посилання  │
+└─────────────────────────────────────────────────────────────────┘
 
-НОВИЙ (як у Facebook):
-┌────────────────────────────────────────────┐
-│ 👤 [Що у вас нового?___________] 🎬 📷 👥  │
-│                                            │
-│ (При виборі файлу - превʼю)                │
-│ ┌────────────────────────────────────────┐ │
-│ │ [Превʼю фото/відео]               ❌   │ │
-│ └────────────────────────────────────────┘ │
-│                              [Опублікувати]│
-└────────────────────────────────────────────┘
+СТАНЕ:
+┌─────────────────────────────────────────────────────────────────┐
+│ Фільтр "Відео" → Аналізує media_url та content → Знаходить пости│
+│                  з відео файлами та посиланнями YouTube/Facebook│
+│                                                                 │
+│ Facebook посилання → platform: 'facebook' → Вбудований плеєр    │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Файл для редагування
+### Підсумок змін
 
-**`src/components/feed/NewsFeed.tsx`**
-
----
-
-### Зміна 1: Додати нові імпорти та стани
-
-```tsx
-// Додаткові імпорти
-import { useRef } from "react";
-import { X } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { uploadToStorage } from "@/lib/storage";
-
-// Нові стани
-const [selectedFile, setSelectedFile] = useState<File | null>(null);
-const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-const [isUploading, setIsUploading] = useState(false);
-const imageInputRef = useRef<HTMLInputElement>(null);
-const videoInputRef = useRef<HTMLInputElement>(null);
-```
-
----
-
-### Зміна 2: Додати обробники для файлів
-
-```tsx
-const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-
-  // Валідація типу файлу
-  if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-    toast({ title: 'Підтримуються лише зображення та відео', variant: 'destructive' });
-    return;
-  }
-
-  // Валідація розміру (макс 50MB)
-  const maxSize = 50 * 1024 * 1024;
-  if (file.size > maxSize) {
-    toast({ title: 'Розмір файлу не повинен перевищувати 50MB', variant: 'destructive' });
-    return;
-  }
-
-  setSelectedFile(file);
-  
-  // Створення превʼю
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    setPreviewUrl(event.target?.result as string);
-  };
-  reader.readAsDataURL(file);
-};
-
-const removeFile = () => {
-  setSelectedFile(null);
-  setPreviewUrl(null);
-  if (imageInputRef.current) imageInputRef.current.value = '';
-  if (videoInputRef.current) videoInputRef.current.value = '';
-};
-
-const handleEventClick = () => {
-  toast({ title: "Функція 'Подія' в розробці" });
-};
-```
-
----
-
-### Зміна 3: Оновити handleCreatePost для завантаження медіа
-
-```tsx
-const handleCreatePost = async () => {
-  if (!newPostContent.trim() && !selectedFile) return;
-
-  setIsUploading(true);
-
-  try {
-    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
-    
-    let mediaUrl = null;
-
-    // Завантаження медіа файлу
-    if (selectedFile) {
-      const fileExtension = selectedFile.name.split('.').pop() || 'jpg';
-      const uniqueFileName = `post-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExtension}`;
-      const filePath = `posts/${uniqueFileName}`;
-      
-      mediaUrl = await uploadToStorage('posts', filePath, selectedFile, selectedFile.type);
-    }
-    
-    const newPost = {
-      content: newPostContent,
-      user_id: currentUser.id,
-      media_url: mediaUrl,
-      category: activeCategory === 'all' ? null : activeCategory
-    };
-
-    const { data, error } = await supabase
-      .from('posts')
-      .insert([newPost])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    setPosts([data, ...posts]);
-    setNewPostContent("");
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    toast({ title: "Публікацію створено!" });
-
-  } catch (error) {
-    console.error("Помилка:", error);
-    toast({ title: "Помилка створення публікації", variant: "destructive" });
-  } finally {
-    setIsUploading(false);
-  }
-};
-```
-
----
-
-### Зміна 4: Новий дизайн форми створення публікації
-
-```tsx
-<Card>
-  <CardContent className="p-3 md:p-4">
-    {/* Приховані input для вибору файлів */}
-    <input
-      ref={imageInputRef}
-      type="file"
-      accept="image/*"
-      onChange={handleFileSelect}
-      className="hidden"
-    />
-    <input
-      ref={videoInputRef}
-      type="file"
-      accept="video/*"
-      onChange={handleFileSelect}
-      className="hidden"
-    />
-
-    {/* Компактний рядок: аватар + поле вводу + іконки */}
-    <div className="flex items-center gap-2 md:gap-3">
-      <Avatar className="h-9 w-9 md:h-10 md:w-10 shrink-0">
-        <AvatarImage src={currentUser?.avatar_url} />
-        <AvatarFallback>{currentUser?.full_name?.[0] || 'U'}</AvatarFallback>
-      </Avatar>
-      
-      <Input
-        placeholder="Що у вас нового?"
-        value={newPostContent}
-        onChange={(e) => setNewPostContent(e.target.value)}
-        className="flex-1 h-10 bg-muted/50 border-0"
-      />
-      
-      {/* Кольорові іконки як у Facebook */}
-      <Button 
-        variant="ghost" 
-        size="icon"
-        onClick={() => videoInputRef.current?.click()}
-        className="shrink-0"
-      >
-        <Video className="h-5 w-5 text-red-500" />
-      </Button>
-      <Button 
-        variant="ghost" 
-        size="icon"
-        onClick={() => imageInputRef.current?.click()}
-        className="shrink-0"
-      >
-        <Image className="h-5 w-5 text-green-500" />
-      </Button>
-      <Button 
-        variant="ghost" 
-        size="icon"
-        onClick={handleEventClick}
-        className="shrink-0"
-      >
-        <Users className="h-5 w-5 text-blue-500" />
-      </Button>
-    </div>
-
-    {/* Превʼю вибраного файлу */}
-    {previewUrl && selectedFile && (
-      <div className="mt-3 relative rounded-lg overflow-hidden border">
-        {selectedFile.type.startsWith('image/') ? (
-          <img 
-            src={previewUrl} 
-            alt="Preview" 
-            className="w-full max-h-64 object-cover"
-          />
-        ) : (
-          <video 
-            src={previewUrl} 
-            className="w-full max-h-64 object-cover"
-            controls
-          />
-        )}
-        <Button
-          variant="destructive"
-          size="icon"
-          onClick={removeFile}
-          className="absolute top-2 right-2 h-8 w-8"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-    )}
-
-    {/* Кнопка публікації - показуємо якщо є контент або файл */}
-    {(newPostContent.trim() || selectedFile) && (
-      <div className="mt-3 flex justify-end">
-        <Button 
-          onClick={handleCreatePost}
-          disabled={isUploading}
-          className="bg-primary hover:bg-primary/90"
-          size="sm"
-        >
-          <Send className="h-4 w-4 mr-2" />
-          {isUploading ? "Завантаження..." : "Опублікувати"}
-        </Button>
-      </div>
-    )}
-  </CardContent>
-</Card>
-```
-
----
-
-### Колірна схема іконок (як у Facebook)
-
-| Іконка | Колір | Дія |
-|--------|-------|-----|
-| 🎬 Відео | `text-red-500` | Відкриває вибір відео |
-| 📷 Фото | `text-green-500` | Відкриває вибір зображення |
-| 👥 Подія | `text-blue-500` | Toast "В розробці" |
+| Файл | Зміни |
+|------|-------|
+| `src/lib/videoEmbed.ts` | Додати FACEBOOK_REGEX та обробку Facebook платформи |
+| `src/components/feed/VideoPreview.tsx` | Додати рендеринг Facebook відео через iframe |
+| `src/components/feed/NewsFeed.tsx` | Виправити логіку фільтрації на основі контенту |
 
 ---
 
 ### Очікуваний результат
 
-- Компактний дизайн форми в один рядок (як Facebook)
-- Іконки Фото та Відео працюють - відкривають вибір файлу
-- Превʼю вибраного файлу відображається перед публікацією
-- Можливість видалити вибраний файл
-- Медіа завантажується в Supabase Storage
-- Кнопка "Опублікувати" зʼявляється тільки коли є контент
+1. **Фільтр "Фото"** - показує всі пости з зображеннями
+2. **Фільтр "Відео"** - показує пости з відео файлами та посиланнями на YouTube, Facebook, TikTok, Instagram
+3. **Facebook Reels** - відображаються як вбудований плеєр (як YouTube)
+4. **Інші фільтри** - працюють за збереженою категорією поста
 
