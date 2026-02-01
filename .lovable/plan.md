@@ -4,22 +4,19 @@
 
 ---
 
-### Проблема
+### Поточна проблема
 
-Кнопки "Фото", "Відео", "Подія" у формі створення публікації є статичними та не працюють - при натисканні нічого не відбувається.
-
----
-
-### Рішення: Редизайн форми створення публікації
-
-Змінити структуру форми на стиль Facebook - компактний дизайн з іконками праворуч від поля вводу та функціональними кнопками.
+Кнопки "Фото", "Відео", "Подія" (рядки 170-181 в `NewsFeed.tsx`) є статичними:
+- Немає `onClick` обробників
+- Немає стану для вибраних файлів
+- Немає функціоналу завантаження медіа
 
 ---
 
-### Візуальна схема
+### Рішення: Редизайн форми на компактний стиль Facebook
 
 ```text
-БУЛО (великий блок):
+ПОТОЧНИЙ (великий блок):
 ┌────────────────────────────────────────────┐
 │ ┌────────────────────────────────────────┐ │
 │ │ Що у вас нового?                       │ │
@@ -29,11 +26,11 @@
 │ 📷 Фото  🎬 Відео  👥 Подія  [Опублікувати]│
 └────────────────────────────────────────────┘
 
-СТАНЕ (компактний стиль Facebook):
+НОВИЙ (як у Facebook):
 ┌────────────────────────────────────────────┐
 │ 👤 [Що у вас нового?___________] 🎬 📷 👥  │
 │                                            │
-│ (При виборі файлу - превʼю знизу)          │
+│ (При виборі файлу - превʼю)                │
 │ ┌────────────────────────────────────────┐ │
 │ │ [Превʼю фото/відео]               ❌   │ │
 │ └────────────────────────────────────────┘ │
@@ -47,82 +44,226 @@
 
 **`src/components/feed/NewsFeed.tsx`**
 
-#### Зміни:
+---
 
-1. **Додати стани для роботи з медіа:**
+### Зміна 1: Додати нові імпорти та стани
+
 ```tsx
+// Додаткові імпорти
+import { useRef } from "react";
+import { X } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { uploadToStorage } from "@/lib/storage";
+
+// Нові стани
 const [selectedFile, setSelectedFile] = useState<File | null>(null);
 const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-const fileInputRef = useRef<HTMLInputElement>(null);
+const [isUploading, setIsUploading] = useState(false);
+const imageInputRef = useRef<HTMLInputElement>(null);
+const videoInputRef = useRef<HTMLInputElement>(null);
 ```
 
-2. **Додати обробники для вибору файлів:**
+---
+
+### Зміна 2: Додати обробники для файлів
+
 ```tsx
-const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
+const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0];
   if (!file) return;
-  // Валідація та створення превʼю
+
+  // Валідація типу файлу
+  if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+    toast({ title: 'Підтримуються лише зображення та відео', variant: 'destructive' });
+    return;
+  }
+
+  // Валідація розміру (макс 50MB)
+  const maxSize = 50 * 1024 * 1024;
+  if (file.size > maxSize) {
+    toast({ title: 'Розмір файлу не повинен перевищувати 50MB', variant: 'destructive' });
+    return;
+  }
+
   setSelectedFile(file);
-  // ...
+  
+  // Створення превʼю
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    setPreviewUrl(event.target?.result as string);
+  };
+  reader.readAsDataURL(file);
+};
+
+const removeFile = () => {
+  setSelectedFile(null);
+  setPreviewUrl(null);
+  if (imageInputRef.current) imageInputRef.current.value = '';
+  if (videoInputRef.current) videoInputRef.current.value = '';
+};
+
+const handleEventClick = () => {
+  toast({ title: "Функція 'Подія' в розробці" });
 };
 ```
 
-3. **Оновити handleCreatePost для завантаження медіа:**
+---
+
+### Зміна 3: Оновити handleCreatePost для завантаження медіа
+
 ```tsx
-// Якщо є файл - завантажити в storage
-if (selectedFile) {
-  mediaUrl = await uploadToStorage(...);
-}
+const handleCreatePost = async () => {
+  if (!newPostContent.trim() && !selectedFile) return;
+
+  setIsUploading(true);
+
+  try {
+    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+    
+    let mediaUrl = null;
+
+    // Завантаження медіа файлу
+    if (selectedFile) {
+      const fileExtension = selectedFile.name.split('.').pop() || 'jpg';
+      const uniqueFileName = `post-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExtension}`;
+      const filePath = `posts/${uniqueFileName}`;
+      
+      mediaUrl = await uploadToStorage('posts', filePath, selectedFile, selectedFile.type);
+    }
+    
+    const newPost = {
+      content: newPostContent,
+      user_id: currentUser.id,
+      media_url: mediaUrl,
+      category: activeCategory === 'all' ? null : activeCategory
+    };
+
+    const { data, error } = await supabase
+      .from('posts')
+      .insert([newPost])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    setPosts([data, ...posts]);
+    setNewPostContent("");
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    toast({ title: "Публікацію створено!" });
+
+  } catch (error) {
+    console.error("Помилка:", error);
+    toast({ title: "Помилка створення публікації", variant: "destructive" });
+  } finally {
+    setIsUploading(false);
+  }
+};
 ```
 
-4. **Переробити структуру форми на компактний дизайн:**
+---
+
+### Зміна 4: Новий дизайн форми створення публікації
+
 ```tsx
 <Card>
-  <CardContent className="p-4">
-    {/* Верхня частина: поле вводу + іконки праворуч */}
-    <div className="flex items-center gap-3">
-      {/* Аватар користувача */}
-      <Avatar className="h-10 w-10">...</Avatar>
+  <CardContent className="p-3 md:p-4">
+    {/* Приховані input для вибору файлів */}
+    <input
+      ref={imageInputRef}
+      type="file"
+      accept="image/*"
+      onChange={handleFileSelect}
+      className="hidden"
+    />
+    <input
+      ref={videoInputRef}
+      type="file"
+      accept="video/*"
+      onChange={handleFileSelect}
+      className="hidden"
+    />
+
+    {/* Компактний рядок: аватар + поле вводу + іконки */}
+    <div className="flex items-center gap-2 md:gap-3">
+      <Avatar className="h-9 w-9 md:h-10 md:w-10 shrink-0">
+        <AvatarImage src={currentUser?.avatar_url} />
+        <AvatarFallback>{currentUser?.full_name?.[0] || 'U'}</AvatarFallback>
+      </Avatar>
       
-      {/* Поле вводу */}
       <Input
         placeholder="Що у вас нового?"
         value={newPostContent}
         onChange={(e) => setNewPostContent(e.target.value)}
-        className="flex-1"
+        className="flex-1 h-10 bg-muted/50 border-0"
       />
       
-      {/* Інтерактивні іконки */}
-      <input type="file" accept="video/*" ref={videoInputRef} hidden />
-      <input type="file" accept="image/*" ref={imageInputRef} hidden />
-      
-      <Button variant="ghost" size="icon" onClick={() => videoInputRef.current?.click()}>
+      {/* Кольорові іконки як у Facebook */}
+      <Button 
+        variant="ghost" 
+        size="icon"
+        onClick={() => videoInputRef.current?.click()}
+        className="shrink-0"
+      >
         <Video className="h-5 w-5 text-red-500" />
       </Button>
-      <Button variant="ghost" size="icon" onClick={() => imageInputRef.current?.click()}>
+      <Button 
+        variant="ghost" 
+        size="icon"
+        onClick={() => imageInputRef.current?.click()}
+        className="shrink-0"
+      >
         <Image className="h-5 w-5 text-green-500" />
       </Button>
-      <Button variant="ghost" size="icon" onClick={openEventModal}>
+      <Button 
+        variant="ghost" 
+        size="icon"
+        onClick={handleEventClick}
+        className="shrink-0"
+      >
         <Users className="h-5 w-5 text-blue-500" />
       </Button>
     </div>
-    
-    {/* Превʼю вибраного файлу (якщо є) */}
-    {previewUrl && (
-      <div className="mt-3 relative">
-        <img/video src={previewUrl} ... />
-        <Button onClick={removeFile} className="absolute top-2 right-2">
-          <X />
+
+    {/* Превʼю вибраного файлу */}
+    {previewUrl && selectedFile && (
+      <div className="mt-3 relative rounded-lg overflow-hidden border">
+        {selectedFile.type.startsWith('image/') ? (
+          <img 
+            src={previewUrl} 
+            alt="Preview" 
+            className="w-full max-h-64 object-cover"
+          />
+        ) : (
+          <video 
+            src={previewUrl} 
+            className="w-full max-h-64 object-cover"
+            controls
+          />
+        )}
+        <Button
+          variant="destructive"
+          size="icon"
+          onClick={removeFile}
+          className="absolute top-2 right-2 h-8 w-8"
+        >
+          <X className="h-4 w-4" />
         </Button>
       </div>
     )}
-    
-    {/* Кнопка публікації (показуємо якщо є контент або файл) */}
+
+    {/* Кнопка публікації - показуємо якщо є контент або файл */}
     {(newPostContent.trim() || selectedFile) && (
       <div className="mt-3 flex justify-end">
-        <Button onClick={handleCreatePost}>
+        <Button 
+          onClick={handleCreatePost}
+          disabled={isUploading}
+          className="bg-primary hover:bg-primary/90"
+          size="sm"
+        >
           <Send className="h-4 w-4 mr-2" />
-          Опублікувати
+          {isUploading ? "Завантаження..." : "Опублікувати"}
         </Button>
       </div>
     )}
@@ -132,42 +273,22 @@ if (selectedFile) {
 
 ---
 
-### Функціональність кнопок
+### Колірна схема іконок (як у Facebook)
 
-| Кнопка | Дія при натисканні |
-|--------|-------------------|
-| 🎬 Відео | Відкриває вибір відео файлу (accept="video/*") |
-| 📷 Фото | Відкриває вибір зображення (accept="image/*") |
-| 👥 Подія | Поки що - показує toast "Функція в розробці" |
-
----
-
-### Додаткові імпорти
-
-```tsx
-import { useRef } from "react";
-import { X } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { uploadToStorage } from "@/lib/storage";
-```
-
----
-
-### Колір іконок (як у Facebook)
-
-- **Відео**: `text-red-500` (червоний)
-- **Фото**: `text-green-500` (зелений)
-- **Подія**: `text-blue-500` (синій)
+| Іконка | Колір | Дія |
+|--------|-------|-----|
+| 🎬 Відео | `text-red-500` | Відкриває вибір відео |
+| 📷 Фото | `text-green-500` | Відкриває вибір зображення |
+| 👥 Подія | `text-blue-500` | Toast "В розробці" |
 
 ---
 
 ### Очікуваний результат
 
-- Компактний дизайн форми, схожий на Facebook
+- Компактний дизайн форми в один рядок (як Facebook)
 - Іконки Фото та Відео працюють - відкривають вибір файлу
-- Превʼю вибраного файлу показується перед публікацією
+- Превʼю вибраного файлу відображається перед публікацією
 - Можливість видалити вибраний файл
-- Публікація з медіа завантажується в storage та зберігається в базу
-- Кнопка "Подія" показує повідомлення про розробку функції
+- Медіа завантажується в Supabase Storage
+- Кнопка "Опублікувати" зʼявляється тільки коли є контент
 
