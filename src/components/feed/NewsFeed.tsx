@@ -1,14 +1,16 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Image, Video, Users, Send } from "lucide-react";
+import { Image, Video, Users, Send, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "./PostCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { EditPublicationModal } from "@/components/publications/EditPublicationModal";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { uploadToStorage } from "@/lib/storage";
 
 export function NewsFeed() {
   const [posts, setPosts] = useState<any[]>([]);
@@ -17,16 +19,28 @@ export function NewsFeed() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [editPostOpen, setEditPostOpen] = useState(false);
   const [postToEdit, setPostToEdit] = useState<any>(null);
+  
+  // Нові стани для медіа
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+
+  // Отримуємо поточного користувача
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     loadPosts();
+    // Завантажуємо дані користувача
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    setCurrentUser(user);
   }, []);
 
   const loadPosts = async () => {
     try {
       setLoading(true);
       
-      // Спробуємо завантажити з Supabase
       const { data: supabasePosts, error } = await supabase
         .from('posts')
         .select(`
@@ -42,7 +56,6 @@ export function NewsFeed() {
       if (supabasePosts && supabasePosts.length > 0) {
         setPosts(supabasePosts);
       } else {
-        // Якщо немає постів в Supabase, показуємо порожню стрічку
         setPosts([]);
       }
     } catch (error) {
@@ -53,50 +66,92 @@ export function NewsFeed() {
     }
   };
 
+  // Обробник вибору файлу
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Валідація типу файлу
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      toast({ title: 'Підтримуються лише зображення та відео', variant: 'destructive' });
+      return;
+    }
+
+    // Валідація розміру (макс 50MB)
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast({ title: 'Розмір файлу не повинен перевищувати 50MB', variant: 'destructive' });
+      return;
+    }
+
+    setSelectedFile(file);
+    
+    // Створення превʼю
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setPreviewUrl(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Видалення вибраного файлу
+  const removeFile = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (imageInputRef.current) imageInputRef.current.value = '';
+    if (videoInputRef.current) videoInputRef.current.value = '';
+  };
+
+  // Обробник кнопки "Подія"
+  const handleEventClick = () => {
+    toast({ title: "Функція 'Подія' в розробці" });
+  };
+
   const handleCreatePost = async () => {
-    if (!newPostContent.trim()) return;
+    if (!newPostContent.trim() && !selectedFile) return;
+
+    setIsUploading(true);
 
     try {
-      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      const user = currentUser || JSON.parse(localStorage.getItem("currentUser") || "{}");
+      
+      let mediaUrl = null;
+
+      // Завантаження медіа файлу
+      if (selectedFile) {
+        const fileExtension = selectedFile.name.split('.').pop() || 'jpg';
+        const uniqueFileName = `post-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExtension}`;
+        const filePath = `${uniqueFileName}`;
+        
+        mediaUrl = await uploadToStorage('posts', filePath, selectedFile, selectedFile.type);
+      }
       
       const newPost = {
         content: newPostContent,
-        user_id: currentUser.id,
-        created_at: new Date().toISOString(),
-        likes_count: 0,
-        comments_count: 0,
+        user_id: user.id,
+        media_url: mediaUrl,
         category: activeCategory === 'all' ? null : activeCategory
       };
 
-      // Спробуємо додати до Supabase
-      try {
-        const { data, error } = await supabase
-          .from('posts')
-          .insert([newPost])
-          .select()
-          .single();
+      const { data, error } = await supabase
+        .from('posts')
+        .insert([newPost])
+        .select()
+        .single();
 
-        if (error) {
-          console.error("Помилка створення поста в Supabase:", error);
-        } else if (data) {
-          setPosts([data, ...posts]);
-          setNewPostContent("");
-          return;
-        }
-      } catch (supabaseError) {
-        console.warn("Не вдалося створити пост в Supabase:", supabaseError);
-      }
+      if (error) throw error;
 
-      // Якщо Supabase не працює, додаємо локально
-      const localPost = {
-        ...newPost,
-        id: `local-${Date.now()}`,
-      };
-      
-      setPosts([localPost, ...posts]);
+      setPosts([data, ...posts]);
       setNewPostContent("");
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      toast({ title: "Публікацію створено!" });
+
     } catch (error) {
-      console.error("Помилка створення поста:", error);
+      console.error("Помилка:", error);
+      toast({ title: "Помилка створення публікації", variant: "destructive" });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -156,40 +211,110 @@ export function NewsFeed() {
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-4 md:space-y-6">
-      {/* Створення нового поста */}
+      {/* Компактна форма створення публікації (стиль Facebook) */}
       <Card>
-        <CardContent className="p-4 md:p-6">
-          <Textarea
-            placeholder="Що у вас нового?"
-            value={newPostContent}
-            onChange={(e) => setNewPostContent(e.target.value)}
-            className="min-h-[80px] md:min-h-[100px] resize-none border-0 focus-visible:ring-0 text-base md:text-lg"
+        <CardContent className="p-3 md:p-4">
+          {/* Приховані input для вибору файлів */}
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
           />
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mt-4 pt-4 border-t">
-            <div className="flex flex-wrap gap-2 sm:space-x-4 sm:gap-0">
-              <Button variant="ghost" size="sm" className="text-xs sm:text-sm">
-                <Image className="h-4 w-4 mr-1 sm:mr-2" />
-                <span className="hidden xs:inline">Фото</span>
-              </Button>
-              <Button variant="ghost" size="sm" className="text-xs sm:text-sm">
-                <Video className="h-4 w-4 mr-1 sm:mr-2" />
-                <span className="hidden xs:inline">Відео</span>
-              </Button>
-              <Button variant="ghost" size="sm" className="text-xs sm:text-sm">
-                <Users className="h-4 w-4 mr-1 sm:mr-2" />
-                <span className="hidden xs:inline">Подія</span>
-              </Button>
-            </div>
+          <input
+            ref={videoInputRef}
+            type="file"
+            accept="video/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+
+          {/* Компактний рядок: аватар + поле вводу + іконки */}
+          <div className="flex items-center gap-2 md:gap-3">
+            <Avatar className="h-9 w-9 md:h-10 md:w-10 shrink-0">
+              <AvatarImage src={currentUser?.avatar_url} />
+              <AvatarFallback>{currentUser?.full_name?.[0] || 'U'}</AvatarFallback>
+            </Avatar>
+            
+            <Input
+              placeholder="Що у вас нового?"
+              value={newPostContent}
+              onChange={(e) => setNewPostContent(e.target.value)}
+              className="flex-1 h-10 bg-muted/50 border-0 focus-visible:ring-1"
+            />
+            
+            {/* Кольорові іконки як у Facebook */}
             <Button 
-              onClick={handleCreatePost} 
-              disabled={!newPostContent.trim()}
-              className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
-              size="sm"
+              variant="ghost" 
+              size="icon"
+              onClick={() => videoInputRef.current?.click()}
+              className="shrink-0 hover:bg-red-50"
+              title="Додати відео"
             >
-              <Send className="h-4 w-4 mr-2" />
-              Опублікувати
+              <Video className="h-5 w-5 text-red-500" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => imageInputRef.current?.click()}
+              className="shrink-0 hover:bg-green-50"
+              title="Додати фото"
+            >
+              <Image className="h-5 w-5 text-green-500" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={handleEventClick}
+              className="shrink-0 hover:bg-blue-50"
+              title="Створити подію"
+            >
+              <Users className="h-5 w-5 text-blue-500" />
             </Button>
           </div>
+
+          {/* Превʼю вибраного файлу */}
+          {previewUrl && selectedFile && (
+            <div className="mt-3 relative rounded-lg overflow-hidden border">
+              {selectedFile.type.startsWith('image/') ? (
+                <img 
+                  src={previewUrl} 
+                  alt="Preview" 
+                  className="w-full max-h-64 object-cover"
+                />
+              ) : (
+                <video 
+                  src={previewUrl} 
+                  className="w-full max-h-64 object-cover"
+                  controls
+                />
+              )}
+              <Button
+                variant="destructive"
+                size="icon"
+                onClick={removeFile}
+                className="absolute top-2 right-2 h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Кнопка публікації - показуємо якщо є контент або файл */}
+          {(newPostContent.trim() || selectedFile) && (
+            <div className="mt-3 flex justify-end">
+              <Button 
+                onClick={handleCreatePost}
+                disabled={isUploading}
+                className="bg-primary hover:bg-primary/90"
+                size="sm"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {isUploading ? "Завантаження..." : "Опублікувати"}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -207,15 +332,11 @@ export function NewsFeed() {
           {filteredPosts.length > 0 ? (
             filteredPosts.map((post) => {
               // Отримуємо дані автора поста
-              const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-              
-              // Використовуємо автора з бази даних або з localStorage
               let postAuthor = post.author;
               if (!postAuthor) {
-                if (post.user_id === currentUser.id) {
+                if (post.user_id === currentUser?.id) {
                   postAuthor = currentUser;
                 } else {
-                  // Шукаємо автора в списку користувачів
                   const users = JSON.parse(localStorage.getItem('users') || '[]');
                   postAuthor = users.find((user: any) => user.id === post.user_id);
                 }
