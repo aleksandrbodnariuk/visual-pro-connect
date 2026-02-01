@@ -11,6 +11,7 @@ import { EditPublicationModal } from "@/components/publications/EditPublicationM
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { uploadToStorage } from "@/lib/storage";
+import { extractVideoEmbed } from "@/lib/videoEmbed";
 
 export function NewsFeed() {
   const [posts, setPosts] = useState<any[]>([]);
@@ -191,6 +192,32 @@ export function NewsFeed() {
 
   const filteredPosts = posts.filter(post => {
     if (activeCategory === "all") return true;
+    
+    // Фільтр "Фото" - пости із зображеннями
+    if (activeCategory === "photo") {
+      if (!post.media_url) return false;
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+      return imageExtensions.some(ext => post.media_url?.toLowerCase().endsWith(ext));
+    }
+    
+    // Фільтр "Відео" - пости з відео файлами або посиланнями на відео платформи
+    if (activeCategory === "video") {
+      // Перевіряємо media_url на відео файл
+      if (post.media_url) {
+        const videoExtensions = ['.mp4', '.webm', '.mov', '.avi'];
+        if (videoExtensions.some(ext => post.media_url?.toLowerCase().endsWith(ext))) {
+          return true;
+        }
+      }
+      // Перевіряємо контент на посилання YouTube/Facebook/TikTok
+      const videoEmbed = extractVideoEmbed(post.content);
+      if (videoEmbed && ['youtube', 'facebook', 'tiktok', 'instagram'].includes(videoEmbed.platform)) {
+        return true;
+      }
+      return false;
+    }
+    
+    // Інші категорії (музика, події) - за збереженою категорією
     return post.category === activeCategory;
   });
 
