@@ -52,6 +52,25 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
       </a>
     );
   }
+
+  if (embed.platform === 'facebook') {
+    return (
+      <div className="rounded-lg overflow-hidden border bg-muted">
+        <div className="aspect-video">
+          <iframe
+            src={embed.embedUrl}
+            className="w-full h-full"
+            allowFullScreen
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
+            title="Facebook відео"
+          />
+        </div>
+        <div className="p-2 flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="font-medium">FACEBOOK.COM</span>
+        </div>
+      </div>
+    );
+  }
   
   // Для інших посилань - просто відображаємо як клікабельне посилання
   return (

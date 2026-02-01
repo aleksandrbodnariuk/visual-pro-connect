@@ -2,10 +2,11 @@
 const YOUTUBE_REGEX = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
 const INSTAGRAM_REGEX = /instagram\.com\/(?:p|reel)\/([^\/\s?]+)/;
 const TIKTOK_REGEX = /tiktok\.com\/@[\w.-]+\/video\/(\d+)/;
+const FACEBOOK_REGEX = /facebook\.com\/(?:(?:watch\/?\?v=|reel\/|.*\/videos\/)(\d+)|share\/v\/([^\/\s?]+))/;
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 
 export interface VideoEmbed {
-  platform: 'youtube' | 'instagram' | 'tiktok' | 'link';
+  platform: 'youtube' | 'instagram' | 'tiktok' | 'facebook' | 'link';
   videoId?: string;
   embedUrl?: string;
   originalUrl: string;
@@ -50,6 +51,17 @@ export function extractVideoEmbed(text: string): VideoEmbed | null {
     return {
       platform: 'tiktok',
       videoId: ttMatch[1],
+      originalUrl: url
+    };
+  }
+  
+  // Facebook
+  const fbMatch = url.match(FACEBOOK_REGEX);
+  if (fbMatch && (fbMatch[1] || fbMatch[2])) {
+    return {
+      platform: 'facebook',
+      videoId: fbMatch[1] || fbMatch[2],
+      embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false`,
       originalUrl: url
     };
   }
