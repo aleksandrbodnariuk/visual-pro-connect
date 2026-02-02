@@ -30,7 +30,6 @@ export interface ProfileHeaderProps {
 
 export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
   const { sendFriendRequest, friends } = useFriendRequests();
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isFriend, setIsFriend] = useState(false);
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const navigate = useNavigate();
@@ -52,38 +51,8 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
     isCurrentUser
   } = user;
 
+  // Перевіряємо, чи профільований користувач вже є в друзях
   useEffect(() => {
-    const checkCurrentUser = async () => {
-      try {
-        // Спочатку спроба отримати користувача з Supabase
-        try {
-          const { data } = await supabase.auth.getUser();
-          if (data.user) {
-            setCurrentUserId(data.user.id);
-            return;
-          }
-        } catch (error) {
-          console.warn("Помилка отримання користувача з Supabase:", error);
-        }
-        
-        // Якщо не вдалося отримати з Supabase, використовуємо локальне сховище
-        const currentUser = localStorage.getItem("currentUser");
-        if (currentUser) {
-          const userData = JSON.parse(currentUser);
-          if (userData.id) {
-            setCurrentUserId(userData.id);
-          }
-        }
-      } catch (error) {
-        console.error("Помилка при перевірці поточного користувача:", error);
-      }
-    };
-    
-    checkCurrentUser();
-  }, []);
-
-  useEffect(() => {
-    // Check if this user is already a friend
     if (friends && userId) {
       try {
         const friendExists = friends.some(friend => friend?.id === userId);
@@ -95,9 +64,8 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
   }, [friends, userId]);
 
   const handleAddFriend = async () => {
-    if (!currentUserId) {
-      toast.error('Ви повинні увійти в систему');
-      return;
+    if (isCurrentUser) {
+      return; // Не можна додавати себе в друзі
     }
     
     setIsSendingRequest(true);
@@ -218,7 +186,7 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
                   Написати
                 </Button>
                 <Button className="bg-gradient-purple">Підписатися</Button>
-                {!isFriend && currentUserId && !isCurrentUser && (
+                {!isFriend && (
                   <Button 
                     variant="secondary" 
                     onClick={handleAddFriend}
