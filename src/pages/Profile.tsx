@@ -73,16 +73,51 @@ export default function Profile() {
       setError(null);
       
       try {
-        const currentUser = localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser') || '{}') : null;
+        // ВАЖЛИВО: Використовуємо Supabase Auth як єдине джерело правди
+        const { data: authData } = await supabase.auth.getUser();
+        const authUserId = authData?.user?.id || null;
         
-        const targetUserId = userId || (currentUser ? currentUser.id : null);
+        // Fallback на localStorage тільки якщо Supabase Auth недоступний
+        const localUser = localStorage.getItem('currentUser') 
+          ? JSON.parse(localStorage.getItem('currentUser') || '{}') 
+          : null;
+        
+        const currentUserId = authUserId || localUser?.id || null;
+        const targetUserId = userId || currentUserId;
         
         if (!targetUserId) {
           throw new Error('Не вдалося визначити ID користувача');
         }
         
-        const isOwnProfile = currentUser && currentUser.id === targetUserId;
+        // Перевірка власного профілю
+        const isOwnProfile = currentUserId !== null && currentUserId === targetUserId;
         setIsCurrentUser(isOwnProfile);
+        
+        console.log('Profile: isCurrentUser check', {
+          authUserId,
+          localUserId: localUser?.id,
+          currentUserId,
+          targetUserId,
+          isOwnProfile
+        });
+        
+        // Спочатку отримуємо кількість постів
+        let postsData: any[] = [];
+        let postsCount = 0;
+        
+        try {
+          const { data: postsResult } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('user_id', targetUserId);
+          
+          if (postsResult) {
+            postsData = postsResult;
+            postsCount = postsResult.length;
+          }
+        } catch (postsError) {
+          console.warn("Помилка отримання постів:", postsError);
+        }
         
         let userData = null;
         
@@ -112,8 +147,13 @@ export default function Profile() {
         }
         
         if (!userData) {
-          if (currentUser && (!userId || currentUser.id === userId)) {
-            userData = currentUser;
+          // Використовуємо localStorage як fallback
+          const localUserData = localStorage.getItem('currentUser') 
+            ? JSON.parse(localStorage.getItem('currentUser') || '{}') 
+            : null;
+            
+          if (localUserData && (!userId || localUserData.id === userId)) {
+            userData = localUserData;
           } else {
             const users = JSON.parse(localStorage.getItem('users') || '[]');
             userData = users.find((u: any) => u.id === targetUserId);
@@ -141,7 +181,7 @@ export default function Profile() {
           joinDate: userData.created_at ? new Date(userData.created_at).toLocaleDateString() : "Нещодавно",
           followersCount: 0,
           followingCount: 0,
-          postsCount: 0,
+          postsCount: postsCount,
           profession: userData.categories && userData.categories.length > 0 ? userData.categories[0] : "",
           status: userData.is_shareholder ? "Акціонер" : (userData.is_admin ? "Адміністратор" : "Учасник"),
           role: userData.is_admin ? "admin" : (userData.is_shareholder ? "shareholder" : "user"),
@@ -154,21 +194,6 @@ export default function Profile() {
           country: userData.country,
           city: userData.city
         });
-        
-        let postsData = [];
-        
-        try {
-          const { data } = await supabase
-            .from('posts')
-            .select('*')
-            .eq('user_id', targetUserId);
-          
-          if (data && data.length > 0) {
-            postsData = data;
-          }
-        } catch (postsError) {
-          console.warn("Помилка отримання постів з Supabase:", postsError);
-        }
         
         if (postsData.length > 0) {
           setPosts(postsData.map((post: any) => ({
