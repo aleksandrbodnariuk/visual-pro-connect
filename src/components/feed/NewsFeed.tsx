@@ -28,15 +28,42 @@ export function NewsFeed() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
-  // Отримуємо поточного користувача
+  // Отримуємо поточного користувача через Supabase Auth
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     loadPosts();
-    // Завантажуємо дані користувача
-    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    setCurrentUser(user);
+    loadCurrentUser();
   }, []);
+
+  const loadCurrentUser = async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        const { data } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', authUser.id)
+          .maybeSingle();
+        setCurrentUser(data);
+      }
+    } catch (error) {
+      console.error("Error loading current user:", error);
+    }
+  };
+
+  // Helper функція для правильного username
+  const getUsername = (user: any) => {
+    if (!user) return 'user';
+    
+    // Якщо phone_number схоже на email, беремо частину до @
+    if (user.phone_number?.includes('@')) {
+      return user.phone_number.split('@')[0];
+    }
+    
+    // Інакше беремо перше слово з full_name
+    return user.full_name?.split(' ')[0]?.toLowerCase() || 'user';
+  };
 
   const loadPosts = async () => {
     try {
@@ -378,7 +405,7 @@ export function NewsFeed() {
                   author={{
                     id: post.user_id,
                     name: authorName,
-                    username: postAuthor?.phone_number || postAuthor?.phoneNumber || 'user',
+                    username: getUsername(postAuthor),
                     avatarUrl: postAuthor?.avatar_url || postAuthor?.avatarUrl || '',
                     profession: postAuthor?.title || postAuthor?.bio || ''
                   }}
@@ -389,6 +416,7 @@ export function NewsFeed() {
                   timeAgo="щойно"
                   onEdit={handleEditPost}
                   onDelete={handleDeletePost}
+                  currentUser={currentUser}
                 />
               );
             })
