@@ -81,7 +81,7 @@ export function ProfileEditorDialog({
           <TabsContent value="avatar" className="space-y-4 py-4 flex justify-center">
             <AvatarUpload 
               userId={user.id} 
-              avatarUrl={user.avatarUrl}
+              avatarUrl={user.avatarUrl || user.avatar_url}
               onAvatarChange={handleAvatarChange} 
             />
           </TabsContent>

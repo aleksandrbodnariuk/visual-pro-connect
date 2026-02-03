@@ -37,7 +37,7 @@ interface ProfileEditorProps {
 export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: ProfileEditorProps) {
   const [country, setCountry] = useState(user?.country || "");
   const [city, setCity] = useState(user?.city || "");
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar_url || null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar_url || user?.avatarUrl || null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
@@ -51,7 +51,7 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
     if (user) {
       setCountry(user.country || "");
       setCity(user.city || "");
-      setAvatarUrl(user.avatar_url || null);
+      setAvatarUrl(user.avatar_url || user.avatarUrl || null);
       setSelectedCategories(user.categories || []);
     }
   }, [user]);
@@ -409,8 +409,11 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="flex justify-center">
-              <Avatar className="h-32 w-32">
+            <div className="flex justify-center py-4" style={{ minHeight: '160px' }}>
+              <Avatar 
+                className="h-32 w-32 transition-transform origin-center"
+                style={{ transform: `scale(${avatarSize / 100})` }}
+              >
                 {tempAvatarUrl ? (
                   <AvatarImage src={tempAvatarUrl} alt="Новий аватар" />
                 ) : (
