@@ -1,110 +1,223 @@
 
 
-## План: Виправлення аватара в редакторі профілю
+## План: Виправлення відображення імен користувачів та inline коментарів у стилі Facebook
 
 ---
 
 ### Виявлені проблеми
 
-1. **Аватар не відображається** у вкладці "Профіль" редактора, бо:
-   - `avatarUrl` не передається або передається `null`
-   - Об'єкт `user` в Profile.tsx створюється з `avatarUrl`, але воно не завжди синхронізовано з `avatar_url` з БД
+На основі скріншотів та аналізу коду:
 
-2. **Слайдер розміру не працює** в діалозі зміни аватара:
-   - Стан `avatarSize` змінюється, але аватар в діалозі має фіксований клас `h-32 w-32`
-   - `scale` трансформація не застосовується до аватара в діалозі
-
-3. **Неузгодженість полів**:
-   - БД використовує `avatar_url` (snake_case)
-   - Код використовує і `avatarUrl`, і `avatar_url` - створює плутанину
+1. **Ім'я автора показується як "Користувач"** - деякі пости мають `user_id: null`, тому автор не знайдений
+2. **Показується email замість username** - поле `phone_number` у деяких користувачів містить email (`bodnaryuk.halyna@gmail.com`), а код використовує його як `@username`
+3. **Аватар показує "U"** - `currentUser` завантажується з застарілого `localStorage`, а не через Supabase Auth
+4. **Коментарі вимагають переходу на іншу сторінку** - немає inline секції коментарів під постом
+5. **У коментарях показує "U" замість аватара** - проблема з отриманням даних користувача
 
 ---
 
-### Файл 1: `src/components/profile/ProfileEditorDialog.tsx`
+### Схема поточної проблеми з username
 
-**Проблема:** Передається `user.avatarUrl`, але поле може бути `user.avatar_url`
+```text
+БАЗА ДАНИХ users:
+┌────────────────────────────────────────────────────────────────────────────┐
+│ ID: 92290f24...  full_name: "Galyna Bodnariuk"                             │
+│                  phone_number: "bodnaryuk.halyna@gmail.com" ← Email!       │
+│                                                                            │
+│ ID: c836df06...  full_name: "Олександр Боднарюк"                           │
+│                  phone_number: "0507068007" ← Телефон                      │
+└────────────────────────────────────────────────────────────────────────────┘
 
-**Зміни:**
+ВІДОБРАЖЕННЯ у PostCard:
+  @bodnaryuk.halyna@gmail.com  ← Некоректно (email як username)
+  @0507068007                  ← Некоректно (телефон як username)
+```
 
-Рядок 84 - використовувати обидва варіанти:
+---
+
+### Рішення
+
+---
+
+### Файл 1: `src/components/feed/NewsFeed.tsx`
+
+#### 1.1 Завантажувати currentUser через Supabase Auth
+
+Замінити рядки 32-38:
 ```tsx
-<AvatarUpload 
-  userId={user.id} 
-  avatarUrl={user.avatarUrl || user.avatar_url}
-  onAvatarChange={handleAvatarChange} 
+const [currentUser, setCurrentUser] = useState<any>(null);
+
+useEffect(() => {
+  loadPosts();
+  loadCurrentUser();
+}, []);
+
+const loadCurrentUser = async () => {
+  const { data: { user: authUser } } = await supabase.auth.getUser();
+  if (authUser) {
+    const { data } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', authUser.id)
+      .maybeSingle();
+    setCurrentUser(data);
+  }
+};
+```
+
+#### 1.2 Використовувати full_name як username (перша частина)
+
+Замінити рядок 381:
+```tsx
+username: postAuthor?.full_name?.split(' ')[0]?.toLowerCase() || 'user',
+```
+
+---
+
+### Файл 2: `src/components/feed/PostCard.tsx`
+
+#### 2.1 Додати inline коментарі та форму коментаря
+
+Після рядка 183 (перед закриттям `</div>`) додати секцію inline коментарів:
+
+```tsx
+{/* Inline форма коментаря */}
+<div className="mt-3 pt-3 border-t">
+  <div className="flex items-center gap-2">
+    <Avatar className="h-8 w-8">
+      <AvatarImage src={currentUser?.avatar_url} />
+      <AvatarFallback>
+        {currentUser?.full_name?.[0] || 'U'}
+      </AvatarFallback>
+    </Avatar>
+    <Input
+      placeholder="Написати коментар..."
+      className="flex-1 h-9 bg-muted/50 border-0"
+      value={commentText}
+      onChange={(e) => setCommentText(e.target.value)}
+      onKeyDown={handleCommentSubmit}
+    />
+  </div>
+</div>
+
+{/* Показати перші 2 коментарі inline */}
+{recentComments.length > 0 && (
+  <div className="mt-2 space-y-2">
+    {recentComments.slice(0, 2).map(comment => (
+      <div key={comment.id} className="flex items-start gap-2">
+        <Avatar className="h-6 w-6">
+          <AvatarImage src={comment.user?.avatar_url} />
+          <AvatarFallback>{comment.user?.full_name?.[0]}</AvatarFallback>
+        </Avatar>
+        <div className="bg-muted/50 rounded-2xl px-3 py-1.5">
+          <span className="font-semibold text-xs">{comment.user?.full_name}</span>
+          <p className="text-sm">{comment.content}</p>
+        </div>
+      </div>
+    ))}
+    {comments > 2 && (
+      <Link to={`/post/${id}`} className="text-sm text-muted-foreground">
+        Переглянути ще {comments - 2} коментарів
+      </Link>
+    )}
+  </div>
+)}
+```
+
+#### 2.2 Додати стани та завантаження коментарів
+
+```tsx
+const [commentText, setCommentText] = useState("");
+const [recentComments, setRecentComments] = useState<any[]>([]);
+
+useEffect(() => {
+  loadRecentComments();
+}, [id]);
+
+const loadRecentComments = async () => {
+  const { data } = await supabase
+    .from('comments')
+    .select('*, user:users(id, full_name, avatar_url)')
+    .eq('post_id', id)
+    .order('created_at', { ascending: false })
+    .limit(3);
+  if (data) setRecentComments(data);
+};
+
+const handleCommentSubmit = async (e: React.KeyboardEvent) => {
+  if (e.key === 'Enter' && commentText.trim() && currentUser?.id) {
+    await supabase.from('comments').insert({
+      post_id: id,
+      user_id: currentUser.id,
+      content: commentText.trim()
+    });
+    setCommentText("");
+    loadRecentComments();
+  }
+};
+```
+
+---
+
+### Файл 3: `src/components/feed/PostCard.tsx` - Props та imports
+
+#### 3.1 Додати необхідні imports
+
+```tsx
+import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+```
+
+#### 3.2 Оновити PostCardProps
+
+```tsx
+export interface PostCardProps {
+  // ... існуючі пропси
+  currentUser?: any; // Додати для передачі поточного користувача
+}
+```
+
+---
+
+### Файл 4: `src/components/feed/NewsFeed.tsx` - Передати currentUser
+
+```tsx
+<PostCard 
+  key={post.id}
+  // ... існуючі пропси
+  currentUser={currentUser}  // Додати
 />
 ```
 
 ---
 
-### Файл 2: `src/components/profile/ProfileEditor.tsx`
+### Візуальна схема змін UI
 
-**Проблема 1:** Аватар не показується на вкладці "Профіль"
-**Проблема 2:** Слайдер в діалозі не змінює розмір аватара
+```text
+БУЛО:
+┌────────────────────────────────────────────────────────────────────────────┐
+│ ❤️ 2  💬 1  ↗️                                                  🔖        │
+│                                                                            │
+│ 2 вподобань                                                                │
+│ Користувач https://youtu.be/...                                            │
+│ Переглянути всі 1 коментарів  ← клік → перехід на /post/:id                │
+│ щойно                                                                      │
+└────────────────────────────────────────────────────────────────────────────┘
 
-**Зміни:**
-
-#### 2.1 Оновити ініціалізацію `avatarUrl` (рядок 40)
-```tsx
-const [avatarUrl, setAvatarUrl] = useState<string | null>(
-  user?.avatar_url || user?.avatarUrl || null
-);
-```
-
-#### 2.2 Оновити useEffect (рядок 54)
-```tsx
-setAvatarUrl(user.avatar_url || user.avatarUrl || null);
-```
-
-#### 2.3 Застосувати `avatarSize` до аватара в діалозі (рядок 413)
-
-Замінити:
-```tsx
-<Avatar className="h-32 w-32">
-```
-
-На:
-```tsx
-<Avatar 
-  className="h-32 w-32 transition-transform"
-  style={{ transform: `scale(${avatarSize / 100})` }}
->
-```
-
-#### 2.4 Додати візуальний контейнер для масштабування
-
-Щоб scale працював візуально правильно, обгорнути аватар:
-```tsx
-<div className="flex justify-center py-4" style={{ minHeight: '160px' }}>
-  <Avatar 
-    className="h-32 w-32 transition-transform origin-center"
-    style={{ transform: `scale(${avatarSize / 100})` }}
-  >
-    {tempAvatarUrl ? (
-      <AvatarImage src={tempAvatarUrl} alt="Новий аватар" />
-    ) : (
-      <AvatarFallback>
-        <UserRound className="h-16 w-16" />
-      </AvatarFallback>
-    )}
-  </Avatar>
-</div>
-```
-
----
-
-### Файл 3: `src/components/profile/avatar/AvatarUpload.tsx` (опціонально)
-
-**Покращення:** Додати підтримку зміни розміру
-
-Якщо потрібен слайдер у вкладці "Аватар", додати:
-```tsx
-interface AvatarUploadProps {
-  userId: string;
-  avatarUrl?: string | null;
-  onAvatarChange?: (url: string) => void;
-  showSizeControl?: boolean;  // Новий пропс
-}
+СТАНЕ (як Facebook):
+┌────────────────────────────────────────────────────────────────────────────┐
+│ ❤️ 2  💬 1  ↗️                                                  🔖        │
+│                                                                            │
+│ 2 вподобань                                                                │
+│ Galyna Bodnariuk https://youtu.be/...                                      │
+│ ──────────────────────────────────────────────────────────────────────────│
+│ 👤 Іван Беженар: Круто.молодець                                           │
+│                                                                            │
+│ Переглянути ще 5 коментарів                                                │
+│ ──────────────────────────────────────────────────────────────────────────│
+│ 👤 [Аватар] Написати коментар...                              [Коментувати]│
+│ щойно                                                                      │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -113,14 +226,40 @@ interface AvatarUploadProps {
 
 | Файл | Зміни |
 |------|-------|
-| `ProfileEditorDialog.tsx` | Використовувати `avatarUrl \|\| avatar_url` |
-| `ProfileEditor.tsx` | Ініціалізувати з обох полів, застосувати `avatarSize` до аватара в діалозі |
+| `src/components/feed/NewsFeed.tsx` | Завантажувати currentUser через Supabase Auth, передавати до PostCard |
+| `src/components/feed/PostCard.tsx` | Додати inline коментарі, форму коментаря, виправити username |
+| `src/pages/Post.tsx` | Не потребує змін (залишається як детальний перегляд) |
+
+---
+
+### Додаткові виправлення username
+
+Замість `phone_number` як username показувати:
+1. Перше слово з `full_name` (перетворене на lowercase)
+2. Або якщо `phone_number` виглядає як email - показувати частину до `@`
+
+```tsx
+const getUsername = (user: any) => {
+  if (!user) return 'user';
+  
+  // Якщо phone_number схоже на email, беремо частину до @
+  if (user.phone_number?.includes('@')) {
+    return user.phone_number.split('@')[0];
+  }
+  
+  // Інакше беремо перше слово з full_name
+  return user.full_name?.split(' ')[0]?.toLowerCase() || 'user';
+};
+```
 
 ---
 
 ### Очікуваний результат
 
-1. **Аватар видно** в редакторі профілю (вкладка "Профіль" і діалог зміни)
-2. **Слайдер працює** - при зміні значення аватар масштабується
-3. **Завантажений аватар відображається** в превʼю перед збереженням
+1. **Імена авторів** завжди показуються коректно (full_name)
+2. **Username** показується як перше ім'я або частина email до @
+3. **Аватари** показуються правильно (з Supabase Auth)
+4. **Inline коментарі** - перші 2-3 коментарі видно одразу під постом
+5. **Форма коментаря** - можна швидко написати коментар без переходу на іншу сторінку
+6. **"Переглянути більше"** - відкриває повну сторінку поста тільки для детального перегляду
 
