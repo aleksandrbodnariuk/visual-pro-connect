@@ -52,19 +52,7 @@ export function NewsFeed() {
     }
   };
 
-  // Helper функція для правильного username (БЕЗ телефону/email!)
-  const getUsername = (user: any) => {
-    if (!user) return 'user';
-    
-    // Використовуємо тільки full_name, НЕ phone_number
-    // Беремо перше ім'я як username
-    const firstName = user.full_name?.split(' ')[0];
-    if (firstName) {
-      return firstName.toLowerCase();
-    }
-    
-    return 'user';
-  };
+  // Функція getUsername видалена - @username більше не показується в UI
 
   const loadPosts = async () => {
     try {
@@ -138,11 +126,17 @@ export function NewsFeed() {
 
   const handleCreatePost = async () => {
     if (!newPostContent.trim() && !selectedFile) return;
+    
+    // Перевірка авторизації - пост повинен мати автора
+    if (!currentUser?.id) {
+      toast({ title: "Будь ласка, увійдіть в систему", variant: "destructive" });
+      return;
+    }
 
     setIsUploading(true);
 
     try {
-      const user = currentUser || JSON.parse(localStorage.getItem("currentUser") || "{}");
+      const user = currentUser;
       
       let mediaUrl = null;
 
@@ -406,10 +400,9 @@ export function NewsFeed() {
                   author={{
                     id: post.user_id,
                     name: authorName,
-                    username: getUsername(postAuthor),
                     avatarUrl: postAuthor?.avatar_url || postAuthor?.avatarUrl || '',
-                    profession: postAuthor?.title || '', // Титул передається, але PostCard перевірить чи показувати
-                    isShareHolder: postAuthor?.is_shareholder || false // Для перевірки чи автор є інвестором
+                    profession: postAuthor?.title || '',
+                    isShareHolder: postAuthor?.is_shareholder || false
                   }}
                   imageUrl={post.media_url || undefined}
                   caption={post.content || ''}
