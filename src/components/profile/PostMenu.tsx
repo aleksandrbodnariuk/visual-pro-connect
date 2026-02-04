@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { MoreHorizontal, Edit, Trash2, Flag, Link, Share2 } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Flag, Link, Share2, ExternalLink } from "lucide-react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -26,10 +26,20 @@ interface PostMenuProps {
   isAuthor: boolean;
   onEdit?: (postId: string) => void;
   onDelete?: (postId: string) => void;
+  caption?: string; // Для витягування URL з тексту
 }
 
-export function PostMenu({ postId, isAuthor, onEdit, onDelete }: PostMenuProps) {
+// Функція для витягування URL з тексту
+const extractUrl = (text?: string): string | null => {
+  if (!text) return null;
+  const match = text.match(/(https?:\/\/[^\s]+)/);
+  return match ? match[0] : null;
+};
+
+export function PostMenu({ postId, isAuthor, onEdit, onDelete, caption }: PostMenuProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  
+  const mediaUrl = extractUrl(caption);
 
   const handleEdit = () => {
     if (onEdit) {
@@ -73,6 +83,18 @@ export function PostMenu({ postId, isAuthor, onEdit, onDelete }: PostMenuProps) 
     }
   };
 
+  const handleCopyMediaLink = () => {
+    if (mediaUrl) {
+      try {
+        navigator.clipboard.writeText(mediaUrl);
+        toast.success("Посилання на медіа скопійовано");
+      } catch (error) {
+        console.error("Copy media link error:", error);
+        toast.error("Помилка при копіюванні");
+      }
+    }
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -108,6 +130,12 @@ export function PostMenu({ postId, isAuthor, onEdit, onDelete }: PostMenuProps) 
             <Link className="mr-2 h-4 w-4" />
             Копіювати посилання
           </DropdownMenuItem>
+          {mediaUrl && (
+            <DropdownMenuItem onClick={handleCopyMediaLink} className="flex items-center cursor-pointer">
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Копіювати посилання на медіа
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={handleShare} className="flex items-center cursor-pointer">
             <Share2 className="mr-2 h-4 w-4" />
             Поділитися

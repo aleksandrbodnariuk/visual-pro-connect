@@ -52,17 +52,18 @@ export function NewsFeed() {
     }
   };
 
-  // Helper функція для правильного username
+  // Helper функція для правильного username (БЕЗ телефону/email!)
   const getUsername = (user: any) => {
     if (!user) return 'user';
     
-    // Якщо phone_number схоже на email, беремо частину до @
-    if (user.phone_number?.includes('@')) {
-      return user.phone_number.split('@')[0];
+    // Використовуємо тільки full_name, НЕ phone_number
+    // Беремо перше ім'я як username
+    const firstName = user.full_name?.split(' ')[0];
+    if (firstName) {
+      return firstName.toLowerCase();
     }
     
-    // Інакше беремо перше слово з full_name
-    return user.full_name?.split(' ')[0]?.toLowerCase() || 'user';
+    return 'user';
   };
 
   const loadPosts = async () => {
@@ -407,7 +408,8 @@ export function NewsFeed() {
                     name: authorName,
                     username: getUsername(postAuthor),
                     avatarUrl: postAuthor?.avatar_url || postAuthor?.avatarUrl || '',
-                    profession: postAuthor?.title || postAuthor?.bio || ''
+                    profession: postAuthor?.title || '', // Титул передається, але PostCard перевірить чи показувати
+                    isShareHolder: postAuthor?.is_shareholder || false // Для перевірки чи автор є інвестором
                   }}
                   imageUrl={post.media_url || undefined}
                   caption={post.content || ''}

@@ -34,6 +34,7 @@ export interface PostCardProps {
     username: string;
     avatarUrl?: string;
     profession?: string;
+    isShareHolder?: boolean; // Чи автор є інвестором
   };
   imageUrl?: string;
   caption: string;
@@ -73,8 +74,19 @@ export function PostCard({
   
   const isAuthor = authUser?.id === author.id;
   
+  // Перевіряємо чи поточний користувач є інвестором (для показу титулів)
+  const isCurrentUserInvestor = authUser?.isShareHolder || authUser?.is_shareholder;
+  
+  // Функція для видалення URL з тексту (для приватності)
+  const removeUrls = (text: string): string => {
+    return text.replace(/(https?:\/\/[^\s]+)/g, '').trim();
+  };
+  
   // Виявлення вбудованого відео/посилання
   const videoEmbed = extractVideoEmbed(caption);
+  
+  // Очищений текст без URL
+  const cleanCaption = removeUrls(caption);
 
   // Завантаження останніх коментарів
   useEffect(() => {
@@ -150,7 +162,8 @@ export function PostCard({
             <span className="text-sm font-semibold">{author.name}</span>
             <div className="flex items-center gap-1">
               <span className="text-xs text-muted-foreground">@{author.username}</span>
-              {author.profession && (
+              {/* Титули показуються тільки інвесторам */}
+              {author.profession && isCurrentUserInvestor && (
                 <span className={`profession-badge profession-badge-${author.profession.toLowerCase()} text-[10px]`}>
                   {author.profession}
                 </span>
@@ -163,6 +176,7 @@ export function PostCard({
           isAuthor={isAuthor}
           onEdit={onEdit}
           onDelete={onDelete}
+          caption={caption}
         />
       </div>
 
@@ -240,13 +254,13 @@ export function PostCard({
           <span className="text-sm font-semibold">{likesCount} вподобань</span>
         </div>
 
-        {/* Опис */}
+        {/* Опис (без URL - для приватності) */}
         <div className="mt-1">
           <p className="text-sm">
             <Link to={`/profile/${author.id}`} className="font-semibold">
               {author.name}
             </Link>{" "}
-            {caption}
+            {cleanCaption || (videoEmbed ? '' : '')}
           </p>
         </div>
 
