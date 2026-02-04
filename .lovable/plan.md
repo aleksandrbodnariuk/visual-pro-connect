@@ -1,223 +1,199 @@
 
 
-## План: Виправлення відображення імен користувачів та inline коментарів у стилі Facebook
+## План: Виправлення відображення авторів, коментаторів, та скриття особистої інформації
 
 ---
 
-### Виявлені проблеми
+### Виявлені проблеми з аналізу
 
-На основі скріншотів та аналізу коду:
+1. **Автор поста показується як "Користувач"** 
+   - Деякі пости мають `user_id: null` у базі даних
+   - При відсутності автора fallback показує "Користувач" замість правильного імені
 
-1. **Ім'я автора показується як "Користувач"** - деякі пости мають `user_id: null`, тому автор не знайдений
-2. **Показується email замість username** - поле `phone_number` у деяких користувачів містить email (`bodnaryuk.halyna@gmail.com`), а код використовує його як `@username`
-3. **Аватар показує "U"** - `currentUser` завантажується з застарілого `localStorage`, а не через Supabase Auth
-4. **Коментарі вимагають переходу на іншу сторінку** - немає inline секції коментарів під постом
-5. **У коментарях показує "U" замість аватара** - проблема з отриманням даних користувача
+2. **Аватар показує "U" замість фото**
+   - `currentUser` в PostCard завантажується через `useAuthState().getCurrentUser()`, яка залежить від стану `appUser`
+   - Якщо `appUser` ще не завантажено - аватар показує перший символ 'U'
+
+3. **Під ім'ям показується телефон/email (@0507068007, @bodnaryuk.halyna)**
+   - Функція `getUsername()` в NewsFeed.tsx використовує `phone_number` як username
+   - Це приватна інформація, що не повинна показуватися публічно
+
+4. **Титули (Імператор, Граф) видно всім**
+   - Зараз титул показується у полі `profession` в `PostCard`
+   - Має показуватися тільки тим, хто є інвестором/акціонером
+
+5. **URL-посилання на YouTube/соцмережі показується у підписі**
+   - Зараз повний текст `caption` показується, включаючи URL
+   - Посилання має бути скрите і доступне в меню "..."
 
 ---
 
-### Схема поточної проблеми з username
+### Схема проблеми з username
 
 ```text
-БАЗА ДАНИХ users:
+ЗАРАЗ:
 ┌────────────────────────────────────────────────────────────────────────────┐
-│ ID: 92290f24...  full_name: "Galyna Bodnariuk"                             │
-│                  phone_number: "bodnaryuk.halyna@gmail.com" ← Email!       │
+│ Олександр Боднарюк                                                         │
+│ @0507068007  Імператор  ← Показує телефон та титул ВСІМ!                  │
 │                                                                            │
-│ ID: c836df06...  full_name: "Олександр Боднарюк"                           │
-│                  phone_number: "0507068007" ← Телефон                      │
+│ [Відео]                                                                    │
+│                                                                            │
+│ Олександр Боднарюк https://www.youtube.com/watch?v=... ← URL видно!       │
 └────────────────────────────────────────────────────────────────────────────┘
 
-ВІДОБРАЖЕННЯ у PostCard:
-  @bodnaryuk.halyna@gmail.com  ← Некоректно (email як username)
-  @0507068007                  ← Некоректно (телефон як username)
+МАЄ БУТИ:
+┌────────────────────────────────────────────────────────────────────────────┐
+│ Олександр Боднарюк                                                         │
+│ @олександр  ← Ім'я як username, БЕЗ телефону                               │
+│                                                                            │
+│ [Відео]                                                                    │
+│                                                                            │
+│ Олександр Боднарюк ← Тільки ім'я, БЕЗ URL                                 │
+│ [Меню ...] → Посилання: https://www.youtube.com/watch?v=...               │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Рішення
+### Технічні зміни
 
 ---
 
 ### Файл 1: `src/components/feed/NewsFeed.tsx`
 
-#### 1.1 Завантажувати currentUser через Supabase Auth
+#### 1.1 Виправити функцію `getUsername()` - не показувати телефон/email
 
-Замінити рядки 32-38:
 ```tsx
-const [currentUser, setCurrentUser] = useState<any>(null);
-
-useEffect(() => {
-  loadPosts();
-  loadCurrentUser();
-}, []);
-
-const loadCurrentUser = async () => {
-  const { data: { user: authUser } } = await supabase.auth.getUser();
-  if (authUser) {
-    const { data } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', authUser.id)
-      .maybeSingle();
-    setCurrentUser(data);
+const getUsername = (user: any) => {
+  if (!user) return 'user';
+  
+  // Використовуємо тільки full_name, НЕ phone_number
+  // Беремо перше ім'я як username
+  const firstName = user.full_name?.split(' ')[0];
+  if (firstName) {
+    return firstName.toLowerCase();
   }
+  
+  return 'user';
 };
 ```
 
-#### 1.2 Використовувати full_name як username (перша частина)
+#### 1.2 Не передавати титул як `profession` для всіх
 
-Замінити рядок 381:
+Рядок 410: Прибрати `profession` з props (буде оброблятися в PostCard):
 ```tsx
-username: postAuthor?.full_name?.split(' ')[0]?.toLowerCase() || 'user',
+author={{
+  id: post.user_id,
+  name: authorName,
+  username: getUsername(postAuthor),
+  avatarUrl: postAuthor?.avatar_url || postAuthor?.avatarUrl || '',
+  // Не передаємо profession/title тут - буде перевірятися в PostCard
+}}
 ```
 
 ---
 
 ### Файл 2: `src/components/feed/PostCard.tsx`
 
-#### 2.1 Додати inline коментарі та форму коментаря
-
-Після рядка 183 (перед закриттям `</div>`) додати секцію inline коментарів:
+#### 2.1 Додати перевірку чи поточний користувач є інвестором для показу титулів
 
 ```tsx
-{/* Inline форма коментаря */}
-<div className="mt-3 pt-3 border-t">
-  <div className="flex items-center gap-2">
-    <Avatar className="h-8 w-8">
-      <AvatarImage src={currentUser?.avatar_url} />
-      <AvatarFallback>
-        {currentUser?.full_name?.[0] || 'U'}
-      </AvatarFallback>
-    </Avatar>
-    <Input
-      placeholder="Написати коментар..."
-      className="flex-1 h-9 bg-muted/50 border-0"
-      value={commentText}
-      onChange={(e) => setCommentText(e.target.value)}
-      onKeyDown={handleCommentSubmit}
-    />
-  </div>
-</div>
+// Перевіряємо чи поточний користувач є інвестором (акціонером)
+const isCurrentUserInvestor = authUser?.isShareHolder || authUser?.is_shareholder;
 
-{/* Показати перші 2 коментарі inline */}
-{recentComments.length > 0 && (
-  <div className="mt-2 space-y-2">
-    {recentComments.slice(0, 2).map(comment => (
-      <div key={comment.id} className="flex items-start gap-2">
-        <Avatar className="h-6 w-6">
-          <AvatarImage src={comment.user?.avatar_url} />
-          <AvatarFallback>{comment.user?.full_name?.[0]}</AvatarFallback>
-        </Avatar>
-        <div className="bg-muted/50 rounded-2xl px-3 py-1.5">
-          <span className="font-semibold text-xs">{comment.user?.full_name}</span>
-          <p className="text-sm">{comment.content}</p>
-        </div>
-      </div>
-    ))}
-    {comments > 2 && (
-      <Link to={`/post/${id}`} className="text-sm text-muted-foreground">
-        Переглянути ще {comments - 2} коментарів
-      </Link>
-    )}
-  </div>
+// В рендері:
+{author.profession && isCurrentUserInvestor && (
+  <span className="profession-badge...">
+    {author.profession}
+  </span>
 )}
 ```
 
-#### 2.2 Додати стани та завантаження коментарів
+#### 2.2 Скрити URL у caption, показати тільки текст без посилання
 
+Створити функцію для видалення URL:
 ```tsx
-const [commentText, setCommentText] = useState("");
-const [recentComments, setRecentComments] = useState<any[]>([]);
-
-useEffect(() => {
-  loadRecentComments();
-}, [id]);
-
-const loadRecentComments = async () => {
-  const { data } = await supabase
-    .from('comments')
-    .select('*, user:users(id, full_name, avatar_url)')
-    .eq('post_id', id)
-    .order('created_at', { ascending: false })
-    .limit(3);
-  if (data) setRecentComments(data);
+const removeUrls = (text: string): string => {
+  return text.replace(/(https?:\/\/[^\s]+)/g, '').trim();
 };
 
-const handleCommentSubmit = async (e: React.KeyboardEvent) => {
-  if (e.key === 'Enter' && commentText.trim() && currentUser?.id) {
-    await supabase.from('comments').insert({
-      post_id: id,
-      user_id: currentUser.id,
-      content: commentText.trim()
-    });
-    setCommentText("");
-    loadRecentComments();
-  }
-};
+// У рендері caption:
+const cleanCaption = removeUrls(caption);
+<p className="text-sm">
+  <Link to={`/profile/${author.id}`} className="font-semibold">
+    {author.name}
+  </Link>{" "}
+  {cleanCaption || '(посилання)'}
+</p>
 ```
 
----
+#### 2.3 Додати пункт меню "Посилання" в PostMenu
 
-### Файл 3: `src/components/feed/PostCard.tsx` - Props та imports
-
-#### 3.1 Додати необхідні imports
-
+Передавати `caption` до PostMenu:
 ```tsx
-import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
-```
-
-#### 3.2 Оновити PostCardProps
-
-```tsx
-export interface PostCardProps {
-  // ... існуючі пропси
-  currentUser?: any; // Додати для передачі поточного користувача
-}
-```
-
----
-
-### Файл 4: `src/components/feed/NewsFeed.tsx` - Передати currentUser
-
-```tsx
-<PostCard 
-  key={post.id}
-  // ... існуючі пропси
-  currentUser={currentUser}  // Додати
+<PostMenu 
+  postId={id}
+  isAuthor={isAuthor}
+  onEdit={onEdit}
+  onDelete={onDelete}
+  caption={caption}  // Для отримання URL
 />
 ```
 
 ---
 
-### Візуальна схема змін UI
+### Файл 3: `src/components/profile/PostMenu.tsx`
 
-```text
-БУЛО:
-┌────────────────────────────────────────────────────────────────────────────┐
-│ ❤️ 2  💬 1  ↗️                                                  🔖        │
-│                                                                            │
-│ 2 вподобань                                                                │
-│ Користувач https://youtu.be/...                                            │
-│ Переглянути всі 1 коментарів  ← клік → перехід на /post/:id                │
-│ щойно                                                                      │
-└────────────────────────────────────────────────────────────────────────────┘
+#### 3.1 Додати пункт меню "Копіювати посилання на медіа"
 
-СТАНЕ (як Facebook):
-┌────────────────────────────────────────────────────────────────────────────┐
-│ ❤️ 2  💬 1  ↗️                                                  🔖        │
-│                                                                            │
-│ 2 вподобань                                                                │
-│ Galyna Bodnariuk https://youtu.be/...                                      │
-│ ──────────────────────────────────────────────────────────────────────────│
-│ 👤 Іван Беженар: Круто.молодець                                           │
-│                                                                            │
-│ Переглянути ще 5 коментарів                                                │
-│ ──────────────────────────────────────────────────────────────────────────│
-│ 👤 [Аватар] Написати коментар...                              [Коментувати]│
-│ щойно                                                                      │
-└────────────────────────────────────────────────────────────────────────────┘
+```tsx
+interface PostMenuProps {
+  postId: string;
+  isAuthor: boolean;
+  onEdit?: (postId: string) => void;
+  onDelete?: (postId: string) => void;
+  caption?: string;  // Для отримання URL з тексту
+}
+
+// Функція для витягування URL
+const extractUrl = (text?: string): string | null => {
+  if (!text) return null;
+  const match = text.match(/(https?:\/\/[^\s]+)/);
+  return match ? match[0] : null;
+};
+
+// Новий обробник:
+const handleCopyMediaLink = () => {
+  const url = extractUrl(caption);
+  if (url) {
+    navigator.clipboard.writeText(url);
+    toast.success("Посилання на медіа скопійовано");
+  }
+};
+
+// У меню додати новий пункт (тільки якщо є URL):
+{extractUrl(caption) && (
+  <DropdownMenuItem onClick={handleCopyMediaLink} className="flex items-center cursor-pointer">
+    <ExternalLink className="mr-2 h-4 w-4" />
+    Копіювати посилання на медіа
+  </DropdownMenuItem>
+)}
+```
+
+---
+
+### Файл 4: `src/components/feed/NewsFeed.tsx` - Виправити завантаження аватара currentUser
+
+#### 4.1 Переконатися що `currentUser` коректно завантажується
+
+Функція `loadCurrentUser` вже використовує `supabase.auth.getUser()` та запит до таблиці users - це правильно. Але потрібно переконатися, що `currentUser` передається до `PostCard` і використовується.
+
+У PostCard рядок 289-291:
+```tsx
+<Avatar className="h-8 w-8">
+  <AvatarImage src={authUser?.avatar_url || authUser?.avatarUrl || ''} />
+  <AvatarFallback>{authUser?.full_name?.[0] || authUser?.firstName?.[0] || 'U'}</AvatarFallback>
+</Avatar>
 ```
 
 ---
@@ -226,40 +202,47 @@ export interface PostCardProps {
 
 | Файл | Зміни |
 |------|-------|
-| `src/components/feed/NewsFeed.tsx` | Завантажувати currentUser через Supabase Auth, передавати до PostCard |
-| `src/components/feed/PostCard.tsx` | Додати inline коментарі, форму коментаря, виправити username |
-| `src/pages/Post.tsx` | Не потребує змін (залишається як детальний перегляд) |
-
----
-
-### Додаткові виправлення username
-
-Замість `phone_number` як username показувати:
-1. Перше слово з `full_name` (перетворене на lowercase)
-2. Або якщо `phone_number` виглядає як email - показувати частину до `@`
-
-```tsx
-const getUsername = (user: any) => {
-  if (!user) return 'user';
-  
-  // Якщо phone_number схоже на email, беремо частину до @
-  if (user.phone_number?.includes('@')) {
-    return user.phone_number.split('@')[0];
-  }
-  
-  // Інакше беремо перше слово з full_name
-  return user.full_name?.split(' ')[0]?.toLowerCase() || 'user';
-};
-```
+| `src/components/feed/NewsFeed.tsx` | `getUsername()` використовує тільки ім'я, не телефон; не передавати `profession` |
+| `src/components/feed/PostCard.tsx` | Скрити URL у caption; показувати титули тільки інвесторам; виправити fallback аватара |
+| `src/components/profile/PostMenu.tsx` | Додати пункт "Копіювати посилання на медіа" |
 
 ---
 
 ### Очікуваний результат
 
-1. **Імена авторів** завжди показуються коректно (full_name)
-2. **Username** показується як перше ім'я або частина email до @
-3. **Аватари** показуються правильно (з Supabase Auth)
-4. **Inline коментарі** - перші 2-3 коментарі видно одразу під постом
-5. **Форма коментаря** - можна швидко написати коментар без переходу на іншу сторінку
-6. **"Переглянути більше"** - відкриває повну сторінку поста тільки для детального перегляду
+1. **Ім'я автора** - завжди `full_name`, ніколи "Користувач" (окрім випадків коли `user_id` null)
+2. **Username** - перше ім'я (`@олександр`), НЕ телефон/email
+3. **Аватар** - коректний аватар з БД, перша літера імені як fallback
+4. **Титули** - видно тільки інвесторам/акціонерам
+5. **URL в caption** - скриті, доступні через меню "..." → "Копіювати посилання на медіа"
+
+---
+
+### Візуальна схема результату
+
+```text
+БУЛО:
+┌─────────────────────────────────────┐
+│ 👤 Користувач                       │
+│    @0507068007  Імператор           │
+│ ─────────────────────────────────── │
+│ Користувач https://youtu.be/xxx     │
+│                                     │
+│ 👤 U | Написати коментар...         │
+└─────────────────────────────────────┘
+
+СТАНЕ:
+┌─────────────────────────────────────┐
+│ 🖼️ Олександр Боднарюк               │
+│    @олександр                       │
+│ ─────────────────────────────────── │
+│ Олександр Боднарюк (посилання)      │
+│                                     │
+│ 🖼️ Написати коментар...             │
+│                                     │
+│ [Меню ...]                          │
+│ ├─ Копіювати посилання на медіа     │
+│ └─ Поділитися                       │
+└─────────────────────────────────────┘
+```
 
