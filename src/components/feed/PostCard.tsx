@@ -31,10 +31,10 @@ export interface PostCardProps {
   author: {
     id: string;
     name: string;
-    username: string;
+    username?: string; // Більше не використовується - прибрано з UI
     avatarUrl?: string;
     profession?: string;
-    isShareHolder?: boolean; // Чи автор є інвестором
+    isShareHolder?: boolean;
   };
   imageUrl?: string;
   caption: string;
@@ -160,15 +160,12 @@ export function PostCard({
           </Avatar>
           <div className="flex flex-col">
             <span className="text-sm font-semibold">{author.name}</span>
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">@{author.username}</span>
-              {/* Титули показуються тільки інвесторам */}
-              {author.profession && isCurrentUserInvestor && (
-                <span className={`profession-badge profession-badge-${author.profession.toLowerCase()} text-[10px]`}>
-                  {author.profession}
-                </span>
-              )}
-            </div>
+            {/* Титули показуються тільки інвесторам (без @username - як у Facebook) */}
+            {author.profession && isCurrentUserInvestor && (
+              <span className={`profession-badge profession-badge-${author.profession.toLowerCase()} text-[10px]`}>
+                {author.profession}
+              </span>
+            )}
           </div>
         </Link>
         <PostMenu 
