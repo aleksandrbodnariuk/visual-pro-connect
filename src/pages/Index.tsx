@@ -26,7 +26,7 @@ const Index = () => {
       <Navbar />
       <div className="container grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 3xl:gap-8 px-3 sm:px-4 md:px-6 py-4 md:py-6">
         {/* Sidebar - прихований на мобільних, видимий на планшеті+ */}
-        <div className="hidden md:block md:col-span-4 lg:col-span-3 self-start">
+        <div className="hidden md:block md:col-span-4 lg:col-span-3">
           <Sidebar />
         </div>
         

@@ -5,129 +5,115 @@ interface UseBidirectionalStickyOptions {
   bottomOffset?: number;
 }
 
+interface StickyState {
+  stickyDirection: 'top' | 'bottom';
+  offsetMargin: number;
+}
+
 /**
  * Hook для двонаправленого sticky як у Facebook.
- * Sidebar "прилипає" знизу при прокрутці вниз, зверху при прокрутці вгору.
+ * Використовує margin-top/margin-bottom для "заморожування" позиції sidebar.
  */
 export function useBidirectionalSticky(options: UseBidirectionalStickyOptions = {}) {
   const { topOffset = 80, bottomOffset = 20 } = options;
-  const sidebarRef = useRef<HTMLElement>(null);
-  const [stickyStyle, setStickyStyle] = useState<React.CSSProperties>({
-    position: 'sticky',
-    top: `${topOffset}px`,
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  const [state, setState] = useState<StickyState>({
+    stickyDirection: 'top',
+    offsetMargin: 0,
   });
   
-  // Зберігаємо стан прокрутки
-  const scrollState = useRef({
-    lastScrollY: 0,
-    scrollDirection: 'down' as 'up' | 'down',
-    isStuckTop: true,
-    isStuckBottom: false,
-    translateY: 0,
-  });
+  // Відстежуємо попередню позицію прокрутки
+  const lastScrollY = useRef(0);
+  const ticking = useRef(false);
 
   const handleScroll = useCallback(() => {
-    if (!sidebarRef.current) return;
-
     const sidebar = sidebarRef.current;
-    const sidebarRect = sidebar.getBoundingClientRect();
-    const sidebarHeight = sidebarRect.height;
-    const viewportHeight = window.innerHeight;
+    const container = containerRef.current;
+    
+    if (!sidebar || !container) return;
+    
     const currentScrollY = window.scrollY;
-    const state = scrollState.current;
+    const isScrollingDown = currentScrollY > lastScrollY.current;
+    const newDirection = isScrollingDown ? 'bottom' : 'top';
     
-    // Визначаємо напрямок прокрутки
-    const newDirection = currentScrollY > state.lastScrollY ? 'down' : 'up';
-    const directionChanged = state.scrollDirection !== newDirection;
-    
-    // Доступний простір для sidebar
-    const availableHeight = viewportHeight - topOffset - bottomOffset;
-    
-    // Якщо sidebar менший за viewport - просто sticky top
-    if (sidebarHeight <= availableHeight) {
-      setStickyStyle({
-        position: 'sticky',
-        top: `${topOffset}px`,
-      });
-      state.lastScrollY = currentScrollY;
-      state.scrollDirection = newDirection;
-      return;
-    }
-    
-    // Різниця висот
-    const heightDiff = sidebarHeight - availableHeight;
-    
-    if (newDirection === 'down') {
-      // Прокрутка ВНИЗ
-      if (directionChanged && state.isStuckTop) {
-        // Якщо змінили напрямок з UP на DOWN і були прикріплені зверху
-        // Фіксуємо поточну позицію через translateY
-        state.translateY = Math.max(0, Math.min(currentScrollY - topOffset, heightDiff));
-        state.isStuckTop = false;
-        state.isStuckBottom = false;
+    // Оновлюємо стан тільки при зміні напрямку
+    setState(prevState => {
+      if (prevState.stickyDirection === newDirection) {
+        return prevState;
       }
       
-      // Перевіряємо чи досягли низу sidebar
-      if (sidebarRect.bottom <= viewportHeight - bottomOffset) {
-        // Прилипаємо до низу viewport
-        setStickyStyle({
-          position: 'sticky',
-          top: `${topOffset - heightDiff}px`,
-        });
-        state.isStuckBottom = true;
-        state.isStuckTop = false;
-      } else if (!state.isStuckBottom) {
-        // Ще не досягли низу - sidebar рухається з контентом
-        setStickyStyle({
-          position: 'sticky',
-          top: `${topOffset}px`,
-        });
-      }
-    } else {
-      // Прокрутка ВГОРУ
-      if (directionChanged && state.isStuckBottom) {
-        // Якщо змінили напрямок з DOWN на UP і були прикріплені знизу
-        state.isStuckTop = false;
-        state.isStuckBottom = false;
+      // Розраховуємо пройдену відстань
+      const distanceWalked = sidebar.offsetTop;
+      const sidebarHeight = sidebar.clientHeight;
+      const containerHeight = container.clientHeight;
+      
+      let newOffset = 0;
+      
+      if (newDirection === 'bottom') {
+        // Перед sticky bottom - зберігаємо відстань від верху
+        newOffset = distanceWalked;
+      } else {
+        // Перед sticky top - зберігаємо відстань від низу
+        const totalWalkingSpace = containerHeight - sidebarHeight;
+        const spaceLeftToWalk = totalWalkingSpace - distanceWalked;
+        newOffset = Math.max(0, spaceLeftToWalk);
       }
       
-      // Перевіряємо чи досягли верху sidebar
-      if (sidebarRect.top >= topOffset) {
-        // Прилипаємо до верху viewport
-        setStickyStyle({
-          position: 'sticky',
-          top: `${topOffset}px`,
-        });
-        state.isStuckTop = true;
-        state.isStuckBottom = false;
-      } else if (!state.isStuckTop) {
-        // Ще не досягли верху - sidebar рухається з контентом
-        setStickyStyle({
-          position: 'sticky',
-          top: `${topOffset - heightDiff}px`,
-        });
-      }
-    }
+      return {
+        stickyDirection: newDirection,
+        offsetMargin: newOffset,
+      };
+    });
     
-    state.lastScrollY = currentScrollY;
-    state.scrollDirection = newDirection;
-  }, [topOffset, bottomOffset]);
+    lastScrollY.current = currentScrollY;
+  }, []);
 
-  useEffect(() => {
-    // Ініціалізація
-    scrollState.current.lastScrollY = window.scrollY;
-    
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleScroll, { passive: true });
-    
-    // Початковий виклик
-    handleScroll();
-    
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
-    };
+  const onScroll = useCallback(() => {
+    if (!ticking.current) {
+      requestAnimationFrame(() => {
+        handleScroll();
+        ticking.current = false;
+      });
+      ticking.current = true;
+    }
   }, [handleScroll]);
 
-  return { sidebarRef, stickyStyle };
+  useEffect(() => {
+    lastScrollY.current = window.scrollY;
+    
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [onScroll]);
+
+  // Генеруємо стилі для sidebar
+  const sidebarStyle: React.CSSProperties = {
+    position: 'sticky',
+    top: state.stickyDirection === 'top' ? `${topOffset}px` : 'auto',
+    bottom: state.stickyDirection === 'bottom' ? `${bottomOffset}px` : 'auto',
+    marginTop: state.stickyDirection === 'bottom' ? `${state.offsetMargin}px` : 0,
+    marginBottom: state.stickyDirection === 'top' ? `${state.offsetMargin}px` : 0,
+  };
+
+  // Генеруємо стилі для контейнера
+  const containerStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: state.stickyDirection === 'bottom' ? 'flex-end' : 'flex-start',
+    minHeight: '100%',
+  };
+
+  return { 
+    sidebarRef, 
+    containerRef,
+    sidebarStyle, 
+    containerStyle,
+    stickyDirection: state.stickyDirection,
+  };
 }
