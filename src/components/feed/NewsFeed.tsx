@@ -58,38 +58,47 @@ export function NewsFeed() {
     try {
       setLoading(true);
       
-      // Завантажуємо пости без JOIN (RLS блокує доступ до users)
-      const { data: supabasePosts, error } = await supabase
-        .from('posts')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Timeout 5 секунд для завантаження постів
+      const timeout = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 5000)
+      );
+      
+      const fetchPosts = async () => {
+        // Завантажуємо пости без JOIN (RLS блокує доступ до users)
+        const { data: supabasePosts, error } = await supabase
+          .from('posts')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      if (error && error.code !== 'PGRST116') {
-        console.error("Помилка завантаження постів з Supabase:", error);
-      }
+        if (error && error.code !== 'PGRST116') {
+          console.error("Помилка завантаження постів з Supabase:", error);
+        }
 
-      if (supabasePosts && supabasePosts.length > 0) {
-        // Отримуємо унікальні ID авторів
-        const authorIds = [...new Set(supabasePosts.map(p => p.user_id).filter(Boolean))] as string[];
-        
-        // Завантажуємо авторів через безпечну RPC функцію (SECURITY DEFINER)
-        const { data: authors } = await supabase.rpc('get_safe_public_profiles_by_ids', { 
-          _ids: authorIds 
-        });
-        
-        // Додаємо авторів до постів
-        const postsWithAuthors = supabasePosts.map(post => ({
-          ...post,
-          author: authors?.find((a: any) => a.id === post.user_id) || null
-        }));
-        
-        setPosts(postsWithAuthors);
-      } else {
-        setPosts([]);
-      }
+        if (supabasePosts && supabasePosts.length > 0) {
+          // Отримуємо унікальні ID авторів
+          const authorIds = [...new Set(supabasePosts.map(p => p.user_id).filter(Boolean))] as string[];
+          
+          // Завантажуємо авторів через безпечну RPC функцію (SECURITY DEFINER)
+          const { data: authors } = await supabase.rpc('get_safe_public_profiles_by_ids', { 
+            _ids: authorIds 
+          });
+          
+          // Додаємо авторів до постів
+          const postsWithAuthors = supabasePosts.map(post => ({
+            ...post,
+            author: authors?.find((a: any) => a.id === post.user_id) || null
+          }));
+          
+          return postsWithAuthors;
+        }
+        return [];
+      };
+
+      const result = await Promise.race([fetchPosts(), timeout]);
+      setPosts(result);
     } catch (error) {
       console.error("Помилка завантаження постів:", error);
-      setPosts([]);
+      setPosts([]); // Fallback до порожнього списку
     } finally {
       setLoading(false);
     }

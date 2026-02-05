@@ -90,14 +90,24 @@ export default function Search() {
       try {
         setIsLoading(true);
         
-        // Use secure RPC function that only returns safe public data
-        const { data, error } = await supabase
-          .rpc('get_safe_public_profiles');
+        // Timeout 5 секунд
+        const timeout = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 5000)
+        );
         
-        if (error) throw error;
+        const fetchData = async () => {
+          // Use secure RPC function that only returns safe public data
+          const { data, error } = await supabase
+            .rpc('get_safe_public_profiles');
+          
+          if (error) throw error;
+          return data;
+        };
+        
+        const data = await Promise.race([fetchData(), timeout]);
         
         // Форматуємо дані (тепер RPC повертає categories, city, country)
-        const formattedData = data.map((user: any) => ({
+        const formattedData = (data || []).map((user: any) => ({
           id: user.id,
           full_name: user.full_name || "Користувач без імені",
           username: `user_${user.id.substring(0, 8)}`,
@@ -114,7 +124,8 @@ export default function Search() {
         setProfessionals(formattedData);
       } catch (error) {
         console.error("Помилка при завантаженні користувачів:", error);
-        toast.error("Не вдалося завантажити дані");
+        // Fallback - показуємо порожній список замість нескінченного спінера
+        setProfessionals([]);
       } finally {
         setIsLoading(false);
       }
