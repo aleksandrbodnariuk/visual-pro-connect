@@ -96,9 +96,15 @@
     @apply border-border;
   }
 
+  html {
+    /* Єдина прокрутка для документа */
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+    overflow-x: hidden;
   }
 
   /* Додаємо Google шрифти */
@@ -188,5 +194,30 @@
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Утиліта для sticky sidebar - Facebook-стиль */
+  .sticky-sidebar {
+    position: sticky;
+    top: 4rem; /* Висота navbar (h-16) */
+    max-height: calc(100vh - 5rem);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  /* Для планшетів */
+  @media (min-width: 768px) {
+    .sticky-sidebar {
+      top: 5rem; /* Висота navbar md (h-20) */
+      max-height: calc(100vh - 6rem);
+    }
+  }
+
+  /* Для TV - більші відступи */
+  @media (min-width: 1920px) {
+    .sticky-sidebar {
+      top: 6rem;
+      max-height: calc(100vh - 7rem);
+    }
   }
 }

@@ -56,7 +56,11 @@ export function Sidebar({ className }: SidebarProps) {
   };
 
   return (
-    <aside className={cn("rounded-lg border bg-card overflow-hidden", className)}>
+    <aside className={cn(
+      "rounded-lg border bg-card",
+      "sticky-sidebar scrollbar-hide",
+      className
+    )}>
       <div className="p-3 md:p-4 3xl:p-5 space-y-3 md:space-y-4">
         <h2 className="text-base md:text-lg 3xl:text-xl font-semibold mb-3 md:mb-4">{t.menu}</h2>
         <nav className="space-y-2">
