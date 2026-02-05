@@ -1,265 +1,261 @@
 
 
-## План: Виправлення подвійної прокрутки - одна прокрутка як у Facebook
+## План: Двонаправлена "липка" бокова панель як у Facebook
 
 ---
 
 ### Аналіз проблеми
 
-На скріншотах чітко видно проблему:
+На скріншотах видно:
 
 **У вас зараз:**
-- Два скролбари: один для всієї сторінки (праворуч), інший для бічної панелі (sidebar)
-- Сторінка "стрибає" вгору при взаємодії
+- Sidebar прокручується повністю разом зі сторінкою
+- Коли прокручуємо вниз - sidebar зникає за верхню межу
+- Коли прокручуємо вгору - sidebar зникає за нижню межу
 
 **У Facebook:**
-- Один глобальний скролбар для всього контенту
-- Sidebar та права панель "прилипають" до верху екрану (sticky)
-- При прокрутці рухається тільки центральна стрічка новин
+- Sidebar прокручується тільки до своїх меж
+- При прокрутці вниз - sidebar "прилипає" до нижньої межі viewport
+- При прокрутці вгору - sidebar "прилипає" до верхньої межі viewport
+- Sidebar ніколи повністю не зникає з екрану
 
 ---
 
-### Як це працює у Facebook
-
-Facebook використовує техніку "Sticky Sidebars with Single Page Scroll":
+### Як працює Facebook Bidirectional Sticky
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  NAVBAR (sticky top-0)                                                      │
-├───────────────┬───────────────────────────────────┬─────────────────────────┤
-│               │                                   │                         │
-│  LEFT SIDEBAR │      MAIN FEED (scrollable)       │    RIGHT SIDEBAR        │
-│  (sticky)     │                                   │    (sticky)             │
-│  position:    │   ┌───────────────────────────┐   │    position:            │
-│  sticky       │   │ Post 1                    │   │    sticky               │
-│  top: 64px    │   └───────────────────────────┘   │    top: 64px            │
-│  height:      │   ┌───────────────────────────┐   │    max-height:          │
-│  fit-content  │   │ Post 2                    │   │    calc(100vh - 64px)   │
-│               │   └───────────────────────────┘   │                         │
-│               │   ┌───────────────────────────┐   │                         │
-│               │   │ Post 3                    │   │                         │
-│               │   └───────────────────────────┘   │                         │
-│               │                ↓ (scroll)         │                         │
-└───────────────┴───────────────────────────────────┴─────────────────────────┘
-                           ↕ ОДИН СКРОЛБАР
-```
+КРОК 1: Початок - sidebar вгорі
+┌────────────────────────────────────────────────────────────────────┐
+│ NAVBAR                                                              │
+├──────────────────┬─────────────────────────────────────────────────┤
+│ [Sidebar TOP]    │  Feed                                            │
+│   Меню           │   Post 1                                         │
+│   Категорії      │   Post 2                                         │
+│ [Sidebar BOTTOM] │   Post 3                                         │
+│                  │                                                  │
+└──────────────────┴─────────────────────────────────────────────────┘
 
-**Ключові принципи:**
-1. `html, body` - природна прокрутка документа (без overflow: hidden)
-2. Sidebar - `position: sticky`, `top: navbar_height`, без власного скролу
-3. Якщо sidebar занадто довгий - обмежити `max-height` та додати `overflow-y: auto` тільки для нього
+КРОК 2: Прокрутка ВНИЗ - sidebar прилипає ЗНИЗУ
+┌────────────────────────────────────────────────────────────────────┐
+│ NAVBAR                                                              │
+├──────────────────┬─────────────────────────────────────────────────┤
+│                  │   Post 4                                         │
+│   Меню           │   Post 5                                         │
+│   Категорії      │   Post 6                                         │
+│ [Sidebar BOTTOM] │   Post 7    ← Sidebar "прилип" знизу             │
+│ ─────────────────│──────────────────────────────────────────────── │
+└──────────────────┴─────────────────────────────────────────────────┘
+
+КРОК 3: Прокрутка ВГОРУ - sidebar прилипає ЗВЕРХУ
+┌────────────────────────────────────────────────────────────────────┐
+│ NAVBAR                                                              │
+├──────────────────┬─────────────────────────────────────────────────┤
+│ [Sidebar TOP] ←──│   Post 3     ← Sidebar "прилип" зверху           │
+│   Меню           │   Post 4                                         │
+│   Категорії      │   Post 5                                         │
+│ [Sidebar BOTTOM] │   Post 6                                         │
+│                  │                                                  │
+└──────────────────┴─────────────────────────────────────────────────┘
+```
 
 ---
 
-### Виявлені проблеми в коді
+### Технічне рішення
 
-#### 1. Конфлікт стилів `#root` в App.css
+Facebook використовує JavaScript для відстеження напрямку прокрутки та динамічної зміни CSS властивостей `top` та `bottom`.
 
-```css
-/* App.css - залишок від Vite template */
-#root {
-  max-width: 1280px;  /* ПРОБЛЕМА: Обмежує ширину */
-  margin: 0 auto;
-  padding: 2rem;      /* ПРОБЛЕМА: Зайвий padding */
-  text-align: center;
+---
+
+### Файл 1: Створити хук `src/hooks/useBidirectionalSticky.ts`
+
+Цей хук буде відстежувати напрямок прокрутки та розраховувати позицію sidebar:
+
+```tsx
+import { useEffect, useRef, useState } from 'react';
+
+interface UseBidirectionalStickyOptions {
+  topOffset?: number;  // Відступ від верху (висота navbar)
+  bottomOffset?: number;  // Відступ від низу
+}
+
+interface StickyState {
+  position: 'relative' | 'fixed' | 'absolute';
+  top?: string;
+  bottom?: string;
+  translateY?: string;
+}
+
+export function useBidirectionalSticky(options: UseBidirectionalStickyOptions = {}) {
+  const { topOffset = 80, bottomOffset = 20 } = options;
+  const sidebarRef = useRef<HTMLElement>(null);
+  const [stickyStyle, setStickyStyle] = useState<React.CSSProperties>({});
+  
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+    let scrollDirection: 'up' | 'down' = 'down';
+    let sidebarTop = 0;
+    
+    const handleScroll = () => {
+      if (!sidebarRef.current) return;
+      
+      const sidebar = sidebarRef.current;
+      const sidebarRect = sidebar.getBoundingClientRect();
+      const sidebarHeight = sidebarRect.height;
+      const viewportHeight = window.innerHeight;
+      const currentScrollY = window.scrollY;
+      
+      // Визначаємо напрямок прокрутки
+      const newDirection = currentScrollY > lastScrollY ? 'down' : 'up';
+      const directionChanged = scrollDirection !== newDirection;
+      scrollDirection = newDirection;
+      
+      // Якщо sidebar менший за viewport - просто sticky top
+      if (sidebarHeight <= viewportHeight - topOffset) {
+        setStickyStyle({
+          position: 'sticky',
+          top: `${topOffset}px`,
+        });
+        lastScrollY = currentScrollY;
+        return;
+      }
+      
+      // Логіка для sidebar більшого за viewport
+      if (scrollDirection === 'down') {
+        // Прокрутка вниз - фіксуємо sidebar знизу
+        if (sidebarRect.bottom <= viewportHeight - bottomOffset) {
+          setStickyStyle({
+            position: 'sticky',
+            bottom: `${bottomOffset}px`,
+            top: 'auto',
+          });
+        }
+      } else {
+        // Прокрутка вгору - фіксуємо sidebar зверху
+        if (sidebarRect.top >= topOffset) {
+          setStickyStyle({
+            position: 'sticky',
+            top: `${topOffset}px`,
+            bottom: 'auto',
+          });
+        }
+      }
+      
+      lastScrollY = currentScrollY;
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Початкова ініціалізація
+    
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [topOffset, bottomOffset]);
+  
+  return { sidebarRef, stickyStyle };
 }
 ```
 
-#### 2. Стилі в index.html
-
-```html
-<style>
-  #root {
-    height: 100%;           /* Може викликати проблеми */
-    display: flex;
-    flex-direction: column;
-  }
-</style>
-```
-
-#### 3. Sidebar має overflow при занадто великій висоті
-
-Sidebar не обмежений по висоті, що створює другу прокрутку.
-
 ---
 
-### Рішення
+### Файл 2: Оновити `src/components/layout/Sidebar.tsx`
 
----
+Інтегрувати хук у компонент:
 
-### Файл 1: `src/App.css` - Видалити конфліктні стилі
+```tsx
+import { useBidirectionalSticky } from '@/hooks/useBidirectionalSticky';
 
-**Повністю переписати файл:**
-
-```css
-/* Видаляємо все старе - залишаємо тільки необхідне */
-#root {
-  /* Тепер контейнер займає 100% ширини */
-  width: 100%;
-  max-width: none;
-  padding: 0;
-  margin: 0;
-  text-align: left;
+export function Sidebar({ className }: SidebarProps) {
+  const { sidebarRef, stickyStyle } = useBidirectionalSticky({
+    topOffset: 80,  // Висота navbar
+    bottomOffset: 20
+  });
+  
+  // ... решта коду
+  
+  return (
+    <aside 
+      ref={sidebarRef as React.RefObject<HTMLElement>}
+      style={stickyStyle}
+      className={cn(
+        "rounded-lg border bg-card scrollbar-hide",
+        className
+      )}
+    >
+      {/* ... */}
+    </aside>
+  );
 }
 ```
 
 ---
 
-### Файл 2: `index.html` - Виправити стилі для єдиної прокрутки
+### Файл 3: Оновити `src/index.css`
 
-Змінити `<style>` блок:
+Спростити `.sticky-sidebar` оскільки логіка тепер в JavaScript:
 
-```html
-<style>
-  html {
-    /* Один скролбар для всього документа */
-    overflow-y: scroll;
-    overflow-x: hidden;
-    scroll-behavior: smooth;
-    -webkit-text-size-adjust: 100%;
-    -webkit-tap-highlight-color: transparent;
-  }
-  
-  body {
-    min-height: 100vh;
-    overflow-x: hidden;
-    /* НЕ встановлюємо overflow-y: hidden */
-  }
-  
-  #root {
-    min-height: 100vh;
-  }
-  
-  /* ... інші стилі залишаються */
-</style>
+```css
+/* Оновлена утиліта - тільки базові стилі */
+.sticky-sidebar {
+  max-height: none; /* Прибираємо обмеження - контролюється JS */
+  overflow-y: visible; /* Прибираємо внутрішній скрол */
+}
 ```
 
 ---
 
-### Файл 3: `src/components/layout/Sidebar.tsx` - Sticky з обмеженою висотою
+### Файл 4: Оновити `src/pages/Index.tsx`
 
-Sidebar повинен:
-- Бути `sticky` з `top` рівним висоті navbar
-- Мати `max-height` щоб не виходити за межі viewport
-- Власний скрол тільки якщо контент перевищує viewport
-
-**Обгортка для aside:**
+Переконатися що sidebar обгорнутий у правильний контейнер:
 
 ```tsx
-<aside className={cn(
-  "rounded-lg border bg-card sticky top-16 md:top-20",
-  "max-h-[calc(100vh-5rem)] overflow-y-auto",  // Власний скрол тільки при потребі
-  "scrollbar-hide",  // Приховати скролбар для чистішого вигляду
-  className
-)}>
-```
-
----
-
-### Файл 4: `src/pages/Index.tsx` - Оптимізація layout
-
-Переконатися що layout не створює зайвих прокруток:
-
-```tsx
-return (
-  <div className="min-h-screen bg-background pb-20 md:pb-0">
-    <Navbar />
-    {/* Прибираємо будь-які overflow або height обмеження з container */}
-    <div className="container grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 3xl:gap-8 px-3 sm:px-4 md:px-6 py-4 md:py-6">
-      <Sidebar className="hidden md:block md:col-span-4 lg:col-span-3" />
-      {/* Main content - природна висота */}
-      <main className="col-span-1 md:col-span-8 lg:col-span-9">
-        {/* ... */}
-      </main>
-    </div>
+<div className="container grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 3xl:gap-8 px-3 sm:px-4 md:px-6 py-4 md:py-6">
+  {/* Sidebar обгортка з self-start для правильного позиціонування */}
+  <div className="hidden md:block md:col-span-4 lg:col-span-3 self-start">
+    <Sidebar />
   </div>
-);
+  
+  {/* Основний контент */}
+  <main className="col-span-1 md:col-span-8 lg:col-span-9">
+    {/* ... */}
+  </main>
+</div>
 ```
 
 ---
 
-### Файл 5: `src/index.css` - Глобальні стилі прокрутки
+### Файл 5: Оновити `src/pages/Profile.tsx`
 
-Додати стилі для плавної прокрутки та підтримки TV:
+Аналогічно оновити sidebar обгортку:
+
+```tsx
+<div className="hidden md:block md:col-span-4 lg:col-span-3 self-start">
+  <Sidebar />
+</div>
+```
+
+---
+
+### Альтернативний підхід (чистий CSS з CSS custom properties)
+
+Якщо хочемо уникнути складного JavaScript, можна використати простіший підхід який працює для більшості випадків:
 
 ```css
-@layer base {
-  html {
-    /* Єдина прокрутка для документа */
-    scroll-behavior: smooth;
-  }
-  
-  body {
-    /* Дозволяємо природну прокрутку */
-    overflow-x: hidden;
-  }
+.sticky-sidebar {
+  position: sticky;
+  /* Фіксований top для простого sticky */
+  top: 5rem;
+  /* Обмежуємо висоту щоб sidebar не виходив за viewport */
+  max-height: calc(100vh - 6rem);
+  /* Внутрішній скрол тільки для sidebar */
+  overflow-y: auto;
+  /* Приховуємо скролбар */
+  scrollbar-width: none;
 }
 
-@layer utilities {
-  /* Утиліта для sticky sidebar */
-  .sticky-sidebar {
-    position: sticky;
-    top: 5rem; /* Висота navbar */
-    max-height: calc(100vh - 6rem);
-    overflow-y: auto;
-    scrollbar-width: thin;
-  }
-  
-  /* Для TV - більші відступи */
-  @media (min-width: 1920px) {
-    .sticky-sidebar {
-      top: 6rem;
-      max-height: calc(100vh - 7rem);
-    }
-  }
+.sticky-sidebar::-webkit-scrollbar {
+  display: none;
 }
 ```
 
----
-
-### Візуальне порівняння
-
-```text
-ЗАРАЗ (дві прокрутки):
-┌───────────────────────────────────────────────────────────────────────┐▲
-│ Navbar                                                                │░
-├─────────────────┬────────────────────────────────────┬────────────────┤░
-│ ┌─────────────┐▲│                                    │                │░
-│ │ Sidebar     │░│  Feed                              │                │░
-│ │             │░│  ┌──────────────────────────────┐  │                │░
-│ │ Menu        │░│  │ Post                         │  │                │░ ← ДВА СКРОЛА!
-│ │ Categories  │░│  └──────────────────────────────┘  │                │░
-│ └─────────────┘▼│                                    │                │░
-└─────────────────┴────────────────────────────────────┴────────────────┘▼
-
-ПІСЛЯ (як Facebook):
-┌───────────────────────────────────────────────────────────────────────┐
-│ Navbar (sticky top-0)                                                 │
-├─────────────────┬────────────────────────────────────┬────────────────┤
-│ Sidebar         │                                    │ Right Panel    │
-│ (sticky)        │  Feed                              │ (sticky)       │
-│                 │  ┌──────────────────────────────┐  │                │
-│ Menu            │  │ Post 1                       │  │                │
-│ Categories      │  └──────────────────────────────┘  │                │
-│                 │  ┌──────────────────────────────┐  │                │
-│                 │  │ Post 2                       │  │                │▲
-│                 │  └──────────────────────────────┘  │                │░
-│                 │                 ↓                  │                │░ ← ОДИН СКРОЛ
-│                 │  ┌──────────────────────────────┐  │                │░
-│                 │  │ Post 3                       │  │                │▼
-└─────────────────┴────────────────────────────────────┴────────────────┘
-```
-
----
-
-### Адаптивність для різних пристроїв
-
-| Пристрій | Sidebar | Поведінка |
-|----------|---------|-----------|
-| **Смартфон** (xs-sm) | Прихований (hidden) | Тільки контент прокручується |
-| **Планшет** (md) | Sticky, 4 колонки | Sticky sidebar, один скрол |
-| **Ноутбук** (lg-xl) | Sticky, 3 колонки | Sticky sidebar, один скрол |
-| **TV** (3xl-4xl) | Sticky, більші відступи | Sticky sidebar, один скрол, більші елементи |
+Цей підхід простіший, але sidebar буде мати власний внутрішній скрол замість двонаправленого sticky.
 
 ---
 
@@ -267,18 +263,19 @@ return (
 
 | Файл | Зміни |
 |------|-------|
-| `src/App.css` | Видалити старі конфліктні стилі Vite |
-| `index.html` | Виправити стилі `html, body, #root` для єдиної прокрутки |
-| `src/index.css` | Додати утиліту `.sticky-sidebar` та глобальні стилі прокрутки |
-| `src/components/layout/Sidebar.tsx` | Додати `max-height` та `overflow-y: auto` з `scrollbar-hide` |
-| `src/pages/Index.tsx` | Оновити класи sidebar для коректного sticky поведінки |
+| `src/hooks/useBidirectionalSticky.ts` | **Новий файл** - хук для відстеження прокрутки та розрахунку позиції |
+| `src/components/layout/Sidebar.tsx` | Інтегрувати хук, прибрати клас `sticky-sidebar` |
+| `src/index.css` | Спростити/видалити `.sticky-sidebar` |
+| `src/pages/Index.tsx` | Додати `self-start` до обгортки sidebar |
+| `src/pages/Profile.tsx` | Додати `self-start` до обгортки sidebar |
 
 ---
 
 ### Очікуваний результат
 
-1. **Один скролбар** - як у Facebook, тільки справа на всю сторінку
-2. **Sidebar завжди видимий** - прилипає до верху при прокрутці
-3. **Стабільна сторінка** - не "стрибає" вгору
-4. **Працює на всіх пристроях** - смартфони, планшети, ноутбуки, TV
+1. **Sidebar завжди видимий** - не зникає повністю за межі екрану
+2. **Двонаправлена прокрутка** - при прокрутці вниз sidebar "прилипає" знизу, при прокрутці вгору - зверху
+3. **Як у Facebook** - поведінка ідентична до бокової панелі Facebook
+4. **Адаптивність** - працює на всіх розмірах екранів
+5. **Плавна анімація** - без "стрибків" при зміні напрямку прокрутки
 
