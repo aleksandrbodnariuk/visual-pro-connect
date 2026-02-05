@@ -3,15 +3,23 @@ import { NewsFeed } from "@/components/feed/NewsFeed";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Hero } from "@/components/home/Hero";
-import { useAuthState } from "@/hooks/auth/useAuthState";
+import { useAuth } from "@/context/AuthContext";
 import { CreatePublicationButton } from "@/components/publications/CreatePublicationButton";
 
 const Index = () => {
-  const { getCurrentUser } = useAuthState();
-  const currentUser = getCurrentUser();
+  const { isAuthenticated, loading } = useAuth();
+  
+  // Показуємо loader поки визначається стан
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
   
   // Якщо користувач не авторизований, показуємо Hero секцію
-  if (!currentUser) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-muted/30 pt-14 sm:pt-16 3xl:pt-20">
         <Navbar />

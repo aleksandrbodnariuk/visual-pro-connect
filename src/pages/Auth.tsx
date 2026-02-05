@@ -3,9 +3,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
-import { useSupabaseAuth } from '@/hooks/auth/useSupabaseAuth';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from "@/components/ui/button";
-
 import { AuthStepManager, AuthStep } from '@/components/auth/AuthStepManager';
 
 export default function Auth() {
@@ -15,13 +14,23 @@ export default function Auth() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [authStep, setAuthStep] = useState<AuthStep>(AuthStep.LOGIN_REGISTER);
-  const { isAuthenticated } = useSupabaseAuth();
+  const { isAuthenticated, loading } = useAuth();
   
   useEffect(() => {
-    if (isAuthenticated()) {
-      navigate("/");
+    // Чекаємо завантаження перед редиректом
+    if (!loading && isAuthenticated) {
+      navigate("/", { replace: true });
     }
-  }, [navigate, isAuthenticated]);
+  }, [loading, isAuthenticated, navigate]);
+  
+  // Показуємо loader поки визначається стан
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen flex flex-col">
