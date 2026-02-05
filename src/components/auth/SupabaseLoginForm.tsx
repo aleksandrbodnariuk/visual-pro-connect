@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useSupabaseAuth } from '@/hooks/auth/useSupabaseAuth';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface SupabaseLoginFormProps {
   onSwitchToRegister: () => void;
@@ -21,6 +22,7 @@ export default function SupabaseLoginForm({ onSwitchToRegister, onForgotPassword
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -64,12 +66,23 @@ export default function SupabaseLoginForm({ onSwitchToRegister, onForgotPassword
         onChange={(e) => setEmail(e.target.value)}
       />
       
-      <Input
-        type="password"
-        placeholder={t.password}
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+      <div className="relative">
+        <Input
+          type={showPassword ? "text" : "password"}
+          placeholder={t.password}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="pr-10"
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+          tabIndex={-1}
+        >
+          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
       
       <Button className="w-full" onClick={handleLogin} disabled={loading}>
         {loading ? t.loading : t.login}
