@@ -12,6 +12,15 @@ import { UserActions } from "@/components/admin/users/UserActions";
 import { Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+// Перевіряє чи це номер телефону, а не email
+const isValidPhoneNumber = (value: string | null | undefined): boolean => {
+  if (!value) return false;
+  // Якщо містить @ - це email, не телефон
+  if (value.includes('@')) return false;
+  // Перевіряємо що містить тільки цифри та можливо + або пробіли
+  return /^[\d\s\+\-\(\)]+$/.test(value);
+};
+
 export function UsersTab() {
   const [users, setUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -392,7 +401,7 @@ export function UsersTab() {
                 {user.email || 'Не вказано'}
               </div>
               <div>{user.full_name || 'Не вказано'}</div>
-              <div>{user.phone_number || 'Не вказано'}</div>
+              <div>{isValidPhoneNumber(user.phone_number) ? user.phone_number : 'Не вказано'}</div>
               <UserRole user={user} onRoleChange={changeUserRole} />
               <UserTitle user={user} onTitleChange={changeUserTitle} />
               <ShareholderToggle user={user} onToggleShareholder={toggleShareholderStatus} />
