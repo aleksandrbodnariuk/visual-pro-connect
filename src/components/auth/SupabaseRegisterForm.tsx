@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useSupabaseAuth } from '@/hooks/auth/useSupabaseAuth';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface SupabaseRegisterFormProps {
   onSwitchToLogin: () => void;
@@ -24,6 +25,8 @@ export default function SupabaseRegisterForm({ onSwitchToLogin }: SupabaseRegist
   const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleRegister = async () => {
     if (!email || !password || !firstName || !lastName) {
@@ -125,19 +128,41 @@ export default function SupabaseRegisterForm({ onSwitchToLogin }: SupabaseRegist
         onChange={(e) => setEmail(e.target.value)}
       />
       
-      <Input
-        type="password"
-        placeholder={t.password}
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+      <div className="relative">
+        <Input
+          type={showPassword ? "text" : "password"}
+          placeholder={t.password}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="pr-10"
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+          tabIndex={-1}
+        >
+          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
       
-      <Input
-        type="password"
-        placeholder={t.confirmPassword}
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-      />
+      <div className="relative">
+        <Input
+          type={showConfirmPassword ? "text" : "password"}
+          placeholder={t.confirmPassword}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className="pr-10"
+        />
+        <button
+          type="button"
+          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+          tabIndex={-1}
+        >
+          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
       
       <Button className="w-full" onClick={handleRegister} disabled={loading}>
         {loading ? t.loading : t.register}
