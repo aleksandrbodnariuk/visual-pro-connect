@@ -1,110 +1,98 @@
 
 
-## План: Виправлення зависання сайту
+## План: Виправлення проблем із завантаженням сайту
 
 ---
 
-### Діагностика
+### Діагностика проблеми
 
-На скриншотах видно:
-1. Сторінка друзів застряла на "Завантаження списку друзів..."
-2. Головна сторінка показує skeleton loaders замість контенту
-3. Preview застряг на завантаженні
+Консольні логи показують масові "Timeout" помилки:
 
-**Кореневі причини:**
+```
+Помилка завантаження постів: Timeout
+Помилка або timeout завантаження налаштувань: Timeout
+```
 
-| Проблема | Файл | Опис |
-|----------|------|------|
-| RPC зависає | `Search.tsx`, `NewsFeed.tsx` | `get_safe_public_profiles` виконується надто довго |
-| Застарілий localStorage | `useDataSync.ts` | Шукає `currentUser` в localStorage замість Supabase Auth |
-| Немає timeout у запитах | `NewsFeed.tsx`, `FriendsList.tsx` | Запити можуть зависати нескінченно |
-| Каскад проблем | Усі компоненти | Один повільний запит блокує весь UI |
+**Проблема:** Timeout 5 секунд замалий для Supabase запитів, особливо при холодному старті.
+
+---
+
+### Кореневі причини
+
+| Проблема | Опис | Файли |
+|----------|------|-------|
+| Занадто короткий timeout | 5 сек недостатньо для Supabase | `NewsFeed.tsx`, `NavbarLogo.tsx`, `Search.tsx`, `FriendsList.tsx` |
+| Застаріле використання localStorage | Сторінки використовують `localStorage.getItem("currentUser")` | `Notifications.tsx`, `Profile.tsx` |
+| Неправильна поведінка при timeout | При помилці показується порожній стан без retry | Усі компоненти |
 
 ---
 
 ### Рішення
 
-#### 1. Оновити useDataSync.ts - видалити застарілий localStorage
+#### 1. Збільшити timeout до 15 секунд
 
-Використовувати `supabase.auth.getUser()` замість `localStorage.getItem('currentUser')`:
+Змінити timeout з 5000ms на 15000ms у всіх файлах:
+
+- `src/components/feed/NewsFeed.tsx` - рядок 63
+- `src/components/layout/NavbarLogo.tsx` - рядок 19
+- `src/pages/Search.tsx`
+- `src/components/profile/FriendsList.tsx`
 
 ```tsx
-const syncDataOnStartup = useCallback(async () => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user?.id) {
-      return; // Немає авторизованого користувача
-    }
-    // ... решта коду
-  }
-}, []);
+// Було:
+setTimeout(() => reject(new Error('Timeout')), 5000)
+
+// Стало:
+setTimeout(() => reject(new Error('Timeout')), 15000)
 ```
 
 ---
 
-#### 2. Додати timeout для критичних запитів
+#### 2. Виправити Notifications.tsx - використовувати Supabase Auth
 
-Обгорнути довгі запити в `Promise.race` з timeout:
-
+Замінити:
 ```tsx
-const fetchWithTimeout = async (promise: Promise<any>, ms: number = 5000) => {
-  const timeout = new Promise((_, reject) => 
-    setTimeout(() => reject(new Error('Timeout')), ms)
-  );
-  return Promise.race([promise, timeout]);
-};
+const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+```
+
+На:
+```tsx
+const { data: { user } } = await supabase.auth.getUser();
+if (!user?.id) {
+  throw new Error("User not authenticated");
+}
 ```
 
 ---
 
-#### 3. Оптимізувати NewsFeed.tsx
+#### 3. Виправити Profile.tsx - видалити залежність від localStorage
 
-- Показувати контент одразу (без skeleton якщо є кешовані дані)
-- Додати timeout 5 секунд для завантаження постів
-- Fallback до порожнього масиву при помилці
+Рядки 81-85 використовують localStorage як fallback:
+```tsx
+const localUser = localStorage.getItem('currentUser') 
+  ? JSON.parse(localStorage.getItem('currentUser') || '{}') 
+  : null;
+```
+
+Це потрібно видалити і покладатись тільки на `supabase.auth.getUser()`.
+
+---
+
+#### 4. Додати retry логіку для критичних запитів
+
+При timeout спробувати ще раз через 2 секунди:
 
 ```tsx
-const loadPosts = async () => {
+const loadPostsWithRetry = async (retryCount = 0) => {
   try {
-    setLoading(true);
-    
-    const postsPromise = supabase
-      .from('posts')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    // Timeout 5 секунд
-    const { data, error } = await Promise.race([
-      postsPromise,
-      new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 5000)
-      )
-    ]);
-    
-    // ... обробка даних
+    await loadPosts();
   } catch (error) {
-    console.error("Error:", error);
-    setPosts([]); // Показати порожній список
-  } finally {
-    setLoading(false);
+    if (retryCount < 2) {
+      setTimeout(() => loadPostsWithRetry(retryCount + 1), 2000);
+    }
   }
 };
 ```
-
----
-
-#### 4. Оптимізувати Search.tsx
-
-- Додати timeout для RPC `get_safe_public_profiles`
-- Показувати "Не вдалося завантажити" замість нескінченного спінера
-
----
-
-#### 5. Оптимізувати FriendsList.tsx
-
-- Не блокувати UI якщо користувач не авторизований
-- Додати timeout для запитів друзів
 
 ---
 
@@ -112,36 +100,19 @@ const loadPosts = async () => {
 
 | Файл | Зміна |
 |------|-------|
-| `src/hooks/useDataSync.ts` | Замінити localStorage на supabase.auth.getUser() |
-| `src/components/feed/NewsFeed.tsx` | Додати timeout 5 сек для завантаження постів |
-| `src/pages/Search.tsx` | Додати timeout для RPC запиту |
-| `src/hooks/friends/useFetchFriends.ts` | Додати timeout для запитів друзів |
-
----
-
-### Технічні деталі
-
-Створити допоміжну функцію `fetchWithTimeout`:
-
-```tsx
-// src/lib/utils.ts або окремий файл
-export async function fetchWithTimeout<T>(
-  promise: Promise<T>, 
-  timeoutMs: number = 5000
-): Promise<T> {
-  const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
-  );
-  return Promise.race([promise, timeout]);
-}
-```
+| `src/components/feed/NewsFeed.tsx` | Збільшити timeout до 15 сек |
+| `src/components/layout/NavbarLogo.tsx` | Збільшити timeout до 15 сек |
+| `src/pages/Search.tsx` | Збільшити timeout до 15 сек |
+| `src/components/profile/FriendsList.tsx` | Збільшити timeout до 15 сек |
+| `src/pages/Notifications.tsx` | Замінити localStorage на supabase.auth.getUser() |
+| `src/pages/Profile.tsx` | Видалити fallback на localStorage |
 
 ---
 
 ### Очікуваний результат
 
-1. Сайт не зависає на нескінченному завантаженні
-2. Якщо запит зависає > 5 секунд - показується fallback UI
-3. Авторизовані користувачі бачать контент швидко
-4. Неавторизовані користувачі бачать публічний контент без затримок
+1. Сайт завантажується правильно без "Timeout" помилок
+2. Новини та логотип відображаються коректно
+3. Сторінки працюють без залежності від localStorage
+4. Вхід в систему працює і редирект на головну сторінку відбувається правильно
 
