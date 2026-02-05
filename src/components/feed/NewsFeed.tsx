@@ -58,12 +58,10 @@ export function NewsFeed() {
     try {
       setLoading(true);
       
+      // Завантажуємо пости без JOIN (RLS блокує доступ до users)
       const { data: supabasePosts, error } = await supabase
         .from('posts')
-        .select(`
-          *,
-          author:users!posts_user_id_fkey(*)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error && error.code !== 'PGRST116') {
@@ -71,7 +69,21 @@ export function NewsFeed() {
       }
 
       if (supabasePosts && supabasePosts.length > 0) {
-        setPosts(supabasePosts);
+        // Отримуємо унікальні ID авторів
+        const authorIds = [...new Set(supabasePosts.map(p => p.user_id).filter(Boolean))] as string[];
+        
+        // Завантажуємо авторів через безпечну RPC функцію (SECURITY DEFINER)
+        const { data: authors } = await supabase.rpc('get_safe_public_profiles_by_ids', { 
+          _ids: authorIds 
+        });
+        
+        // Додаємо авторів до постів
+        const postsWithAuthors = supabasePosts.map(post => ({
+          ...post,
+          author: authors?.find((a: any) => a.id === post.user_id) || null
+        }));
+        
+        setPosts(postsWithAuthors);
       } else {
         setPosts([]);
       }
