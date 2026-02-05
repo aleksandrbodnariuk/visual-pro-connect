@@ -1,122 +1,89 @@
 
-
-## План: Виправлення завантаження сайту
+## План: Виправлення циклу редіректів після входу
 
 ---
 
 ### Причина проблеми
 
-У новому `ThemeContext.tsx` є кілька проблем:
+У `Navbar.tsx` є застарілий код (рядки 13-21), який:
 
-1. **Race condition**: `onAuthStateChange` може спрацювати до того, як `loadUserTheme()` завершиться
-2. **Можлива нескінченна затримка**: якщо запит до Supabase зависає - сайт не завантажиться
-3. **Блокування неавторизованих користувачів**: спінер показується навіть гостям
+1. Перевіряє чи є в localStorage ключ `currentUser`
+2. Якщо є - видаляє його і редіректить на `/auth`
+
+Але тепер `next-themes` використовує `storageKey="theme"`, і при зміні localStorage (навіть для теми) можуть відбуватися рендери, які триггерять цей useEffect.
+
+Більш критично: цей код застарілий і більше не потрібен, бо автентифікація повністю перейшла на Supabase.
 
 ---
 
 ### Рішення
 
-Змінити логіку ThemeContext щоб:
-1. Додати timeout для завантаження теми (3 секунди максимум)
-2. Показувати дітей одразу, а не чекати на тему
-3. Завантажувати тему асинхронно після рендеру
-
----
-
-### Зміни в ThemeContext.tsx
+**Видалити застарілий useEffect з Navbar.tsx:**
 
 ```tsx
-export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [defaultTheme, setDefaultTheme] = useState<string>('light');
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const loadUserTheme = async () => {
-      try {
-        // Додаємо timeout 3 секунди
-        const timeoutPromise = new Promise<null>((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 3000)
-        );
-        
-        const fetchTheme = async () => {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const { data } = await supabase
-              .from('users')
-              .select('theme')
-              .eq('id', user.id)
-              .single();
-            return data?.theme || 'light';
-          }
-          return 'light';
-        };
-        
-        const theme = await Promise.race([
-          fetchTheme(), 
-          timeoutPromise
-        ]) as string | null;
-        
-        if (theme) setDefaultTheme(theme);
-      } catch (error) {
-        console.error('Error loading theme:', error);
-        // Використовуємо світлу тему за замовчуванням
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadUserTheme();
-    // ... решта коду
-  }, []);
-
-  // Замість спінера - одразу рендеримо з дефолтною темою
-  if (isLoading) {
-    return (
-      <NextThemesProvider 
-        attribute="class" 
-        defaultTheme="light"
-        enableSystem={false}
-        storageKey="theme"
-      >
-        {children}
-      </NextThemesProvider>
-    );
+// ВИДАЛИТИ ЦЕЙ КОД:
+React.useEffect(() => {
+  if (!loading && !isAuthenticated()) {
+    const localUser = localStorage.getItem('currentUser');
+    if (localUser) {
+      localStorage.removeItem('currentUser');
+      window.location.href = '/auth';
+    }
   }
-  // ...
-}
+}, [loading, isAuthenticated]);
 ```
 
+Цей код був потрібен під час міграції з localStorage на Supabase Auth, щоб очистити старі дані. Зараз він тільки створює проблеми.
+
 ---
 
-### Альтернативне простіше рішення
+### Файли для редагування
 
-Видалити стан `isLoading` повністю і рендерити дітей одразу:
+| Файл | Зміна |
+|------|-------|
+| `src/components/layout/Navbar.tsx` | Видалити useEffect (рядки 12-22) |
+
+---
+
+### Новий код Navbar.tsx
 
 ```tsx
-export function ThemeProvider({ children }: ThemeProviderProps) {
-  useEffect(() => {
-    // Завантажити тему і застосувати через next-themes
-  }, []);
+import React from "react";
+import { NavbarLogo } from "./NavbarLogo";
+import { NavbarNavigation } from "./NavbarNavigation";
+import { NavbarSearch } from "./NavbarSearch";
+import { NavbarActions } from "./NavbarActions";
+import { useSupabaseAuth } from "@/hooks/auth/useSupabaseAuth";
+
+export function Navbar() {
+  const { getCurrentUser } = useSupabaseAuth();
+  const currentUser = getCurrentUser();
+
+  // Перевіряємо чи користувач є адміністратором
+  const isAdmin = (currentUser?.isAdmin === true) || (currentUser?.founder_admin === true);
 
   return (
-    <NextThemesProvider 
-      attribute="class" 
-      defaultTheme="light"
-      enableSystem={false}
-      storageKey="theme"
-    >
-      {children}
-    </NextThemesProvider>
+    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 fixed top-0 left-0 right-0 z-50">
+      <div className="container flex h-14 sm:h-16 3xl:h-20 items-center justify-between px-3 sm:px-4 md:px-6">
+        <div className="flex items-center gap-2 sm:gap-4 md:gap-6">
+          <NavbarLogo />
+          <NavbarNavigation isAdmin={isAdmin} />
+        </div>
+        
+        <div className="flex items-center gap-2 sm:gap-4">
+          <NavbarSearch />
+          <NavbarActions />
+        </div>
+      </div>
+    </nav>
   );
 }
 ```
-
-Тема застосується як тільки завантажиться, без блокування UI.
 
 ---
 
 ### Очікуваний результат
 
-- Сайт завантажується миттєво
-- Тема застосовується асинхронно (можливий короткий flash)
-- Немає нескінченного спінера
+1. Після входу користувач потрапляє на головну сторінку
+2. Немає циклічних редіректів
+3. Автентифікація працює стабільно
