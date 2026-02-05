@@ -1,14 +1,14 @@
-import { ThemeProvider as NextThemesProvider } from 'next-themes';
-import { useEffect, useState } from 'react';
+import { ThemeProvider as NextThemesProvider, useTheme } from 'next-themes';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ThemeProviderProps {
   children: React.ReactNode;
 }
 
-export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [defaultTheme, setDefaultTheme] = useState<string>('light');
-  const [isLoading, setIsLoading] = useState(true);
+// Inner component to sync theme with Supabase after mount
+function ThemeSyncer() {
+  const { setTheme } = useTheme();
 
   useEffect(() => {
     const loadUserTheme = async () => {
@@ -19,16 +19,14 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
             .from('users')
             .select('theme')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
           
           if (data?.theme) {
-            setDefaultTheme(data.theme);
+            setTheme(data.theme);
           }
         }
       } catch (error) {
         console.error('Error loading user theme:', error);
-      } finally {
-        setIsLoading(false);
       }
     };
     
@@ -41,36 +39,33 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
           .from('users')
           .select('theme')
           .eq('id', session.user.id)
-          .single();
+          .maybeSingle();
         
         if (data?.theme) {
-          setDefaultTheme(data.theme);
+          setTheme(data.theme);
         }
       } else if (event === 'SIGNED_OUT') {
-        setDefaultTheme('light');
+        setTheme('light');
       }
     });
     
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [setTheme]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  return null;
+}
 
+export function ThemeProvider({ children }: ThemeProviderProps) {
   return (
     <NextThemesProvider 
       attribute="class" 
-      defaultTheme={defaultTheme}
+      defaultTheme="light"
       enableSystem={false}
       storageKey="theme"
     >
+      <ThemeSyncer />
       {children}
     </NextThemesProvider>
   );
