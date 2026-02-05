@@ -5,20 +5,22 @@ export function useDataSync() {
   // Синхронізує дані з Supabase при завантаженні компонента
   const syncDataOnStartup = useCallback(async () => {
     try {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      // Use Supabase Auth instead of localStorage
+      const { data: { user } } = await supabase.auth.getUser();
       
-      if (!currentUser || !currentUser.id) {
+      if (!user?.id) {
         return; // Немає авторизованого користувача
       }
 
-      console.log("Синхронізація даних для користувача:", currentUser.id);
+      const userId = user.id;
+      console.log("Синхронізація даних для користувача:", userId);
 
       // Синхронізуємо запити друзів
       try {
         const { data: friendRequests } = await supabase
           .from('friend_requests')
           .select('*')
-          .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
+          .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
 
         if (friendRequests && friendRequests.length > 0) {
           localStorage.setItem('friendRequests', JSON.stringify(friendRequests));
@@ -33,7 +35,7 @@ export function useDataSync() {
         const { data: notifications } = await supabase
           .from('notifications')
           .select('*')
-          .eq('user_id', currentUser.id);
+          .eq('user_id', userId);
 
         if (notifications && notifications.length > 0) {
           localStorage.setItem('notifications', JSON.stringify(notifications));

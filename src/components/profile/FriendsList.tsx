@@ -11,8 +11,20 @@ export function FriendsList({ userId }: { userId?: string }) {
   useEffect(() => {
     const loadFriendData = async () => {
       setIsLoading(true);
-      await refreshFriendRequests();
-      setIsLoading(false);
+      
+      // Timeout 5 секунд для запиту друзів
+      const timeout = setTimeout(() => {
+        setIsLoading(false);
+      }, 5000);
+      
+      try {
+        await refreshFriendRequests();
+      } catch (error) {
+        console.error("Error loading friends:", error);
+      } finally {
+        clearTimeout(timeout);
+        setIsLoading(false);
+      }
     };
     
     loadFriendData();
