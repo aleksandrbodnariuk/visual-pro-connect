@@ -1,118 +1,143 @@
 
 
-## План: Виправлення проблем із завантаженням сайту
+## План: Виправлення критичних проблем завантаження сайту
 
 ---
 
-### Діагностика проблеми
+### Діагностика
 
-Консольні логи показують масові "Timeout" помилки:
+Після аналізу коду виявлено **кореневу причину** проблем:
 
-```
-Помилка завантаження постів: Timeout
-Помилка або timeout завантаження налаштувань: Timeout
-```
-
-**Проблема:** Timeout 5 секунд замалий для Supabase запитів, особливо при холодному старті.
+| Проблема | Файл | Опис |
+|----------|------|------|
+| Блокуючий `initializeStorage()` | `main.tsx:36` | Запускається синхронно при старті, робить 5 запитів до Storage |
+| Дублювання `onAuthStateChange` | `ThemeContext.tsx`, `AuthContext.tsx` | Дві підписки конкурують за один потік подій |
+| Відсутній timeout в ThemeSyncer | `ThemeContext.tsx:14-31` | Запит до `users` може зависати нескінченно |
+| Запити без error handling | `ThemeContext.tsx` | Помилка RLS блокує весь ThemeProvider |
 
 ---
 
-### Кореневі причини
+### Послідовність проблем при завантаженні
 
-| Проблема | Опис | Файли |
-|----------|------|-------|
-| Занадто короткий timeout | 5 сек недостатньо для Supabase | `NewsFeed.tsx`, `NavbarLogo.tsx`, `Search.tsx`, `FriendsList.tsx` |
-| Застаріле використання localStorage | Сторінки використовують `localStorage.getItem("currentUser")` | `Notifications.tsx`, `Profile.tsx` |
-| Неправильна поведінка при timeout | При помилці показується порожній стан без retry | Усі компоненти |
+```text
+Старт додатку
+    ↓
+main.tsx: initializeStorage() ─→ 5 паралельних запитів до Storage
+    ↓ (блокує потік)
+App.tsx рендериться
+    ↓
+AuthProvider: onAuthStateChange + getSession ─→ 2 запити
+    ↓
+ThemeProvider: ThemeSyncer ─→ getUser + select users + onAuthStateChange
+    ↓                          ↑
+    └──────────────────────────┘
+         Конкуренція за auth state
+    ↓
+NavbarLogo: запит site_settings (timeout 15 сек)
+    ↓
+NewsFeed: запит posts + RPC (timeout 15 сек)
+    ↓
+ВСІ ЗАПИТИ ЧЕКАЮТЬ ОДИН ОДНОГО = TIMEOUT
+```
 
 ---
 
 ### Рішення
 
-#### 1. Збільшити timeout до 15 секунд
+#### Частина 1: Видалити блокуючий `initializeStorage()` з main.tsx
 
-Змінити timeout з 5000ms на 15000ms у всіх файлах:
-
-- `src/components/feed/NewsFeed.tsx` - рядок 63
-- `src/components/layout/NavbarLogo.tsx` - рядок 19
-- `src/pages/Search.tsx`
-- `src/components/profile/FriendsList.tsx`
+Перенести ініціалізацію сховища в useEffect або видалити повністю (бакети вже існують):
 
 ```tsx
-// Було:
-setTimeout(() => reject(new Error('Timeout')), 5000)
-
-// Стало:
-setTimeout(() => reject(new Error('Timeout')), 15000)
+// main.tsx - ВИДАЛИТИ рядки 11-36
+// initializeStorage() не потрібен - бакети вже створені
 ```
 
 ---
 
-#### 2. Виправити Notifications.tsx - використовувати Supabase Auth
+#### Частина 2: Спростити ThemeContext - видалити дублювання
 
-Замінити:
-```tsx
-const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
-```
+Змінити ThemeSyncer щоб не підписувався на `onAuthStateChange` (це вже робить AuthProvider):
 
-На:
 ```tsx
-const { data: { user } } = await supabase.auth.getUser();
-if (!user?.id) {
-  throw new Error("User not authenticated");
+function ThemeSyncer() {
+  const { setTheme } = useTheme();
+  const { user, loading } = useAuth(); // Використовуємо готовий стан з AuthContext!
+
+  useEffect(() => {
+    // Завантажуємо тему тільки коли user вже визначений
+    if (loading || !user) return;
+    
+    const loadTheme = async () => {
+      try {
+        const { data } = await supabase
+          .from('users')
+          .select('theme')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        if (data?.theme) {
+          setTheme(data.theme);
+        }
+      } catch (error) {
+        console.error('Error loading theme:', error);
+      }
+    };
+    
+    loadTheme();
+  }, [user, loading, setTheme]);
+
+  return null;
 }
 ```
 
 ---
 
-#### 3. Виправити Profile.tsx - видалити залежність від localStorage
+#### Частина 3: Змінити порядок провайдерів в App.tsx
 
-Рядки 81-85 використовують localStorage як fallback:
+AuthProvider має бути першим, щоб ThemeSyncer міг використовувати useAuth():
+
 ```tsx
-const localUser = localStorage.getItem('currentUser') 
-  ? JSON.parse(localStorage.getItem('currentUser') || '{}') 
-  : null;
+// Поточний порядок - ПРАВИЛЬНИЙ
+<QueryClientProvider>
+  <AuthProvider>      // ← Спочатку Auth
+    <ThemeProvider>   // ← Потім Theme (використовує useAuth)
 ```
-
-Це потрібно видалити і покладатись тільки на `supabase.auth.getUser()`.
 
 ---
 
-#### 4. Додати retry логіку для критичних запитів
-
-При timeout спробувати ще раз через 2 секунди:
+#### Частина 4: Видалити застарілий код з main.tsx
 
 ```tsx
-const loadPostsWithRetry = async (retryCount = 0) => {
-  try {
-    await loadPosts();
-  } catch (error) {
-    if (retryCount < 2) {
-      setTimeout(() => loadPostsWithRetry(retryCount + 1), 2000);
-    }
-  }
-};
+// main.tsx - спрощений
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import "./index.css";
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
 ```
 
 ---
 
 ### Файли для редагування
 
-| Файл | Зміна |
-|------|-------|
-| `src/components/feed/NewsFeed.tsx` | Збільшити timeout до 15 сек |
-| `src/components/layout/NavbarLogo.tsx` | Збільшити timeout до 15 сек |
-| `src/pages/Search.tsx` | Збільшити timeout до 15 сек |
-| `src/components/profile/FriendsList.tsx` | Збільшити timeout до 15 сек |
-| `src/pages/Notifications.tsx` | Замінити localStorage на supabase.auth.getUser() |
-| `src/pages/Profile.tsx` | Видалити fallback на localStorage |
+| Файл | Дія |
+|------|-----|
+| `src/main.tsx` | Видалити `initializeStorage()` та зайві імпорти |
+| `src/context/ThemeContext.tsx` | Використовувати `useAuth()` замість власної підписки |
 
 ---
 
 ### Очікуваний результат
 
-1. Сайт завантажується правильно без "Timeout" помилок
-2. Новини та логотип відображаються коректно
-3. Сторінки працюють без залежності від localStorage
-4. Вхід в систему працює і редирект на головну сторінку відбувається правильно
+1. Сайт завантажується без зависання
+2. Головна сторінка показує контент
+3. Сторінка входу (`/auth`) відкривається
+4. Немає конкуренції за auth state між провайдерами
+5. Тема завантажується після того як користувач авторизований
 
