@@ -1,214 +1,241 @@
 
 
-## План: Двонаправлена "липка" бокова панель як у Facebook
+## План: Виправлення двонаправленого sticky sidebar (правильна імплементація)
 
 ---
 
-### Аналіз проблеми
+### Виявлена проблема
 
-На скріншотах видно:
-
-**У вас зараз:**
-- Sidebar прокручується повністю разом зі сторінкою
-- Коли прокручуємо вниз - sidebar зникає за верхню межу
-- Коли прокручуємо вгору - sidebar зникає за нижню межу
-
-**У Facebook:**
-- Sidebar прокручується тільки до своїх меж
-- При прокрутці вниз - sidebar "прилипає" до нижньої межі viewport
-- При прокрутці вгору - sidebar "прилипає" до верхньої межі viewport
-- Sidebar ніколи повністю не зникає з екрану
-
----
-
-### Як працює Facebook Bidirectional Sticky
+Поточна імплементація в `useBidirectionalSticky.ts` має критичну помилку:
 
 ```text
-КРОК 1: Початок - sidebar вгорі
-┌────────────────────────────────────────────────────────────────────┐
-│ NAVBAR                                                              │
-├──────────────────┬─────────────────────────────────────────────────┤
-│ [Sidebar TOP]    │  Feed                                            │
-│   Меню           │   Post 1                                         │
-│   Категорії      │   Post 2                                         │
-│ [Sidebar BOTTOM] │   Post 3                                         │
-│                  │                                                  │
-└──────────────────┴─────────────────────────────────────────────────┘
+ПОТОЧНИЙ ПІДХІД (НЕ ПРАЦЮЄ):
+- Намагається динамічно змінювати властивість "top" у sticky
+- Це не спрацьовує тому що sticky завжди "прилипає" до top, незалежно від значення
 
-КРОК 2: Прокрутка ВНИЗ - sidebar прилипає ЗНИЗУ
-┌────────────────────────────────────────────────────────────────────┐
-│ NAVBAR                                                              │
-├──────────────────┬─────────────────────────────────────────────────┤
-│                  │   Post 4                                         │
-│   Меню           │   Post 5                                         │
-│   Категорії      │   Post 6                                         │
-│ [Sidebar BOTTOM] │   Post 7    ← Sidebar "прилип" знизу             │
-│ ─────────────────│──────────────────────────────────────────────── │
-└──────────────────┴─────────────────────────────────────────────────┘
-
-КРОК 3: Прокрутка ВГОРУ - sidebar прилипає ЗВЕРХУ
-┌────────────────────────────────────────────────────────────────────┐
-│ NAVBAR                                                              │
-├──────────────────┬─────────────────────────────────────────────────┤
-│ [Sidebar TOP] ←──│   Post 3     ← Sidebar "прилип" зверху           │
-│   Меню           │   Post 4                                         │
-│   Категорії      │   Post 5                                         │
-│ [Sidebar BOTTOM] │   Post 6                                         │
-│                  │                                                  │
-└──────────────────┴─────────────────────────────────────────────────┘
+ПРАВИЛЬНИЙ ПІДХІД (як у Facebook):
+- Використовувати margin-top/margin-bottom для "заморожування" позиції
+- Змінювати напрямок sticky (top-0 або bottom-0) залежно від scroll direction
+- Контейнер sidebar повинен бути flex з justify-end при sticky bottom
 ```
 
 ---
 
-### Технічне рішення
+### Як працює правильне рішення
 
-Facebook використовує JavaScript для відстеження напрямку прокрутки та динамічної зміни CSS властивостей `top` та `bottom`.
+```text
+КРОК 1: Користувач прокручує ВНИЗ
+┌─────────────────────────────────────────────────┐
+│ NAVBAR                                          │
+├────────────────┬────────────────────────────────┤
+│                │                                │
+│  margin-top:   │   Feed                         │
+│  100px         │   Post 4                       │
+│  ┌──────────┐  │   Post 5                       │
+│  │ Sidebar  │  │   Post 6                       │
+│  │ bottom-0 │←─┤   [STICKY BOTTOM]              │
+│  └──────────┘  │                                │
+└────────────────┴────────────────────────────────┘
+   ↑ margin-top "заморожує" пройдену відстань
+
+КРОК 2: Користувач ЗМІНЮЄ напрямок - прокручує ВГОРУ
+┌─────────────────────────────────────────────────┐
+│ NAVBAR                                          │
+├────────────────┬────────────────────────────────┤
+│  ┌──────────┐  │                                │
+│  │ Sidebar  │←─┤   Post 3  [STICKY TOP]         │
+│  │ top-0    │  │   Post 4                       │
+│  └──────────┘  │   Post 5                       │
+│                │                                │
+│  margin-bottom:│                                │
+│  200px         │                                │
+└────────────────┴────────────────────────────────┘
+   ↑ margin-bottom "заморожує" залишкову відстань
+```
+
+**Ключова ідея**: Браузер сам керує sticky позиціонуванням, а ми тільки:
+1. Відстежуємо напрямок прокрутки
+2. Зберігаємо "пройдену відстань" через margin
+3. Перемикаємо sticky напрямок (top або bottom)
 
 ---
 
-### Файл 1: Створити хук `src/hooks/useBidirectionalSticky.ts`
+### Зміни у файлах
 
-Цей хук буде відстежувати напрямок прокрутки та розраховувати позицію sidebar:
+---
+
+### Файл 1: `src/hooks/useBidirectionalSticky.ts` - Повне переписування
+
+Новий хук з правильною логікою:
 
 ```tsx
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface UseBidirectionalStickyOptions {
-  topOffset?: number;  // Відступ від верху (висота navbar)
-  bottomOffset?: number;  // Відступ від низу
+  topOffset?: number;
+  bottomOffset?: number;
 }
 
 interface StickyState {
-  position: 'relative' | 'fixed' | 'absolute';
-  top?: string;
-  bottom?: string;
-  translateY?: string;
+  stickyDirection: 'top' | 'bottom';
+  offsetMargin: number;
 }
 
+/**
+ * Hook для двонаправленого sticky як у Facebook.
+ * Використовує margin-top/margin-bottom для "заморожування" позиції sidebar.
+ */
 export function useBidirectionalSticky(options: UseBidirectionalStickyOptions = {}) {
   const { topOffset = 80, bottomOffset = 20 } = options;
-  const sidebarRef = useRef<HTMLElement>(null);
-  const [stickyStyle, setStickyStyle] = useState<React.CSSProperties>({});
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
-  useEffect(() => {
-    let lastScrollY = window.scrollY;
-    let scrollDirection: 'up' | 'down' = 'down';
-    let sidebarTop = 0;
+  const [state, setState] = useState<StickyState>({
+    stickyDirection: 'top',
+    offsetMargin: 0,
+  });
+  
+  // Відстежуємо попередню позицію прокрутки
+  const lastScrollY = useRef(0);
+  const ticking = useRef(false);
+
+  const handleScroll = useCallback(() => {
+    const sidebar = sidebarRef.current;
+    const container = containerRef.current;
     
-    const handleScroll = () => {
-      if (!sidebarRef.current) return;
-      
-      const sidebar = sidebarRef.current;
-      const sidebarRect = sidebar.getBoundingClientRect();
-      const sidebarHeight = sidebarRect.height;
-      const viewportHeight = window.innerHeight;
-      const currentScrollY = window.scrollY;
-      
-      // Визначаємо напрямок прокрутки
-      const newDirection = currentScrollY > lastScrollY ? 'down' : 'up';
-      const directionChanged = scrollDirection !== newDirection;
-      scrollDirection = newDirection;
-      
-      // Якщо sidebar менший за viewport - просто sticky top
-      if (sidebarHeight <= viewportHeight - topOffset) {
-        setStickyStyle({
-          position: 'sticky',
-          top: `${topOffset}px`,
-        });
-        lastScrollY = currentScrollY;
-        return;
+    if (!sidebar || !container) return;
+    
+    const currentScrollY = window.scrollY;
+    const isScrollingDown = currentScrollY > lastScrollY.current;
+    const newDirection = isScrollingDown ? 'bottom' : 'top';
+    
+    // Оновлюємо стан тільки при зміні напрямку
+    setState(prevState => {
+      if (prevState.stickyDirection === newDirection) {
+        return prevState;
       }
       
-      // Логіка для sidebar більшого за viewport
-      if (scrollDirection === 'down') {
-        // Прокрутка вниз - фіксуємо sidebar знизу
-        if (sidebarRect.bottom <= viewportHeight - bottomOffset) {
-          setStickyStyle({
-            position: 'sticky',
-            bottom: `${bottomOffset}px`,
-            top: 'auto',
-          });
-        }
+      // Розраховуємо пройдену відстань
+      const distanceWalked = sidebar.offsetTop;
+      const sidebarHeight = sidebar.clientHeight;
+      const containerHeight = container.clientHeight;
+      
+      let newOffset = 0;
+      
+      if (newDirection === 'bottom') {
+        // Перед sticky bottom - зберігаємо відстань від верху
+        newOffset = distanceWalked;
       } else {
-        // Прокрутка вгору - фіксуємо sidebar зверху
-        if (sidebarRect.top >= topOffset) {
-          setStickyStyle({
-            position: 'sticky',
-            top: `${topOffset}px`,
-            bottom: 'auto',
-          });
-        }
+        // Перед sticky top - зберігаємо відстань від низу
+        const totalWalkingSpace = containerHeight - sidebarHeight;
+        const spaceLeftToWalk = totalWalkingSpace - distanceWalked;
+        newOffset = Math.max(0, spaceLeftToWalk);
       }
       
-      lastScrollY = currentScrollY;
+      return {
+        stickyDirection: newDirection,
+        offsetMargin: newOffset,
+      };
+    });
+    
+    lastScrollY.current = currentScrollY;
+  }, []);
+
+  const onScroll = useCallback(() => {
+    if (!ticking.current) {
+      requestAnimationFrame(() => {
+        handleScroll();
+        ticking.current = false;
+      });
+      ticking.current = true;
+    }
+  }, [handleScroll]);
+
+  useEffect(() => {
+    lastScrollY.current = window.scrollY;
+    
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
     };
-    
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Початкова ініціалізація
-    
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [topOffset, bottomOffset]);
-  
-  return { sidebarRef, stickyStyle };
+  }, [onScroll]);
+
+  // Генеруємо стилі для sidebar
+  const sidebarStyle: React.CSSProperties = {
+    position: 'sticky',
+    top: state.stickyDirection === 'top' ? `${topOffset}px` : 'auto',
+    bottom: state.stickyDirection === 'bottom' ? `${bottomOffset}px` : 'auto',
+    marginTop: state.stickyDirection === 'bottom' ? `${state.offsetMargin}px` : 0,
+    marginBottom: state.stickyDirection === 'top' ? `${state.offsetMargin}px` : 0,
+  };
+
+  // Генеруємо стилі для контейнера
+  const containerStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: state.stickyDirection === 'bottom' ? 'flex-end' : 'flex-start',
+    minHeight: '100%',
+  };
+
+  return { 
+    sidebarRef, 
+    containerRef,
+    sidebarStyle, 
+    containerStyle,
+    stickyDirection: state.stickyDirection,
+  };
 }
 ```
 
 ---
 
-### Файл 2: Оновити `src/components/layout/Sidebar.tsx`
+### Файл 2: `src/components/layout/Sidebar.tsx` - Оновлення структури
 
-Інтегрувати хук у компонент:
+Sidebar тепер повинен мати обгортку-контейнер:
 
 ```tsx
-import { useBidirectionalSticky } from '@/hooks/useBidirectionalSticky';
-
 export function Sidebar({ className }: SidebarProps) {
-  const { sidebarRef, stickyStyle } = useBidirectionalSticky({
-    topOffset: 80,  // Висота navbar
+  // ... інші хуки
+  
+  const { sidebarRef, containerRef, sidebarStyle, containerStyle } = useBidirectionalSticky({
+    topOffset: 80,
     bottomOffset: 20
   });
   
-  // ... решта коду
-  
   return (
-    <aside 
-      ref={sidebarRef as React.RefObject<HTMLElement>}
-      style={stickyStyle}
-      className={cn(
-        "rounded-lg border bg-card scrollbar-hide",
-        className
-      )}
+    <div 
+      ref={containerRef}
+      style={containerStyle}
+      className="h-full"
     >
-      {/* ... */}
-    </aside>
+      <aside 
+        ref={sidebarRef}
+        style={sidebarStyle}
+        className={cn(
+          "rounded-lg border bg-card scrollbar-hide",
+          className
+        )}
+      >
+        {/* ... весь контент sidebar */}
+      </aside>
+    </div>
   );
 }
 ```
 
 ---
 
-### Файл 3: Оновити `src/index.css`
+### Файл 3: `src/pages/Index.tsx` - Забезпечити висоту контейнера
 
-Спростити `.sticky-sidebar` оскільки логіка тепер в JavaScript:
-
-```css
-/* Оновлена утиліта - тільки базові стилі */
-.sticky-sidebar {
-  max-height: none; /* Прибираємо обмеження - контролюється JS */
-  overflow-y: visible; /* Прибираємо внутрішній скрол */
-}
-```
-
----
-
-### Файл 4: Оновити `src/pages/Index.tsx`
-
-Переконатися що sidebar обгорнутий у правильний контейнер:
+Grid елемент з sidebar повинен мати повну висоту:
 
 ```tsx
 <div className="container grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 3xl:gap-8 px-3 sm:px-4 md:px-6 py-4 md:py-6">
-  {/* Sidebar обгортка з self-start для правильного позиціонування */}
-  <div className="hidden md:block md:col-span-4 lg:col-span-3 self-start">
+  {/* Sidebar контейнер - потрібна висота для роботи sticky */}
+  <div className="hidden md:block md:col-span-4 lg:col-span-3">
     <Sidebar />
   </div>
   
@@ -219,43 +246,45 @@ export function Sidebar({ className }: SidebarProps) {
 </div>
 ```
 
+Важливо: прибрати `self-start` щоб контейнер sidebar мав повну висоту grid row.
+
 ---
 
-### Файл 5: Оновити `src/pages/Profile.tsx`
+### Файл 4: `src/pages/Profile.tsx` - Аналогічні зміни
 
-Аналогічно оновити sidebar обгортку:
+Прибрати `self-start` з sidebar контейнера на сторінці профілю.
 
-```tsx
-<div className="hidden md:block md:col-span-4 lg:col-span-3 self-start">
-  <Sidebar />
+---
+
+### Візуальна діаграма рішення
+
+```text
+СТРУКТУРА DOM:
+
+<div className="grid">                         ← Grid контейнер
+  │
+  ├── <div ref={containerRef}                  ← Контейнер sidebar (flex, повна висота)
+  │       style={{ 
+  │         display: flex,
+  │         flexDirection: column,
+  │         justifyContent: stickyDirection === 'bottom' ? 'flex-end' : 'flex-start'
+  │       }}>
+  │     │
+  │     └── <aside ref={sidebarRef}            ← Сам sidebar (sticky)
+  │             style={{
+  │               position: sticky,
+  │               top/bottom: залежить від напрямку,
+  │               marginTop/Bottom: "заморожує" позицію
+  │             }}>
+  │           ... контент ...
+  │         </aside>
+  │   </div>
+  │
+  └── <main>                                   ← Основний контент (довший)
+        Post 1, Post 2, Post 3...
+      </main>
 </div>
 ```
-
----
-
-### Альтернативний підхід (чистий CSS з CSS custom properties)
-
-Якщо хочемо уникнути складного JavaScript, можна використати простіший підхід який працює для більшості випадків:
-
-```css
-.sticky-sidebar {
-  position: sticky;
-  /* Фіксований top для простого sticky */
-  top: 5rem;
-  /* Обмежуємо висоту щоб sidebar не виходив за viewport */
-  max-height: calc(100vh - 6rem);
-  /* Внутрішній скрол тільки для sidebar */
-  overflow-y: auto;
-  /* Приховуємо скролбар */
-  scrollbar-width: none;
-}
-
-.sticky-sidebar::-webkit-scrollbar {
-  display: none;
-}
-```
-
-Цей підхід простіший, але sidebar буде мати власний внутрішній скрол замість двонаправленого sticky.
 
 ---
 
@@ -263,19 +292,17 @@ export function Sidebar({ className }: SidebarProps) {
 
 | Файл | Зміни |
 |------|-------|
-| `src/hooks/useBidirectionalSticky.ts` | **Новий файл** - хук для відстеження прокрутки та розрахунку позиції |
-| `src/components/layout/Sidebar.tsx` | Інтегрувати хук, прибрати клас `sticky-sidebar` |
-| `src/index.css` | Спростити/видалити `.sticky-sidebar` |
-| `src/pages/Index.tsx` | Додати `self-start` до обгортки sidebar |
-| `src/pages/Profile.tsx` | Додати `self-start` до обгортки sidebar |
+| `src/hooks/useBidirectionalSticky.ts` | Повне переписування з правильною логікою margin |
+| `src/components/layout/Sidebar.tsx` | Додати контейнер-обгортку з ref та стилями |
+| `src/pages/Index.tsx` | Прибрати `self-start`, дозволити повну висоту |
+| `src/pages/Profile.tsx` | Прибрати `self-start`, дозволити повну висоту |
 
 ---
 
 ### Очікуваний результат
 
-1. **Sidebar завжди видимий** - не зникає повністю за межі екрану
-2. **Двонаправлена прокрутка** - при прокрутці вниз sidebar "прилипає" знизу, при прокрутці вгору - зверху
-3. **Як у Facebook** - поведінка ідентична до бокової панелі Facebook
-4. **Адаптивність** - працює на всіх розмірах екранів
-5. **Плавна анімація** - без "стрибків" при зміні напрямку прокрутки
+1. **Sidebar прилипає до низу** при прокрутці вниз (як у Facebook)
+2. **Sidebar прилипає до верху** при прокрутці вгору
+3. **Плавні переходи** без "стрибків" - браузер керує sticky
+4. **Sidebar ніколи не зникає** повністю за межі екрану
 
