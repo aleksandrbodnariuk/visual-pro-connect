@@ -13,7 +13,7 @@ const Index = () => {
   // Якщо користувач не авторизований, показуємо Hero секцію
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-muted/30">
+      <div className="min-h-screen bg-muted/30 pt-14 sm:pt-16 3xl:pt-20">
         <Navbar />
         <Hero />
       </div>
@@ -22,7 +22,7 @@ const Index = () => {
   
   // Для авторизованих користувачів показуємо основний інтерфейс
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0">
+    <div className="min-h-screen bg-background pb-20 md:pb-0 pt-14 sm:pt-16 3xl:pt-20">
       <Navbar />
       {/* Fixed Sidebar - рендериться окремо від grid */}
       <Sidebar />
