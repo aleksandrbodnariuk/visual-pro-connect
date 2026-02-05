@@ -354,10 +354,12 @@ export default function Profile() {
       <Navbar />
       <ProfileHeader user={user} onEditProfile={handleEditProfile} />
       
+      {/* Fixed Sidebar - рендериться окремо від grid */}
+      <Sidebar />
+      
       <div className="container mt-8 grid grid-cols-12 gap-6 px-4 md:px-6">
-        <div className="hidden md:block md:col-span-4 lg:col-span-3 min-h-full">
-          <Sidebar />
-        </div>
+        {/* Spacer для fixed sidebar */}
+        <div className="hidden md:block md:col-span-4 lg:col-span-3" aria-hidden="true" />
         
         <main className="col-span-12 md:col-span-8 lg:col-span-9">
           <Tabs defaultValue="posts" className="w-full">

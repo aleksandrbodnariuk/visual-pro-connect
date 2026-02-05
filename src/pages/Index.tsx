@@ -24,11 +24,12 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar />
+      {/* Fixed Sidebar - рендериться окремо від grid */}
+      <Sidebar />
+      
       <div className="container grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 3xl:gap-8 px-3 sm:px-4 md:px-6 py-4 md:py-6">
-        {/* Sidebar - прихований на мобільних, видимий на планшеті+ */}
-        <div className="hidden md:block md:col-span-4 lg:col-span-3 min-h-full">
-          <Sidebar />
-        </div>
+        {/* Spacer для fixed sidebar */}
+        <div className="hidden md:block md:col-span-4 lg:col-span-3" aria-hidden="true" />
         
         {/* Основний контент */}
         <main className="col-span-1 md:col-span-8 lg:col-span-9">
