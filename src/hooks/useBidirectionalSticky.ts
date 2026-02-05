@@ -6,13 +6,15 @@ interface UseBidirectionalStickyOptions {
 }
 
 interface StickyState {
+  isSticky: boolean;
   stickyDirection: 'top' | 'bottom';
-  offsetMargin: number;
+  marginTop: number;
+  marginBottom: number;
 }
 
 /**
  * Hook для двонаправленого sticky як у Facebook.
- * Використовує margin-top/margin-bottom для "заморожування" позиції sidebar.
+ * Використовує getBoundingClientRect() для точних розрахунків.
  */
 export function useBidirectionalSticky(options: UseBidirectionalStickyOptions = {}) {
   const { topOffset = 80, bottomOffset = 20 } = options;
@@ -20,12 +22,14 @@ export function useBidirectionalSticky(options: UseBidirectionalStickyOptions = 
   const containerRef = useRef<HTMLDivElement>(null);
   
   const [state, setState] = useState<StickyState>({
+    isSticky: true,
     stickyDirection: 'top',
-    offsetMargin: 0,
+    marginTop: 0,
+    marginBottom: 0,
   });
   
-  // Відстежуємо попередню позицію прокрутки
   const lastScrollY = useRef(0);
+  const lastDirection = useRef<'up' | 'down'>('down');
   const ticking = useRef(false);
 
   const handleScroll = useCallback(() => {
@@ -35,40 +39,72 @@ export function useBidirectionalSticky(options: UseBidirectionalStickyOptions = 
     if (!sidebar || !container) return;
     
     const currentScrollY = window.scrollY;
-    const isScrollingDown = currentScrollY > lastScrollY.current;
-    const newDirection = isScrollingDown ? 'bottom' : 'top';
+    const scrollDelta = currentScrollY - lastScrollY.current;
     
-    // Оновлюємо стан тільки при зміні напрямку
-    setState(prevState => {
-      if (prevState.stickyDirection === newDirection) {
-        return prevState;
-      }
-      
-      // Розраховуємо пройдену відстань
-      const distanceWalked = sidebar.offsetTop;
-      const sidebarHeight = sidebar.clientHeight;
-      const containerHeight = container.clientHeight;
-      
-      let newOffset = 0;
-      
-      if (newDirection === 'bottom') {
-        // Перед sticky bottom - зберігаємо відстань від верху
-        newOffset = distanceWalked;
+    // Ігноруємо мінімальні зміни скролу
+    if (Math.abs(scrollDelta) < 1) {
+      lastScrollY.current = currentScrollY;
+      return;
+    }
+    
+    const currentDirection = scrollDelta > 0 ? 'down' : 'up';
+    const directionChanged = currentDirection !== lastDirection.current;
+    
+    const sidebarHeight = sidebar.offsetHeight;
+    const viewportHeight = window.innerHeight;
+    const availableHeight = viewportHeight - topOffset - bottomOffset;
+    
+    // Якщо sidebar менший за доступну область viewport - просто sticky top
+    if (sidebarHeight <= availableHeight) {
+      setState({
+        isSticky: true,
+        stickyDirection: 'top',
+        marginTop: 0,
+        marginBottom: 0,
+      });
+      lastScrollY.current = currentScrollY;
+      lastDirection.current = currentDirection;
+      return;
+    }
+    
+    // Отримуємо позиції через getBoundingClientRect для точності
+    const containerRect = container.getBoundingClientRect();
+    const sidebarRect = sidebar.getBoundingClientRect();
+    
+    // Відстань від верху контейнера до верху sidebar
+    const distanceFromContainerTop = sidebarRect.top - containerRect.top;
+    const containerHeight = container.offsetHeight;
+    const maxWalkDistance = containerHeight - sidebarHeight;
+    
+    if (directionChanged) {
+      if (currentDirection === 'down') {
+        // Переключаємось на sticky bottom
+        // Зберігаємо поточну позицію через margin-top
+        const newMarginTop = Math.max(0, Math.min(distanceFromContainerTop, maxWalkDistance));
+        
+        setState({
+          isSticky: true,
+          stickyDirection: 'bottom',
+          marginTop: newMarginTop,
+          marginBottom: 0,
+        });
       } else {
-        // Перед sticky top - зберігаємо відстань від низу
-        const totalWalkingSpace = containerHeight - sidebarHeight;
-        const spaceLeftToWalk = totalWalkingSpace - distanceWalked;
-        newOffset = Math.max(0, spaceLeftToWalk);
+        // Переключаємось на sticky top
+        // Зберігаємо поточну позицію через margin-bottom
+        const newMarginBottom = Math.max(0, maxWalkDistance - distanceFromContainerTop);
+        
+        setState({
+          isSticky: true,
+          stickyDirection: 'top',
+          marginTop: 0,
+          marginBottom: newMarginBottom,
+        });
       }
-      
-      return {
-        stickyDirection: newDirection,
-        offsetMargin: newOffset,
-      };
-    });
+    }
     
     lastScrollY.current = currentScrollY;
-  }, []);
+    lastDirection.current = currentDirection;
+  }, [topOffset, bottomOffset]);
 
   const onScroll = useCallback(() => {
     if (!ticking.current) {
@@ -86,34 +122,28 @@ export function useBidirectionalSticky(options: UseBidirectionalStickyOptions = 
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
     
+    // Початковий розрахунок
+    handleScroll();
+    
     return () => {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
     };
-  }, [onScroll]);
+  }, [onScroll, handleScroll]);
 
   // Генеруємо стилі для sidebar
   const sidebarStyle: React.CSSProperties = {
     position: 'sticky',
     top: state.stickyDirection === 'top' ? `${topOffset}px` : 'auto',
     bottom: state.stickyDirection === 'bottom' ? `${bottomOffset}px` : 'auto',
-    marginTop: state.stickyDirection === 'bottom' ? `${state.offsetMargin}px` : 0,
-    marginBottom: state.stickyDirection === 'top' ? `${state.offsetMargin}px` : 0,
-  };
-
-  // Генеруємо стилі для контейнера
-  const containerStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: state.stickyDirection === 'bottom' ? 'flex-end' : 'flex-start',
-    minHeight: '100%',
+    marginTop: state.marginTop,
+    marginBottom: state.marginBottom,
   };
 
   return { 
     sidebarRef, 
     containerRef,
-    sidebarStyle, 
-    containerStyle,
+    sidebarStyle,
     stickyDirection: state.stickyDirection,
   };
 }

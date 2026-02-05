@@ -25,7 +25,7 @@ export function Sidebar({ className }: SidebarProps) {
   const { unreadCount } = useUnreadMessages();
   
   // Двонаправлений sticky як у Facebook
-  const { sidebarRef, containerRef, sidebarStyle, containerStyle } = useBidirectionalSticky({
+  const { sidebarRef, containerRef, sidebarStyle } = useBidirectionalSticky({
     topOffset: 80,  // Висота navbar
     bottomOffset: 20
   });
@@ -65,8 +65,7 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <div 
       ref={containerRef}
-      style={containerStyle}
-      className="h-full"
+      className="relative"
     >
       <aside 
         ref={sidebarRef}
