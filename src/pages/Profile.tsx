@@ -77,12 +77,8 @@ export default function Profile() {
         const { data: authData } = await supabase.auth.getUser();
         const authUserId = authData?.user?.id || null;
         
-        // Fallback на localStorage тільки якщо Supabase Auth недоступний
-        const localUser = localStorage.getItem('currentUser') 
-          ? JSON.parse(localStorage.getItem('currentUser') || '{}') 
-          : null;
-        
-        const currentUserId = authUserId || localUser?.id || null;
+        // Тільки Supabase Auth - без localStorage fallback
+        const currentUserId = authUserId || null;
         const targetUserId = userId || currentUserId;
         
         if (!targetUserId) {
@@ -95,7 +91,6 @@ export default function Profile() {
         
         console.log('Profile: isCurrentUser check', {
           authUserId,
-          localUserId: localUser?.id,
           currentUserId,
           targetUserId,
           isOwnProfile
@@ -147,21 +142,7 @@ export default function Profile() {
         }
         
         if (!userData) {
-          // Використовуємо localStorage як fallback
-          const localUserData = localStorage.getItem('currentUser') 
-            ? JSON.parse(localStorage.getItem('currentUser') || '{}') 
-            : null;
-            
-          if (localUserData && (!userId || localUserData.id === userId)) {
-            userData = localUserData;
-          } else {
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            userData = users.find((u: any) => u.id === targetUserId);
-            
-            if (!userData) {
-              throw new Error('Користувача не знайдено');
-            }
-          }
+          throw new Error('Користувача не знайдено');
         }
         
         setUser({

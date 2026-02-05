@@ -12,10 +12,10 @@ export function FriendsList({ userId }: { userId?: string }) {
     const loadFriendData = async () => {
       setIsLoading(true);
       
-      // Timeout 5 секунд для запиту друзів
+      // Timeout 15 секунд для запиту друзів
       const timeout = setTimeout(() => {
         setIsLoading(false);
-      }, 5000);
+      }, 15000);
       
       try {
         await refreshFriendRequests();
