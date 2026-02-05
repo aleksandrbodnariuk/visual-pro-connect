@@ -96,7 +96,7 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
   return (
     <div className="animate-fade-in">
       {/* Обкладинка профілю */}
-      <div className="relative h-44 w-full overflow-hidden rounded-b-lg md:h-64">
+      <div className="relative h-44 w-full overflow-hidden rounded-lg md:h-64">
         <div
           className="h-full w-full bg-cover bg-center"
           style={{
@@ -112,7 +112,7 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
       </div>
 
       {/* Інформація профілю */}
-      <div className="container relative -mt-16 px-4">
+      <div className="relative -mt-16 px-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="flex flex-col items-start gap-4 md:flex-row md:items-end">
             <Avatar className="h-40 w-40 border-4 border-background shadow-lg">
