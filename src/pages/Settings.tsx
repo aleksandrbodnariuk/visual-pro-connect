@@ -11,6 +11,7 @@ import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { BannerUpload } from '@/components/profile/BannerUpload';
 import { useAuthState } from '@/hooks/auth/useAuthState';
 import { AccountSettings } from '@/components/settings/AccountSettings';
+import { ThemeSettings } from '@/components/settings/ThemeSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { CATEGORIES } from '@/components/search/SearchCategories';
 import { toast } from 'sonner';
@@ -101,6 +102,7 @@ export default function Settings() {
           >
             <TabsList className="mb-6 flex-wrap">
               <TabsTrigger value="general">Загальні</TabsTrigger>
+              <TabsTrigger value="appearance">Зовнішній вигляд</TabsTrigger>
               <TabsTrigger value="profile">Профіль</TabsTrigger>
               <TabsTrigger value="profession">Професія</TabsTrigger>
               <TabsTrigger value="notifications">Сповіщення</TabsTrigger>
@@ -118,6 +120,10 @@ export default function Settings() {
                   }}
                 />
               )}
+            </TabsContent>
+            
+            <TabsContent value="appearance">
+              <ThemeSettings />
             </TabsContent>
             
             <TabsContent value="profile">
