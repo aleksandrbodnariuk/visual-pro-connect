@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "./context/LanguageContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import { useDataSync } from "./hooks/useDataSync";
 import { FaviconUpdater } from "./components/layout/FaviconUpdater";
 import { MobileNavigation } from "./components/layout/MobileNavigation";
@@ -55,14 +56,16 @@ const AppContent = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <LanguageProvider>
-      <TooltipProvider>
-        <FaviconUpdater />
-        <Toaster />
-        <Sonner />
-        <AppContent />
-      </TooltipProvider>
-    </LanguageProvider>
+    <ThemeProvider>
+      <LanguageProvider>
+        <TooltipProvider>
+          <FaviconUpdater />
+          <Toaster />
+          <Sonner />
+          <AppContent />
+        </TooltipProvider>
+      </LanguageProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

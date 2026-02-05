@@ -512,6 +512,7 @@ export type Database = {
           is_admin: boolean | null
           is_shareholder: boolean | null
           phone_number: string
+          theme: string | null
           title: string | null
           viber: string | null
           website: string | null
@@ -532,6 +533,7 @@ export type Database = {
           is_admin?: boolean | null
           is_shareholder?: boolean | null
           phone_number: string
+          theme?: string | null
           title?: string | null
           viber?: string | null
           website?: string | null
@@ -552,6 +554,7 @@ export type Database = {
           is_admin?: boolean | null
           is_shareholder?: boolean | null
           phone_number?: string
+          theme?: string | null
           title?: string | null
           viber?: string | null
           website?: string | null
