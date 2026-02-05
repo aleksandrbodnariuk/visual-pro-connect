@@ -1,231 +1,147 @@
 
-## План: Виправлення автентифікації та логотипу
+
+## План: Виправлення зависання сайту
 
 ---
 
-### Діагностика проблем
+### Діагностика
 
-| Проблема | Причина | Файл |
-|----------|---------|------|
-| Логотип не відображається | Запит до `site_settings` зависає або RLS блокує доступ | `NavbarLogo.tsx` |
-| Циклічний редирект | `isAuthenticated` в `useEffect` deps створює нескінченний цикл | `Auth.tsx` |
-| Вхід не зберігається | Кожен компонент має власний екземпляр `useSupabaseAuth` з локальним станом | `useSupabaseAuth.ts`, `Index.tsx` |
+На скриншотах видно:
+1. Сторінка друзів застряла на "Завантаження списку друзів..."
+2. Головна сторінка показує skeleton loaders замість контенту
+3. Preview застряг на завантаженні
 
----
+**Кореневі причини:**
 
-### Архітектурна проблема
-
-```text
-Поточний стан:
-┌─────────────────────────────────────────────────────────┐
-│  Auth.tsx                                               │
-│  └─ useSupabaseAuth() ─► [session: null → logged_in]   │
-└─────────────────────────────────────────────────────────┘
-                           ↓ navigate("/")
-┌─────────────────────────────────────────────────────────┐
-│  Index.tsx                                              │
-│  └─ useAuthState() → useSupabaseAuth()                  │
-│     └─► [session: null] ← НОВИЙ ЕКЗЕМПЛЯР!             │
-│         currentUser = null → показує Hero               │
-└─────────────────────────────────────────────────────────┘
-
-Кожен компонент створює свій useState для session!
-```
+| Проблема | Файл | Опис |
+|----------|------|------|
+| RPC зависає | `Search.tsx`, `NewsFeed.tsx` | `get_safe_public_profiles` виконується надто довго |
+| Застарілий localStorage | `useDataSync.ts` | Шукає `currentUser` в localStorage замість Supabase Auth |
+| Немає timeout у запитах | `NewsFeed.tsx`, `FriendsList.tsx` | Запити можуть зависати нескінченно |
+| Каскад проблем | Усі компоненти | Один повільний запит блокує весь UI |
 
 ---
 
 ### Рішення
 
-#### Частина 1: Створити AuthContext для глобального стану
+#### 1. Оновити useDataSync.ts - видалити застарілий localStorage
 
-**Новий файл: `src/context/AuthContext.tsx`**
-
-```tsx
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
-
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  loading: boolean;
-  isAuthenticated: boolean;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Спочатку налаштовуємо listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    // Потім отримуємо початкову сесію
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  return (
-    <AuthContext.Provider value={{ 
-      user, 
-      session, 
-      loading, 
-      isAuthenticated: !!session?.user 
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
-}
-```
-
----
-
-#### Частина 2: Обгорнути App в AuthProvider
-
-**Файл: `src/App.tsx`**
+Використовувати `supabase.auth.getUser()` замість `localStorage.getItem('currentUser')`:
 
 ```tsx
-import { AuthProvider } from './context/AuthContext';
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <ThemeProvider>
-        {/* ... решта */}
-      </ThemeProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
-```
-
----
-
-#### Частина 3: Оновити Auth.tsx
-
-```tsx
-import { useAuth } from '@/context/AuthContext';
-
-export default function Auth() {
-  const navigate = useNavigate();
-  const { isAuthenticated, loading } = useAuth();
-  
-  useEffect(() => {
-    // Чекаємо завантаження перед редиректом
-    if (!loading && isAuthenticated) {
-      navigate("/");
+const syncDataOnStartup = useCallback(async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user?.id) {
+      return; // Немає авторизованого користувача
     }
-  }, [loading, isAuthenticated, navigate]);
-  
-  // Показуємо loader поки визначається стан
-  if (loading) {
-    return <div>Завантаження...</div>;
+    // ... решта коду
   }
-  
-  // ... решта коду
-}
-```
-
----
-
-#### Частина 4: Оновити Index.tsx
-
-```tsx
-import { useAuth } from '@/context/AuthContext';
-
-const Index = () => {
-  const { isAuthenticated, loading } = useAuth();
-  
-  if (loading) {
-    return <div>Завантаження...</div>;
-  }
-  
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-muted/30 pt-14 sm:pt-16 3xl:pt-20">
-        <Navbar />
-        <Hero />
-      </div>
-    );
-  }
-  
-  // ... авторизований контент
-};
-```
-
----
-
-#### Частина 5: Виправити NavbarLogo
-
-Додати fallback та timeout для завантаження логотипу:
-
-```tsx
-useEffect(() => {
-  const loadLogoAndSiteName = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Timeout 3 секунди
-      const timeout = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 3000)
-      );
-      
-      const fetchSettings = async () => {
-        // ... існуючий код
-      };
-      
-      await Promise.race([fetchSettings(), timeout]);
-    } catch (error) {
-      // Fallback до дефолтних значень
-      setLogoUrl('/default-logo.png');
-      setSiteName('Спільнота B&C');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  loadLogoAndSiteName();
 }, []);
 ```
 
 ---
 
+#### 2. Додати timeout для критичних запитів
+
+Обгорнути довгі запити в `Promise.race` з timeout:
+
+```tsx
+const fetchWithTimeout = async (promise: Promise<any>, ms: number = 5000) => {
+  const timeout = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error('Timeout')), ms)
+  );
+  return Promise.race([promise, timeout]);
+};
+```
+
+---
+
+#### 3. Оптимізувати NewsFeed.tsx
+
+- Показувати контент одразу (без skeleton якщо є кешовані дані)
+- Додати timeout 5 секунд для завантаження постів
+- Fallback до порожнього масиву при помилці
+
+```tsx
+const loadPosts = async () => {
+  try {
+    setLoading(true);
+    
+    const postsPromise = supabase
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    // Timeout 5 секунд
+    const { data, error } = await Promise.race([
+      postsPromise,
+      new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 5000)
+      )
+    ]);
+    
+    // ... обробка даних
+  } catch (error) {
+    console.error("Error:", error);
+    setPosts([]); // Показати порожній список
+  } finally {
+    setLoading(false);
+  }
+};
+```
+
+---
+
+#### 4. Оптимізувати Search.tsx
+
+- Додати timeout для RPC `get_safe_public_profiles`
+- Показувати "Не вдалося завантажити" замість нескінченного спінера
+
+---
+
+#### 5. Оптимізувати FriendsList.tsx
+
+- Не блокувати UI якщо користувач не авторизований
+- Додати timeout для запитів друзів
+
+---
+
 ### Файли для редагування
 
-| Файл | Дія |
-|------|-----|
-| `src/context/AuthContext.tsx` | Створити новий |
-| `src/App.tsx` | Додати AuthProvider |
-| `src/pages/Auth.tsx` | Використати useAuth з контексту |
-| `src/pages/Index.tsx` | Використати useAuth замість useAuthState |
-| `src/components/layout/NavbarLogo.tsx` | Додати timeout і fallback |
+| Файл | Зміна |
+|------|-------|
+| `src/hooks/useDataSync.ts` | Замінити localStorage на supabase.auth.getUser() |
+| `src/components/feed/NewsFeed.tsx` | Додати timeout 5 сек для завантаження постів |
+| `src/pages/Search.tsx` | Додати timeout для RPC запиту |
+| `src/hooks/friends/useFetchFriends.ts` | Додати timeout для запитів друзів |
+
+---
+
+### Технічні деталі
+
+Створити допоміжну функцію `fetchWithTimeout`:
+
+```tsx
+// src/lib/utils.ts або окремий файл
+export async function fetchWithTimeout<T>(
+  promise: Promise<T>, 
+  timeoutMs: number = 5000
+): Promise<T> {
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
+  );
+  return Promise.race([promise, timeout]);
+}
+```
 
 ---
 
 ### Очікуваний результат
 
-1. Логотип завантажується коректно з fallback на дефолтний
-2. Після входу користувач потрапляє на головну сторінку
-3. Стан автентифікації синхронізується між усіма компонентами
-4. Немає циклічних редиректів
+1. Сайт не зависає на нескінченному завантаженні
+2. Якщо запит зависає > 5 секунд - показується fallback UI
+3. Авторизовані користувачі бачать контент швидко
+4. Неавторизовані користувачі бачать публічний контент без затримок
+
