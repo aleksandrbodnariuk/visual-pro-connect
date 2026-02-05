@@ -135,7 +135,7 @@ export default function Connect() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-safe-nav">
       <Navbar />
       <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
         <Sidebar className="hidden lg:block col-span-3" />

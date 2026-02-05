@@ -82,7 +82,7 @@ export default function Settings() {
   };
   
   return (
-    <div className="min-h-screen pb-20 md:pb-10">
+    <div className="min-h-screen pb-safe-nav">
       <Navbar />
       
       <div className="container mt-8 grid grid-cols-12 gap-6 px-4 md:px-6">

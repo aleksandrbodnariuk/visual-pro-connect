@@ -350,7 +350,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen pb-20 md:pb-10 pt-14 sm:pt-16 3xl:pt-20">
+    <div className="min-h-screen pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
       <Navbar />
       <ProfileHeader user={user} onEditProfile={handleEditProfile} />
       

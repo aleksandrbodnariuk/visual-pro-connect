@@ -201,4 +201,17 @@
   .sticky-sidebar {
     /* Позиціонування контролюється JavaScript */
   }
+
+  /* Безпечний відступ для мобільної навігації */
+  .pb-safe-nav {
+    /* 64px (h-16 навігація) + 16px (запас) + safe-area-inset-bottom */
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (min-width: 768px) {
+  /* На десктопі не потрібен цей відступ */
+  .pb-safe-nav {
+    padding-bottom: 0;
+  }
 }

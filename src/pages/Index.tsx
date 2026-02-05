@@ -22,7 +22,7 @@ const Index = () => {
   
   // Для авторизованих користувачів показуємо основний інтерфейс
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0 pt-14 sm:pt-16 3xl:pt-20">
+    <div className="min-h-screen bg-background pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
       <Navbar />
       {/* Fixed Sidebar - рендериться окремо від grid */}
       <Sidebar />
