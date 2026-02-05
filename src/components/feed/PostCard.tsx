@@ -1,6 +1,6 @@
 
-import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -63,8 +63,12 @@ export function PostCard({
   const [saved, setSaved] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [recentComments, setRecentComments] = useState<CommentData[]>([]);
+  const [allComments, setAllComments] = useState<CommentData[]>([]);
+  const [showAllComments, setShowAllComments] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const navigate = useNavigate();
+  const [isLoadingAllComments, setIsLoadingAllComments] = useState(false);
+  const commentInputRef = useRef<HTMLInputElement>(null);
+  
   const { getCurrentUser } = useAuthState();
   const authUser = currentUser || getCurrentUser();
   
@@ -122,6 +126,44 @@ export function PostCard({
     }
   };
 
+  // Завантаження всіх коментарів для inline expand
+  const loadAllComments = async () => {
+    if (isLoadingAllComments || showAllComments) return;
+    
+    setIsLoadingAllComments(true);
+    try {
+      const { data: commentsData, error } = await supabase
+        .from('comments')
+        .select('*')
+        .eq('post_id', id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (commentsData && commentsData.length > 0) {
+        const userIds = [...new Set(commentsData.map(c => c.user_id))];
+        const { data: users } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: userIds });
+        
+        const commentsWithUsers = commentsData.map(comment => ({
+          ...comment,
+          user: users?.find((u: any) => u.id === comment.user_id)
+        }));
+        
+        setAllComments(commentsWithUsers);
+        setShowAllComments(true);
+      }
+    } catch (error) {
+      console.error("Error loading all comments:", error);
+    } finally {
+      setIsLoadingAllComments(false);
+    }
+  };
+
+  // Фокус на поле коментаря
+  const handleCommentFocus = () => {
+    commentInputRef.current?.focus();
+  };
+
   const handleCommentSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && commentText.trim() && authUser?.id) {
       setIsSubmittingComment(true);
@@ -135,7 +177,11 @@ export function PostCard({
         if (error) throw error;
         
         setCommentText("");
+        // Перезавантажуємо коментарі
         loadRecentComments();
+        if (showAllComments) {
+          loadAllComments();
+        }
       } catch (error) {
         console.error("Error submitting comment:", error);
       } finally {
@@ -215,7 +261,7 @@ export function PostCard({
               variant="ghost" 
               size="icon" 
               className="rounded-full"
-              onClick={() => navigate(`/post/${id}`)}
+              onClick={handleCommentFocus}
             >
               <MessageCircle className="h-5 w-5" />
               <span className="sr-only">Коментар</span>
@@ -261,10 +307,10 @@ export function PostCard({
           </p>
         </div>
 
-        {/* Inline коментарі */}
-        {recentComments.length > 0 && (
+        {/* Inline коментарі - показуємо 2 або всі */}
+        {(showAllComments ? allComments : recentComments).length > 0 && (
           <div className="mt-2 space-y-2">
-            {recentComments.slice(0, 2).map(comment => (
+            {(showAllComments ? allComments : recentComments.slice(0, 2)).map(comment => (
               <div key={comment.id} className="flex items-start gap-2">
                 <Link to={`/profile/${comment.user_id}`}>
                   <Avatar className="h-6 w-6">
@@ -283,12 +329,27 @@ export function PostCard({
           </div>
         )}
 
-        {/* Посилання на всі коментарі */}
+        {/* Кнопка "Переглянути більше коментарів" - inline expand */}
         <div className="mt-1 flex flex-col">
-          {comments > 2 && (
-            <Link to={`/post/${id}`} className="text-sm text-muted-foreground hover:underline">
-              Переглянути ще {comments - Math.min(recentComments.length, 2)} коментарів
-            </Link>
+          {comments > 2 && !showAllComments && (
+            <button 
+              onClick={loadAllComments}
+              disabled={isLoadingAllComments}
+              className="text-sm text-muted-foreground hover:underline text-left"
+            >
+              {isLoadingAllComments 
+                ? "Завантаження..." 
+                : `Переглянути ще ${comments - Math.min(recentComments.length, 2)} коментарів`
+              }
+            </button>
+          )}
+          {showAllComments && allComments.length > 2 && (
+            <button 
+              onClick={() => setShowAllComments(false)}
+              className="text-sm text-muted-foreground hover:underline text-left"
+            >
+              Згорнути коментарі
+            </button>
           )}
           <span className="mt-1 text-xs text-muted-foreground">{timeAgo}</span>
         </div>
@@ -302,6 +363,7 @@ export function PostCard({
                 <AvatarFallback>{authUser.full_name?.[0] || 'U'}</AvatarFallback>
               </Avatar>
               <Input
+                ref={commentInputRef}
                 placeholder="Написати коментар..."
                 className="flex-1 h-9 bg-muted/50 border-0 focus-visible:ring-1"
                 value={commentText}
