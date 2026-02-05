@@ -355,7 +355,7 @@ export default function Profile() {
       <ProfileHeader user={user} onEditProfile={handleEditProfile} />
       
       <div className="container mt-8 grid grid-cols-12 gap-6 px-4 md:px-6">
-        <div className="hidden md:block md:col-span-4 lg:col-span-3">
+        <div className="hidden md:block md:col-span-4 lg:col-span-3 min-h-full">
           <Sidebar />
         </div>
         

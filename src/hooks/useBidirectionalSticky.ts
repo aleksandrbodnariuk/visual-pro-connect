@@ -51,8 +51,22 @@ export function useBidirectionalSticky(options: UseBidirectionalStickyOptions = 
     const directionChanged = currentDirection !== lastDirection.current;
     
     const sidebarHeight = sidebar.offsetHeight;
+    const containerHeight = container.offsetHeight;
     const viewportHeight = window.innerHeight;
     const availableHeight = viewportHeight - topOffset - bottomOffset;
+    
+    // Захист: якщо контейнер такий самий як sidebar - sticky не потрібен
+    if (containerHeight <= sidebarHeight + 10) {
+      setState({
+        isSticky: true,
+        stickyDirection: 'top',
+        marginTop: 0,
+        marginBottom: 0,
+      });
+      lastScrollY.current = currentScrollY;
+      lastDirection.current = currentDirection;
+      return;
+    }
     
     // Якщо sidebar менший за доступну область viewport - просто sticky top
     if (sidebarHeight <= availableHeight) {
@@ -73,7 +87,6 @@ export function useBidirectionalSticky(options: UseBidirectionalStickyOptions = 
     
     // Відстань від верху контейнера до верху sidebar
     const distanceFromContainerTop = sidebarRect.top - containerRect.top;
-    const containerHeight = container.offsetHeight;
     const maxWalkDistance = containerHeight - sidebarHeight;
     
     if (directionChanged) {
