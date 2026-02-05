@@ -9,7 +9,7 @@ import { CreatePublicationModal } from "@/components/publications/CreatePublicat
 import { useAuthState } from "@/hooks/auth/useAuthState";
 import { toast } from "sonner";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
-
+import { useBidirectionalSticky } from "@/hooks/useBidirectionalSticky";
 interface SidebarProps {
   className?: string;
 }
@@ -22,6 +22,12 @@ export function Sidebar({ className }: SidebarProps) {
   const { getCurrentUser } = useAuthState();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { unreadCount } = useUnreadMessages();
+  
+  // Двонаправлений sticky як у Facebook
+  const { sidebarRef, stickyStyle } = useBidirectionalSticky({
+    topOffset: 80,  // Висота navbar
+    bottomOffset: 20
+  });
   
   const currentUser = getCurrentUser();
   
@@ -56,11 +62,13 @@ export function Sidebar({ className }: SidebarProps) {
   };
 
   return (
-    <aside className={cn(
-      "rounded-lg border bg-card",
-      "sticky-sidebar scrollbar-hide",
-      className
-    )}>
+    <aside 
+      ref={sidebarRef as React.RefObject<HTMLElement>}
+      style={stickyStyle}
+      className={cn(
+        "rounded-lg border bg-card scrollbar-hide",
+        className
+      )}>
       <div className="p-3 md:p-4 3xl:p-5 space-y-3 md:space-y-4">
         <h2 className="text-base md:text-lg 3xl:text-xl font-semibold mb-3 md:mb-4">{t.menu}</h2>
         <nav className="space-y-2">

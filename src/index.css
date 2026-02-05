@@ -196,28 +196,9 @@
     display: none;
   }
 
-  /* Утиліта для sticky sidebar - Facebook-стиль */
+  /* Sticky sidebar тепер контролюється через useBidirectionalSticky hook */
+  /* Базові стилі для сумісності */
   .sticky-sidebar {
-    position: sticky;
-    top: 4rem; /* Висота navbar (h-16) */
-    max-height: calc(100vh - 5rem);
-    overflow-y: auto;
-    scrollbar-width: thin;
-  }
-
-  /* Для планшетів */
-  @media (min-width: 768px) {
-    .sticky-sidebar {
-      top: 5rem; /* Висота navbar md (h-20) */
-      max-height: calc(100vh - 6rem);
-    }
-  }
-
-  /* Для TV - більші відступи */
-  @media (min-width: 1920px) {
-    .sticky-sidebar {
-      top: 6rem;
-      max-height: calc(100vh - 7rem);
-    }
+    /* Позиціонування контролюється JavaScript */
   }
 }
