@@ -23,7 +23,7 @@ export const translations: Record<Language, Record<string, string>> = {
     loginAsAdminFounder: "Вхід як Адміністратор-засновник",
     incorrectPhoneOrPassword: "Неправильний номер телефону або пароль",
     passwordsDoNotMatch: "Паролі не співпадають",
-    passwordMinLength: "Пароль повинен містити принаймні 6 символів",
+    passwordMinLength: "Пароль повинен містити принаймні 10 символів",
     userAlreadyExists: "Користувач з таким email вже зареєстрований",
     invalidEmail: "Невірний формат email",
     registrationSuccess: "Реєстрація успішна! Перевірте ваш email для підтвердження.",
@@ -32,6 +32,15 @@ export const translations: Record<Language, Record<string, string>> = {
     enterNameAndSurname: "Введіть ім'я та прізвище",
     userWithPhoneExists: "Користувач з таким номером телефону вже зареєстрований",
     registrationSuccessful: "Реєстрація успішна",
+    
+    // Password requirements
+    passwordRequirements: "Вимоги до паролю:",
+    passwordMinChars: "Мінімум 10 символів",
+    passwordUppercase: "Велика літера (A-Z)",
+    passwordLowercase: "Мала літера (a-z)",
+    passwordNumber: "Цифра (0-9)",
+    passwordSpecial: "Спеціальний символ (!@#$%^&*)",
+    passwordTooWeak: "Пароль не відповідає вимогам безпеки",
     enterPhoneAndPassword: "Введіть номер телефону та пароль",
     
     // Password reset
@@ -106,7 +115,7 @@ export const translations: Record<Language, Record<string, string>> = {
     loginAsAdminFounder: "Login as Admin-Founder",
     incorrectPhoneOrPassword: "Incorrect phone number or password",
     passwordsDoNotMatch: "Passwords do not match",
-    passwordMinLength: "Password must be at least 6 characters",
+    passwordMinLength: "Password must be at least 10 characters",
     userAlreadyExists: "User with this email already registered",
     invalidEmail: "Invalid email format",
     registrationSuccess: "Registration successful! Please check your email for confirmation.",
@@ -115,6 +124,16 @@ export const translations: Record<Language, Record<string, string>> = {
     enterNameAndSurname: "Enter first name and last name",
     userWithPhoneExists: "User with this phone number already exists",
     registrationSuccessful: "Registration successful",
+    
+    // Password requirements
+    passwordRequirements: "Password requirements:",
+    passwordMinChars: "Minimum 10 characters",
+    passwordUppercase: "Uppercase letter (A-Z)",
+    passwordLowercase: "Lowercase letter (a-z)",
+    passwordNumber: "Number (0-9)",
+    passwordSpecial: "Special character (!@#$%^&*)",
+    passwordTooWeak: "Password does not meet security requirements",
+    stockMarket: "Stock Market",
     enterPhoneAndPassword: "Enter phone number and password",
     
     // Password reset
@@ -187,7 +206,7 @@ export const translations: Record<Language, Record<string, string>> = {
     loginAsAdminFounder: "Zaloguj jako Administrator-Założyciel",
     incorrectPhoneOrPassword: "Nieprawidłowy numer telefonu lub hasło",
     passwordsDoNotMatch: "Hasła nie pasują",
-    passwordMinLength: "Hasło musi mieć co najmniej 6 znaków",
+    passwordMinLength: "Hasło musi mieć co najmniej 10 znaków",
     userAlreadyExists: "Użytkownik z tym adresem email już istnieje",
     invalidEmail: "Nieprawidłowy format email",
     registrationSuccess: "Rejestracja pomyślna! Sprawdź swój email w celu potwierdzenia.",
@@ -196,6 +215,16 @@ export const translations: Record<Language, Record<string, string>> = {
     userWithPhoneExists: "Użytkownik z tym numerem telefonu już istnieje",
     registrationSuccessful: "Rejestracja pomyślna",
     enterPhoneAndPassword: "Wprowadź numer telefonu i hasło",
+    databaseErrorSavingUser: "Błąd bazy danych podczas zapisywania użytkownika.",
+    
+    // Password requirements
+    passwordRequirements: "Wymagania dotyczące hasła:",
+    passwordMinChars: "Minimum 10 znaków",
+    passwordUppercase: "Wielka litera (A-Z)",
+    passwordLowercase: "Mała litera (a-z)",
+    passwordNumber: "Cyfra (0-9)",
+    passwordSpecial: "Znak specjalny (!@#$%^&*)",
+    passwordTooWeak: "Hasło nie spełnia wymagań bezpieczeństwa",
     
     // Password reset
     forgotPassword: "Zapomniałeś hasła?",
@@ -267,7 +296,7 @@ export const translations: Record<Language, Record<string, string>> = {
     loginAsAdminFounder: "Als Admin-Gründer anmelden",
     incorrectPhoneOrPassword: "Falsche Telefonnummer oder Passwort",
     passwordsDoNotMatch: "Passwörter stimmen nicht überein",
-    passwordMinLength: "Passwort muss mindestens 6 Zeichen lang sein",
+    passwordMinLength: "Passwort muss mindestens 10 Zeichen lang sein",
     userAlreadyExists: "Benutzer mit dieser E-Mail bereits registriert",
     invalidEmail: "Ungültiges E-Mail-Format",
     registrationSuccess: "Registrierung erfolgreich! Bitte überprüfen Sie Ihre E-Mail zur Bestätigung.",
@@ -276,6 +305,16 @@ export const translations: Record<Language, Record<string, string>> = {
     userWithPhoneExists: "Benutzer mit dieser Telefonnummer existiert bereits",
     registrationSuccessful: "Registrierung erfolgreich",
     enterPhoneAndPassword: "Geben Sie Telefonnummer und Passwort ein",
+    databaseErrorSavingUser: "Datenbankfehler beim Speichern des Benutzers.",
+    
+    // Password requirements
+    passwordRequirements: "Passwortanforderungen:",
+    passwordMinChars: "Mindestens 10 Zeichen",
+    passwordUppercase: "Großbuchstabe (A-Z)",
+    passwordLowercase: "Kleinbuchstabe (a-z)",
+    passwordNumber: "Zahl (0-9)",
+    passwordSpecial: "Sonderzeichen (!@#$%^&*)",
+    passwordTooWeak: "Passwort erfüllt nicht die Sicherheitsanforderungen",
     
     // Password reset
     forgotPassword: "Passwort vergessen?",
@@ -347,7 +386,7 @@ export const translations: Record<Language, Record<string, string>> = {
     loginAsAdminFounder: "Conectare ca Administrator-Fondator",
     incorrectPhoneOrPassword: "Număr de telefon sau parolă incorectă",
     passwordsDoNotMatch: "Parolele nu se potrivesc",
-    passwordMinLength: "Parola trebuie să aibă cel puțin 6 caractere",
+    passwordMinLength: "Parola trebuie să aibă cel puțin 10 caractere",
     userAlreadyExists: "Utilizator cu acest email deja înregistrat",
     invalidEmail: "Format email invalid",
     registrationSuccess: "Înregistrare reușită! Verificați emailul pentru confirmare.",
@@ -356,6 +395,16 @@ export const translations: Record<Language, Record<string, string>> = {
     userWithPhoneExists: "Utilizatorul cu acest număr de telefon există deja",
     registrationSuccessful: "Înregistrare reușită",
     enterPhoneAndPassword: "Introduceți numărul de telefon și parola",
+    databaseErrorSavingUser: "Eroare bază de date la salvarea utilizatorului.",
+    
+    // Password requirements
+    passwordRequirements: "Cerințe pentru parolă:",
+    passwordMinChars: "Minimum 10 caractere",
+    passwordUppercase: "Literă mare (A-Z)",
+    passwordLowercase: "Literă mică (a-z)",
+    passwordNumber: "Cifră (0-9)",
+    passwordSpecial: "Caracter special (!@#$%^&*)",
+    passwordTooWeak: "Parola nu îndeplinește cerințele de securitate",
     
     // Password reset
     forgotPassword: "Ai uitat parola?",

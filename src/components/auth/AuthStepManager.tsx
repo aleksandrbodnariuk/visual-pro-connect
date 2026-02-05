@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
+import { LanguageSelector } from '@/components/layout/LanguageSelector';
 
 import SupabaseLoginForm from '@/components/auth/SupabaseLoginForm';
 import SupabaseRegisterForm from '@/components/auth/SupabaseRegisterForm';
@@ -34,7 +34,10 @@ export function AuthStepManager({
   // Рендеримо компонент відповідно до поточного кроку автентифікації
   if (authStep === AuthStep.SUPABASE_RESET_PASSWORD) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center p-4">
+      <div className="relative flex h-screen flex-col items-center justify-center p-4">
+        <div className="absolute top-4 right-4">
+          <LanguageSelector />
+        </div>
         <div className="w-full max-w-md space-y-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold">Скидання паролю</h1>
@@ -50,7 +53,10 @@ export function AuthStepManager({
   }
   
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
+    <div className="relative flex min-h-screen flex-col items-center justify-center p-4">
+      <div className="absolute top-4 right-4">
+        <LanguageSelector />
+      </div>
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold">{isLogin ? t.loginToApp : t.register}</h1>

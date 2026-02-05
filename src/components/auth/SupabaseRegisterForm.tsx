@@ -7,7 +7,7 @@ import { useSupabaseAuth } from '@/hooks/auth/useSupabaseAuth';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 import { Eye, EyeOff } from 'lucide-react';
-
+import PasswordRequirements, { isPasswordValid } from './PasswordRequirements';
 interface SupabaseRegisterFormProps {
   onSwitchToLogin: () => void;
 }
@@ -39,8 +39,8 @@ export default function SupabaseRegisterForm({ onSwitchToLogin }: SupabaseRegist
       return;
     }
 
-    if (password.length < 6) {
-      toast.error(t.passwordMinLength);
+    if (!isPasswordValid(password)) {
+      toast.error(t.passwordTooWeak);
       return;
     }
 
@@ -145,6 +145,8 @@ export default function SupabaseRegisterForm({ onSwitchToLogin }: SupabaseRegist
           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </button>
       </div>
+      
+      <PasswordRequirements password={password} />
       
       <div className="relative">
         <Input
