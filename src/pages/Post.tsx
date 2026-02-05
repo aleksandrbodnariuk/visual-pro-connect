@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Trash2 } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, Share2, Bookmark, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,12 +11,8 @@ import { toast } from "@/hooks/use-toast";
 import { useAuthState } from "@/hooks/auth/useAuthState";
 import { usePostLikes } from "@/hooks/usePostLikes";
 import { Navbar } from "@/components/layout/Navbar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { extractVideoEmbed } from "@/lib/videoEmbed";
+import { VideoPreview } from "@/components/feed/VideoPreview";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -241,9 +237,18 @@ export default function PostPage() {
               </Link>
             </div>
 
-            {/* Content */}
+            {/* Content - очищаємо URL */}
             {post.content && (
-              <p className="mb-4 text-foreground">{post.content}</p>
+              <p className="mb-4 text-foreground">
+                {post.content.replace(/(https?:\/\/[^\s]+)/g, '').trim()}
+              </p>
+            )}
+            
+            {/* Video Preview - якщо є вбудоване відео */}
+            {post.content && extractVideoEmbed(post.content) && !post.media_url && (
+              <div className="mb-4">
+                <VideoPreview embed={extractVideoEmbed(post.content)!} />
+              </div>
             )}
 
             {/* Media */}
