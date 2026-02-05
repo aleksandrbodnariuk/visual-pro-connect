@@ -58,9 +58,9 @@ export function NewsFeed() {
     try {
       setLoading(true);
       
-      // Timeout 5 секунд для завантаження постів
+      // Timeout 15 секунд для завантаження постів
       const timeout = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 5000)
+        setTimeout(() => reject(new Error('Timeout')), 15000)
       );
       
       const fetchPosts = async () => {

@@ -90,9 +90,9 @@ export default function Search() {
       try {
         setIsLoading(true);
         
-        // Timeout 5 секунд
+        // Timeout 15 секунд
         const timeout = new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 5000)
+          setTimeout(() => reject(new Error('Timeout')), 15000)
         );
         
         const fetchData = async () => {

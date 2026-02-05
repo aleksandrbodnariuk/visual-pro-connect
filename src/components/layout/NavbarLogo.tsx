@@ -16,7 +16,7 @@ export function NavbarLogo() {
         
         // Створюємо timeout promise
         const timeoutPromise = new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 3000)
+          setTimeout(() => reject(new Error('Timeout')), 15000)
         );
         
         // Функція для завантаження налаштувань
