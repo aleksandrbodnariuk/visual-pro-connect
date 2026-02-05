@@ -1,39 +1,85 @@
 
 
-## План: Виправлення превʼю відео для повного кадру без обрізання
+## План: Виправлення подвійної прокрутки - одна прокрутка як у Facebook
 
 ---
 
-### Виявлена проблема
+### Аналіз проблеми
 
-На скріншотах видно:
-- **Оригінальне відео (Facebook)**: Вертикальний формат (приблизно 9:16), музиканти видно повністю
-- **У нас на сайті**: Відео обрізане горизонтально (16:9), музикантів видно лише частково
+На скріншотах чітко видно проблему:
 
-**Технічна причина:**
+**У вас зараз:**
+- Два скролбари: один для всієї сторінки (праворуч), інший для бічної панелі (sidebar)
+- Сторінка "стрибає" вгору при взаємодії
+
+**У Facebook:**
+- Один глобальний скролбар для всього контенту
+- Sidebar та права панель "прилипають" до верху екрану (sticky)
+- При прокрутці рухається тільки центральна стрічка новин
+
+---
+
+### Як це працює у Facebook
+
+Facebook використовує техніку "Sticky Sidebars with Single Page Scroll":
+
 ```text
-ЗАРАЗ (VideoPreview.tsx):
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ <div className="aspect-video">  ← Фіксує 16:9 для ВСІХ відео               │
-│   <iframe ... className="w-full h-full" />                                  │
-│ </div>                                                                      │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-Результат: Вертикальне відео (9:16) втискується в 16:9 контейнер → обрізання
+│  NAVBAR (sticky top-0)                                                      │
+├───────────────┬───────────────────────────────────┬─────────────────────────┤
+│               │                                   │                         │
+│  LEFT SIDEBAR │      MAIN FEED (scrollable)       │    RIGHT SIDEBAR        │
+│  (sticky)     │                                   │    (sticky)             │
+│  position:    │   ┌───────────────────────────┐   │    position:            │
+│  sticky       │   │ Post 1                    │   │    sticky               │
+│  top: 64px    │   └───────────────────────────┘   │    top: 64px            │
+│  height:      │   ┌───────────────────────────┐   │    max-height:          │
+│  fit-content  │   │ Post 2                    │   │    calc(100vh - 64px)   │
+│               │   └───────────────────────────┘   │                         │
+│               │   ┌───────────────────────────┐   │                         │
+│               │   │ Post 3                    │   │                         │
+│               │   └───────────────────────────┘   │                         │
+│               │                ↓ (scroll)         │                         │
+└───────────────┴───────────────────────────────────┴─────────────────────────┘
+                           ↕ ОДИН СКРОЛБАР
 ```
 
+**Ключові принципи:**
+1. `html, body` - природна прокрутка документа (без overflow: hidden)
+2. Sidebar - `position: sticky`, `top: navbar_height`, без власного скролу
+3. Якщо sidebar занадто довгий - обмежити `max-height` та додати `overflow-y: auto` тільки для нього
+
 ---
 
-### Проблема з різними платформами
+### Виявлені проблеми в коді
 
-| Платформа | Формат відео | Рішення |
-|-----------|--------------|---------|
-| YouTube (звичайне) | 16:9 горизонтальне | `aspect-video` ОК |
-| YouTube Shorts | 9:16 вертикальне | Потрібен інший aspect-ratio |
-| Facebook Watch | 16:9 горизонтальне | `aspect-video` ОК |
-| Facebook Reels | 9:16 вертикальне | Потрібен інший aspect-ratio |
-| Instagram Reels | 9:16 вертикальне | Вже має min-height, але потребує покращення |
-| TikTok | 9:16 вертикальне | Зараз показує тільки посилання |
+#### 1. Конфлікт стилів `#root` в App.css
+
+```css
+/* App.css - залишок від Vite template */
+#root {
+  max-width: 1280px;  /* ПРОБЛЕМА: Обмежує ширину */
+  margin: 0 auto;
+  padding: 2rem;      /* ПРОБЛЕМА: Зайвий padding */
+  text-align: center;
+}
+```
+
+#### 2. Стилі в index.html
+
+```html
+<style>
+  #root {
+    height: 100%;           /* Може викликати проблеми */
+    display: flex;
+    flex-direction: column;
+  }
+</style>
+```
+
+#### 3. Sidebar має overflow при занадто великій висоті
+
+Sidebar не обмежений по висоті, що створює другу прокрутку.
 
 ---
 
@@ -41,151 +87,179 @@
 
 ---
 
-### Файл 1: `src/lib/videoEmbed.ts`
+### Файл 1: `src/App.css` - Видалити конфліктні стилі
 
-#### 1.1 Додати поле `isVertical` до VideoEmbed
+**Повністю переписати файл:**
 
-```tsx
-export interface VideoEmbed {
-  platform: 'youtube' | 'instagram' | 'tiktok' | 'facebook' | 'link';
-  videoId?: string;
-  embedUrl?: string;
-  originalUrl: string;
-  thumbnailUrl?: string;
-  isVertical?: boolean;  // Додати для визначення орієнтації
-}
-```
-
-#### 1.2 Визначати YouTube Shorts як вертикальне
-
-```tsx
-// YouTube Shorts regex
-const YOUTUBE_SHORTS_REGEX = /youtube\.com\/shorts\/([^"&?\/\s]{11})/;
-
-// В extractVideoEmbed:
-// Перевіряємо YouTube Shorts окремо
-const ytShortsMatch = url.match(YOUTUBE_SHORTS_REGEX);
-if (ytShortsMatch && ytShortsMatch[1]) {
-  return {
-    platform: 'youtube',
-    videoId: ytShortsMatch[1],
-    embedUrl: `https://www.youtube.com/embed/${ytShortsMatch[1]}`,
-    originalUrl: url,
-    thumbnailUrl: `https://img.youtube.com/vi/${ytShortsMatch[1]}/maxresdefault.jpg`,
-    isVertical: true  // Shorts завжди вертикальні
-  };
-}
-```
-
-#### 1.3 Визначати Facebook Reels як вертикальне
-
-```tsx
-// Оновити FACEBOOK_REGEX щоб розрізняти reels
-const FACEBOOK_REEL_REGEX = /facebook\.com\/reel\/(\d+)/;
-
-// В extractVideoEmbed:
-const fbReelMatch = url.match(FACEBOOK_REEL_REGEX);
-if (fbReelMatch && fbReelMatch[1]) {
-  return {
-    platform: 'facebook',
-    videoId: fbReelMatch[1],
-    embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false`,
-    originalUrl: url,
-    isVertical: true  // Reels завжди вертикальні
-  };
+```css
+/* Видаляємо все старе - залишаємо тільки необхідне */
+#root {
+  /* Тепер контейнер займає 100% ширини */
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
 }
 ```
 
 ---
 
-### Файл 2: `src/components/feed/VideoPreview.tsx`
+### Файл 2: `index.html` - Виправити стилі для єдиної прокрутки
 
-#### 2.1 Використовувати адаптивний aspect-ratio залежно від орієнтації
+Змінити `<style>` блок:
+
+```html
+<style>
+  html {
+    /* Один скролбар для всього документа */
+    overflow-y: scroll;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    min-height: 100vh;
+    overflow-x: hidden;
+    /* НЕ встановлюємо overflow-y: hidden */
+  }
+  
+  #root {
+    min-height: 100vh;
+  }
+  
+  /* ... інші стилі залишаються */
+</style>
+```
+
+---
+
+### Файл 3: `src/components/layout/Sidebar.tsx` - Sticky з обмеженою висотою
+
+Sidebar повинен:
+- Бути `sticky` з `top` рівним висоті navbar
+- Мати `max-height` щоб не виходити за межі viewport
+- Власний скрол тільки якщо контент перевищує viewport
+
+**Обгортка для aside:**
 
 ```tsx
-export function VideoPreview({ embed }: VideoPreviewProps) {
-  // Визначаємо CSS клас для контейнера залежно від орієнтації
-  const aspectClass = embed.isVertical 
-    ? "aspect-[9/16] max-w-[320px] mx-auto"  // Вертикальне - 9:16, центроване
-    : "aspect-video";  // Горизонтальне - 16:9, на всю ширину
+<aside className={cn(
+  "rounded-lg border bg-card sticky top-16 md:top-20",
+  "max-h-[calc(100vh-5rem)] overflow-y-auto",  // Власний скрол тільки при потребі
+  "scrollbar-hide",  // Приховати скролбар для чистішого вигляду
+  className
+)}>
+```
 
-  if (embed.platform === 'youtube') {
-    return (
-      <div className="rounded-lg overflow-hidden border bg-muted">
-        <div className={aspectClass}>
-          <iframe
-            src={embed.embedUrl}
-            className="w-full h-full"
-            allowFullScreen
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            title="YouTube відео"
-          />
-        </div>
-        <div className="p-2 flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-medium">
-            {embed.isVertical ? 'YOUTUBE SHORTS' : 'YOUTUBE.COM'}
-          </span>
-        </div>
-      </div>
-    );
+---
+
+### Файл 4: `src/pages/Index.tsx` - Оптимізація layout
+
+Переконатися що layout не створює зайвих прокруток:
+
+```tsx
+return (
+  <div className="min-h-screen bg-background pb-20 md:pb-0">
+    <Navbar />
+    {/* Прибираємо будь-які overflow або height обмеження з container */}
+    <div className="container grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 3xl:gap-8 px-3 sm:px-4 md:px-6 py-4 md:py-6">
+      <Sidebar className="hidden md:block md:col-span-4 lg:col-span-3" />
+      {/* Main content - природна висота */}
+      <main className="col-span-1 md:col-span-8 lg:col-span-9">
+        {/* ... */}
+      </main>
+    </div>
+  </div>
+);
+```
+
+---
+
+### Файл 5: `src/index.css` - Глобальні стилі прокрутки
+
+Додати стилі для плавної прокрутки та підтримки TV:
+
+```css
+@layer base {
+  html {
+    /* Єдина прокрутка для документа */
+    scroll-behavior: smooth;
   }
   
-  if (embed.platform === 'facebook') {
-    return (
-      <div className="rounded-lg overflow-hidden border bg-muted">
-        <div className={aspectClass}>
-          <iframe
-            src={embed.embedUrl}
-            className="w-full h-full"
-            allowFullScreen
-            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
-            title="Facebook відео"
-          />
-        </div>
-        <div className="p-2 flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-medium">
-            {embed.isVertical ? 'FACEBOOK REELS' : 'FACEBOOK.COM'}
-          </span>
-        </div>
-      </div>
-    );
+  body {
+    /* Дозволяємо природну прокрутку */
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  /* Утиліта для sticky sidebar */
+  .sticky-sidebar {
+    position: sticky;
+    top: 5rem; /* Висота navbar */
+    max-height: calc(100vh - 6rem);
+    overflow-y: auto;
+    scrollbar-width: thin;
   }
   
-  // ... решта платформ
+  /* Для TV - більші відступи */
+  @media (min-width: 1920px) {
+    .sticky-sidebar {
+      top: 6rem;
+      max-height: calc(100vh - 7rem);
+    }
+  }
 }
 ```
 
 ---
 
-### Візуальна схема результату
+### Візуальне порівняння
 
 ```text
-ГОРИЗОНТАЛЬНЕ ВІДЕО (16:9):
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ ┌─────────────────────────────────────────────────────────────────────────┐ │
-│ │                                                                         │ │
-│ │                     [YouTube/Facebook Player]                           │ │
-│ │                         aspect-video (16:9)                             │ │
-│ │                                                                         │ │
-│ └─────────────────────────────────────────────────────────────────────────┘ │
-│ YOUTUBE.COM                                                                 │
-└─────────────────────────────────────────────────────────────────────────────┘
+ЗАРАЗ (дві прокрутки):
+┌───────────────────────────────────────────────────────────────────────┐▲
+│ Navbar                                                                │░
+├─────────────────┬────────────────────────────────────┬────────────────┤░
+│ ┌─────────────┐▲│                                    │                │░
+│ │ Sidebar     │░│  Feed                              │                │░
+│ │             │░│  ┌──────────────────────────────┐  │                │░
+│ │ Menu        │░│  │ Post                         │  │                │░ ← ДВА СКРОЛА!
+│ │ Categories  │░│  └──────────────────────────────┘  │                │░
+│ └─────────────┘▼│                                    │                │░
+└─────────────────┴────────────────────────────────────┴────────────────┘▼
 
-ВЕРТИКАЛЬНЕ ВІДЕО (9:16 - Shorts/Reels):
-┌─────────────────────────────────────────────────────────────────────────────┐
-│              ┌───────────────────────────────┐                              │
-│              │                               │                              │
-│              │                               │                              │
-│              │   [YouTube/Facebook Player]   │                              │
-│              │       aspect-[9/16]           │                              │
-│              │       max-w-[320px]           │                              │
-│              │       mx-auto (центровано)    │                              │
-│              │                               │                              │
-│              │                               │                              │
-│              └───────────────────────────────┘                              │
-│              YOUTUBE SHORTS / FACEBOOK REELS                                │
-└─────────────────────────────────────────────────────────────────────────────┘
+ПІСЛЯ (як Facebook):
+┌───────────────────────────────────────────────────────────────────────┐
+│ Navbar (sticky top-0)                                                 │
+├─────────────────┬────────────────────────────────────┬────────────────┤
+│ Sidebar         │                                    │ Right Panel    │
+│ (sticky)        │  Feed                              │ (sticky)       │
+│                 │  ┌──────────────────────────────┐  │                │
+│ Menu            │  │ Post 1                       │  │                │
+│ Categories      │  └──────────────────────────────┘  │                │
+│                 │  ┌──────────────────────────────┐  │                │
+│                 │  │ Post 2                       │  │                │▲
+│                 │  └──────────────────────────────┘  │                │░
+│                 │                 ↓                  │                │░ ← ОДИН СКРОЛ
+│                 │  ┌──────────────────────────────┐  │                │░
+│                 │  │ Post 3                       │  │                │▼
+└─────────────────┴────────────────────────────────────┴────────────────┘
 ```
+
+---
+
+### Адаптивність для різних пристроїв
+
+| Пристрій | Sidebar | Поведінка |
+|----------|---------|-----------|
+| **Смартфон** (xs-sm) | Прихований (hidden) | Тільки контент прокручується |
+| **Планшет** (md) | Sticky, 4 колонки | Sticky sidebar, один скрол |
+| **Ноутбук** (lg-xl) | Sticky, 3 колонки | Sticky sidebar, один скрол |
+| **TV** (3xl-4xl) | Sticky, більші відступи | Sticky sidebar, один скрол, більші елементи |
 
 ---
 
@@ -193,60 +267,18 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
 
 | Файл | Зміни |
 |------|-------|
-| `src/lib/videoEmbed.ts` | Додати `isVertical` поле, визначати YouTube Shorts та Facebook Reels |
-| `src/components/feed/VideoPreview.tsx` | Використовувати `aspect-[9/16]` для вертикальних відео |
-
----
-
-### Покращення для Instagram та TikTok
-
-#### Instagram Reels
-```tsx
-if (embed.platform === 'instagram') {
-  // Instagram Reels/Posts - завжди вертикальні, використовуємо фіксовану висоту
-  return (
-    <div className="rounded-lg overflow-hidden border max-w-[320px] mx-auto">
-      <iframe
-        src={embed.embedUrl}
-        className="w-full aspect-[9/16]"
-        frameBorder="0"
-        scrolling="no"
-        title="Instagram пост"
-      />
-    </div>
-  );
-}
-```
-
-#### TikTok (опціонально - додати iframe embed)
-TikTok підтримує oEmbed API, можна отримати embed iframe:
-```tsx
-if (embed.platform === 'tiktok') {
-  return (
-    <div className="rounded-lg overflow-hidden border max-w-[320px] mx-auto">
-      <blockquote 
-        className="tiktok-embed" 
-        cite={embed.originalUrl}
-        data-video-id={embed.videoId}
-      >
-        <section>
-          <a href={embed.originalUrl} target="_blank" rel="noopener noreferrer">
-            Переглянути на TikTok
-          </a>
-        </section>
-      </blockquote>
-    </div>
-  );
-}
-```
+| `src/App.css` | Видалити старі конфліктні стилі Vite |
+| `index.html` | Виправити стилі `html, body, #root` для єдиної прокрутки |
+| `src/index.css` | Додати утиліту `.sticky-sidebar` та глобальні стилі прокрутки |
+| `src/components/layout/Sidebar.tsx` | Додати `max-height` та `overflow-y: auto` з `scrollbar-hide` |
+| `src/pages/Index.tsx` | Оновити класи sidebar для коректного sticky поведінки |
 
 ---
 
 ### Очікуваний результат
 
-1. **YouTube Shorts** - показуються у вертикальному форматі 9:16, центровані
-2. **Facebook Reels** - показуються у вертикальному форматі 9:16, без обрізання
-3. **Звичайні YouTube/Facebook відео** - залишаються 16:9
-4. **Instagram** - покращене відображення вертикальних постів/рилсів
-5. **Мітки** - "YOUTUBE SHORTS" та "FACEBOOK REELS" для вертикальних відео
+1. **Один скролбар** - як у Facebook, тільки справа на всю сторінку
+2. **Sidebar завжди видимий** - прилипає до верху при прокрутці
+3. **Стабільна сторінка** - не "стрибає" вгору
+4. **Працює на всіх пристроях** - смартфони, планшети, ноутбуки, TV
 
