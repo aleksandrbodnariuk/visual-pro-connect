@@ -65,7 +65,7 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <div 
       ref={containerRef}
-      className="relative"
+      className="relative h-full"
     >
       <aside 
         ref={sidebarRef}
