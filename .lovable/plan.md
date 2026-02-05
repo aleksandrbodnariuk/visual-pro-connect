@@ -1,143 +1,85 @@
 
 
-## План: Виправлення критичних проблем завантаження сайту
+## План: Виправлення перекриття аватара та інформації профілю сайдбаром
 
 ---
 
-### Діагностика
+### Діагностика проблеми
 
-Після аналізу коду виявлено **кореневу причину** проблем:
+На скриншоті видно:
+- Аватар не відображається (схований за sidebar)
+- Ім'я обрізане - "р Боднарюк" замість "Олександр Боднарюк"  
+- Лічильники публікацій/підписників не видно
+- Кнопка "Редагувати профіль" виїхала за праву межу
 
-| Проблема | Файл | Опис |
-|----------|------|------|
-| Блокуючий `initializeStorage()` | `main.tsx:36` | Запускається синхронно при старті, робить 5 запитів до Storage |
-| Дублювання `onAuthStateChange` | `ThemeContext.tsx`, `AuthContext.tsx` | Дві підписки конкурують за один потік подій |
-| Відсутній timeout в ThemeSyncer | `ThemeContext.tsx:14-31` | Запит до `users` може зависати нескінченно |
-| Запити без error handling | `ThemeContext.tsx` | Помилка RLS блокує весь ThemeProvider |
+**Причина**: `ProfileHeader` рендериться на повну ширину екрана, але **fixed Sidebar перекриває ліву частину**.
 
 ---
 
-### Послідовність проблем при завантаженні
+### Порівняння з правильним layout
 
-```text
-Старт додатку
-    ↓
-main.tsx: initializeStorage() ─→ 5 паралельних запитів до Storage
-    ↓ (блокує потік)
-App.tsx рендериться
-    ↓
-AuthProvider: onAuthStateChange + getSession ─→ 2 запити
-    ↓
-ThemeProvider: ThemeSyncer ─→ getUser + select users + onAuthStateChange
-    ↓                          ↑
-    └──────────────────────────┘
-         Конкуренція за auth state
-    ↓
-NavbarLogo: запит site_settings (timeout 15 сек)
-    ↓
-NewsFeed: запит posts + RPC (timeout 15 сек)
-    ↓
-ВСІ ЗАПИТИ ЧЕКАЮТЬ ОДИН ОДНОГО = TIMEOUT
-```
+| Сторінка | ProfileHeader | Sidebar | Результат |
+|----------|---------------|---------|-----------|
+| `Index.tsx` | Контент всередині grid | Fixed зліва | Не перекриває |
+| `Profile.tsx` | Поза grid (на повну ширину) | Fixed зліва | **Перекриває!** |
 
 ---
 
 ### Рішення
 
-#### Частина 1: Видалити блокуючий `initializeStorage()` з main.tsx
+Додати **відступ зліва** для `ProfileHeader` на desktop, щоб sidebar не перекривав:
 
-Перенести ініціалізацію сховища в useEffect або видалити повністю (бакети вже існують):
+#### Зміна в ProfileHeader.tsx
 
 ```tsx
-// main.tsx - ВИДАЛИТИ рядки 11-36
-// initializeStorage() не потрібен - бакети вже створені
+// Рядок 115: Інформація профілю
+<div className="container relative -mt-16 px-4 md:pl-[calc(25%+1.5rem)] lg:pl-[calc(25%+2rem)]">
 ```
+
+Це додасть лівий padding на desktop, який відповідає ширині sidebar.
 
 ---
 
-#### Частина 2: Спростити ThemeContext - видалити дублювання
+### Альтернативне рішення (краще)
 
-Змінити ThemeSyncer щоб не підписувався на `onAuthStateChange` (це вже робить AuthProvider):
+Перенести `ProfileHeader` всередину grid-layout, як це зроблено в Index.tsx:
+
+#### Зміна в Profile.tsx
 
 ```tsx
-function ThemeSyncer() {
-  const { setTheme } = useTheme();
-  const { user, loading } = useAuth(); // Використовуємо готовий стан з AuthContext!
-
-  useEffect(() => {
-    // Завантажуємо тему тільки коли user вже визначений
-    if (loading || !user) return;
+<div className="container mt-8 grid grid-cols-12 gap-6 px-4 md:px-6">
+  {/* Spacer для fixed sidebar */}
+  <div className="hidden md:block md:col-span-4 lg:col-span-3" aria-hidden="true" />
+  
+  {/* ProfileHeader тепер в правильній колонці */}
+  <div className="col-span-12 md:col-span-8 lg:col-span-9">
+    <ProfileHeader user={user} onEditProfile={handleEditProfile} />
     
-    const loadTheme = async () => {
-      try {
-        const { data } = await supabase
-          .from('users')
-          .select('theme')
-          .eq('id', user.id)
-          .maybeSingle();
-        
-        if (data?.theme) {
-          setTheme(data.theme);
-        }
-      } catch (error) {
-        console.error('Error loading theme:', error);
-      }
-    };
-    
-    loadTheme();
-  }, [user, loading, setTheme]);
-
-  return null;
-}
-```
-
----
-
-#### Частина 3: Змінити порядок провайдерів в App.tsx
-
-AuthProvider має бути першим, щоб ThemeSyncer міг використовувати useAuth():
-
-```tsx
-// Поточний порядок - ПРАВИЛЬНИЙ
-<QueryClientProvider>
-  <AuthProvider>      // ← Спочатку Auth
-    <ThemeProvider>   // ← Потім Theme (використовує useAuth)
-```
-
----
-
-#### Частина 4: Видалити застарілий код з main.tsx
-
-```tsx
-// main.tsx - спрощений
-import React from "react";
-import ReactDOM from "react-dom/client";
-import App from "./App";
-import "./index.css";
-
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+    <main className="mt-6">
+      <Tabs defaultValue="posts" className="w-full">
+        ...
+      </Tabs>
+    </main>
+  </div>
+</div>
 ```
 
 ---
 
 ### Файли для редагування
 
-| Файл | Дія |
-|------|-----|
-| `src/main.tsx` | Видалити `initializeStorage()` та зайві імпорти |
-| `src/context/ThemeContext.tsx` | Використовувати `useAuth()` замість власної підписки |
+| Файл | Зміна |
+|------|-------|
+| `src/pages/Profile.tsx` | Перенести ProfileHeader всередину grid-layout |
+| `src/components/profile/ProfileHeader.tsx` | Видалити container клас, використовувати повну ширину батьківського елемента |
 
 ---
 
 ### Очікуваний результат
 
-1. Сайт завантажується без зависання
-2. Головна сторінка показує контент
-3. Сторінка входу (`/auth`) відкривається
-4. Немає конкуренції за auth state між провайдерами
-5. Тема завантажується після того як користувач авторизований
+1. Аватар відображається повністю (не перекривається sidebar)
+2. Повне ім'я "Олександр Боднарюк" видиме
+3. Лічильники публікацій/підписників видимі
+4. Кнопка "Редагувати профіль" на своєму місці
+5. Layout профілю відповідає layout іншим сторінкам
 
