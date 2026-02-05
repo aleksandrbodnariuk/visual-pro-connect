@@ -14,46 +14,56 @@ export function NavbarLogo() {
         setIsLoading(true);
         console.log('Loading logo and site name from Supabase...');
         
-        // ЗАВЖДИ завантажуємо з Supabase (без аутентифікації для загальнодоступних налаштувань)
-        const { data: logoData, error: logoError } = await supabase
-          .from('site_settings')
-          .select('value')
-          .eq('id', 'site-logo')
-          .maybeSingle();
+        // Створюємо timeout promise
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 3000)
+        );
+        
+        // Функція для завантаження налаштувань
+        const fetchSettings = async () => {
+          const { data: logoData, error: logoError } = await supabase
+            .from('site_settings')
+            .select('value')
+            .eq('id', 'site-logo')
+            .maybeSingle();
 
-        if (logoError) {
-          console.error('Помилка завантаження логотипу з Supabase:', logoError);
-        } else if (logoData?.value) {
-          console.log('Logo loaded from Supabase:', logoData.value);
-          setLogoUrl(logoData.value);
-          localStorage.setItem('customLogo', logoData.value);
-        } else {
-          console.log('No logo in Supabase, using default logo...');
-          setLogoUrl('/default-logo.png');
-        }
-
-        const { data: nameData, error: nameError } = await supabase
-          .from('site_settings')
-          .select('value')
-          .eq('id', 'site-name')
-          .maybeSingle();
-
-        if (nameError) {
-          console.error('Помилка завантаження назви сайту з Supabase:', nameError);
-        } else if (nameData?.value) {
-          console.log('Site name loaded from Supabase:', nameData.value);
-          setSiteName(nameData.value);
-          localStorage.setItem('siteName', nameData.value);
-        } else {
-          console.log('No site name in Supabase, checking localStorage...');
-          const cachedSiteName = localStorage.getItem('siteName');
-          if (cachedSiteName) {
-            setSiteName(cachedSiteName);
+          if (logoError) {
+            console.error('Помилка завантаження логотипу з Supabase:', logoError);
+          } else if (logoData?.value) {
+            console.log('Logo loaded from Supabase:', logoData.value);
+            setLogoUrl(logoData.value);
+            localStorage.setItem('customLogo', logoData.value);
+          } else {
+            console.log('No logo in Supabase, using default logo...');
+            setLogoUrl('/default-logo.png');
           }
-        }
+
+          const { data: nameData, error: nameError } = await supabase
+            .from('site_settings')
+            .select('value')
+            .eq('id', 'site-name')
+            .maybeSingle();
+
+          if (nameError) {
+            console.error('Помилка завантаження назви сайту з Supabase:', nameError);
+          } else if (nameData?.value) {
+            console.log('Site name loaded from Supabase:', nameData.value);
+            setSiteName(nameData.value);
+            localStorage.setItem('siteName', nameData.value);
+          } else {
+            console.log('No site name in Supabase, using default...');
+            const cachedSiteName = localStorage.getItem('siteName');
+            if (cachedSiteName) {
+              setSiteName(cachedSiteName);
+            }
+          }
+        };
+        
+        // Race між timeout і fetch
+        await Promise.race([fetchSettings(), timeoutPromise]);
       } catch (error) {
-        console.error('Помилка завантаження налаштувань:', error);
-        // Fallback до localStorage або логотип за замовчуванням
+        console.error('Помилка або timeout завантаження налаштувань:', error);
+        // Fallback до дефолтних значень або localStorage
         const cachedLogo = localStorage.getItem('customLogo');
         const cachedSiteName = localStorage.getItem('siteName');
         
