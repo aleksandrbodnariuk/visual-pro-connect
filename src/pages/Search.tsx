@@ -47,7 +47,6 @@ const normalizeCategoryId = (id: string): string => {
 interface Professional {
   id: string;
   full_name: string;
-  username?: string;
   categories: string[];
   avatar_url?: string;
   location?: string;
@@ -96,9 +95,9 @@ export default function Search() {
         );
         
         const fetchData = async () => {
-          // Use secure RPC function that only returns safe public data
+          // Use secure RPC function that only returns specialists
           const { data, error } = await supabase
-            .rpc('get_safe_public_profiles');
+            .rpc('get_specialists');
           
           if (error) throw error;
           return data;
@@ -106,14 +105,13 @@ export default function Search() {
         
         const data = await Promise.race([fetchData(), timeout]);
         
-        // Форматуємо дані (тепер RPC повертає categories, city, country)
+        // Форматуємо дані (тепер RPC повертає тільки фахівців)
         const formattedData = (data || []).map((user: any) => ({
           id: user.id,
           full_name: user.full_name || "Користувач без імені",
-          username: `user_${user.id.substring(0, 8)}`,
           avatar_url: user.avatar_url,
           categories: user.categories || [],
-          bio: user.bio || "Учасник спільноти B&C",
+          bio: user.bio || "Фахівець спільноти B&C",
           location: user.city && user.country 
             ? `${user.city}, ${user.country}` 
             : user.city || user.country || "",
@@ -305,9 +303,6 @@ export default function Search() {
                         <div>
                           <h3 className="font-semibold">{professional.full_name}</h3>
                           <div className="flex items-center gap-1">
-                            <span className="text-sm text-muted-foreground">
-                              {professional.username ? `@${professional.username.substring(0, 8)}` : ""}
-                            </span>
                             <span className="flex items-center gap-1 rounded-full bg-secondary/10 px-2 py-0.5 text-xs">
                               {getCategoryIcon(professional.categories)}
                               <span>{getCategoryLabel(professional.categories)}</span>

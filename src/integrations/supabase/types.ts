@@ -686,6 +686,20 @@ export type Database = {
           title: string
         }[]
       }
+      get_specialists: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          bio: string
+          categories: string[]
+          city: string
+          country: string
+          created_at: string
+          full_name: string
+          id: string
+          title: string
+        }[]
+      }
       get_user_by_phone: {
         Args: { _phone_number: string }
         Returns: {
@@ -798,7 +812,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "founder" | "shareholder" | "user"
+      app_role: "admin" | "founder" | "shareholder" | "user" | "specialist"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -926,7 +940,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "founder", "shareholder", "user"],
+      app_role: ["admin", "founder", "shareholder", "user", "specialist"],
     },
   },
 } as const
