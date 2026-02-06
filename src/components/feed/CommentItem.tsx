@@ -57,7 +57,7 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
       </Link>
       <div className="flex-1 min-w-0">
         <div className="bg-muted/50 rounded-2xl px-3 py-1.5 inline-block max-w-full">
-          <span className="flex items-center gap-1 leading-tight">
+          <span className="flex items-center gap-1 leading-none">
             <Link 
               to={`/profile/${comment.user_id}`} 
               className="font-semibold text-xs hover:underline"
@@ -70,7 +70,7 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
               </Badge>
             )}
           </span>
-          <p className="text-sm break-words leading-snug">{comment.content}</p>
+          <p className="text-sm break-words leading-none">{comment.content}</p>
         </div>
         
         {/* Дії під коментарем */}
