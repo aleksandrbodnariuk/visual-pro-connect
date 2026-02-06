@@ -1,157 +1,163 @@
 
 
-## План: Виправлення бокової панелі та перейменування сторінки
+## План: Фільтрація друзів та заміна кнопки "Написати"
 
 ---
 
 ### Проблема
 
-На скриншоті видно, що на сторінці "Знайти контакти" (Connect) бокова панель перекривається контентом. Ця ж проблема присутня на сторінках Notifications та Settings.
+1. На сторінці "Знайти друзів" показуються всі користувачі, включаючи тих, хто вже є друзями
+2. Є дві окремі кнопки "Написати" та "Додати" - замість цього потрібна одна кнопка "Додати в друзі"
+
+---
+
+### Поточний стан
 
 ```text
-НЕПРАВИЛЬНО (Connect, Notifications, Settings):
-┌────────────────────────────────────┐
-│ Navbar                             │
-├─────────┬──────────────────────────┤
-│ Sidebar │ Content                  │
-│ (inside │ (перекриває sidebar)     │
-│  grid)  │                          │
-└─────────┴──────────────────────────┘
+ЗАРАЗ:
+┌─────────────────────────────────────────┐
+│  Картка користувача                     │
+│  ┌─────────┐                            │
+│  │ Avatar  │  Ім'я користувача          │
+│  └─────────┘  Категорія                 │
+│                                         │
+│  [Профіль] [Написати] [Додати] ← 3 кнопки│
+└─────────────────────────────────────────┘
 
-ПРАВИЛЬНО (Index, Friends, Profile):
-┌────────────────────────────────────┐
-│ Navbar (fixed)                     │
-├────────────────────────────────────┤
-│ pt-14 sm:pt-16 (відступ для navbar)│
-├─────────┬──────────────────────────┤
-│ Sidebar │ Spacer  │ Content        │
-│ (fixed, │ (empty) │                │
-│ окремо) │         │                │
-└─────────┴─────────┴────────────────┘
+ПІСЛЯ:
+┌─────────────────────────────────────────┐
+│  Картка користувача                     │
+│  ┌─────────┐                            │
+│  │ Avatar  │  Ім'я користувача          │
+│  └─────────┘  Категорія                 │
+│                                         │
+│  [Профіль] [Додати в друзі] ← 2 кнопки  │
+└─────────────────────────────────────────┘
+
++ Показуються тільки НЕ-друзі
 ```
 
 ---
 
-### Сторінки для виправлення
+### Технічні зміни
 
-| Сторінка | Файл | Проблема |
-|----------|------|----------|
-| Знайти контакти | `Connect.tsx` | Sidebar в grid з className |
-| Сповіщення | `Notifications.tsx` | Sidebar в grid з className |
-| Налаштування | `Settings.tsx` | Sidebar в grid з className |
+#### Файл: `src/pages/Connect.tsx`
 
----
+**1. Імпорт хука checkFriendshipStatus (рядок 26)**
 
-### Зміни по файлах
-
-#### 1. Connect.tsx (рядки 137-143)
-
-**До:**
-```tsx
-<div className="min-h-screen bg-background pb-safe-nav">
-  <Navbar />
-  <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
-    <Sidebar className="hidden lg:block col-span-3" />
-    <main className="col-span-12 lg:col-span-9">
-```
-
-**Після:**
-```tsx
-<div className="min-h-screen bg-background pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
-  <Navbar />
-  <Sidebar />
-  <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
-    <div className="hidden md:block md:col-span-4 lg:col-span-3" aria-hidden="true" />
-    <main className="col-span-12 md:col-span-8 lg:col-span-9">
-```
-
-**Перейменування (рядок 145):**
 ```tsx
 // До:
-<h1 className="text-3xl font-bold mb-2">Знайти контакти</h1>
+const { sendFriendRequest, friends } = useFriendRequests();
 
 // Після:
-<h1 className="text-3xl font-bold mb-2">Знайти друзів</h1>
+const { sendFriendRequest, friends, friendRequests, checkFriendshipStatus } = useFriendRequests();
 ```
+
+**2. Оновити фільтрацію (рядки 75-103)**
+
+Додати фільтр для виключення друзів та тих, кому вже відправлено запит:
+
+```tsx
+useEffect(() => {
+  let result = users;
+  
+  // Не показуємо поточного користувача
+  if (currentUserId) {
+    result = result.filter(user => user.id !== currentUserId);
+  }
+  
+  // Не показуємо друзів та тих, кому вже відправлено запит
+  result = result.filter(user => {
+    const status = checkFriendshipStatus(user.id);
+    // Показуємо тільки тих, з ким немає зв'язку
+    return status.status === 'none';
+  });
+  
+  // Застосувати фільтр пошуку
+  if (searchTerm) {
+    // ... існуюча логіка
+  }
+  
+  // Застосувати фільтр категорії
+  if (categoryFilter !== "all") {
+    // ... існуюча логіка
+  }
+  
+  setFilteredUsers(result);
+}, [searchTerm, categoryFilter, users, currentUserId, friendRequests, checkFriendshipStatus]);
+```
+
+**3. Оновити кнопки в картці (рядки 213-232)**
+
+Видалити кнопку "Написати", залишити тільки "Профіль" та "Додати в друзі":
+
+```tsx
+// До:
+<div className="flex mt-4 space-x-2 justify-center">
+  <Button variant="outline" size="sm" onClick={() => navigate(`/profile/${user.id}`)}>
+    <User className="h-4 w-4 mr-1" /> Профіль
+  </Button>
+  <Button 
+    variant="outline" 
+    size="sm" 
+    onClick={() => handleSendMessage(user.id)}
+  >
+    <MessageSquare className="h-4 w-4 mr-1" /> Написати
+  </Button>
+  {!isFriend(user.id) && (
+    <Button 
+      variant="outline" 
+      size="sm"
+      onClick={() => handleSendFriendRequest(user.id)}
+    >
+      <UserPlus className="h-4 w-4 mr-1" /> Додати
+    </Button>
+  )}
+</div>
+
+// Після:
+<div className="flex mt-4 space-x-2 justify-center">
+  <Button variant="outline" size="sm" onClick={() => navigate(`/profile/${user.id}`)}>
+    <User className="h-4 w-4 mr-1" /> Профіль
+  </Button>
+  <Button 
+    size="sm"
+    onClick={() => handleSendFriendRequest(user.id)}
+  >
+    <UserPlus className="h-4 w-4 mr-1" /> Додати в друзі
+  </Button>
+</div>
+```
+
+**4. Видалити невикористані імпорти**
+
+```tsx
+// До:
+import { Search, Filter, Users, User, UserPlus, MessageSquare } from "lucide-react";
+
+// Після:
+import { Search, Filter, Users, User, UserPlus } from "lucide-react";
+```
+
+**5. Видалити невикористану функцію handleSendMessage (рядки 114-116)**
 
 ---
 
-#### 2. Notifications.tsx (рядки 221-227)
+### Логіка фільтрації
 
-**До:**
-```tsx
-<div className="min-h-screen bg-background pb-safe-nav">
-  <Navbar />
-  <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
-    <Sidebar className="hidden md:block md:col-span-4 lg:col-span-3" />
-    <main className="col-span-12 md:col-span-8 lg:col-span-9">
-```
-
-**Після:**
-```tsx
-<div className="min-h-screen bg-background pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
-  <Navbar />
-  <Sidebar />
-  <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
-    <div className="hidden md:block md:col-span-4 lg:col-span-3" aria-hidden="true" />
-    <main className="col-span-12 md:col-span-8 lg:col-span-9">
-```
-
----
-
-#### 3. Settings.tsx (рядки 85-94)
-
-**До:**
-```tsx
-<div className="min-h-screen pb-safe-nav">
-  <Navbar />
-  <div className="container mt-8 grid grid-cols-12 gap-6 px-4 md:px-6">
-    <div className="hidden md:block md:col-span-4 lg:col-span-3">
-      <Sidebar className="sticky top-20" />
-    </div>
-    <main className="col-span-12 md:col-span-8 lg:col-span-9">
-```
-
-**Після:**
-```tsx
-<div className="min-h-screen pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
-  <Navbar />
-  <Sidebar />
-  <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
-    <div className="hidden md:block md:col-span-4 lg:col-span-3" aria-hidden="true" />
-    <main className="col-span-12 md:col-span-8 lg:col-span-9">
-```
-
----
-
-#### 4. translations.ts (рядок 92)
-
-**До:**
-```tsx
-findContacts: "Знайти контакти",
-```
-
-**Після:**
-```tsx
-findContacts: "Знайти друзів",
-```
-
----
-
-### Підсумок змін
-
-| Файл | Тип зміни |
-|------|-----------|
-| `src/pages/Connect.tsx` | Виправити layout + перейменувати заголовок |
-| `src/pages/Notifications.tsx` | Виправити layout |
-| `src/pages/Settings.tsx` | Виправити layout |
-| `src/lib/translations.ts` | Перейменувати "Знайти контакти" → "Знайти друзів" |
+| Статус дружби | Показувати в списку? |
+|---------------|---------------------|
+| `none` | Так - можна додати в друзі |
+| `pending-sent` | Ні - вже відправлено запит |
+| `pending-received` | Ні - очікує відповіді |
+| `friends` | Ні - вже друзі |
 
 ---
 
 ### Результат
 
-1. Бокова панель правильно відображатиметься на всіх сторінках
-2. Сторінка "Знайти контакти" перейменована на "Знайти друзів"
-3. Уніфікований layout на всіх сторінках додатку
+1. На сторінці "Знайти друзів" показуються тільки користувачі, яких ще немає в друзях
+2. Кнопка "Написати" видалена
+3. Кнопка "Додати в друзі" - основна дія для кожної картки
+4. Після додавання в друзі, користувач автоматично зникне зі списку (завдяки real-time підписці)
 
