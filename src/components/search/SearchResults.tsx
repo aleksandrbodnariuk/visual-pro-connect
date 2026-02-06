@@ -57,63 +57,31 @@ export function SearchResults({ category }: { category: string }) {
       try {
         setIsLoading(true);
         
-        // Спроба отримати дані з Supabase
-        const { data, error } = await (supabase as any)
-          .rpc('get_safe_public_profiles');
+        // Отримуємо тільки фахівців з Supabase
+        const { data, error } = await supabase
+          .rpc('get_specialists');
         
         if (error) throw error;
         
         if (data && data.length > 0) {
-          // Фільтруємо користувачів за категорією
+          // Фільтруємо фахівців за категорією
           let filteredData = data;
           if (category && category !== 'all') {
-            filteredData = data.filter(user => 
+            filteredData = data.filter((user: any) => 
               user.categories && 
               Array.isArray(user.categories) && 
               user.categories.includes(category)
             );
           }
           
-          // Remove dummy data that might be from demos
-          // Since is_bot is not in the schema, we'll filter out users with demo IDs instead
-          filteredData = filteredData.filter(user => !user.id.startsWith('demo'));
-          
           setProfessionals(filteredData);
         } else {
           setProfessionals([]);
         }
       } catch (error) {
-        console.error('Error fetching professionals:', error);
+        console.error('Error fetching specialists:', error);
         toast.error('Помилка при завантаженні даних');
-        
-        // Якщо помилка, використовуємо демо дані
-        const demoUsers = [
-          {
-            id: "demo1",
-            full_name: "Анна Коваленко",
-            categories: ["photographer"],
-            avatar_url: "https://i.pravatar.cc/150?img=1",
-            is_demo: true
-          },
-          {
-            id: "demo2",
-            full_name: "Максим Шевченко",
-            categories: ["videographer"],
-            avatar_url: "https://i.pravatar.cc/150?img=3",
-            is_demo: true
-          }
-        ];
-        
-        // Фільтруємо демо дані за категорією
-        let filteredDemoData = demoUsers;
-        if (category && category !== 'all') {
-          filteredDemoData = demoUsers.filter(user => 
-            user.categories && 
-            user.categories.includes(category)
-          );
-        }
-        
-        setProfessionals(filteredDemoData);
+        setProfessionals([]);
       } finally {
         setIsLoading(false);
       }

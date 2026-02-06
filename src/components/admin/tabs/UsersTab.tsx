@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/components/admin/users/UserRole";
 import { UserTitle } from "@/components/admin/users/UserTitle";
 import { ShareholderToggle } from "@/components/admin/users/ShareholderToggle";
+import { SpecialistToggle } from "@/components/admin/users/SpecialistToggle";
 import { UserActions } from "@/components/admin/users/UserActions";
 import { Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,11 +24,13 @@ const isValidPhoneNumber = (value: string | null | undefined): boolean => {
 
 export function UsersTab() {
   const [users, setUsers] = useState<any[]>([]);
+  const [userRoles, setUserRoles] = useState<Record<string, string[]>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [showBlocked, setShowBlocked] = useState(false);
 
   useEffect(() => {
     loadUsers();
+    loadUserRoles();
   }, []);
 
   const loadUsers = async () => {
@@ -66,6 +69,92 @@ export function UsersTab() {
       console.error("Помилка завантаження користувачів:", error);
       toast.error("Помилка завантаження користувачів. Деталі в консолі.");
       setUsers([]);
+    }
+  };
+
+  const loadUserRoles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+      
+      if (error) throw error;
+      
+      // Групуємо ролі по user_id
+      const rolesMap: Record<string, string[]> = {};
+      (data || []).forEach((row: any) => {
+        if (!rolesMap[row.user_id]) {
+          rolesMap[row.user_id] = [];
+        }
+        rolesMap[row.user_id].push(row.role);
+      });
+      
+      setUserRoles(rolesMap);
+    } catch (error) {
+      console.error("Помилка завантаження ролей:", error);
+    }
+  };
+
+  // Перевіряє чи користувач є фахівцем
+  const isSpecialist = (userId: string): boolean => {
+    return userRoles[userId]?.includes('specialist') || false;
+  };
+
+  const toggleSpecialistStatus = async (userId: string) => {
+    try {
+      console.log(`=== Зміна статусу фахівця для користувача: ${userId} ===`);
+      
+      const currentStatus = isSpecialist(userId);
+      const newStatus = !currentStatus;
+      
+      console.log(`Поточний статус фахівця: ${currentStatus}`);
+      console.log(`Новий статус фахівця: ${newStatus}`);
+      
+      if (newStatus) {
+        // Додаємо роль 'specialist' в user_roles
+        const { error } = await supabase
+          .from('user_roles')
+          .upsert(
+            { user_id: userId, role: 'specialist' as any },
+            { onConflict: 'user_id,role' }
+          );
+        
+        if (error) {
+          console.error("Помилка додавання ролі specialist:", error);
+          toast.error("Помилка надання статусу фахівця");
+          return;
+        }
+      } else {
+        // Видаляємо роль 'specialist' з user_roles
+        const { error } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId)
+          .eq('role', 'specialist');
+        
+        if (error) {
+          console.error("Помилка видалення ролі specialist:", error);
+          toast.error("Помилка зняття статусу фахівця");
+          return;
+        }
+      }
+      
+      // Оновлюємо локальний стан ролей
+      setUserRoles(prev => {
+        const updated = { ...prev };
+        if (newStatus) {
+          updated[userId] = [...(updated[userId] || []), 'specialist'];
+        } else {
+          updated[userId] = (updated[userId] || []).filter(r => r !== 'specialist');
+        }
+        return updated;
+      });
+      
+      toast.success(`Статус фахівця ${newStatus ? 'надано' : 'знято'}`);
+      console.log(`=== Операція завершена успішно ===`);
+    } catch (error) {
+      console.error("Помилка зміни статусу фахівця:", error);
+      toast.error("Помилка зміни статусу фахівця");
     }
   };
 
@@ -368,7 +457,7 @@ export function UsersTab() {
         </div>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-8 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
+          <div className="grid grid-cols-9 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
             <div>ID</div>
             <div>Email</div>
             <div>Ім'я</div>
@@ -376,11 +465,12 @@ export function UsersTab() {
             <div>Роль</div>
             <div>Титул</div>
             <div>Акціонер</div>
+            <div>Фахівець</div>
             <div>Дії</div>
           </div>
 
           {filteredUsers.map((user) => (
-            <div key={user.id} className="grid grid-cols-8 gap-4 items-center py-2 border-b">
+            <div key={user.id} className="grid grid-cols-9 gap-4 items-center py-2 border-b">
               <div className="text-xs font-mono flex items-center gap-1">
                 <span className="truncate max-w-[120px]" title={user.id}>
                   {user.id}
@@ -405,6 +495,10 @@ export function UsersTab() {
               <UserRole user={user} onRoleChange={changeUserRole} />
               <UserTitle user={user} onTitleChange={changeUserTitle} />
               <ShareholderToggle user={user} onToggleShareholder={toggleShareholderStatus} />
+              <SpecialistToggle 
+                user={{ ...user, is_specialist: isSpecialist(user.id) }} 
+                onToggleSpecialist={toggleSpecialistStatus} 
+              />
               <UserActions 
                 user={user} 
                 onDeleteUser={deleteUser} 

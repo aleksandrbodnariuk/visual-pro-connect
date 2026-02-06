@@ -72,9 +72,9 @@ export function SearchCategories() {
   useEffect(() => {
     const fetchCategoryCounts = async () => {
       try {
-        // Try to get counts from Supabase
-        const { data, error } = await (supabase as any)
-          .rpc('get_safe_public_profiles');
+        // Try to get counts from Supabase - тільки фахівці
+        const { data, error } = await supabase
+          .rpc('get_specialists');
           
         if (error) throw error;
         
@@ -85,11 +85,11 @@ export function SearchCategories() {
           categoryCounts[cat.id] = 0;
         });
         
-        // Count users in each category
+        // Count specialists in each category
         if (data) {
-          data.forEach(user => {
+          data.forEach((user: any) => {
             if (user.categories && Array.isArray(user.categories)) {
-              user.categories.forEach(category => {
+              user.categories.forEach((category: string) => {
                 if (categoryCounts[category] !== undefined) {
                   categoryCounts[category]++;
                 }

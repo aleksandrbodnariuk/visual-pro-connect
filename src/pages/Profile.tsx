@@ -59,6 +59,7 @@ export default function Profile() {
   const [error, setError] = useState<string | null>(null);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [portfolioManagerOpen, setPortfolioManagerOpen] = useState(false);
+  const [isSpecialist, setIsSpecialist] = useState(false);
   
   const [servicesDialogOpen, setServicesDialogOpen] = useState(false);
   const [editPostOpen, setEditPostOpen] = useState(false);
@@ -195,6 +196,21 @@ export default function Profile() {
           })));
         } else {
           setPosts([]);
+        }
+        
+        // Перевіряємо статус фахівця
+        try {
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', targetUserId)
+            .eq('role', 'specialist')
+            .maybeSingle();
+          
+          setIsSpecialist(!!roleData);
+        } catch (roleError) {
+          console.warn("Помилка перевірки ролі фахівця:", roleError);
+          setIsSpecialist(false);
         }
       } catch (error: any) {
         console.error("Помилка при завантаженні даних:", error);
@@ -346,7 +362,9 @@ export default function Profile() {
           <Tabs defaultValue="posts" className="w-full">
             <TabsList className="mb-4">
               <TabsTrigger value="posts">Публікації</TabsTrigger>
-              <TabsTrigger value="portfolio">Портфоліо</TabsTrigger>
+              {isSpecialist && (
+                <TabsTrigger value="portfolio">Портфоліо</TabsTrigger>
+              )}
               {(user?.role === "representative" || user?.status === "Представник" || (user?.categories && user?.categories.length > 0)) && (
                 <TabsTrigger value="services">Послуги</TabsTrigger>
               )}
@@ -381,24 +399,26 @@ export default function Profile() {
               </div>
             </TabsContent>
             
-            <TabsContent value="portfolio" className="mt-6">
-              {isCurrentUser && (
-                <div className="mb-4">
-                  <Button onClick={handleAddToPortfolio}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Додати в портфоліо
-                  </Button>
-                </div>
-              )}
-              <Suspense fallback={<div>Завантаження портфоліо...</div>}>
-                <PortfolioGrid 
-                  items={[]} 
-                  userId={user?.id} 
-                  isOwner={isCurrentUser}
-                  onAddItem={handleAddToPortfolio}
-                />
-              </Suspense>
-            </TabsContent>
+            {isSpecialist && (
+              <TabsContent value="portfolio" className="mt-6">
+                {isCurrentUser && (
+                  <div className="mb-4">
+                    <Button onClick={handleAddToPortfolio}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Додати в портфоліо
+                    </Button>
+                  </div>
+                )}
+                <Suspense fallback={<div>Завантаження портфоліо...</div>}>
+                  <PortfolioGrid 
+                    items={[]} 
+                    userId={user?.id} 
+                    isOwner={isCurrentUser}
+                    onAddItem={handleAddToPortfolio}
+                  />
+                </Suspense>
+              </TabsContent>
+            )}
             
             {(user?.role === "representative" || user?.status === "Представник" || (user?.categories && user?.categories.length > 0)) && (
               <TabsContent value="services" className="mt-6">
