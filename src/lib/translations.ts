@@ -89,7 +89,7 @@ export const translations: Record<Language, Record<string, string>> = {
     pyrotechnicians: "Піротехніки",
     
     // Misc
-    findContacts: "Знайти контакти",
+    findContacts: "Знайти друзів",
     expandNetwork: "Розширте свою мережу",
     findClientsPartners: "Знаходьте нових клієнтів та партнерів для співпраці"
   },
