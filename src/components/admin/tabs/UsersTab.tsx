@@ -456,7 +456,8 @@ export function UsersTab() {
           </div>
         </div>
 
-        <div className="space-y-4">
+        {/* Desktop Table - hidden on mobile */}
+        <div className="hidden md:block space-y-4">
           <div className="grid grid-cols-9 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
             <div>ID</div>
             <div>Email</div>
@@ -504,6 +505,57 @@ export function UsersTab() {
                 onDeleteUser={deleteUser} 
               />
             </div>
+          ))}
+
+          {filteredUsers.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              Користувачів не знайдено
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Cards - shown only on mobile */}
+        <div className="md:hidden space-y-4">
+          {filteredUsers.map((user) => (
+            <Card key={user.id} className="p-4">
+              <div className="space-y-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold truncate">{user.full_name || 'Не вказано'}</h3>
+                    <p className="text-sm text-muted-foreground truncate">{user.email || 'Не вказано'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {isValidPhoneNumber(user.phone_number) ? user.phone_number : 'Телефон не вказано'}
+                    </p>
+                  </div>
+                  <UserActions user={user} onDeleteUser={deleteUser} />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Роль:</span>
+                    <UserRole user={user} onRoleChange={changeUserRole} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Титул:</span>
+                    <UserTitle user={user} onTitleChange={changeUserTitle} />
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Акціонер:</span>
+                    <ShareholderToggle user={user} onToggleShareholder={toggleShareholderStatus} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Фахівець:</span>
+                    <SpecialistToggle 
+                      user={{ ...user, is_specialist: isSpecialist(user.id) }} 
+                      onToggleSpecialist={toggleSpecialistStatus} 
+                    />
+                  </div>
+                </div>
+              </div>
+            </Card>
           ))}
 
           {filteredUsers.length === 0 && (

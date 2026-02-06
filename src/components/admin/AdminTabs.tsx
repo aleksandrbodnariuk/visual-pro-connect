@@ -33,7 +33,7 @@ export function AdminTabs() {
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-      <TabsList className="mb-4 flex flex-wrap gap-1">
+      <TabsList className="mb-4 flex overflow-x-auto gap-1 w-full justify-start pb-2">
         <TabsTrigger value="users">Користувачі</TabsTrigger>
         <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
         <TabsTrigger value="portfolio">Портфоліо</TabsTrigger>

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PenLine, Trash2, Save } from "lucide-react";
+import { PenLine, Save } from "lucide-react";
 import { toast } from "sonner";
 import { SHAREHOLDER_TITLES } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
@@ -309,29 +309,106 @@ export function ShareholdersTab() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">Акціонер</th>
-                    <th className="text-left p-2">Титул</th>
-                    <th className="text-left p-2">Кількість акцій</th>
-                    <th className="text-left p-2">Частка (%)</th>
-                    <th className="text-left p-2">Прибуток (грн)</th>
-                    <th className="text-left p-2">Дії</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shareholders.length > 0 ? (
-                    shareholders.map((shareholder) => (
-                      <tr key={shareholder.id} className="border-b hover:bg-muted/50">
-                        <td className="p-2">{shareholder.firstName} {shareholder.lastName}</td>
-                        <td className="p-2">
+            <>
+              {/* Desktop Table - hidden on mobile */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">Акціонер</th>
+                      <th className="text-left p-2">Титул</th>
+                      <th className="text-left p-2">Кількість акцій</th>
+                      <th className="text-left p-2">Частка (%)</th>
+                      <th className="text-left p-2">Прибуток (грн)</th>
+                      <th className="text-left p-2">Дії</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shareholders.length > 0 ? (
+                      shareholders.map((shareholder) => (
+                        <tr key={shareholder.id} className="border-b hover:bg-muted/50">
+                          <td className="p-2">{shareholder.firstName} {shareholder.lastName}</td>
+                          <td className="p-2">
+                            <Select 
+                              defaultValue={shareholder.title || "Магнат"} 
+                              onValueChange={(value) => changeShareholderTitle(shareholder.id, value)}
+                            >
+                              <SelectTrigger className="w-[150px]">
+                                <SelectValue placeholder="Титул" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {["Акціонер", "Магнат", "Барон", "Граф", "Маркіз", "Лорд", "Герцог", "Імператор"].map((title) => (
+                                  <SelectItem key={title} value={title}>
+                                    {title}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="p-2">
+                            <div className="flex gap-2 items-center">
+                              <Input
+                                type="number"
+                                className="w-24"
+                                min="1"
+                                value={shareholder.shares || 10}
+                                onChange={(e) => updateSharesCount(shareholder.id, parseInt(e.target.value))}
+                              />
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => updateSharesCount(shareholder.id, (shareholder.shares || 10) + 1)}
+                              >
+                                +
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => updateSharesCount(
+                                  shareholder.id, 
+                                  Math.max(1, (shareholder.shares || 10) - 1)
+                                )}
+                                disabled={(shareholder.shares || 10) <= 1}
+                              >
+                                -
+                              </Button>
+                            </div>
+                          </td>
+                          <td className="p-2">{shareholder.percentage}%</td>
+                          <td className="p-2">{shareholder.profit?.toFixed(2) || "0.00"} грн</td>
+                          <td className="p-2">
+                            <Button variant="outline" size="sm" className="mr-2">
+                              <PenLine className="h-4 w-4 mr-1" /> Деталі
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="p-2 text-center text-muted-foreground">
+                          Немає зареєстрованих акціонерів
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards - shown only on mobile */}
+              <div className="md:hidden space-y-4">
+                {shareholders.length > 0 ? (
+                  shareholders.map((shareholder) => (
+                    <Card key={shareholder.id} className="p-4">
+                      <div className="space-y-3">
+                        <h3 className="font-semibold">{shareholder.firstName} {shareholder.lastName}</h3>
+                        
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Титул:</span>
                           <Select 
                             defaultValue={shareholder.title || "Магнат"} 
                             onValueChange={(value) => changeShareholderTitle(shareholder.id, value)}
                           >
-                            <SelectTrigger className="w-[150px]">
+                            <SelectTrigger className="w-[130px]">
                               <SelectValue placeholder="Титул" />
                             </SelectTrigger>
                             <SelectContent>
@@ -342,12 +419,14 @@ export function ShareholdersTab() {
                               ))}
                             </SelectContent>
                           </Select>
-                        </td>
-                        <td className="p-2">
-                          <div className="flex gap-2 items-center">
+                        </div>
+                        
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Акції:</span>
+                          <div className="flex gap-1 items-center">
                             <Input
                               type="number"
-                              className="w-24"
+                              className="w-16 h-8"
                               min="1"
                               value={shareholder.shares || 10}
                               onChange={(e) => updateSharesCount(shareholder.id, parseInt(e.target.value))}
@@ -355,6 +434,7 @@ export function ShareholdersTab() {
                             <Button 
                               variant="outline" 
                               size="sm" 
+                              className="h-8 w-8 p-0"
                               onClick={() => updateSharesCount(shareholder.id, (shareholder.shares || 10) + 1)}
                             >
                               +
@@ -362,6 +442,7 @@ export function ShareholdersTab() {
                             <Button 
                               variant="outline" 
                               size="sm" 
+                              className="h-8 w-8 p-0"
                               onClick={() => updateSharesCount(
                                 shareholder.id, 
                                 Math.max(1, (shareholder.shares || 10) - 1)
@@ -371,26 +452,31 @@ export function ShareholdersTab() {
                               -
                             </Button>
                           </div>
-                        </td>
-                        <td className="p-2">{shareholder.percentage}%</td>
-                        <td className="p-2">{shareholder.profit?.toFixed(2) || "0.00"} грн</td>
-                        <td className="p-2">
-                          <Button variant="outline" size="sm" className="mr-2">
-                            <PenLine className="h-4 w-4 mr-1" /> Деталі
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={6} className="p-2 text-center text-muted-foreground">
-                        Немає зареєстрованих акціонерів
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+                        
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Частка:</span>
+                          <span>{shareholder.percentage}%</span>
+                        </div>
+                        
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Прибуток:</span>
+                          <span>{shareholder.profit?.toFixed(2) || "0.00"} грн</span>
+                        </div>
+                        
+                        <Button variant="outline" size="sm" className="w-full">
+                          <PenLine className="h-4 w-4 mr-1" /> Деталі
+                        </Button>
+                      </div>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Немає зареєстрованих акціонерів
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

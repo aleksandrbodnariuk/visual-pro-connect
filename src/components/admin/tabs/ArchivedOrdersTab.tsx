@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Trash2, ArrowUpRight } from "lucide-react";
 import { toast } from "sonner";
 
+// Card component for mobile view is already imported above
+
 export function ArchivedOrdersTab() {
   const [archivedOrders, setArchivedOrders] = useState<any[]>(() => {
     return JSON.parse(localStorage.getItem("archivedOrders") || "[]");
@@ -30,7 +32,8 @@ export function ArchivedOrdersTab() {
         <CardDescription>Перегляд архівних замовлень</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        {/* Desktop Table - hidden on mobile */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b">
@@ -72,6 +75,48 @@ export function ArchivedOrdersTab() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards - shown only on mobile */}
+        <div className="md:hidden space-y-4">
+          {archivedOrders.length > 0 ? (
+            archivedOrders.map((order) => (
+              <Card key={order.id} className="p-4">
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">ID: {order.id}</p>
+                  
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Створено:</span>
+                    <span>{new Date(order.date).toLocaleDateString()}</span>
+                  </div>
+                  
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Архівовано:</span>
+                    <span>{order.archivedDate ? new Date(order.archivedDate).toLocaleDateString() : "Невідомо"}</span>
+                  </div>
+                  
+                  <p className="text-sm">{order.description}</p>
+                  
+                  <div className="flex justify-between items-center pt-2">
+                    <span className="font-semibold">{order.amount.toFixed(2)} грн</span>
+                  </div>
+                  
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" size="sm" className="flex-1">
+                      <ArrowUpRight className="h-4 w-4 mr-1" /> Деталі
+                    </Button>
+                    <Button variant="destructive" size="sm" className="flex-1" onClick={() => deleteArchivedOrder(order.id)}>
+                      <Trash2 className="h-4 w-4 mr-1" /> Видалити
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Немає архівних замовлень
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

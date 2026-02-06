@@ -102,7 +102,8 @@ export function PostsTab() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        {/* Desktop Table - hidden on mobile */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b">
@@ -165,6 +166,59 @@ export function PostsTab() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards - shown only on mobile */}
+        <div className="md:hidden space-y-4">
+          {posts.length > 0 ? (
+            posts.map((post) => (
+              <Card key={post.id} className="p-4">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold truncate">{post.title}</p>
+                      <p className="text-sm text-muted-foreground">{post.author}</p>
+                    </div>
+                    <Badge 
+                      variant={post.status === "Активний" ? "default" : "secondary"}
+                      className="cursor-pointer ml-2"
+                      onClick={() => togglePostStatus(post.id)}
+                    >
+                      {post.status}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleViewPost(post)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" /> Перегляд
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleEditPost(post)}
+                    >
+                      <PenLine className="h-4 w-4 mr-1" /> Редагувати
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      onClick={() => deletePost(post.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" /> Видалити
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Немає публікацій
+            </div>
+          )}
         </div>
 
         {/* Діалог для перегляду публікації */}
