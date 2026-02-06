@@ -1,216 +1,157 @@
 
 
-## План: Система "Фахівців" (Specialists) та виправлення "@user"
+## План: Виправлення бокової панелі та перейменування сторінки
 
 ---
 
-### Огляд проблем
+### Проблема
 
-1. **"@user_xxx"** - у картках професіоналів показується фейковий username замість реальних даних
-2. **Всі користувачі у пошуку** - сторінка Search показує всіх користувачів, а не тільки фахівців
-3. **Немає ролі "Фахівець"** - відсутній механізм визначення хто є фахівцем
-
----
-
-### Рішення
-
-| Компонент | Дія |
-|-----------|-----|
-| База даних | Додати роль `specialist` до enum `app_role` |
-| RPC функція | Створити `get_specialists()` для пошуку тільки фахівців |
-| Search.tsx | Видалити "@user", фільтрувати тільки фахівців |
-| Profile.tsx | Обмежити портфоліо тільки для фахівців |
-| UsersTab.tsx | Додати перемикач "Фахівець" |
-
----
-
-### Візуальна схема
+На скриншоті видно, що на сторінці "Знайти контакти" (Connect) бокова панель перекривається контентом. Ця ж проблема присутня на сторінках Notifications та Settings.
 
 ```text
-ЗВИЧАЙНИЙ КОРИСТУВАЧ:
-┌─────────────────────────────┐
-│ - Публікації ✓              │
-│ - Портфоліо ✗ (недоступно)  │
-│ - НЕ в пошуку фахівців      │
-└─────────────────────────────┘
+НЕПРАВИЛЬНО (Connect, Notifications, Settings):
+┌────────────────────────────────────┐
+│ Navbar                             │
+├─────────┬──────────────────────────┤
+│ Sidebar │ Content                  │
+│ (inside │ (перекриває sidebar)     │
+│  grid)  │                          │
+└─────────┴──────────────────────────┘
 
-ФАХІВЕЦЬ (Specialist):
-┌─────────────────────────────┐
-│ - Публікації ✓              │
-│ - Портфоліо ✓               │
-│ - Відображається в пошуку   │
-│ - Має категорії             │
-└─────────────────────────────┘
+ПРАВИЛЬНО (Index, Friends, Profile):
+┌────────────────────────────────────┐
+│ Navbar (fixed)                     │
+├────────────────────────────────────┤
+│ pt-14 sm:pt-16 (відступ для navbar)│
+├─────────┬──────────────────────────┤
+│ Sidebar │ Spacer  │ Content        │
+│ (fixed, │ (empty) │                │
+│ окремо) │         │                │
+└─────────┴─────────┴────────────────┘
 ```
 
 ---
 
-### Детальні технічні зміни
+### Сторінки для виправлення
 
-#### 1. Міграція бази даних
+| Сторінка | Файл | Проблема |
+|----------|------|----------|
+| Знайти контакти | `Connect.tsx` | Sidebar в grid з className |
+| Сповіщення | `Notifications.tsx` | Sidebar в grid з className |
+| Налаштування | `Settings.tsx` | Sidebar в grid з className |
 
-```sql
--- Додати роль 'specialist' до enum
-ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'specialist';
+---
+
+### Зміни по файлах
+
+#### 1. Connect.tsx (рядки 137-143)
+
+**До:**
+```tsx
+<div className="min-h-screen bg-background pb-safe-nav">
+  <Navbar />
+  <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
+    <Sidebar className="hidden lg:block col-span-3" />
+    <main className="col-span-12 lg:col-span-9">
 ```
 
-#### 2. Нова RPC функція `get_specialists()`
+**Після:**
+```tsx
+<div className="min-h-screen bg-background pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
+  <Navbar />
+  <Sidebar />
+  <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
+    <div className="hidden md:block md:col-span-4 lg:col-span-3" aria-hidden="true" />
+    <main className="col-span-12 md:col-span-8 lg:col-span-9">
+```
 
-```sql
-CREATE OR REPLACE FUNCTION public.get_specialists()
-RETURNS TABLE(
-  id uuid, 
-  full_name text, 
-  avatar_url text, 
-  title text, 
-  bio text, 
-  categories text[], 
-  city text, 
-  country text, 
-  created_at timestamp
-)
-LANGUAGE plpgsql
-STABLE SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-BEGIN
-  RETURN QUERY
-  SELECT 
-    u.id, u.full_name, u.avatar_url, u.title, u.bio,
-    u.categories, u.city, u.country, u.created_at
-  FROM public.users u
-  WHERE EXISTS (
-    SELECT 1 FROM public.user_roles 
-    WHERE user_id = u.id AND role = 'specialist'
-  )
-  ORDER BY u.created_at DESC;
-END;
-$$;
+**Перейменування (рядок 145):**
+```tsx
+// До:
+<h1 className="text-3xl font-bold mb-2">Знайти контакти</h1>
+
+// Після:
+<h1 className="text-3xl font-bold mb-2">Знайти друзів</h1>
 ```
 
 ---
 
-#### 3. Search.tsx - Виправлення карток
+#### 2. Notifications.tsx (рядки 221-227)
 
-**Видалити** (рядок 113):
+**До:**
 ```tsx
-username: `user_${user.id.substring(0, 8)}`,
+<div className="min-h-screen bg-background pb-safe-nav">
+  <Navbar />
+  <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
+    <Sidebar className="hidden md:block md:col-span-4 lg:col-span-3" />
+    <main className="col-span-12 md:col-span-8 lg:col-span-9">
 ```
 
-**Видалити** (рядки 308-310):
+**Після:**
 ```tsx
-<span className="text-sm text-muted-foreground">
-  {professional.username ? `@${professional.username.substring(0, 8)}` : ""}
-</span>
-```
-
-**Змінити RPC виклик** (рядок 100-101):
-```tsx
-// ДО:
-const { data, error } = await supabase.rpc('get_safe_public_profiles');
-
-// ПІСЛЯ:
-const { data, error } = await supabase.rpc('get_specialists');
-```
-
----
-
-#### 4. UsersTab.tsx - Перемикач "Фахівець"
-
-Додати нову колонку після "Акціонер":
-
-```tsx
-// Заголовок (в grid)
-<div>Фахівець</div>
-
-// Перемикач
-<SpecialistToggle user={user} onToggleSpecialist={toggleSpecialistStatus} />
-```
-
-Логіка перемикача:
-```tsx
-const toggleSpecialistStatus = async (userId: string) => {
-  const currentStatus = hasSpecialistRole(userId);
-  
-  if (newStatus) {
-    await supabase.from('user_roles')
-      .upsert({ user_id: userId, role: 'specialist' });
-  } else {
-    await supabase.from('user_roles')
-      .delete()
-      .eq('user_id', userId)
-      .eq('role', 'specialist');
-  }
-};
+<div className="min-h-screen bg-background pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
+  <Navbar />
+  <Sidebar />
+  <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
+    <div className="hidden md:block md:col-span-4 lg:col-span-3" aria-hidden="true" />
+    <main className="col-span-12 md:col-span-8 lg:col-span-9">
 ```
 
 ---
 
-#### 5. Profile.tsx - Обмеження портфоліо
+#### 3. Settings.tsx (рядки 85-94)
 
+**До:**
 ```tsx
-// ДО: Показується всім
-<TabsTrigger value="portfolio">Портфоліо</TabsTrigger>
-
-// ПІСЛЯ: Тільки для фахівців
-{isSpecialist && (
-  <TabsTrigger value="portfolio">Портфоліо</TabsTrigger>
-)}
+<div className="min-h-screen pb-safe-nav">
+  <Navbar />
+  <div className="container mt-8 grid grid-cols-12 gap-6 px-4 md:px-6">
+    <div className="hidden md:block md:col-span-4 lg:col-span-3">
+      <Sidebar className="sticky top-20" />
+    </div>
+    <main className="col-span-12 md:col-span-8 lg:col-span-9">
 ```
 
-Визначення статусу:
+**Після:**
 ```tsx
-const [isSpecialist, setIsSpecialist] = useState(false);
-
-// Перевірка ролі
-const { data } = await supabase
-  .from('user_roles')
-  .select('role')
-  .eq('user_id', userId)
-  .eq('role', 'specialist')
-  .single();
-
-setIsSpecialist(!!data);
+<div className="min-h-screen pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
+  <Navbar />
+  <Sidebar />
+  <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
+    <div className="hidden md:block md:col-span-4 lg:col-span-3" aria-hidden="true" />
+    <main className="col-span-12 md:col-span-8 lg:col-span-9">
 ```
 
 ---
 
-#### 6. SearchCategories.tsx - Лічильники фахівців
+#### 4. translations.ts (рядок 92)
 
+**До:**
 ```tsx
-// Замінити виклик RPC
-const { data, error } = await supabase.rpc('get_specialists');
+findContacts: "Знайти контакти",
+```
+
+**Після:**
+```tsx
+findContacts: "Знайти друзів",
 ```
 
 ---
 
-### Нові компоненти
+### Підсумок змін
 
-| Файл | Опис |
-|------|------|
-| `src/components/admin/users/SpecialistToggle.tsx` | Перемикач статусу фахівця |
-
----
-
-### Файли для редагування
-
-| Файл | Зміни |
-|------|-------|
-| `src/pages/Search.tsx` | Видалити "@user", змінити RPC |
-| `src/pages/Profile.tsx` | Обмежити вкладку портфоліо |
-| `src/components/admin/tabs/UsersTab.tsx` | Додати колонку "Фахівець" |
-| `src/components/search/SearchCategories.tsx` | Змінити RPC |
-| `src/components/admin/users/SpecialistToggle.tsx` | Новий компонент |
-| `supabase/migrations/xxx.sql` | Міграція: enum + функція |
-| `src/integrations/supabase/types.ts` | Оновити типи |
+| Файл | Тип зміни |
+|------|-----------|
+| `src/pages/Connect.tsx` | Виправити layout + перейменувати заголовок |
+| `src/pages/Notifications.tsx` | Виправити layout |
+| `src/pages/Settings.tsx` | Виправити layout |
+| `src/lib/translations.ts` | Перейменувати "Знайти контакти" → "Знайти друзів" |
 
 ---
 
 ### Результат
 
-1. Видалено "@user" з карток професіоналів
-2. У пошуку фахівців відображаються тільки користувачі з роллю `specialist`
-3. Вкладка "Портфоліо" доступна тільки фахівцям
-4. Адміністратор може надавати/знімати статус фахівця через адмін-панель
-5. Лічильники категорій відображають тільки фахівців
+1. Бокова панель правильно відображатиметься на всіх сторінках
+2. Сторінка "Знайти контакти" перейменована на "Знайти друзів"
+3. Уніфікований layout на всіх сторінках додатку
 
