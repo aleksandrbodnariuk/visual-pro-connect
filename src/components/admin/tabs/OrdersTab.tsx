@@ -139,7 +139,8 @@ export function OrdersTab() {
           <CardDescription>Перегляд та управління замовленнями</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          {/* Desktop Table - hidden on mobile */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
@@ -181,6 +182,44 @@ export function OrdersTab() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Cards - shown only on mobile */}
+          <div className="md:hidden space-y-4">
+            {orders.length > 0 ? (
+              orders.map((order) => (
+                <Card key={order.id} className="p-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-xs text-muted-foreground">ID: {order.id}</p>
+                        <p className="text-sm">{new Date(order.date).toLocaleDateString()}</p>
+                      </div>
+                      <span className="text-sm font-medium">{order.status}</span>
+                    </div>
+                    
+                    <p className="text-sm">{order.description}</p>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold">{order.amount.toFixed(2)} грн</span>
+                    </div>
+                    
+                    <div className="flex gap-2 pt-2">
+                      <Button variant="outline" size="sm" className="flex-1" onClick={() => archiveOrder(order.id)}>
+                        <Archive className="h-4 w-4 mr-1" /> Архів
+                      </Button>
+                      <Button variant="destructive" size="sm" className="flex-1" onClick={() => deleteOrder(order.id)}>
+                        <Trash2 className="h-4 w-4 mr-1" /> Видалити
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Немає активних замовлень
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

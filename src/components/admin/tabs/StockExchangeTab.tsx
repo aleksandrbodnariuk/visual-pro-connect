@@ -303,7 +303,8 @@ export function StockExchangeTab() {
           <CardDescription>Транзакції, які очікують на обробку</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          {/* Desktop Table - hidden on mobile */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
@@ -352,6 +353,54 @@ export function StockExchangeTab() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Cards - shown only on mobile */}
+          <div className="md:hidden space-y-4">
+            {pendingTransactions.length > 0 ? (
+              pendingTransactions.map((transaction) => (
+                <Card key={transaction.id} className="p-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-start">
+                      <p className="text-xs text-muted-foreground">ID: {transaction.id.substring(0, 8)}...</p>
+                      <Badge 
+                        variant={transaction.status === "Очікує підтвердження" ? "outline" : "secondary"}
+                      >
+                        {transaction.status}
+                      </Badge>
+                    </div>
+                    
+                    <p className="text-sm">{new Date(transaction.date).toLocaleDateString()}</p>
+                    
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Продавець:</span>
+                      <span>{transaction.sellerName}</span>
+                    </div>
+                    
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Покупець:</span>
+                      <span>{transaction.buyerName}</span>
+                    </div>
+                    
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Кількість:</span>
+                      <span>{transaction.sharesCount} акцій</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center pt-2">
+                      <span className="font-semibold">{transaction.totalAmount?.toFixed(2)} грн</span>
+                      <Button variant="outline" size="sm" onClick={() => openTransaction(transaction)}>
+                        <MessageCircle className="h-4 w-4 mr-1" /> Деталі
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Немає активних угод
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

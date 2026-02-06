@@ -64,7 +64,7 @@ export default function Admin() {
     
     if (!isAuthenticated() || !currentUser) {
       console.log('❌ Admin access denied: no auth');
-      toast.error("Доступ запрещен: Необходимо войти в систему");
+      toast.error("Доступ заборонено: Необхідно увійти в систему");
       navigate("/auth");
       return;
     }
@@ -74,7 +74,7 @@ export default function Admin() {
         isAdmin: currentUser.isAdmin,
         founder_admin: currentUser.founder_admin
       });
-      toast.error("Доступ запрещен: Необходимы права администратора");
+      toast.error("Доступ заборонено: Необхідні права адміністратора");
       navigate("/");
       return;
     }
@@ -125,7 +125,7 @@ export default function Admin() {
   }, [navigate, stockPrice, tabName, loading, isAuthenticated, currentUser]);
 
   if (loading) {
-    return <div className="container py-16 text-center">Загрузка...</div>;
+    return <div className="container py-16 text-center">Завантаження...</div>;
   }
 
   // Show loading while user data is being fetched
@@ -134,25 +134,25 @@ export default function Admin() {
   }
 
   if (!isAuthenticated() || !currentUser) {
-    return <div className="container py-16 text-center">Перенаправление на страницу авторизации...</div>;
+    return <div className="container py-16 text-center">Перенаправлення на сторінку авторизації...</div>;
   }
 
   if (!currentUser.isAdmin && !currentUser.founder_admin) {
-    return <div className="container py-16 text-center">Доступ запрещен</div>;
+    return <div className="container py-16 text-center">Доступ заборонено</div>;
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pt-14 sm:pt-16 3xl:pt-20 pb-safe-nav">
       <Navbar />
       <div className="container py-8">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Панель администратора</h1>
-            <p className="text-muted-foreground">Управление сайтом Спільнота B&C</p>
+            <h1 className="text-3xl font-bold">Панель адміністратора</h1>
+            <p className="text-muted-foreground">Управління сайтом Спільнота B&C</p>
             
             {currentUser.founder_admin && (
               <Badge variant="secondary" className="mt-2">
-                Администратор-основатель
+                Адміністратор-засновник
               </Badge>
             )}
           </div>
