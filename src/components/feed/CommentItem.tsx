@@ -56,12 +56,9 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
         </Avatar>
       </Link>
       <div className="flex-1 min-w-0">
-        <div className="bg-muted/50 rounded-2xl px-3 py-1.5 inline-block max-w-full">
-          <span className="flex items-center gap-1 leading-none">
-            <Link 
-              to={`/profile/${comment.user_id}`} 
-              className="font-semibold text-xs hover:underline"
-            >
+        <div className="bg-muted/50 rounded-2xl px-3 py-1 inline-block max-w-full">
+          <span className="font-semibold text-xs hover:underline inline-flex items-center gap-1">
+            <Link to={`/profile/${comment.user_id}`} className="hover:underline">
               {comment.user?.full_name || 'Користувач'}
             </Link>
             {isPostAuthor && (
@@ -70,7 +67,7 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
               </Badge>
             )}
           </span>
-          <p className="text-sm break-words leading-none -mt-2">{comment.content}</p>
+          <p className="text-sm break-words m-0 p-0">{comment.content}</p>
         </div>
         
         {/* Дії під коментарем */}
