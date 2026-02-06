@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { Search, Filter, Users, User, UserPlus, MessageSquare } from "lucide-react";
+import { Search, Filter, Users, User, UserPlus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,7 @@ export default function Connect() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { sendFriendRequest, friends } = useFriendRequests();
+  const { sendFriendRequest, friendRequests, checkFriendshipStatus } = useFriendRequests();
 
   useEffect(() => {
     const checkCurrentUser = async () => {
@@ -80,6 +80,13 @@ export default function Connect() {
       result = result.filter(user => user.id !== currentUserId);
     }
     
+    // Не показуємо друзів та тих, кому вже відправлено запит
+    result = result.filter(user => {
+      const status = checkFriendshipStatus(user.id);
+      // Показуємо тільки тих, з ким немає зв'язку
+      return status.status === 'none';
+    });
+    
     // Застосувати фільтр пошуку
     if (searchTerm) {
       result = result.filter(user => 
@@ -101,7 +108,7 @@ export default function Connect() {
     }
     
     setFilteredUsers(result);
-  }, [searchTerm, categoryFilter, users, currentUserId]);
+  }, [searchTerm, categoryFilter, users, currentUserId, friendRequests, checkFriendshipStatus]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -111,10 +118,6 @@ export default function Connect() {
     setCategoryFilter(value);
   };
 
-  const handleSendMessage = (userId: string) => {
-    navigate(`/messages?userId=${userId}`);
-  };
-
   const handleSendFriendRequest = async (userId: string) => {
     if (!currentUserId) {
       toast.error("Ви повинні увійти в систему");
@@ -122,10 +125,6 @@ export default function Connect() {
     }
     // Toast вже показується в sendFriendRequest
     await sendFriendRequest(userId);
-  };
-
-  const isFriend = (userId: string) => {
-    return friends && friends.some(friend => friend?.id === userId);
   };
 
   // Функція для створення заглушок аватара
@@ -215,21 +214,11 @@ export default function Connect() {
                         <User className="h-4 w-4 mr-1" /> Профіль
                       </Button>
                       <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleSendMessage(user.id)}
+                        size="sm"
+                        onClick={() => handleSendFriendRequest(user.id)}
                       >
-                        <MessageSquare className="h-4 w-4 mr-1" /> Написати
+                        <UserPlus className="h-4 w-4 mr-1" /> Додати в друзі
                       </Button>
-                      {!isFriend(user.id) && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleSendFriendRequest(user.id)}
-                        >
-                          <UserPlus className="h-4 w-4 mr-1" /> Додати
-                        </Button>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
