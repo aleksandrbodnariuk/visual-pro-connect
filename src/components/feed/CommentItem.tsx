@@ -56,18 +56,17 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
         </Avatar>
       </Link>
       <div className="flex-1 min-w-0">
-        <div className="bg-muted/50 rounded-2xl px-3 py-1 inline-block max-w-full">
-          <span className="font-semibold text-xs hover:underline inline-flex items-center gap-1">
-            <Link to={`/profile/${comment.user_id}`} className="hover:underline">
-              {comment.user?.full_name || 'Користувач'}
-            </Link>
-            {isPostAuthor && (
-              <Badge variant="secondary" className="text-[10px] py-0 px-1.5 h-4">
-                Автор
-              </Badge>
-            )}
-          </span>
-          <p className="text-sm break-words m-0 p-0">{comment.content}</p>
+        <div className="bg-muted/50 rounded-2xl px-3 py-1 inline-block max-w-full text-sm [&>*]:leading-[1.1]">
+          <Link to={`/profile/${comment.user_id}`} className="font-semibold text-xs hover:underline">
+            {comment.user?.full_name || 'Користувач'}
+          </Link>
+          {isPostAuthor && (
+            <Badge variant="secondary" className="text-[10px] py-0 px-1.5 h-4 ml-1 align-middle">
+              Автор
+            </Badge>
+          )}
+          <br />
+          <span className="break-words">{comment.content}</span>
         </div>
         
         {/* Дії під коментарем */}
