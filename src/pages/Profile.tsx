@@ -19,9 +19,9 @@ import { ServicesSection } from "@/components/profile/ServicesSection";
 import { ShareholderSection } from "@/components/profile/ShareholderSection";
 import { PortfolioManager } from "@/components/profile/PortfolioManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
 import { EditPublicationModal } from "@/components/publications/EditPublicationModal";
 import { FriendsList } from "@/components/profile/FriendsList";
+import { CreatePostBar } from "@/components/profile/CreatePostBar";
 
 const LoadingSpinner = () => (
   <div className="min-h-screen">
@@ -59,7 +59,7 @@ export default function Profile() {
   const [error, setError] = useState<string | null>(null);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [portfolioManagerOpen, setPortfolioManagerOpen] = useState(false);
-  const [createPostOpen, setCreatePostOpen] = useState(false);
+  
   const [servicesDialogOpen, setServicesDialogOpen] = useState(false);
   const [editPostOpen, setEditPostOpen] = useState(false);
   const [postToEdit, setPostToEdit] = useState<any>(null);
@@ -227,9 +227,6 @@ export default function Profile() {
     setPortfolioManagerOpen(true);
   };
 
-  const handleCreatePost = async () => {
-    setCreatePostOpen(true);
-  };
 
   const handleEditServices = () => {
     setServicesDialogOpen(true);
@@ -362,13 +359,15 @@ export default function Profile() {
             
             <TabsContent value="posts" className="mt-6">
               <div className="space-y-6">
-                {isCurrentUser && (
-                  <div className="mb-4">
-                    <Button onClick={handleCreatePost}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Створити публікацію
-                    </Button>
-                  </div>
+                {isCurrentUser && user && (
+                  <CreatePostBar 
+                    user={{
+                      id: user.id,
+                      name: user.name,
+                      avatarUrl: user.avatarUrl
+                    }}
+                    onSuccess={() => window.location.reload()}
+                  />
                 )}
                 
                 <Suspense fallback={<div>Завантаження публікацій...</div>}>
@@ -469,15 +468,6 @@ export default function Profile() {
             </DialogContent>
           </Dialog>
           
-          <CreatePublicationModal 
-            open={createPostOpen} 
-            onOpenChange={setCreatePostOpen}
-            userId={user?.id}
-            onSuccess={() => {
-              window.location.reload();
-              toast.success("Публікацію створено");
-            }}
-          />
 
           <EditPublicationModal
             open={editPostOpen}

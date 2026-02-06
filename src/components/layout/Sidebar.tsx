@@ -1,15 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Home, Search, Bell, MessageSquare, User, Settings, Users, Camera, Music, Video, Sparkles, UtensilsCrossed, Car, Flower2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
-import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
 import { useAuthState } from "@/hooks/auth/useAuthState";
 import { toast } from "sonner";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
-
 interface SidebarProps {
   className?: string;
 }
@@ -20,18 +18,9 @@ export function Sidebar({ className }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { getCurrentUser } = useAuthState();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { unreadCount } = useUnreadMessages();
   
   const currentUser = getCurrentUser();
-  
-  const handleCreatePublication = () => {
-    if (!currentUser) {
-      toast.error("Для створення публікації необхідно увійти в систему");
-      return;
-    }
-    setIsCreateModalOpen(true);
-  };
 
   const handleNavigate = (path: string) => {
     try {
@@ -226,15 +215,6 @@ export function Sidebar({ className }: SidebarProps) {
       </div>
 
       <div className="border-t p-4">
-        <Button 
-          onClick={handleCreatePublication} 
-          className="w-full"
-        >
-          Створити публікацію
-        </Button>
-      </div>
-      
-      <div className="border-t p-4">
         <div className="rounded-lg bg-muted p-4">
           <h3 className="font-medium mb-2">{t.expandNetwork}</h3>
           <p className="text-sm text-muted-foreground mb-3">
@@ -245,20 +225,6 @@ export function Sidebar({ className }: SidebarProps) {
           </Button>
         </div>
       </div>
-      
-      {/* Модальне вікно створення публікації */}
-      {currentUser && (
-        <CreatePublicationModal
-          open={isCreateModalOpen}
-          onOpenChange={setIsCreateModalOpen}
-          userId={currentUser.id}
-          onSuccess={() => {
-            setIsCreateModalOpen(false);
-            toast.success("Публікацію створено");
-            window.location.reload();
-          }}
-        />
-      )}
     </aside>
   );
 }
