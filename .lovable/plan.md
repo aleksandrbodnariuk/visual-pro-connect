@@ -1,130 +1,237 @@
 
 
-## План: Реалізація коментарів у стилі Facebook (inline expand)
+## План: Реалізація вкладених коментарів (відповіді на коментарі) у стилі Facebook
 
 ---
 
-### Виявлені проблеми
+### Поточний стан
 
-| Проблема | Опис | Файл |
-|----------|------|------|
-| Перехід на окрему сторінку | Кнопка коментаря переводить на `/post/:id` замість розкриття inline | `PostCard.tsx:218` |
-| Видимий URL | На сторінці Post.tsx URL показується без очищення | `Post.tsx:246` |
-| Логіка "Переглянути більше" хибна | Порівнюється `comments` з 2, але коментарі можуть не завантажитись | `PostCard.tsx:288` |
-| Окрема форма коментаря | На Post.tsx форма в Card замість inline | `Post.tsx:277-305` |
+Таблиця `comments` має такі поля:
+- `id` - UUID
+- `post_id` - посилання на пост
+- `user_id` - автор коментаря
+- `content` - текст
+- `created_at` - дата створення
+
+**Немає поля для зв'язку з батьківським коментарем.**
 
 ---
 
-### Рішення: Facebook-style inline коментарі
-
-#### Поведінка як у Facebook:
+### Архітектура рішення
 
 ```text
-┌─────────────────────────────────┐
-│ Пост                             │
-├─────────────────────────────────┤
-│ ❤️ 💬 🔗         🔖              │
-│ 4 вподобань                      │
-│                                  │
-│ Переглянути більше коментарів ← кнопка expand
-│                                  │
-│ 👤 Коментар 1                    │
-│ 👤 Коментар 2                    │
-│ ──────────────────               │
-│ 👤 Написати коментар...          │ ← inline input
-└─────────────────────────────────┘
-
-КЛІК "Переглянути більше":
-- Коментарі розкриваються В ТІЙ САМІЙ КАРТЦІ
-- БЕЗ переходу на іншу сторінку
-- БЕЗ модального вікна
+┌─────────────────────────────────────────────┐
+│ Коментар 1 (parent_id = NULL)               │
+│ 👤 Валентина Пушкар                          │
+│ "Саша на цих фото схожий на ФРЕДИ"          │
+│ [Подобається] [Відповісти]                  │
+│                                             │
+│   ┌─────────────────────────────────────┐   │
+│   │ Відповідь (parent_id = Коментар 1)  │   │
+│   │ 👤 Олександр Дідик                   │   │
+│   │ "Була така гітара? Урал?"           │   │
+│   │ [Подобається] [Відповісти]          │   │
+│   └─────────────────────────────────────┘   │
+│                                             │
+│   ┌─────────────────────────────────────┐   │
+│   │ Відповідь (parent_id = Коментар 1)  │   │
+│   │ 🔑 Автор                             │   │
+│   │ 👤 Олександр Боднарюк               │   │
+│   │ "У сільських клубах..."             │   │
+│   └─────────────────────────────────────┘   │
+└─────────────────────────────────────────────┘
 ```
 
 ---
 
-### Технічні зміни
+### Частина 1: Зміни в базі даних
 
-#### 1. Додати стан `showAllComments` в PostCard.tsx
+#### Додати колонку `parent_id` до таблиці comments
 
-```tsx
-const [showAllComments, setShowAllComments] = useState(false);
-const [allComments, setAllComments] = useState<CommentData[]>([]);
+```sql
+-- Додати колонку parent_id для вкладених коментарів
+ALTER TABLE public.comments 
+ADD COLUMN parent_id uuid REFERENCES public.comments(id) ON DELETE CASCADE;
+
+-- Індекс для швидкого пошуку відповідей
+CREATE INDEX idx_comments_parent_id ON public.comments(parent_id);
 ```
 
 ---
 
-#### 2. Функція завантаження всіх коментарів
+### Частина 2: Оновити TypeScript типи
 
-```tsx
-const loadAllComments = async () => {
-  const { data } = await supabase
-    .from('comments')
-    .select('*')
-    .eq('post_id', id)
-    .order('created_at', { ascending: false });
+Файл: `src/integrations/supabase/types.ts`
+
+```typescript
+comments: {
+  Row: {
+    content: string
+    created_at: string | null
+    id: string
+    post_id: string
+    user_id: string
+    parent_id: string | null  // ← Додати
+  }
+  Insert: {
+    content: string
+    created_at?: string | null
+    id?: string
+    post_id: string
+    user_id: string
+    parent_id?: string | null  // ← Додати
+  }
+  Update: {
+    content?: string
+    created_at?: string | null
+    id?: string
+    post_id?: string
+    user_id?: string
+    parent_id?: string | null  // ← Додати
+  }
+}
+```
+
+---
+
+### Частина 3: Оновити інтерфейс CommentData
+
+Файл: `src/components/feed/PostCard.tsx`
+
+```typescript
+interface CommentData {
+  id: string;
+  content: string;
+  created_at: string;
+  user_id: string;
+  parent_id?: string | null;  // ← Додати
+  user?: {
+    id: string;
+    full_name: string;
+    avatar_url: string;
+  };
+  replies?: CommentData[];  // ← Вкладені відповіді
+}
+```
+
+---
+
+### Частина 4: Додати стан для відповіді
+
+```typescript
+const [replyingTo, setReplyingTo] = useState<{
+  commentId: string;
+  userName: string;
+} | null>(null);
+```
+
+---
+
+### Частина 5: Функція групування коментарів
+
+```typescript
+const groupCommentsWithReplies = (comments: CommentData[]): CommentData[] => {
+  // Спочатку отримуємо кореневі коментарі (parent_id = null)
+  const rootComments = comments.filter(c => !c.parent_id);
   
-  // ... fetch user data
-  setAllComments(commentsWithUsers);
-  setShowAllComments(true);
+  // Додаємо відповіді до кожного кореневого коментаря
+  return rootComments.map(root => ({
+    ...root,
+    replies: comments.filter(c => c.parent_id === root.id)
+  }));
 };
 ```
 
 ---
 
-#### 3. Змінити кнопку MessageCircle
+### Частина 6: Оновити запит коментарів
 
-Замість:
-```tsx
-onClick={() => navigate(`/post/${id}`)}
-```
+```typescript
+const loadRecentComments = async () => {
+  // Завантажуємо всі коментарі (включно з відповідями)
+  const { data: commentsData } = await supabase
+    .from('comments')
+    .select('*')
+    .eq('post_id', id)
+    .order('created_at', { ascending: true }); // Від старих до нових
 
-На:
-```tsx
-onClick={() => {
-  // Фокус на поле вводу коментаря
-  commentInputRef.current?.focus();
-}}
+  // Групуємо в ієрархію
+  const grouped = groupCommentsWithReplies(commentsWithUsers);
+  setRecentComments(grouped.slice(-2)); // Останні 2 кореневі
+};
 ```
 
 ---
 
-#### 4. Кнопка "Переглянути більше коментарів"
+### Частина 7: Оновити форму відправки коментаря
 
-Замість Link на `/post/${id}`:
+```typescript
+const handleCommentSubmit = async () => {
+  await supabase.from('comments').insert({
+    post_id: id,
+    user_id: authUser.id,
+    content: commentText.trim(),
+    parent_id: replyingTo?.commentId || null  // ← Додати parent_id
+  });
+  
+  setReplyingTo(null);
+  setCommentText("");
+};
+```
+
+---
+
+### Частина 8: UI для коментаря з відповідями
+
 ```tsx
-{comments > 2 && !showAllComments && (
-  <button 
-    onClick={loadAllComments}
-    className="text-sm text-muted-foreground hover:underline"
-  >
-    Переглянути ще {comments - 2} коментарів
-  </button>
+{/* Компонент одного коментаря */}
+const CommentItem = ({ comment, depth = 0 }: { comment: CommentData; depth?: number }) => (
+  <div className={cn("flex items-start gap-2", depth > 0 && "ml-8 mt-2")}>
+    <Avatar className="h-6 w-6">
+      <AvatarImage src={comment.user?.avatar_url} />
+      <AvatarFallback>{comment.user?.full_name?.[0]}</AvatarFallback>
+    </Avatar>
+    <div className="flex-1">
+      <div className="bg-muted/50 rounded-2xl px-3 py-1.5">
+        <span className="font-semibold text-xs">{comment.user?.full_name}</span>
+        <p className="text-sm">{comment.content}</p>
+      </div>
+      
+      {/* Дії під коментарем */}
+      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+        <span>{formatTimeAgo(comment.created_at)}</span>
+        <button className="hover:underline font-medium">Подобається</button>
+        <button 
+          onClick={() => setReplyingTo({ commentId: comment.id, userName: comment.user?.full_name })}
+          className="hover:underline font-medium"
+        >
+          Відповісти
+        </button>
+      </div>
+      
+      {/* Вкладені відповіді */}
+      {comment.replies?.map(reply => (
+        <CommentItem key={reply.id} comment={reply} depth={depth + 1} />
+      ))}
+    </div>
+  </div>
+);
+```
+
+---
+
+### Частина 9: Показувати кому відповідаємо
+
+```tsx
+{replyingTo && (
+  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+    <span>Відповідь для {replyingTo.userName}</span>
+    <button onClick={() => setReplyingTo(null)} className="text-destructive">
+      ✕ Скасувати
+    </button>
+  </div>
 )}
 ```
-
----
-
-#### 5. Відображення коментарів
-
-```tsx
-{/* Показуємо 2 останніх або всі */}
-{(showAllComments ? allComments : recentComments.slice(0, 2)).map(comment => (
-  // ... render comment
-))}
-```
-
----
-
-#### 6. Очистити URL на сторінці Post.tsx (backup)
-
-Рядок 246:
-```tsx
-{post.content && (
-  <p className="mb-4 text-foreground">{removeUrls(post.content)}</p>
-)}
-```
-
-Та додати VideoPreview якщо є embed.
 
 ---
 
@@ -132,17 +239,17 @@ onClick={() => {
 
 | Файл | Зміни |
 |------|-------|
-| `src/components/feed/PostCard.tsx` | Додати inline expand коментарів |
-| `src/pages/Post.tsx` | Очистити URL, додати VideoPreview |
+| Міграція SQL | Додати колонку `parent_id` |
+| `src/integrations/supabase/types.ts` | Додати `parent_id` до типів comments |
+| `src/components/feed/PostCard.tsx` | Повна реалізація вкладених коментарів |
 
 ---
 
 ### Очікуваний результат
 
-1. Коментарі розкриваються inline при натисканні "Переглянути більше"
-2. Немає переходу на окрему сторінку для коментарів
-3. Кнопка коментаря фокусує поле вводу
-4. URL не показується в тексті поста
-5. VideoPreview відображається замість голого URL
-6. Сторінка Post.tsx залишається як backup (для прямих посилань)
+1. Під кожним коментарем є кнопка "Відповісти"
+2. Відповіді показуються з відступом під батьківським коментарем
+3. При відповіді показується "@ім'я" кому відповідаємо
+4. Автор поста позначається бейджем "Автор" (як на скриншоті)
+5. Ієрархія коментарів зберігається у БД через `parent_id`
 
