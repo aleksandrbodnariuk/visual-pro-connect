@@ -1,120 +1,81 @@
 
-## План: Заміна кнопок "Створити публікацію" на Facebook-стиль інтерфейс
+## План: Виправлення бокової панелі на сторінці Друзі
 
 ---
 
-### Що потрібно зробити
+### Проблема
 
-На скриншотах видно:
-- **Поточний стан**: Кнопки "Створити публікацію" у двох місцях (Sidebar і Profile)
-- **Facebook-стиль**: Компактний рядок з аватаром, полем "Що у вас на думці?" та іконками
-
----
-
-### Зміни
-
-| Файл | Дія |
-|------|-----|
-| `src/components/layout/Sidebar.tsx` | Видалити кнопку "Створити публікацію" та модальне вікно |
-| `src/pages/Profile.tsx` | Замінити кнопку на Facebook-стиль компонент |
-| `src/components/profile/CreatePostBar.tsx` | Створити новий компонент (Facebook-стиль) |
-
----
-
-### Детальні зміни
-
-#### 1. Sidebar.tsx (рядки 228-261)
-
-**Видалити:**
-```tsx
-<div className="border-t p-4">
-  <Button onClick={handleCreatePublication} className="w-full">
-    Створити публікацію
-  </Button>
-</div>
-
-{currentUser && (
-  <CreatePublicationModal ... />
-)}
-```
-
-**Також видалити:**
-- Імпорт `CreatePublicationModal` (рядок 8)
-- State `isCreateModalOpen` (рядок 23)
-- Функцію `handleCreatePublication` (рядки 28-34)
-
----
-
-#### 2. Новий компонент: CreatePostBar.tsx
+Сторінка Friends.tsx має неправильну структуру layout, яка відрізняється від Index.tsx та Profile.tsx:
 
 ```text
-┌─────────────────────────────────────────────────┐
-│ [Аватар] [Що у вас на думці?...] [🎥] [📷] [👥] │
-└─────────────────────────────────────────────────┘
-```
+ПОТОЧНИЙ СТАН (Friends.tsx):
+┌────────────────────────────────────┐
+│ Navbar                             │
+├─────────┬──────────────────────────┤
+│ Sidebar │ Main Content             │
+│ (inside │ (перекриває sidebar)     │
+│  grid)  │                          │
+└─────────┴──────────────────────────┘
 
-- Аватар користувача (32x32px)
-- Поле вводу з placeholder "Що у вас на думці?"
-- Іконки: Відео (червона), Фото (зелена), Подія (синя)
-- Превʼю вибраного медіа
-- Кнопка "Опублікувати" зʼявляється при наявності контенту
+ПРАВИЛЬНИЙ СТАН (Index.tsx, Profile.tsx):
+┌────────────────────────────────────┐
+│ Navbar (fixed)                     │
+├────────────────────────────────────┤
+│ pt-14 (padding-top для navbar)     │
+├─────────┬──────────────────────────┤
+│ Sidebar │ Spacer  │ Main Content   │
+│ (fixed, │ (empty) │                │
+│ окремо) │         │                │
+└─────────┴─────────┴────────────────┘
+```
 
 ---
 
-#### 3. Profile.tsx (рядки 363-382)
+### Помилки у Friends.tsx
 
-**Замінити:**
+1. **Відсутній `pt-14 sm:pt-16 3xl:pt-20`** - контент перекривається Navbar
+2. **Sidebar передає className** який перезаписує `fixed` на `sticky`
+3. **Відсутній порожній spacer div** для резервування місця
+
+---
+
+### Рішення
+
+Оновити структуру Friends.tsx за зразком Index.tsx:
+
+| Елемент | Зміна |
+|---------|-------|
+| Root div | Додати `pt-14 sm:pt-16 3xl:pt-20` |
+| Sidebar | Рендерити окремо без className |
+| Grid | Додати spacer div з `aria-hidden="true"` |
+
+---
+
+### Технічні зміни
+
+**Файл: `src/pages/Friends.tsx`**
+
 ```tsx
-{isCurrentUser && (
-  <div className="mb-4">
-    <Button onClick={handleCreatePost}>
-      <Edit className="mr-2 h-4 w-4" />
-      Створити публікацію
-    </Button>
-  </div>
-)}
+// ДО:
+<div className="min-h-screen bg-background pb-safe-nav">
+  <Navbar />
+  <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
+    <Sidebar className="hidden md:block md:col-span-4 lg:col-span-3 sticky top-20 h-fit" />
+    <main className="col-span-12 md:col-span-8 lg:col-span-9">
+
+// ПІСЛЯ:
+<div className="min-h-screen bg-background pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
+  <Navbar />
+  <Sidebar />
+  <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-6">
+    <div className="hidden md:block md:col-span-4 lg:col-span-3" aria-hidden="true" />
+    <main className="col-span-12 md:col-span-8 lg:col-span-9">
 ```
-
-**На:**
-```tsx
-{isCurrentUser && (
-  <CreatePostBar 
-    user={user} 
-    onSuccess={() => window.location.reload()} 
-  />
-)}
-```
-
----
-
-### Візуальне порівняння
-
-```text
-ДО (окрема кнопка):
-┌────────────────────────────┐
-│ [📝 Створити публікацію]   │
-└────────────────────────────┘
-
-ПІСЛЯ (Facebook-стиль):
-┌─────────────────────────────────────────────────┐
-│ [👤] [Що у вас на думці?     ] [🎥] [📷] [👥]  │
-└─────────────────────────────────────────────────┘
-```
-
----
-
-### Файли для редагування
-
-| Файл | Рядки | Операція |
-|------|-------|----------|
-| `src/components/layout/Sidebar.tsx` | 8, 23, 28-34, 228-261 | Видалення |
-| `src/pages/Profile.tsx` | 22, 62, 230-232, 365-371, 472-480 | Видалення/Заміна |
-| `src/components/profile/CreatePostBar.tsx` | Новий | Створення |
 
 ---
 
 ### Результат
 
-1. Видалено кнопки "Створити публікацію" з Sidebar та Profile
-2. На сторінці Profile зʼявиться Facebook-стиль форма
-3. Уніфікований UX - однаковий інтерфейс на головній та профілі
+- Sidebar буде fixed з лівого боку (як на інших сторінках)
+- Контент не буде перекриватися Navbar
+- Уніфікований layout на всіх сторінках
