@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,26 +12,15 @@ import { PostMenu } from "@/components/profile/PostMenu";
 import { useAuthState } from "@/hooks/auth/useAuthState";
 import { extractVideoEmbed } from "@/lib/videoEmbed";
 import { VideoPreview } from "./VideoPreview";
+import { CommentItem, CommentData } from "./CommentItem";
 import { supabase } from "@/integrations/supabase/client";
-
-interface CommentData {
-  id: string;
-  content: string;
-  created_at: string;
-  user_id: string;
-  user?: {
-    id: string;
-    full_name: string;
-    avatar_url: string;
-  };
-}
 
 export interface PostCardProps {
   id: string;
   author: {
     id: string;
     name: string;
-    username?: string; // Більше не використовується - прибрано з UI
+    username?: string;
     avatarUrl?: string;
     profession?: string;
     isShareHolder?: boolean;
@@ -46,6 +35,23 @@ export interface PostCardProps {
   onDelete?: (postId: string) => void;
   currentUser?: any;
 }
+
+// Функція групування коментарів з відповідями
+const groupCommentsWithReplies = (comments: CommentData[]): CommentData[] => {
+  // Спочатку отримуємо кореневі коментарі (parent_id = null)
+  const rootComments = comments.filter(c => !c.parent_id);
+  
+  // Рекурсивно додаємо відповіді до кожного коментаря
+  const addReplies = (parentComment: CommentData): CommentData => {
+    const directReplies = comments.filter(c => c.parent_id === parentComment.id);
+    return {
+      ...parentComment,
+      replies: directReplies.map(reply => addReplies(reply))
+    };
+  };
+  
+  return rootComments.map(root => addReplies(root));
+};
 
 export function PostCard({
   id,
@@ -67,6 +73,10 @@ export function PostCard({
   const [showAllComments, setShowAllComments] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isLoadingAllComments, setIsLoadingAllComments] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<{
+    commentId: string;
+    userName: string;
+  } | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
   
   const { getCurrentUser } = useAuthState();
@@ -103,8 +113,7 @@ export function PostCard({
         .from('comments')
         .select('*')
         .eq('post_id', id)
-        .order('created_at', { ascending: false })
-        .limit(3);
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
 
@@ -112,12 +121,16 @@ export function PostCard({
         const userIds = [...new Set(commentsData.map(c => c.user_id))];
         const { data: users } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: userIds });
         
-        const commentsWithUsers = commentsData.map(comment => ({
+        const commentsWithUsers: CommentData[] = commentsData.map(comment => ({
           ...comment,
+          parent_id: (comment as any).parent_id || null,
           user: users?.find((u: any) => u.id === comment.user_id)
         }));
         
-        setRecentComments(commentsWithUsers);
+        // Групуємо коментарі з відповідями
+        const grouped = groupCommentsWithReplies(commentsWithUsers);
+        // Показуємо останні 2 кореневі коментарі
+        setRecentComments(grouped.slice(-2));
       } else {
         setRecentComments([]);
       }
@@ -136,7 +149,7 @@ export function PostCard({
         .from('comments')
         .select('*')
         .eq('post_id', id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
 
@@ -144,12 +157,15 @@ export function PostCard({
         const userIds = [...new Set(commentsData.map(c => c.user_id))];
         const { data: users } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: userIds });
         
-        const commentsWithUsers = commentsData.map(comment => ({
+        const commentsWithUsers: CommentData[] = commentsData.map(comment => ({
           ...comment,
+          parent_id: (comment as any).parent_id || null,
           user: users?.find((u: any) => u.id === comment.user_id)
         }));
         
-        setAllComments(commentsWithUsers);
+        // Групуємо коментарі з відповідями
+        const grouped = groupCommentsWithReplies(commentsWithUsers);
+        setAllComments(grouped);
         setShowAllComments(true);
       }
     } catch (error) {
@@ -164,23 +180,44 @@ export function PostCard({
     commentInputRef.current?.focus();
   };
 
+  // Відповідь на коментар
+  const handleReply = (commentId: string, userName: string) => {
+    setReplyingTo({ commentId, userName });
+    commentInputRef.current?.focus();
+  };
+
+  // Скасування відповіді
+  const cancelReply = () => {
+    setReplyingTo(null);
+  };
+
   const handleCommentSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && commentText.trim() && authUser?.id) {
       setIsSubmittingComment(true);
       try {
-        const { error } = await supabase.from('comments').insert({
+        const insertData: any = {
           post_id: id,
           user_id: authUser.id,
           content: commentText.trim()
-        });
+        };
+        
+        // Додаємо parent_id якщо це відповідь
+        if (replyingTo) {
+          insertData.parent_id = replyingTo.commentId;
+        }
+        
+        const { error } = await supabase.from('comments').insert(insertData);
         
         if (error) throw error;
         
         setCommentText("");
+        setReplyingTo(null);
         // Перезавантажуємо коментарі
         loadRecentComments();
         if (showAllComments) {
-          loadAllComments();
+          // Перезавантажуємо всі коментарі
+          setShowAllComments(false);
+          setTimeout(() => loadAllComments(), 100);
         }
       } catch (error) {
         console.error("Error submitting comment:", error);
@@ -189,6 +226,10 @@ export function PostCard({
       }
     }
   };
+
+  // Підрахунок загальної кількості коментарів (кореневих)
+  const displayedComments = showAllComments ? allComments : recentComments;
+  const totalRootComments = showAllComments ? allComments.length : comments;
 
   return (
     <div className={cn("creative-card card-hover", className)}>
@@ -307,31 +348,23 @@ export function PostCard({
           </p>
         </div>
 
-        {/* Inline коментарі - показуємо 2 або всі */}
-        {(showAllComments ? allComments : recentComments).length > 0 && (
-          <div className="mt-2 space-y-2">
-            {(showAllComments ? allComments : recentComments.slice(0, 2)).map(comment => (
-              <div key={comment.id} className="flex items-start gap-2">
-                <Link to={`/profile/${comment.user_id}`}>
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={comment.user?.avatar_url || ''} />
-                    <AvatarFallback className="text-xs">{comment.user?.full_name?.[0] || 'U'}</AvatarFallback>
-                  </Avatar>
-                </Link>
-                <div className="bg-muted/50 rounded-2xl px-3 py-1.5 flex-1">
-                  <Link to={`/profile/${comment.user_id}`} className="font-semibold text-xs hover:underline">
-                    {comment.user?.full_name || 'Користувач'}
-                  </Link>
-                  <p className="text-sm">{comment.content}</p>
-                </div>
-              </div>
+        {/* Inline коментарі з вкладеними відповідями */}
+        {displayedComments.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {displayedComments.map(comment => (
+              <CommentItem 
+                key={comment.id} 
+                comment={comment}
+                postAuthorId={author.id}
+                onReply={handleReply}
+              />
             ))}
           </div>
         )}
 
         {/* Кнопка "Переглянути більше коментарів" - inline expand */}
-        <div className="mt-1 flex flex-col">
-          {comments > 2 && !showAllComments && (
+        <div className="mt-2 flex flex-col">
+          {totalRootComments > 2 && !showAllComments && (
             <button 
               onClick={loadAllComments}
               disabled={isLoadingAllComments}
@@ -339,7 +372,7 @@ export function PostCard({
             >
               {isLoadingAllComments 
                 ? "Завантаження..." 
-                : `Переглянути ще ${comments - Math.min(recentComments.length, 2)} коментарів`
+                : `Переглянути ще ${totalRootComments - Math.min(recentComments.length, 2)} коментарів`
               }
             </button>
           )}
@@ -357,6 +390,18 @@ export function PostCard({
         {/* Inline форма коментаря */}
         {authUser && (
           <div className="mt-3 pt-3 border-t">
+            {/* Показуємо кому відповідаємо */}
+            {replyingTo && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2 bg-muted/30 rounded-lg px-3 py-1.5">
+                <span>Відповідь для <strong>{replyingTo.userName}</strong></span>
+                <button 
+                  onClick={cancelReply} 
+                  className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={authUser.avatar_url || ''} />
@@ -364,7 +409,7 @@ export function PostCard({
               </Avatar>
               <Input
                 ref={commentInputRef}
-                placeholder="Написати коментар..."
+                placeholder={replyingTo ? `Відповісти ${replyingTo.userName}...` : "Написати коментар..."}
                 className="flex-1 h-9 bg-muted/50 border-0 focus-visible:ring-1"
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
