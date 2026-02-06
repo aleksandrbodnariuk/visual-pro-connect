@@ -70,7 +70,7 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
               </Badge>
             )}
           </span>
-          <p className="text-sm break-words leading-none -mt-0.5">{comment.content}</p>
+          <p className="text-sm break-words leading-none -mt-2">{comment.content}</p>
         </div>
         
         {/* Дії під коментарем */}
