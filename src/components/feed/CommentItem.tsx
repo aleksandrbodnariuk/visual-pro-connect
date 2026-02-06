@@ -46,7 +46,7 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
   const maxDepth = 2; // Максимальна глибина вкладеності для UI
 
   return (
-    <div className={cn("flex items-start gap-2", depth > 0 && "ml-8 mt-2")}>
+    <div className={cn("flex items-start gap-2", depth > 0 && "ml-8 mt-1")}>
       <Link to={`/profile/${comment.user_id}`}>
         <Avatar className="h-7 w-7 shrink-0">
           <AvatarImage src={comment.user?.avatar_url || ''} />
@@ -56,7 +56,7 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
         </Avatar>
       </Link>
       <div className="flex-1 min-w-0">
-        <div className="bg-muted/50 rounded-2xl px-3 py-2 inline-block max-w-full">
+        <div className="bg-muted/50 rounded-2xl px-3 py-1.5 inline-block max-w-full">
           <div className="flex items-center gap-2 flex-wrap">
             <Link 
               to={`/profile/${comment.user_id}`} 
@@ -89,7 +89,7 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
         
         {/* Вкладені відповіді */}
         {comment.replies && comment.replies.length > 0 && depth < maxDepth && (
-          <div className="mt-1">
+          <div className="mt-0.5">
             {comment.replies.map(reply => (
               <CommentItem 
                 key={reply.id} 
@@ -104,7 +104,7 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
         
         {/* Якщо глибина перевищує ліміт, показуємо відповіді без додаткового відступу */}
         {comment.replies && comment.replies.length > 0 && depth >= maxDepth && (
-          <div className="mt-1">
+          <div className="mt-0.5">
             {comment.replies.map(reply => (
               <CommentItem 
                 key={reply.id} 

@@ -350,7 +350,7 @@ export function PostCard({
 
         {/* Inline коментарі з вкладеними відповідями */}
         {displayedComments.length > 0 && (
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 space-y-1">
             {displayedComments.map(comment => (
               <CommentItem 
                 key={comment.id} 
