@@ -1,236 +1,68 @@
 
 
-## План: Реалізація вкладених коментарів (відповіді на коментарі) у стилі Facebook
+## План: Зменшення відстані між коментарями для компактного вигляду як у Facebook
 
 ---
 
-### Поточний стан
+### Аналіз проблеми
 
-Таблиця `comments` має такі поля:
-- `id` - UUID
-- `post_id` - посилання на пост
-- `user_id` - автор коментаря
-- `content` - текст
-- `created_at` - дата створення
-
-**Немає поля для зв'язку з батьківським коментарем.**
+| Елемент | Поточне значення | Візуальний ефект |
+|---------|------------------|------------------|
+| Контейнер коментарів | `space-y-2` (8px) | Великий відступ між кореневими |
+| Вкладені відповіді | `mt-2` (8px) | Додатковий відступ для replies |
+| Бульбашка коментаря | `py-2` (8px зверху і знизу) | Занадто висока бульбашка |
+| Дії під коментарем | `mt-1` (4px) | Нормально |
 
 ---
 
-### Архітектура рішення
+### Рішення
 
-```text
-┌─────────────────────────────────────────────┐
-│ Коментар 1 (parent_id = NULL)               │
-│ 👤 Валентина Пушкар                          │
-│ "Саша на цих фото схожий на ФРЕДИ"          │
-│ [Подобається] [Відповісти]                  │
-│                                             │
-│   ┌─────────────────────────────────────┐   │
-│   │ Відповідь (parent_id = Коментар 1)  │   │
-│   │ 👤 Олександр Дідик                   │   │
-│   │ "Була така гітара? Урал?"           │   │
-│   │ [Подобається] [Відповісти]          │   │
-│   └─────────────────────────────────────┘   │
-│                                             │
-│   ┌─────────────────────────────────────┐   │
-│   │ Відповідь (parent_id = Коментар 1)  │   │
-│   │ 🔑 Автор                             │   │
-│   │ 👤 Олександр Боднарюк               │   │
-│   │ "У сільських клубах..."             │   │
-│   └─────────────────────────────────────┘   │
-└─────────────────────────────────────────────┘
+#### 1. Зменшити відступ між кореневими коментарями
+
+**Файл:** `src/components/feed/PostCard.tsx` (рядок 353)
+
+```diff
+- <div className="mt-3 space-y-2">
++ <div className="mt-3 space-y-1">
 ```
 
+`space-y-1` = 4px замість 8px
+
 ---
 
-### Частина 1: Зміни в базі даних
+#### 2. Зменшити відступ для вкладених відповідей
 
-#### Додати колонку `parent_id` до таблиці comments
+**Файл:** `src/components/feed/CommentItem.tsx` (рядок 49)
 
-```sql
--- Додати колонку parent_id для вкладених коментарів
-ALTER TABLE public.comments 
-ADD COLUMN parent_id uuid REFERENCES public.comments(id) ON DELETE CASCADE;
-
--- Індекс для швидкого пошуку відповідей
-CREATE INDEX idx_comments_parent_id ON public.comments(parent_id);
+```diff
+- <div className={cn("flex items-start gap-2", depth > 0 && "ml-8 mt-2")}>
++ <div className={cn("flex items-start gap-2", depth > 0 && "ml-8 mt-1")}>
 ```
 
+`mt-1` = 4px замість 8px
+
 ---
 
-### Частина 2: Оновити TypeScript типи
+#### 3. Зменшити внутрішній padding бульбашки коментаря
 
-Файл: `src/integrations/supabase/types.ts`
+**Файл:** `src/components/feed/CommentItem.tsx` (рядок 59)
 
-```typescript
-comments: {
-  Row: {
-    content: string
-    created_at: string | null
-    id: string
-    post_id: string
-    user_id: string
-    parent_id: string | null  // ← Додати
-  }
-  Insert: {
-    content: string
-    created_at?: string | null
-    id?: string
-    post_id: string
-    user_id: string
-    parent_id?: string | null  // ← Додати
-  }
-  Update: {
-    content?: string
-    created_at?: string | null
-    id?: string
-    post_id?: string
-    user_id?: string
-    parent_id?: string | null  // ← Додати
-  }
-}
+```diff
+- <div className="bg-muted/50 rounded-2xl px-3 py-2 inline-block max-w-full">
++ <div className="bg-muted/50 rounded-2xl px-3 py-1.5 inline-block max-w-full">
 ```
 
----
-
-### Частина 3: Оновити інтерфейс CommentData
-
-Файл: `src/components/feed/PostCard.tsx`
-
-```typescript
-interface CommentData {
-  id: string;
-  content: string;
-  created_at: string;
-  user_id: string;
-  parent_id?: string | null;  // ← Додати
-  user?: {
-    id: string;
-    full_name: string;
-    avatar_url: string;
-  };
-  replies?: CommentData[];  // ← Вкладені відповіді
-}
-```
+`py-1.5` = 6px замість 8px (py-2)
 
 ---
 
-### Частина 4: Додати стан для відповіді
+#### 4. Зменшити відступ для контейнера вкладених відповідей
 
-```typescript
-const [replyingTo, setReplyingTo] = useState<{
-  commentId: string;
-  userName: string;
-} | null>(null);
-```
+**Файл:** `src/components/feed/CommentItem.tsx` (рядки 92, 107)
 
----
-
-### Частина 5: Функція групування коментарів
-
-```typescript
-const groupCommentsWithReplies = (comments: CommentData[]): CommentData[] => {
-  // Спочатку отримуємо кореневі коментарі (parent_id = null)
-  const rootComments = comments.filter(c => !c.parent_id);
-  
-  // Додаємо відповіді до кожного кореневого коментаря
-  return rootComments.map(root => ({
-    ...root,
-    replies: comments.filter(c => c.parent_id === root.id)
-  }));
-};
-```
-
----
-
-### Частина 6: Оновити запит коментарів
-
-```typescript
-const loadRecentComments = async () => {
-  // Завантажуємо всі коментарі (включно з відповідями)
-  const { data: commentsData } = await supabase
-    .from('comments')
-    .select('*')
-    .eq('post_id', id)
-    .order('created_at', { ascending: true }); // Від старих до нових
-
-  // Групуємо в ієрархію
-  const grouped = groupCommentsWithReplies(commentsWithUsers);
-  setRecentComments(grouped.slice(-2)); // Останні 2 кореневі
-};
-```
-
----
-
-### Частина 7: Оновити форму відправки коментаря
-
-```typescript
-const handleCommentSubmit = async () => {
-  await supabase.from('comments').insert({
-    post_id: id,
-    user_id: authUser.id,
-    content: commentText.trim(),
-    parent_id: replyingTo?.commentId || null  // ← Додати parent_id
-  });
-  
-  setReplyingTo(null);
-  setCommentText("");
-};
-```
-
----
-
-### Частина 8: UI для коментаря з відповідями
-
-```tsx
-{/* Компонент одного коментаря */}
-const CommentItem = ({ comment, depth = 0 }: { comment: CommentData; depth?: number }) => (
-  <div className={cn("flex items-start gap-2", depth > 0 && "ml-8 mt-2")}>
-    <Avatar className="h-6 w-6">
-      <AvatarImage src={comment.user?.avatar_url} />
-      <AvatarFallback>{comment.user?.full_name?.[0]}</AvatarFallback>
-    </Avatar>
-    <div className="flex-1">
-      <div className="bg-muted/50 rounded-2xl px-3 py-1.5">
-        <span className="font-semibold text-xs">{comment.user?.full_name}</span>
-        <p className="text-sm">{comment.content}</p>
-      </div>
-      
-      {/* Дії під коментарем */}
-      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-        <span>{formatTimeAgo(comment.created_at)}</span>
-        <button className="hover:underline font-medium">Подобається</button>
-        <button 
-          onClick={() => setReplyingTo({ commentId: comment.id, userName: comment.user?.full_name })}
-          className="hover:underline font-medium"
-        >
-          Відповісти
-        </button>
-      </div>
-      
-      {/* Вкладені відповіді */}
-      {comment.replies?.map(reply => (
-        <CommentItem key={reply.id} comment={reply} depth={depth + 1} />
-      ))}
-    </div>
-  </div>
-);
-```
-
----
-
-### Частина 9: Показувати кому відповідаємо
-
-```tsx
-{replyingTo && (
-  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-    <span>Відповідь для {replyingTo.userName}</span>
-    <button onClick={() => setReplyingTo(null)} className="text-destructive">
-      ✕ Скасувати
-    </button>
-  </div>
-)}
+```diff
+- <div className="mt-1">
++ <div className="mt-0.5">
 ```
 
 ---
@@ -239,17 +71,34 @@ const CommentItem = ({ comment, depth = 0 }: { comment: CommentData; depth?: num
 
 | Файл | Зміни |
 |------|-------|
-| Міграція SQL | Додати колонку `parent_id` |
-| `src/integrations/supabase/types.ts` | Додати `parent_id` до типів comments |
-| `src/components/feed/PostCard.tsx` | Повна реалізація вкладених коментарів |
+| `src/components/feed/PostCard.tsx` | `space-y-2` → `space-y-1` |
+| `src/components/feed/CommentItem.tsx` | `mt-2` → `mt-1`, `py-2` → `py-1.5`, `mt-1` → `mt-0.5` |
+
+---
+
+### Візуальне порівняння
+
+```text
+ДО (великі відступи):          ПІСЛЯ (компактно як FB):
+┌──────────────────┐           ┌──────────────────┐
+│ 👤 Коментар 1    │           │ 👤 Коментар 1    │
+│                  │           │ 👤 Коментар 2    │
+│                  │           │ 👤 Коментар 3    │
+├──────────────────┤           │   └ Відповідь    │
+│ 👤 Коментар 2    │           │ 👤 Коментар 4    │
+│                  │           └──────────────────┘
+├──────────────────┤
+│ 👤 Коментар 3    │
+│   └ Відповідь    │
+└──────────────────┘
+```
 
 ---
 
 ### Очікуваний результат
 
-1. Під кожним коментарем є кнопка "Відповісти"
-2. Відповіді показуються з відступом під батьківським коментарем
-3. При відповіді показується "@ім'я" кому відповідаємо
-4. Автор поста позначається бейджем "Автор" (як на скриншоті)
-5. Ієрархія коментарів зберігається у БД через `parent_id`
+1. Відстань між коментарями зменшена з 8px до 4px
+2. Бульбашка коментаря стала компактнішою
+3. Вкладені відповіді ближче до батьківського коментаря
+4. Візуально схоже на Facebook
 
