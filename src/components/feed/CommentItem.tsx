@@ -57,20 +57,20 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
       </Link>
       <div className="flex-1 min-w-0">
         <div className="bg-muted/50 rounded-2xl px-3 py-1.5 inline-block max-w-full">
-          <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm break-words">
             <Link 
               to={`/profile/${comment.user_id}`} 
-              className="font-semibold text-xs hover:underline"
+              className="font-semibold text-xs hover:underline mr-1"
             >
               {comment.user?.full_name || 'Користувач'}
             </Link>
             {isPostAuthor && (
-              <Badge variant="secondary" className="text-[10px] py-0 px-1.5 h-4">
+              <Badge variant="secondary" className="text-[10px] py-0 px-1.5 h-4 mr-1 align-middle">
                 Автор
               </Badge>
             )}
-          </div>
-          <p className="text-sm break-words">{comment.content}</p>
+            <span>{comment.content}</span>
+          </p>
         </div>
         
         {/* Дії під коментарем */}
