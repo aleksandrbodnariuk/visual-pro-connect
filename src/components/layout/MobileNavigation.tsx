@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Users, Plus, MessageSquare, Menu, User, Bell, Search, Settings, LogOut, Camera, Video, Music, Mic, Sparkles, UtensilsCrossed, Car, Flower2 } from "lucide-react";
+import { Home, Users, Plus, MessageSquare, Menu, User, Bell, Search, Settings, LogOut, Camera, Video, Music, Mic, Sparkles, UtensilsCrossed, Car, Flower2, UserPlus } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -110,6 +110,15 @@ export function MobileNavigation() {
                       >
                         <Bell className="h-5 w-5" />
                         <span>Сповіщення</span>
+                      </Link>
+                      
+                      <Link
+                        to="/connect"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <UserPlus className="h-5 w-5" />
+                        <span>Знайти друзів</span>
                       </Link>
                       
                       <Link
