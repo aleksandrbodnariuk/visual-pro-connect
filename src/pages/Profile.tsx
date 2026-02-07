@@ -198,16 +198,17 @@ export default function Profile() {
           setPosts([]);
         }
         
-        // Перевіряємо статус фахівця
+        // Перевіряємо статус фахівця через RPC
         try {
-          const { data: roleData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', targetUserId)
-            .eq('role', 'specialist')
-            .maybeSingle();
+          const { data: hasSpecialistRole, error: roleError } = await supabase
+            .rpc('has_role', { _user_id: targetUserId, _role: 'specialist' });
           
-          setIsSpecialist(!!roleData);
+          if (roleError) {
+            console.warn("Помилка перевірки ролі фахівця:", roleError);
+            setIsSpecialist(false);
+          } else {
+            setIsSpecialist(!!hasSpecialistRole);
+          }
         } catch (roleError) {
           console.warn("Помилка перевірки ролі фахівця:", roleError);
           setIsSpecialist(false);
