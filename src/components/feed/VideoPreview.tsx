@@ -1,5 +1,6 @@
 import { VideoEmbed } from "@/lib/videoEmbed";
 import { ExternalLink } from "lucide-react";
+import { LinkPreview } from "./LinkPreview";
 
 interface VideoPreviewProps {
   embed: VideoEmbed;
@@ -93,16 +94,6 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
     );
   }
   
-  // Для інших посилань - просто відображаємо як клікабельне посилання
-  return (
-    <a 
-      href={embed.originalUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="mt-3 flex items-center gap-2 text-primary hover:underline text-sm break-all"
-    >
-      <ExternalLink className="h-4 w-4 shrink-0" />
-      {embed.originalUrl}
-    </a>
-  );
+  // Для інших посилань - показуємо прев'ю з Open Graph
+  return <LinkPreview url={embed.originalUrl} />;
 }
