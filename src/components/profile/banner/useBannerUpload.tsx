@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { uploadToStorage } from '@/lib/storage';
 import { supabase } from '@/integrations/supabase/client';
+import { compressImageFromDataUrl } from '@/lib/imageCompression';
 
 export function useBannerUpload(
   userId: string,
@@ -20,11 +21,84 @@ export function useBannerUpload(
     }
   }, [existingBannerUrl]);
 
+  const uploadCroppedImage = async (croppedDataUrl: string) => {
+    setIsUploading(true);
+    let uploadedUrl = '';
+
+    try {
+      console.log('Стискання та завантаження банера для користувача:', userId);
+      
+      // Compress the cropped image
+      const compressedDataUrl = await compressImageFromDataUrl(croppedDataUrl, 'banner');
+      console.log('Банер стиснуто');
+      
+      // Convert data URL to Blob
+      const response = await fetch(compressedDataUrl);
+      const blob = await response.blob();
+      
+      // Create file from blob
+      const file = new File([blob], `banner-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      
+      console.log('Розмір файлу банера:', file.size, 'байт');
+      
+      // Create unique file name
+      const uniqueFileName = `${Date.now()}.jpg`;
+      const filePath = `${userId}/${uniqueFileName}`;
+      
+      // Upload to storage
+      const publicUrl = await uploadToStorage('banners', filePath, file, 'image/jpeg');
+      uploadedUrl = publicUrl;
+      
+      console.log('Банер успішно завантажено, URL:', publicUrl);
+
+      // Update database
+      try {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ banner_url: publicUrl })
+          .eq('id', userId);
+        
+        if (updateError) {
+          console.error('Помилка оновлення банера в профілі користувача:', updateError);
+        } else {
+          console.log('Банер успішно оновлено в базі даних');
+        }
+      } catch (dbError) {
+        console.warn('Не вдалося оновити в базі даних:', dbError);
+      }
+
+      // Clear old cache
+      localStorage.removeItem('currentUser');
+      
+      // Update URL with timestamp for cache busting
+      const urlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
+      setBannerUrl(urlWithTimestamp);
+      setPreviewUrl(null);
+      
+      if (onComplete) {
+        onComplete(urlWithTimestamp);
+      }
+
+      toast.success('Банер успішно оновлено');
+      
+      // Force page reload after a short delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (error) {
+      console.error('Помилка при завантаженні банера:', error);
+      toast.error('Не вдалося завантажити банер. Перевірте підключення до інтернету та спробуйте ще раз.');
+    } finally {
+      setIsUploading(false);
+    }
+
+    return uploadedUrl;
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Збільшуємо обмеження розміру файлу до 10MB для банерів
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
       toast.error('Розмір файлу не повинен перевищувати 10MB для банера');
@@ -46,76 +120,12 @@ export function useBannerUpload(
   };
 
   const handleUpload = async (): Promise<string> => {
-    if (!fileInputRef.current?.files?.length) {
+    if (!previewUrl) {
       toast.error('Будь ласка, виберіть файл');
       return '';
     }
 
-    const file = fileInputRef.current.files[0];
-    setIsUploading(true);
-    let uploadedUrl = '';
-
-    try {
-      console.log('Завантаження банера для користувача:', userId);
-      console.log('Розмір файлу банера:', file.size, 'байт');
-      console.log('Тип файлу банера:', file.type);
-      
-      const fileExtension = file.name.split('.').pop() || 'jpg';
-      const uniqueFileName = `${Date.now()}.${fileExtension}`;
-      const filePath = `${userId}/${uniqueFileName}`;
-      
-      console.log('Шлях файлу банера:', filePath);
-      
-      const publicUrl = await uploadToStorage('banners', filePath, file, file.type);
-      uploadedUrl = publicUrl;
-      
-      console.log('Банер успішно завантажено, URL:', publicUrl);
-
-      try {
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ banner_url: publicUrl })
-          .eq('id', userId);
-        
-        if (updateError) {
-          console.error('Помилка оновлення банера в профілі користувача:', updateError);
-        } else {
-          console.log('Банер успішно оновлено в базі даних');
-        }
-      } catch (dbError) {
-        console.warn('Не вдалося оновити в базі даних:', dbError);
-      }
-
-      // Видаляємо старий кеш користувача
-      localStorage.removeItem('currentUser');
-      
-      // Оновлюємо URL з timestamp для примусового оновлення
-      const urlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
-      setBannerUrl(urlWithTimestamp);
-      setPreviewUrl(null);
-      
-      if (onComplete) {
-        onComplete(urlWithTimestamp);
-      }
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-
-      toast.success('Банер успішно оновлено');
-      
-      // Примусово оновити сторінку через 500ms для відображення нового банера
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
-    } catch (error) {
-      console.error('Помилка при завантаженні банера:', error);
-      toast.error('Не вдалося завантажити банер. Перевірте підключення до інтернету та спробуйте ще раз.');
-    } finally {
-      setIsUploading(false);
-    }
-
-    return uploadedUrl;
+    return await uploadCroppedImage(previewUrl);
   };
 
   const handleCancel = () => {
@@ -171,6 +181,7 @@ export function useBannerUpload(
     handleFileChange,
     handleUpload,
     handleCancel,
-    removeBanner
+    removeBanner,
+    uploadCroppedImage
   };
 }

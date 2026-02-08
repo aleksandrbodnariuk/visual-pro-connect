@@ -10,6 +10,7 @@ import { FileText, RefreshCw, Save } from "lucide-react";
 import { toast } from "sonner";
 import { LogoUpload } from "@/components/settings/LogoUpload";
 import { DatabaseDiagnostics } from "@/components/admin/DatabaseDiagnostics";
+import { ImageCompressionSettings } from "@/components/admin/ImageCompressionSettings";
 
 export function SettingsTab() {
   const [settings, setSettings] = useState({
@@ -80,6 +81,8 @@ export function SettingsTab() {
   return (
     <div className="space-y-6">
       <LogoUpload />
+      
+      <ImageCompressionSettings />
       
       <DatabaseDiagnostics />
       

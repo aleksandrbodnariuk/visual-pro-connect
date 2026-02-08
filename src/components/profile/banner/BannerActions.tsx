@@ -12,6 +12,7 @@ interface BannerActionsProps {
   onCancel: () => void;
   onUpload: () => Promise<string>;
   onRemove?: () => Promise<boolean>;
+  onSelectFile?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export function BannerActions({ 
