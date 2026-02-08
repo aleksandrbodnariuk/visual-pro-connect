@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { uploadToStorage } from '@/lib/storage';
 import { supabase } from '@/integrations/supabase/client';
+import { compressImageFromDataUrl } from '@/lib/imageCompression';
 
 export function useAvatarUpload(
   userId: string,
@@ -19,42 +20,35 @@ export function useAvatarUpload(
     }
   }, [initialAvatarUrl]);
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Збільшуємо обмеження розміру файлу до 5MB для аватарів
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      toast.error('Розмір файлу не повинен перевищувати 5MB');
-      return;
-    }
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Будь ласка, виберіть зображення');
-      return;
-    }
-
+  const uploadCroppedImage = async (croppedDataUrl: string) => {
     setIsUploading(true);
 
     try {
-      console.log('Завантаження аватара для користувача:', userId);
-      console.log('Розмір файлу:', file.size, 'байт');
-      console.log('Тип файлу:', file.type);
+      console.log('Стискання та завантаження аватара для користувача:', userId);
       
-      // Створюємо унікальне ім'я файлу
-      const fileExtension = file.name.split('.').pop() || 'jpg';
-      const uniqueFileName = `${userId}-${Date.now()}.${fileExtension}`;
+      // Compress the cropped image
+      const compressedDataUrl = await compressImageFromDataUrl(croppedDataUrl, 'avatar');
+      console.log('Аватар стиснуто');
+      
+      // Convert data URL to Blob
+      const response = await fetch(compressedDataUrl);
+      const blob = await response.blob();
+      
+      // Create file from blob
+      const file = new File([blob], `avatar-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      
+      console.log('Розмір файлу:', file.size, 'байт');
+      
+      // Create unique file name
+      const uniqueFileName = `${userId}-${Date.now()}.jpg`;
       const filePath = `avatars/${uniqueFileName}`;
       
-      console.log('Шлях файлу:', filePath);
-      
-      // Використовуємо uploadToStorage з lib/storage
-      const publicUrl = await uploadToStorage('avatars', filePath, file, file.type);
+      // Upload to storage
+      const publicUrl = await uploadToStorage('avatars', filePath, file, 'image/jpeg');
       
       console.log('Аватар успішно завантажено, URL:', publicUrl);
 
-      // Оновлюємо URL аватара в базі даних
+      // Update database
       try {
         const { error: updateError } = await supabase
           .from('users')
@@ -70,12 +64,11 @@ export function useAvatarUpload(
         console.warn('Не вдалося оновити в базі даних:', dbError);
       }
 
-      // Оновлюємо localStorage
+      // Update localStorage
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
       if (currentUser && currentUser.id === userId) {
         currentUser.avatar_url = publicUrl;
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        console.log('Оновлено поточного користувача в localStorage');
       }
 
       const users = JSON.parse(localStorage.getItem('users') || '[]');
@@ -86,7 +79,6 @@ export function useAvatarUpload(
         return user;
       });
       localStorage.setItem('users', JSON.stringify(updatedUsers));
-      console.log('Оновлено список користувачів в localStorage');
 
       setAvatarUrl(publicUrl);
       if (onAvatarChange) {
@@ -99,9 +91,34 @@ export function useAvatarUpload(
       toast.error('Не вдалося завантажити аватар. Перевірте підключення до інтернету та спробуйте ще раз.');
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+    }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast.error('Розмір файлу не повинен перевищувати 5MB');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Будь ласка, виберіть зображення');
+      return;
+    }
+
+    // Read and upload directly (for backward compatibility)
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const dataUrl = e.target?.result as string;
+      await uploadCroppedImage(dataUrl);
+    };
+    reader.readAsDataURL(file);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -109,6 +126,7 @@ export function useAvatarUpload(
     avatarUrl,
     isUploading,
     fileInputRef,
-    handleFileChange
+    handleFileChange,
+    uploadCroppedImage
   };
 }

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Video, Image, Users, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { compressImageAsFile } from "@/lib/imageCompression";
 
 interface CreatePostBarProps {
   user: {
@@ -31,24 +32,38 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
     videoInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'photo' | 'video') => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'photo' | 'video') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (10MB max)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Файл занадто великий. Максимум 10MB");
+    // Validate file size (50MB max for posts)
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("Файл занадто великий. Максимум 50MB");
       return;
     }
 
-    setMediaFile(file);
+    // Compress images before setting
+    let processedFile = file;
+    if (type === 'photo' && file.type.startsWith('image/')) {
+      try {
+        toast.loading("Стискання зображення...", { id: "compress" });
+        processedFile = await compressImageAsFile(file, 'post');
+        toast.dismiss("compress");
+        console.log(`Фото стиснуто: ${file.size} -> ${processedFile.size} байт`);
+      } catch (error) {
+        console.error('Помилка стискання:', error);
+        toast.dismiss("compress");
+      }
+    }
+
+    setMediaFile(processedFile);
     
     // Create preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setMediaPreview(reader.result as string);
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(processedFile);
   };
 
   const clearMedia = () => {
