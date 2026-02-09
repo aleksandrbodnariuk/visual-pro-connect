@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, X } from "lucide-react";
+import { Upload, X, Edit2 } from "lucide-react";
 import { toast } from "sonner";
 import { uploadToStorage } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
+import { ImageCropEditor } from "@/components/ui/ImageCropEditor";
+import { compressImageAsFile } from "@/lib/imageCompression";
 
 const postSchema = z.object({
   content: z.string()
@@ -42,6 +44,10 @@ export function EditPublicationModal({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [keepExistingMedia, setKeepExistingMedia] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Image editor state
+  const [showImageEditor, setShowImageEditor] = useState(false);
+  const [originalImageSrc, setOriginalImageSrc] = useState<string | null>(null);
 
   // Синхронізуємо стан при зміні поста
   useEffect(() => {
@@ -69,14 +75,74 @@ export function EditPublicationModal({
       return;
     }
 
-    setSelectedFile(file);
-    setKeepExistingMedia(false);
+    if (file.type.startsWith('image/')) {
+      // Open image editor for images
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setOriginalImageSrc(event.target?.result as string);
+        setShowImageEditor(true);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // Set video directly
+      setSelectedFile(file);
+      setKeepExistingMedia(false);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setPreviewUrl(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
     
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setPreviewUrl(event.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    // Reset input
+    if (e.target) {
+      e.target.value = '';
+    }
+  };
+
+  const handleCropComplete = async (croppedImageUrl: string) => {
+    try {
+      toast.loading("Обробка зображення...", { id: "compress" });
+      
+      // Convert data URL to File
+      const response = await fetch(croppedImageUrl);
+      const blob = await response.blob();
+      const file = new File([blob], `post-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      
+      // Compress the cropped image
+      const compressedFile = await compressImageAsFile(file, 'post');
+      toast.dismiss("compress");
+      console.log(`Фото стиснуто: ${file.size} -> ${compressedFile.size} байт`);
+      
+      setSelectedFile(compressedFile);
+      setKeepExistingMedia(false);
+      
+      // Create preview from compressed file
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setPreviewUrl(event.target?.result as string);
+      };
+      reader.readAsDataURL(compressedFile);
+    } catch (error) {
+      console.error('Помилка обробки зображення:', error);
+      toast.dismiss("compress");
+      toast.error("Помилка обробки зображення");
+    }
+    
+    setShowImageEditor(false);
+    setOriginalImageSrc(null);
+  };
+
+  const handleEditorClose = () => {
+    setShowImageEditor(false);
+    setOriginalImageSrc(null);
+  };
+
+  const openEditorForCurrentImage = () => {
+    if (previewUrl) {
+      setOriginalImageSrc(previewUrl);
+      setShowImageEditor(true);
+    }
   };
 
   const handleSubmit = async () => {
@@ -147,128 +213,153 @@ export function EditPublicationModal({
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Редагувати публікацію</DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="edit-content">Текст публікації</Label>
-            <Textarea
-              id="edit-content"
-              placeholder="Поділіться своїми думками..."
-              value={content}
-              onChange={(e) => setContent(e.target.value.slice(0, 10000))}
-              rows={4}
-              className="resize-none"
-              maxLength={10000}
-            />
-            <p className="text-xs text-muted-foreground mt-1">{content.length}/10000</p>
-          </div>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Редагувати публікацію</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-content">Текст публікації</Label>
+              <Textarea
+                id="edit-content"
+                placeholder="Поділіться своїми думками..."
+                value={content}
+                onChange={(e) => setContent(e.target.value.slice(0, 10000))}
+                rows={4}
+                className="resize-none"
+                maxLength={10000}
+              />
+              <p className="text-xs text-muted-foreground mt-1">{content.length}/10000</p>
+            </div>
 
-          <div>
-            <Label htmlFor="edit-category">Категорія (опціонально)</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="Оберіть категорію" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="photographer">Фотограф</SelectItem>
-                <SelectItem value="videographer">Відеограф</SelectItem>
-                <SelectItem value="musician">Музикант</SelectItem>
-                <SelectItem value="host">Ведучий</SelectItem>
-                <SelectItem value="pyrotechnician">Піротехнік</SelectItem>
-                <SelectItem value="other">Інше</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <div>
+              <Label htmlFor="edit-category">Категорія (опціонально)</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Оберіть категорію" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="photographer">Фотограф</SelectItem>
+                  <SelectItem value="videographer">Відеограф</SelectItem>
+                  <SelectItem value="musician">Музикант</SelectItem>
+                  <SelectItem value="host">Ведучий</SelectItem>
+                  <SelectItem value="pyrotechnician">Піротехнік</SelectItem>
+                  <SelectItem value="other">Інше</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div>
-            <Label>Медіафайл (опціонально)</Label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,video/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            
-            {!previewUrl ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Додати зображення або відео (до 50MB)
-              </Button>
-            ) : (
-              <div className="space-y-2">
-                <div className="relative">
-                  {isImage ? (
-                    <img 
-                      src={previewUrl} 
-                      alt="Preview" 
-                      className="w-full h-32 object-cover rounded"
-                    />
-                  ) : (
-                    <video 
-                      src={previewUrl} 
-                      className="w-full h-32 object-cover rounded"
-                      controls
-                    />
+            <div>
+              <Label>Медіафайл (опціонально)</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              
+              {!previewUrl ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Додати зображення або відео (до 50MB)
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="relative group">
+                    {isImage ? (
+                      <>
+                        <img 
+                          src={previewUrl} 
+                          alt="Preview" 
+                          className="w-full max-h-48 object-contain rounded bg-muted/30"
+                        />
+                        {/* Edit button overlay for images */}
+                        <button
+                          type="button"
+                          onClick={openEditorForCurrentImage}
+                          className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm text-foreground rounded-full p-2 shadow-md hover:bg-background transition-colors opacity-0 group-hover:opacity-100"
+                          title="Редагувати зображення"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <video 
+                        src={previewUrl} 
+                        className="w-full max-h-48 object-contain rounded bg-muted/30"
+                        controls
+                      />
+                    )}
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={removeFile}
+                      className="absolute top-2 right-2"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {selectedFile && (
+                    <p className="text-sm text-muted-foreground">
+                      {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
                   )}
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={removeFile}
-                    className="absolute top-2 right-2"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  {!selectedFile && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full"
+                    >
+                      Замінити файл
+                    </Button>
+                  )}
                 </div>
-                {selectedFile && (
-                  <p className="text-sm text-muted-foreground">
-                    {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                  </p>
-                )}
-                {!selectedFile && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full"
-                  >
-                    Замінити файл
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          <div className="flex gap-2 pt-4">
-            <Button 
-              onClick={handleSubmit} 
-              disabled={isUpdating || !content.trim()}
-              className="flex-1"
-            >
-              {isUpdating ? "Збереження..." : "Зберегти зміни"}
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-              disabled={isUpdating}
-            >
-              Скасувати
-            </Button>
+            <div className="flex gap-2 pt-4">
+              <Button 
+                onClick={handleSubmit} 
+                disabled={isUpdating || !content.trim()}
+                className="flex-1"
+              >
+                {isUpdating ? "Збереження..." : "Зберегти зміни"}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+                disabled={isUpdating}
+              >
+                Скасувати
+              </Button>
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Crop Editor */}
+      {originalImageSrc && (
+        <ImageCropEditor
+          imageSrc={originalImageSrc}
+          open={showImageEditor}
+          onClose={handleEditorClose}
+          onCropComplete={handleCropComplete}
+          aspectRatio={16/9}
+          title="Редагувати фото публікації"
+        />
+      )}
+    </>
   );
 }
