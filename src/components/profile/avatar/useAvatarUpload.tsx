@@ -39,12 +39,11 @@ export function useAvatarUpload(
       
       console.log('Розмір файлу:', file.size, 'байт');
       
-      // Create unique file name
+      // Create unique file name - path is just the filename, bucket handles the folder
       const uniqueFileName = `${userId}-${Date.now()}.jpg`;
-      const filePath = `avatars/${uniqueFileName}`;
       
-      // Upload to storage
-      const publicUrl = await uploadToStorage('avatars', filePath, file, 'image/jpeg');
+      // Upload to storage - use only filename, not nested path
+      const publicUrl = await uploadToStorage('avatars', uniqueFileName, file, 'image/jpeg');
       
       console.log('Аватар успішно завантажено, URL:', publicUrl);
 

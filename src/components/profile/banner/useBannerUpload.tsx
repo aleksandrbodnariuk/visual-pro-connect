@@ -41,12 +41,11 @@ export function useBannerUpload(
       
       console.log('Розмір файлу банера:', file.size, 'байт');
       
-      // Create unique file name
-      const uniqueFileName = `${Date.now()}.jpg`;
-      const filePath = `${userId}/${uniqueFileName}`;
+      // Create unique file name - path inside the bucket
+      const uniqueFileName = `${userId}-${Date.now()}.jpg`;
       
-      // Upload to storage
-      const publicUrl = await uploadToStorage('banners', filePath, file, 'image/jpeg');
+      // Upload to storage - use only filename, bucket handles the folder
+      const publicUrl = await uploadToStorage('banners', uniqueFileName, file, 'image/jpeg');
       uploadedUrl = publicUrl;
       
       console.log('Банер успішно завантажено, URL:', publicUrl);
