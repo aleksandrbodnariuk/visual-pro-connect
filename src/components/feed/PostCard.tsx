@@ -92,7 +92,8 @@ export function PostCard({
   const isCurrentUserInvestor = authUser?.isShareHolder || authUser?.is_shareholder;
   
   // Функція для видалення URL з тексту (для приватності)
-  const removeUrls = (text: string): string => {
+  const removeUrls = (text: string | null | undefined): string => {
+    if (!text) return '';
     return text.replace(/(https?:\/\/[^\s]+)/g, '').trim();
   };
   
