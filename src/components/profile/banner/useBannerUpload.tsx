@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { uploadToStorage } from '@/lib/storage';
 import { supabase } from '@/integrations/supabase/client';
-import { compressImageFromDataUrl } from '@/lib/imageCompression';
+import { compressImageFromDataUrl, dataUrlToBlob } from '@/lib/imageCompression';
 
 export function useBannerUpload(
   userId: string,
@@ -33,8 +33,7 @@ export function useBannerUpload(
       console.log('Банер стиснуто');
       
       // Convert data URL to Blob
-      const response = await fetch(compressedDataUrl);
-      const blob = await response.blob();
+      const blob = dataUrlToBlob(compressedDataUrl);
       
       // Create file from blob
       const file = new File([blob], `banner-${Date.now()}.jpg`, { type: 'image/jpeg' });
