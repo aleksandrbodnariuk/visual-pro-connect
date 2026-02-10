@@ -267,11 +267,11 @@ export function PostCard({
 
       {/* Зображення - показуємо тільки якщо є */}
       {imageUrl && (
-        <div className="relative aspect-square overflow-hidden bg-muted">
+        <div className="relative overflow-hidden bg-muted">
           <img
             src={imageUrl}
             alt={caption}
-            className="h-full w-full object-cover transition-all hover:scale-105"
+            className="w-full object-contain max-h-[600px] transition-all hover:scale-105"
           />
         </div>
       )}
