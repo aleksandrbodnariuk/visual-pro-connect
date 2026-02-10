@@ -323,7 +323,7 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
           open={showImageEditor}
           onClose={handleEditorClose}
           onCropComplete={handleCropComplete}
-          aspectRatio={16/9}
+          aspectRatio={undefined}
           title="Редагувати фото публікації"
         />
       )}

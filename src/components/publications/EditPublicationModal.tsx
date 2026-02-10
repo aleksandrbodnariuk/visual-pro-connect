@@ -355,7 +355,7 @@ export function EditPublicationModal({
           open={showImageEditor}
           onClose={handleEditorClose}
           onCropComplete={handleCropComplete}
-          aspectRatio={16/9}
+          aspectRatio={undefined}
           title="Редагувати фото публікації"
         />
       )}
