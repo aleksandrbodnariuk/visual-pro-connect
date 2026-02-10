@@ -14,7 +14,6 @@ import { compressImageAsFile, dataUrlToBlob } from "@/lib/imageCompression";
 
 const postSchema = z.object({
   content: z.string()
-    .min(1, "Текст публікації не може бути порожнім")
     .max(10000, "Текст публікації не може перевищувати 10000 символів"),
   category: z.string().max(50).optional().nullable()
 });
@@ -331,7 +330,7 @@ export function EditPublicationModal({
             <div className="flex gap-2 pt-4">
               <Button 
                 onClick={handleSubmit} 
-                disabled={isUpdating || !content.trim()}
+                disabled={isUpdating || (!content.trim() && !previewUrl)}
                 className="flex-1"
               >
                 {isUpdating ? "Збереження..." : "Зберегти зміни"}
