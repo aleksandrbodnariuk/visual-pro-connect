@@ -12,7 +12,7 @@ interface ImageCropEditorProps {
   open: boolean;
   onClose: () => void;
   onCropComplete: (croppedImage: string) => void;
-  aspectRatio?: number; // e.g., 1 for square (avatar), 3.2 for banner (1920/600)
+  aspectRatio?: number | undefined; // undefined = free crop, 1 = square, 3.2 = banner
   title?: string;
   circularCrop?: boolean;
 }
@@ -42,7 +42,7 @@ export function ImageCropEditor({
   open,
   onClose,
   onCropComplete,
-  aspectRatio = 1,
+  aspectRatio,
   title = 'Редагувати зображення',
   circularCrop = false
 }: ImageCropEditorProps) {
@@ -54,18 +54,24 @@ export function ImageCropEditor({
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
-    const initialCrop = centerAspectCrop(width, height, aspectRatio);
-    setCrop(initialCrop);
-    // Set initial completedCrop in pixels so "Apply" works immediately
-    if (initialCrop) {
-      const pixelCrop: PixelCrop = {
-        unit: 'px',
-        x: Math.round((initialCrop.x / 100) * width),
-        y: Math.round((initialCrop.y / 100) * height),
-        width: Math.round((initialCrop.width / 100) * width),
-        height: Math.round((initialCrop.height / 100) * height),
-      };
-      setCompletedCrop(pixelCrop);
+    if (aspectRatio) {
+      const initialCrop = centerAspectCrop(width, height, aspectRatio);
+      setCrop(initialCrop);
+      if (initialCrop) {
+        const pixelCrop: PixelCrop = {
+          unit: 'px',
+          x: Math.round((initialCrop.x / 100) * width),
+          y: Math.round((initialCrop.y / 100) * height),
+          width: Math.round((initialCrop.width / 100) * width),
+          height: Math.round((initialCrop.height / 100) * height),
+        };
+        setCompletedCrop(pixelCrop);
+      }
+    } else {
+      // Free crop: select full image by default
+      const fullCrop: Crop = { unit: '%', x: 0, y: 0, width: 100, height: 100 };
+      setCrop(fullCrop);
+      setCompletedCrop({ unit: 'px', x: 0, y: 0, width, height });
     }
   }, [aspectRatio]);
 
@@ -131,7 +137,12 @@ export function ImageCropEditor({
     setRotate(0);
     if (imgRef.current) {
       const { width, height } = imgRef.current;
-      setCrop(centerAspectCrop(width, height, aspectRatio));
+      if (aspectRatio) {
+        setCrop(centerAspectCrop(width, height, aspectRatio));
+      } else {
+        setCrop({ unit: '%', x: 0, y: 0, width: 100, height: 100 });
+        setCompletedCrop({ unit: 'px', x: 0, y: 0, width, height });
+      }
     }
   };
 
