@@ -54,7 +54,19 @@ export function ImageCropEditor({
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
-    setCrop(centerAspectCrop(width, height, aspectRatio));
+    const initialCrop = centerAspectCrop(width, height, aspectRatio);
+    setCrop(initialCrop);
+    // Set initial completedCrop in pixels so "Apply" works immediately
+    if (initialCrop) {
+      const pixelCrop: PixelCrop = {
+        unit: 'px',
+        x: Math.round((initialCrop.x / 100) * width),
+        y: Math.round((initialCrop.y / 100) * height),
+        width: Math.round((initialCrop.width / 100) * width),
+        height: Math.round((initialCrop.height / 100) * height),
+      };
+      setCompletedCrop(pixelCrop);
+    }
   }, [aspectRatio]);
 
   const handleComplete = useCallback(async () => {
@@ -145,6 +157,7 @@ export function ImageCropEditor({
                 ref={imgRef}
                 src={imageSrc}
                 alt="Редагування"
+                crossOrigin="anonymous"
                 style={{
                   transform: `scale(${scale}) rotate(${rotate}deg)`,
                   maxHeight: '400px',

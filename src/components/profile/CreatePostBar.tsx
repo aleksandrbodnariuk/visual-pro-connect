@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Video, Image, Users, X, Loader2, Edit2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { compressImageAsFile } from "@/lib/imageCompression";
+import { compressImageAsFile, dataUrlToBlob } from "@/lib/imageCompression";
 import { ImageCropEditor } from "@/components/ui/ImageCropEditor";
 
 interface CreatePostBarProps {
@@ -76,8 +76,7 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
       toast.loading("Стискання зображення...", { id: "compress" });
       
       // Convert data URL to File
-      const response = await fetch(croppedImageUrl);
-      const blob = await response.blob();
+      const blob = dataUrlToBlob(croppedImageUrl);
       const file = new File([blob], `post-${Date.now()}.jpg`, { type: 'image/jpeg' });
       
       // Compress the cropped image
