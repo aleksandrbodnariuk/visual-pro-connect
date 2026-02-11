@@ -1,74 +1,61 @@
 
 
-# Plan: Fix Image Editor and Avatar/Banner Upload Issues
+# Plan: Fix Image Cropping, Add Editor to Main Page, Fix Preview
 
-## Problem Summary
+## Problem Analysis
 
-Three issues remain unfixed across the codebase:
+Based on the screenshots and code review, there are three distinct root causes:
 
-1. **"Apply" button in image editor does nothing** -- `completedCrop` state is only set when user drags the crop area. If user just opens editor and clicks Apply, the function exits silently because `completedCrop` is undefined.
+### Root Cause 1: Canvas rendering bug in ImageCropEditor
 
-2. **Avatar and banner uploads fail with "Failed to fetch"** -- The code uses `fetch(dataUrl)` to convert a base64 data URL to a Blob. This method is unreliable with large data URLs and can fail in certain browsers/environments.
+The `handleComplete` function in `ImageCropEditor.tsx` (line 94-97) uses `window.devicePixelRatio` to scale the canvas. On Retina screens (pixelRatio=2), this creates a canvas 2x-4x larger than the natural image. The drawing logic then uses complex transforms that don't correctly account for this pixel ratio scaling, resulting in the output image being cropped from the right and bottom.
 
-3. **Post image editor has the same fetch issue** -- Both `CreatePostBar` and `EditPublicationModal` use `fetch(croppedImageUrl)` to convert the cropped result.
+The fix: remove `pixelRatio` entirely and use the simpler, more reliable `drawImage(image, sourceX, sourceY, sourceW, sourceH, 0, 0, destW, destH)` approach for the common case (no rotation, no zoom).
+
+### Root Cause 2: No image editor on main page (NewsFeed.tsx)
+
+The main page's post creation form in `NewsFeed.tsx` has its own file handler (`handleFileSelect`, line 108) that directly sets the file as preview without opening the `ImageCropEditor`. The profile page (`CreatePostBar.tsx`) already has the editor integrated, but the main page does not.
+
+### Root Cause 3: Preview image clipped on main page
+
+The image preview in `NewsFeed.tsx` (line 354) uses `object-cover`, which forces the image to fill the container and clips excess portions. This should be `object-contain` to show the full image.
+
+---
 
 ## Changes
 
-### 1. `src/lib/imageCompression.ts` -- Add `dataUrlToBlob` utility
+### 1. Fix `src/components/ui/ImageCropEditor.tsx` -- Fix canvas rendering
 
-Add a new exported function that converts a data URL to a Blob without using `fetch`:
+Rewrite the `handleComplete` function:
 
-```typescript
-export function dataUrlToBlob(dataUrl: string): Blob {
-  const parts = dataUrl.split(',');
-  const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
-  const bstr = atob(parts[1]);
-  const u8arr = new Uint8Array(bstr.length);
-  for (let i = 0; i < bstr.length; i++) {
-    u8arr[i] = bstr.charCodeAt(i);
-  }
-  return new Blob([u8arr], { type: mime });
-}
-```
+- Remove `window.devicePixelRatio` from canvas sizing and context scaling
+- For the default case (no rotation, no zoom), use the direct `drawImage` with source rectangle -- this is the most reliable cropping method
+- For rotation/zoom cases, keep the transform approach but without pixelRatio
+- This ensures the output image matches exactly what the user sees in the editor
 
-### 2. `src/components/ui/ImageCropEditor.tsx` -- Fix "Apply" button
+### 2. Fix `src/components/feed/NewsFeed.tsx` -- Add image editor + fix preview
 
-- On `onImageLoad`, after setting the percent crop, also compute and set the initial `completedCrop` in pixel coordinates so the Apply button works immediately.
-- Add `crossOrigin="anonymous"` to the `<img>` element for CORS compatibility with external storage URLs.
+- Import `ImageCropEditor`, `compressImageAsFile`, and `dataUrlToBlob`
+- Add state variables for the image editor (`showImageEditor`, `originalImageSrc`)
+- Modify `handleFileSelect`: when user selects an image, open the `ImageCropEditor` instead of setting the preview directly
+- Add `handleCropComplete` function that compresses the edited image and sets it as the file to upload
+- Add `handleEditorClose` function
+- Change the image preview CSS from `object-cover` to `object-contain` so the full image is visible before publishing
+- Add an edit button overlay on the image preview (like the profile page has)
+- Render the `ImageCropEditor` dialog at the end of the component
 
-### 3. `src/components/profile/avatar/useAvatarUpload.tsx` -- Fix upload
+---
 
-Replace:
-```typescript
-const response = await fetch(compressedDataUrl);
-const blob = await response.blob();
-```
-With:
-```typescript
-import { dataUrlToBlob } from '@/lib/imageCompression';
-const blob = dataUrlToBlob(compressedDataUrl);
-```
-
-### 4. `src/components/profile/banner/useBannerUpload.tsx` -- Fix upload
-
-Same replacement as avatar: use `dataUrlToBlob` instead of `fetch(dataUrl)`.
-
-### 5. `src/components/profile/CreatePostBar.tsx` -- Fix crop handler
-
-In `handleCropComplete`, replace `fetch(croppedImageUrl)` with `dataUrlToBlob(croppedImageUrl)`.
-
-### 6. `src/components/publications/EditPublicationModal.tsx` -- Fix crop handler
-
-Same replacement in `handleCropComplete`.
-
-## Files Modified (6 total)
+## Files to Modify (2 total)
 
 | File | Change |
 |------|--------|
-| `src/lib/imageCompression.ts` | Add `dataUrlToBlob()` function |
-| `src/components/ui/ImageCropEditor.tsx` | Set initial `completedCrop` on image load; add `crossOrigin` |
-| `src/components/profile/avatar/useAvatarUpload.tsx` | Use `dataUrlToBlob` instead of `fetch` |
-| `src/components/profile/banner/useBannerUpload.tsx` | Use `dataUrlToBlob` instead of `fetch` |
-| `src/components/profile/CreatePostBar.tsx` | Use `dataUrlToBlob` instead of `fetch` |
-| `src/components/publications/EditPublicationModal.tsx` | Use `dataUrlToBlob` instead of `fetch` |
+| `src/components/ui/ImageCropEditor.tsx` | Rewrite `handleComplete` to remove pixelRatio and use reliable drawImage approach |
+| `src/components/feed/NewsFeed.tsx` | Add ImageCropEditor integration, fix preview styling, add compression |
+
+## Expected Result
+
+1. The image editor will open when uploading photos from both the main page and profile page
+2. After clicking "Apply" in the editor, the full uncropped image will appear in the preview
+3. The published image in the feed will display in full without any cropping
 
