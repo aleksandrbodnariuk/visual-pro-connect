@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Image, Video, Users, Send, X } from "lucide-react";
+import { Image, Video, Users, Send, X, Pencil } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "./PostCard";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,8 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { uploadToStorage } from "@/lib/storage";
 import { extractVideoEmbed } from "@/lib/videoEmbed";
+import { ImageCropEditor } from "@/components/ui/ImageCropEditor";
+import { compressImageFromDataUrl, dataUrlToBlob } from "@/lib/imageCompression";
 
 export function NewsFeed() {
   const [posts, setPosts] = useState<any[]>([]);
@@ -27,6 +29,8 @@ export function NewsFeed() {
   const [isUploading, setIsUploading] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const [showImageEditor, setShowImageEditor] = useState(false);
+  const [originalImageSrc, setOriginalImageSrc] = useState<string | null>(null);
 
   // Отримуємо поточного користувача через Supabase Auth
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -122,14 +126,48 @@ export function NewsFeed() {
       return;
     }
 
-    setSelectedFile(file);
-    
-    // Створення превʼю
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setPreviewUrl(event.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    if (file.type.startsWith('image/')) {
+      // Open image editor for images
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setOriginalImageSrc(event.target?.result as string);
+        setShowImageEditor(true);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // Videos: set directly
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setPreviewUrl(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCropComplete = async (croppedDataUrl: string) => {
+    try {
+      const compressed = await compressImageFromDataUrl(croppedDataUrl, 'post');
+      setPreviewUrl(compressed);
+      const blob = dataUrlToBlob(compressed);
+      const file = new File([blob], `post-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      setSelectedFile(file);
+    } catch (error) {
+      console.error('Error processing cropped image:', error);
+      // Fallback: use original cropped data
+      setPreviewUrl(croppedDataUrl);
+      const blob = dataUrlToBlob(croppedDataUrl);
+      const file = new File([blob], `post-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      setSelectedFile(file);
+    }
+    setShowImageEditor(false);
+    setOriginalImageSrc(null);
+  };
+
+  const handleEditorClose = () => {
+    setShowImageEditor(false);
+    setOriginalImageSrc(null);
+    if (imageInputRef.current) imageInputRef.current.value = '';
   };
 
   // Видалення вибраного файлу
@@ -346,17 +384,31 @@ export function NewsFeed() {
 
           {/* Превʼю вибраного файлу */}
           {previewUrl && selectedFile && (
-            <div className="mt-3 relative rounded-lg overflow-hidden border">
+            <div className="mt-3 relative rounded-lg overflow-hidden border bg-muted/30">
               {selectedFile.type.startsWith('image/') ? (
-                <img 
-                  src={previewUrl} 
-                  alt="Preview" 
-                  className="w-full max-h-64 object-cover"
-                />
+                <>
+                  <img 
+                    src={previewUrl} 
+                    alt="Preview" 
+                    className="w-full max-h-80 object-contain"
+                  />
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={() => {
+                      setOriginalImageSrc(previewUrl);
+                      setShowImageEditor(true);
+                    }}
+                    className="absolute top-2 left-2 h-8 w-8"
+                    title="Редагувати"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </>
               ) : (
                 <video 
                   src={previewUrl} 
-                  className="w-full max-h-64 object-cover"
+                  className="w-full max-h-80 object-contain"
                   controls
                 />
               )}
@@ -457,6 +509,17 @@ export function NewsFeed() {
         post={postToEdit}
         onSuccess={handleEditSuccess}
       />
+
+      {originalImageSrc && (
+        <ImageCropEditor
+          imageSrc={originalImageSrc}
+          open={showImageEditor}
+          onClose={handleEditorClose}
+          onCropComplete={handleCropComplete}
+          aspectRatio={undefined}
+          title="Редагувати фото"
+        />
+      )}
     </div>
   );
 }
