@@ -91,41 +91,36 @@ export function ImageCropEditor({
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
 
-    const pixelRatio = window.devicePixelRatio;
-    
-    canvas.width = Math.floor(completedCrop.width * scaleX * pixelRatio);
-    canvas.height = Math.floor(completedCrop.height * scaleY * pixelRatio);
+    // Source rectangle in natural image coordinates
+    const srcX = completedCrop.x * scaleX;
+    const srcY = completedCrop.y * scaleY;
+    const srcW = completedCrop.width * scaleX;
+    const srcH = completedCrop.height * scaleY;
 
-    ctx.scale(pixelRatio, pixelRatio);
-    ctx.imageSmoothingQuality = 'high';
+    if (rotate === 0 && scale === 1) {
+      // Simple case: direct drawImage with source rectangle (most reliable)
+      canvas.width = Math.floor(srcW);
+      canvas.height = Math.floor(srcH);
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(image, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+    } else {
+      // Rotation/zoom case: use transforms without pixelRatio
+      canvas.width = Math.floor(srcW);
+      canvas.height = Math.floor(srcH);
+      ctx.imageSmoothingQuality = 'high';
 
-    const cropX = completedCrop.x * scaleX;
-    const cropY = completedCrop.y * scaleY;
+      const centerX = image.naturalWidth / 2;
+      const centerY = image.naturalHeight / 2;
 
-    const centerX = image.naturalWidth / 2;
-    const centerY = image.naturalHeight / 2;
-
-    ctx.save();
-
-    ctx.translate(-cropX, -cropY);
-    ctx.translate(centerX, centerY);
-    ctx.rotate((rotate * Math.PI) / 180);
-    ctx.scale(scale, scale);
-    ctx.translate(-centerX, -centerY);
-
-    ctx.drawImage(
-      image,
-      0,
-      0,
-      image.naturalWidth,
-      image.naturalHeight,
-      0,
-      0,
-      image.naturalWidth,
-      image.naturalHeight
-    );
-
-    ctx.restore();
+      ctx.save();
+      ctx.translate(-srcX, -srcY);
+      ctx.translate(centerX, centerY);
+      ctx.rotate((rotate * Math.PI) / 180);
+      ctx.scale(scale, scale);
+      ctx.translate(-centerX, -centerY);
+      ctx.drawImage(image, 0, 0, image.naturalWidth, image.naturalHeight, 0, 0, image.naturalWidth, image.naturalHeight);
+      ctx.restore();
+    }
 
     const croppedImageUrl = canvas.toDataURL('image/jpeg', 0.9);
     onCropComplete(croppedImageUrl);
