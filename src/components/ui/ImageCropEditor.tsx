@@ -76,7 +76,7 @@ export function ImageCropEditor({
   }, [aspectRatio]);
 
   const handleComplete = useCallback(async () => {
-    if (!completedCrop || !imgRef.current) {
+    if (!crop || !imgRef.current) {
       return;
     }
 
@@ -88,44 +88,44 @@ export function ImageCropEditor({
       return;
     }
 
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
+    const natW = image.naturalWidth;
+    const natH = image.naturalHeight;
 
-    // Source rectangle in natural image coordinates
-    const srcX = completedCrop.x * scaleX;
-    const srcY = completedCrop.y * scaleY;
-    const srcW = completedCrop.width * scaleX;
-    const srcH = completedCrop.height * scaleY;
+    // Use percent crop directly to avoid displayed-size rounding errors
+    const cropX = crop.unit === '%' ? (crop.x / 100) * natW : crop.x * (natW / image.width);
+    const cropY = crop.unit === '%' ? (crop.y / 100) * natH : crop.y * (natH / image.height);
+    const cropW = crop.unit === '%' ? (crop.width / 100) * natW : crop.width * (natW / image.width);
+    const cropH = crop.unit === '%' ? (crop.height / 100) * natH : crop.height * (natH / image.height);
+
+    const outW = Math.round(cropW);
+    const outH = Math.round(cropH);
+
+    canvas.width = outW;
+    canvas.height = outH;
+    ctx.imageSmoothingQuality = 'high';
 
     if (rotate === 0 && scale === 1) {
-      // Simple case: direct drawImage with source rectangle (most reliable)
-      canvas.width = Math.floor(srcW);
-      canvas.height = Math.floor(srcH);
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(image, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+      // Simple crop: direct drawImage (most reliable)
+      ctx.drawImage(image, cropX, cropY, cropW, cropH, 0, 0, outW, outH);
     } else {
-      // Rotation/zoom case: use transforms without pixelRatio
-      canvas.width = Math.floor(srcW);
-      canvas.height = Math.floor(srcH);
-      ctx.imageSmoothingQuality = 'high';
-
-      const centerX = image.naturalWidth / 2;
-      const centerY = image.naturalHeight / 2;
+      // Rotation/zoom: use transforms
+      const centerX = natW / 2;
+      const centerY = natH / 2;
 
       ctx.save();
-      ctx.translate(-srcX, -srcY);
+      ctx.translate(-cropX, -cropY);
       ctx.translate(centerX, centerY);
       ctx.rotate((rotate * Math.PI) / 180);
       ctx.scale(scale, scale);
       ctx.translate(-centerX, -centerY);
-      ctx.drawImage(image, 0, 0, image.naturalWidth, image.naturalHeight, 0, 0, image.naturalWidth, image.naturalHeight);
+      ctx.drawImage(image, 0, 0);
       ctx.restore();
     }
 
-    const croppedImageUrl = canvas.toDataURL('image/jpeg', 0.9);
+    const croppedImageUrl = canvas.toDataURL('image/jpeg', 0.92);
     onCropComplete(croppedImageUrl);
     onClose();
-  }, [completedCrop, scale, rotate, onCropComplete, onClose]);
+  }, [crop, scale, rotate, onCropComplete, onClose]);
 
   const handleReset = () => {
     setScale(1);
