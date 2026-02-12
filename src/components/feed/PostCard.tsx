@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Share2, Bookmark, X } from "lucide-react";
+import { MessageCircle, Share2, Bookmark, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { extractVideoEmbed } from "@/lib/videoEmbed";
 import { VideoPreview } from "./VideoPreview";
 import { CommentItem, CommentData } from "./CommentItem";
 import { supabase } from "@/integrations/supabase/client";
+import { ReactionPicker, ReactionType, getReactionEmoji, getReactionColor } from "./ReactionPicker";
 
 export interface PostCardProps {
   id: string;
@@ -83,7 +84,7 @@ export function PostCard({
   const authUser = currentUser || getCurrentUser();
   
   // Використовуємо хуки для лайків та репостів
-  const { liked, likesCount, toggleLike, isLoading: likesLoading } = usePostLikes(id, likes);
+  const { liked, likesCount, toggleLike, isLoading: likesLoading, reactionType, topReactions, toggleReaction } = usePostLikes(id, likes);
   const { shared, toggleShare, isLoading: sharesLoading } = usePostShares(id);
   
   const isAuthor = authUser?.id === author.id;
@@ -287,18 +288,22 @@ export function PostCard({
       <div className="p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="rounded-full"
-              onClick={toggleLike}
-              disabled={likesLoading}
-            >
-              <Heart 
-                className={cn("h-5 w-5 transition-all", liked && "fill-destructive text-destructive")} 
-              />
-              <span className="sr-only">Лайк</span>
-            </Button>
+            <ReactionPicker onSelect={toggleReaction} disabled={likesLoading}>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full"
+                onClick={toggleLike}
+                disabled={likesLoading}
+              >
+                {liked ? (
+                  <span className="text-xl leading-none">{getReactionEmoji(reactionType || 'like')}</span>
+                ) : (
+                  <span className="text-xl leading-none opacity-60">👍</span>
+                )}
+                <span className="sr-only">Лайк</span>
+              </Button>
+            </ReactionPicker>
             <Button 
               variant="ghost" 
               size="icon" 
@@ -335,8 +340,11 @@ export function PostCard({
         </div>
 
         {/* Лайки */}
-        <div className="mt-2">
-          <span className="text-sm font-semibold">{likesCount} вподобань</span>
+        <div className="mt-2 flex items-center gap-1">
+          {topReactions && topReactions.length > 0 && topReactions.map((type, i) => (
+            <span key={i} className="text-sm -ml-0.5 first:ml-0">{getReactionEmoji(type)}</span>
+          ))}
+          <span className="text-sm font-semibold ml-0.5">{likesCount} вподобань</span>
         </div>
 
         {/* Опис (без URL - для приватності) */}
