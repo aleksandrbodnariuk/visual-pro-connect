@@ -1,61 +1,101 @@
 
 
-# Plan: Fix Image Cropping, Add Editor to Main Page, Fix Preview
+# Plan: Fix Intermittent Loading Freeze on Smartphones
 
-## Problem Analysis
+## Root Cause
 
-Based on the screenshots and code review, there are three distinct root causes:
+The app freezes on the loading spinner because **multiple independent auth initializations race against each other**, and **there is no timeout fallback** if any of them hang.
 
-### Root Cause 1: Canvas rendering bug in ImageCropEditor
+On every page load, these components each independently call Supabase auth:
 
-The `handleComplete` function in `ImageCropEditor.tsx` (line 94-97) uses `window.devicePixelRatio` to scale the canvas. On Retina screens (pixelRatio=2), this creates a canvas 2x-4x larger than the natural image. The drawing logic then uses complex transforms that don't correctly account for this pixel ratio scaling, resulting in the output image being cropped from the right and bottom.
+1. **AuthContext** -- `getSession()` + `onAuthStateChange` listener
+2. **useSupabaseAuth** (Navbar) -- another `getSession()` + `onAuthStateChange` + RPC call `get_my_profile`
+3. **useSupabaseAuth** (MobileNavigation via useAuthState) -- yet another independent instance with its own `getSession()` + `onAuthStateChange` + `get_my_profile`
+4. **useUnreadMessages** (MobileNavigation) -- another `getSession()` + `onAuthStateChange`
+5. **useDataSync** -- `getUser()` + 3 more Supabase queries
+6. **FaviconUpdater** -- another Supabase query
+7. **ThemeSyncer** -- another Supabase query
 
-The fix: remove `pixelRatio` entirely and use the simpler, more reliable `drawImage(image, sourceX, sourceY, sourceW, sourceH, 0, 0, destW, destH)` approach for the common case (no rotation, no zoom).
+That is **5+ simultaneous auth calls** and **4+ onAuthStateChange listeners** created on every page load. Each `useSupabaseAuth` instance also makes an RPC call (`get_my_profile`) to fetch the user profile.
 
-### Root Cause 2: No image editor on main page (NewsFeed.tsx)
-
-The main page's post creation form in `NewsFeed.tsx` has its own file handler (`handleFileSelect`, line 108) that directly sets the file as preview without opening the `ImageCropEditor`. The profile page (`CreatePostBar.tsx`) already has the editor integrated, but the main page does not.
-
-### Root Cause 3: Preview image clipped on main page
-
-The image preview in `NewsFeed.tsx` (line 354) uses `object-cover`, which forces the image to fill the container and clips excess portions. This should be `object-contain` to show the full image.
-
----
+On smartphones with slow or unstable connections, any of these can hang indefinitely. Since `AuthContext.loading` has no timeout, the spinner shows forever.
 
 ## Changes
 
-### 1. Fix `src/components/ui/ImageCropEditor.tsx` -- Fix canvas rendering
+### 1. Add auth timeout to `src/context/AuthContext.tsx`
 
-Rewrite the `handleComplete` function:
+Add a 10-second safety timeout so the loading state resolves even if Supabase is unreachable:
 
-- Remove `window.devicePixelRatio` from canvas sizing and context scaling
-- For the default case (no rotation, no zoom), use the direct `drawImage` with source rectangle -- this is the most reliable cropping method
-- For rotation/zoom cases, keep the transform approach but without pixelRatio
-- This ensures the output image matches exactly what the user sees in the editor
+```typescript
+useEffect(() => {
+  const timeout = setTimeout(() => {
+    if (loading) {
+      console.warn('Auth timeout - proceeding without session');
+      setLoading(false);
+    }
+  }, 10000);
+  return () => clearTimeout(timeout);
+}, [loading]);
+```
 
-### 2. Fix `src/components/feed/NewsFeed.tsx` -- Add image editor + fix preview
+### 2. Add loading timeout to `src/hooks/auth/useSupabaseAuth.ts`
 
-- Import `ImageCropEditor`, `compressImageAsFile`, and `dataUrlToBlob`
-- Add state variables for the image editor (`showImageEditor`, `originalImageSrc`)
-- Modify `handleFileSelect`: when user selects an image, open the `ImageCropEditor` instead of setting the preview directly
-- Add `handleCropComplete` function that compresses the edited image and sets it as the file to upload
-- Add `handleEditorClose` function
-- Change the image preview CSS from `object-cover` to `object-contain` so the full image is visible before publishing
-- Add an edit button overlay on the image preview (like the profile page has)
-- Render the `ImageCropEditor` dialog at the end of the component
+Same 10-second timeout for the `loading` state in `useSupabaseAuth`, which blocks Navbar and MobileNavigation rendering:
 
----
+```typescript
+useEffect(() => {
+  const timeout = setTimeout(() => {
+    if (loading) {
+      console.warn('useSupabaseAuth timeout - proceeding');
+      setLoading(false);
+    }
+  }, 10000);
+  return () => clearTimeout(timeout);
+}, [loading]);
+```
 
-## Files to Modify (2 total)
+### 3. Protect `src/hooks/useDataSync.ts` with timeout
+
+Wrap the sync queries in `fetchWithTimeout` (already exists in `src/lib/utils.ts`) so they don't block indefinitely:
+
+```typescript
+import { fetchWithTimeout } from '@/lib/utils';
+
+// Each query wrapped with 10s timeout
+const { data: friendRequests } = await fetchWithTimeout(
+  supabase.from('friend_requests').select('*').or(...),
+  10000
+);
+```
+
+### 4. Protect `src/hooks/useUnreadMessages.ts` with timeout
+
+Add a timeout to the `getSession()` call so it doesn't hang:
+
+```typescript
+const getUser = async () => {
+  try {
+    const { data: { session } } = await fetchWithTimeout(
+      supabase.auth.getSession(),
+      10000
+    );
+    // ...
+  } catch {
+    console.warn('Unread messages: session timeout');
+  }
+};
+```
+
+## Files to Modify (4 total)
 
 | File | Change |
 |------|--------|
-| `src/components/ui/ImageCropEditor.tsx` | Rewrite `handleComplete` to remove pixelRatio and use reliable drawImage approach |
-| `src/components/feed/NewsFeed.tsx` | Add ImageCropEditor integration, fix preview styling, add compression |
+| `src/context/AuthContext.tsx` | Add 10s loading timeout |
+| `src/hooks/auth/useSupabaseAuth.ts` | Add 10s loading timeout |
+| `src/hooks/useDataSync.ts` | Wrap queries with fetchWithTimeout |
+| `src/hooks/useUnreadMessages.ts` | Wrap getSession with timeout |
 
 ## Expected Result
 
-1. The image editor will open when uploading photos from both the main page and profile page
-2. After clicking "Apply" in the editor, the full uncropped image will appear in the preview
-3. The published image in the feed will display in full without any cropping
+If Supabase is slow or unreachable on mobile, the app will stop showing the spinner after 10 seconds and display the page (either the Hero for unauthenticated users, or the feed). This prevents the "frozen" state entirely.
 
