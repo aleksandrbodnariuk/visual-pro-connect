@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchWithTimeout } from "@/lib/utils";
 
 export function useUnreadMessages() {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -22,10 +23,17 @@ export function useUnreadMessages() {
 
   useEffect(() => {
     const getUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.id) {
-        setUserId(session.user.id);
-        fetchUnreadCount(session.user.id);
+      try {
+        const { data: { session } } = await fetchWithTimeout(
+          supabase.auth.getSession(),
+          10000
+        );
+        if (session?.user?.id) {
+          setUserId(session.user.id);
+          fetchUnreadCount(session.user.id);
+        }
+      } catch {
+        console.warn('Unread messages: session timeout');
       }
     };
 

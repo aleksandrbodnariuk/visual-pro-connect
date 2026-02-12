@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchWithTimeout } from '@/lib/utils';
 
 export function useDataSync() {
   // Синхронізує дані з Supabase при завантаженні компонента
@@ -17,10 +18,13 @@ export function useDataSync() {
 
       // Синхронізуємо запити друзів
       try {
-        const { data: friendRequests } = await supabase
-          .from('friend_requests')
-          .select('*')
-          .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
+        const { data: friendRequests } = await fetchWithTimeout(
+          Promise.resolve(supabase
+            .from('friend_requests')
+            .select('*')
+            .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)),
+          10000
+        );
 
         if (friendRequests && friendRequests.length > 0) {
           localStorage.setItem('friendRequests', JSON.stringify(friendRequests));
@@ -32,10 +36,13 @@ export function useDataSync() {
 
       // Синхронізуємо повідомлення
       try {
-        const { data: notifications } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', userId);
+        const { data: notifications } = await fetchWithTimeout(
+          Promise.resolve(supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', userId)),
+          10000
+        );
 
         if (notifications && notifications.length > 0) {
           localStorage.setItem('notifications', JSON.stringify(notifications));
@@ -47,9 +54,12 @@ export function useDataSync() {
 
       // Синхронізуємо налаштування сайту
       try {
-        const { data: siteSettings } = await supabase
-          .from('site_settings')
-          .select('*');
+        const { data: siteSettings } = await fetchWithTimeout(
+          Promise.resolve(supabase
+            .from('site_settings')
+            .select('*')),
+          10000
+        );
 
         if (siteSettings && siteSettings.length > 0) {
           // Оновлюємо localStorage з актуальними даними
