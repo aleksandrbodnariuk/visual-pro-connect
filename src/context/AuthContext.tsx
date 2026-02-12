@@ -17,6 +17,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Safety timeout to prevent infinite loading on slow connections
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn('Auth timeout - proceeding without session');
+        setLoading(false);
+      }
+    }, 10000);
+    return () => clearTimeout(timeout);
+  }, [loading]);
+
   useEffect(() => {
     // Спочатку налаштовуємо listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

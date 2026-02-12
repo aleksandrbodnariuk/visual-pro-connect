@@ -69,6 +69,17 @@ export function useSupabaseAuth() {
     }
   }, []);
 
+  // Safety timeout to prevent infinite loading on slow connections
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn('useSupabaseAuth timeout - proceeding');
+        setLoading(false);
+      }
+    }, 10000);
+    return () => clearTimeout(timeout);
+  }, [loading]);
+
   // Initialize auth state
   useEffect(() => {
     // Set up auth state listener
