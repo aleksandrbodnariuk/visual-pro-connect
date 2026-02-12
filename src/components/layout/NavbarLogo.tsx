@@ -104,19 +104,22 @@ export function NavbarLogo() {
     <NavLink to="/" className="flex items-center space-x-2">
       {isLoading ? (
         <div className="h-10 w-32 bg-muted animate-pulse rounded"></div>
-      ) : logoUrl ? (
-        <img 
-          src={logoUrl} 
-          alt={siteName}
-          className="h-10 max-w-[180px] object-contain"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            setLogoUrl(null);
-          }}
-        />
       ) : (
-        <span className="font-bold text-xl">{siteName}</span>
+        <>
+          {logoUrl && (
+            <img 
+              src={logoUrl} 
+              alt={siteName}
+              className="h-10 max-w-[180px] object-contain"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                setLogoUrl(null);
+              }}
+            />
+          )}
+          <span className="font-bold text-xl">{siteName}</span>
+        </>
       )}
     </NavLink>
   );
