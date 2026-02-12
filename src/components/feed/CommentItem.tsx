@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { ReactionPicker, ReactionType, getReactionEmoji, getReactionLabel, getReactionColor } from "./ReactionPicker";
+import { useCommentLikes } from "@/hooks/useCommentLikes";
 
 export interface CommentData {
   id: string;
@@ -43,7 +45,13 @@ const formatTimeAgo = (dateString: string): string => {
 
 export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: CommentItemProps) {
   const isPostAuthor = comment.user_id === postAuthorId;
-  const maxDepth = 2; // Максимальна глибина вкладеності для UI
+  const maxDepth = 2;
+  const { userReaction, likesCount, topReactions, toggleReaction, isLoading } = useCommentLikes(comment.id);
+
+  const handleLikeClick = () => {
+    // Default to 'like' on simple click
+    toggleReaction(userReaction ? userReaction : 'like');
+  };
 
   return (
     <div className={cn("flex items-start gap-2", depth > 0 && "ml-8 mt-1")}>
@@ -72,9 +80,28 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
         {/* Дії під коментарем */}
         <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground px-1">
           <span>{formatTimeAgo(comment.created_at)}</span>
-          <button className="hover:underline font-medium hover:text-foreground transition-colors">
-            Подобається
-          </button>
+          <ReactionPicker onSelect={toggleReaction} disabled={isLoading}>
+            <button 
+              onClick={handleLikeClick}
+              disabled={isLoading}
+              className={cn(
+                "hover:underline transition-colors",
+                userReaction 
+                  ? `font-bold ${getReactionColor(userReaction)}` 
+                  : "font-medium hover:text-foreground"
+              )}
+            >
+              {userReaction ? getReactionLabel(userReaction) : 'Подобається'}
+            </button>
+          </ReactionPicker>
+          {likesCount > 0 && (
+            <span className="flex items-center gap-0.5">
+              {topReactions.map((type, i) => (
+                <span key={i} className="text-sm -ml-0.5 first:ml-0">{getReactionEmoji(type)}</span>
+              ))}
+              <span className="ml-0.5 text-muted-foreground">{likesCount}</span>
+            </span>
+          )}
           <button 
             onClick={() => onReply(comment.id, comment.user?.full_name || 'Користувач')}
             className="hover:underline font-medium hover:text-foreground transition-colors"
@@ -98,7 +125,6 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
           </div>
         )}
         
-        {/* Якщо глибина перевищує ліміт, показуємо відповіді без додаткового відступу */}
         {comment.replies && comment.replies.length > 0 && depth >= maxDepth && (
           <div className="mt-0.5">
             {comment.replies.map(reply => (
