@@ -109,6 +109,24 @@ export function PostCard({
     loadRecentComments();
   }, [id]);
 
+  // Realtime підписка на коментарі
+  useEffect(() => {
+    const channel = supabase
+      .channel(`realtime_comments_${id}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'comments',
+        filter: `post_id=eq.${id}`
+      }, () => {
+        loadRecentComments();
+        if (showAllComments) {
+          loadAllComments();
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [id, showAllComments]);
+
   const loadRecentComments = async () => {
     try {
       const { data: commentsData, error } = await supabase

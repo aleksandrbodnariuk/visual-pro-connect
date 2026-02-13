@@ -12,6 +12,21 @@ export function useCommentLikes(commentId: string) {
     loadLikes();
   }, [commentId]);
 
+  // Realtime підписка на лайки коментарів
+  useEffect(() => {
+    const channel = supabase
+      .channel(`realtime_comment_likes_${commentId}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'comment_likes',
+        filter: `comment_id=eq.${commentId}`
+      }, () => {
+        loadLikes();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [commentId]);
+
   const loadLikes = async () => {
     try {
       // Get all likes for this comment
