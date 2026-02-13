@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 
 export type ReactionType = 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'angry';
@@ -40,13 +40,23 @@ interface ReactionPickerProps {
 
 export function ReactionPicker({ onSelect, children, disabled }: ReactionPickerProps) {
   const [showPicker, setShowPicker] = useState(false);
+  const [pickerPos, setPickerPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pickerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleMouseEnter = () => {
     if (disabled) return;
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => setShowPicker(true), 500);
+    timeoutRef.current = setTimeout(() => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setPickerPos({
+          top: rect.top - 50,
+          left: rect.left + rect.width / 2,
+        });
+      }
+      setShowPicker(true);
+    }, 500);
   };
 
   const handleMouseLeave = () => {
@@ -61,6 +71,7 @@ export function ReactionPicker({ onSelect, children, disabled }: ReactionPickerP
 
   return (
     <div
+      ref={containerRef}
       className="relative inline-block"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -68,8 +79,16 @@ export function ReactionPicker({ onSelect, children, disabled }: ReactionPickerP
       {children}
       {showPicker && (
         <div
-          ref={pickerRef}
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50"
+          className="fixed z-[9999]"
+          style={{
+            top: `${pickerPos.top}px`,
+            left: `${pickerPos.left}px`,
+            transform: 'translateX(-50%)',
+          }}
+          onMouseEnter={() => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          }}
+          onMouseLeave={handleMouseLeave}
         >
           <div className="flex items-center gap-1 bg-popover border border-border rounded-full px-2 py-1.5 shadow-lg animate-in fade-in-0 zoom-in-95 duration-200">
             {REACTIONS.map((reaction) => (
