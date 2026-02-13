@@ -40,6 +40,20 @@ export function NewsFeed() {
     loadCurrentUser();
   }, []);
 
+  // Realtime підписка на нові/видалені пости
+  useEffect(() => {
+    const channel = supabase
+      .channel('realtime_posts_feed')
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'posts'
+      }, () => {
+        loadPosts();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
   const loadCurrentUser = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
