@@ -8,6 +8,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 import { Eye, EyeOff } from 'lucide-react';
 import PasswordRequirements, { isPasswordValid } from './PasswordRequirements';
+import OAuthButtons from './OAuthButtons';
 interface SupabaseRegisterFormProps {
   onSwitchToLogin: () => void;
 }
@@ -173,6 +174,8 @@ export default function SupabaseRegisterForm({ onSwitchToLogin }: SupabaseRegist
       <Button variant="ghost" className="w-full" onClick={onSwitchToLogin} disabled={loading}>
         {t.alreadyHaveAccount}
       </Button>
+
+      <OAuthButtons />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { useSupabaseAuth } from '@/hooks/auth/useSupabaseAuth';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 import { Eye, EyeOff } from 'lucide-react';
+import OAuthButtons from './OAuthButtons';
 
 interface SupabaseLoginFormProps {
   onSwitchToRegister: () => void;
@@ -97,6 +98,8 @@ export default function SupabaseLoginForm({ onSwitchToRegister, onForgotPassword
           {t.register}
         </Button>
       </div>
+
+      <OAuthButtons />
     </div>
   );
 }
