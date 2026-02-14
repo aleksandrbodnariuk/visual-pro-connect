@@ -144,6 +144,7 @@ export default function Messages() {
 
     const channel = supabase
       .channel('messages-realtime')
+      // Нові повідомлення для мене
       .on(
         'postgres_changes',
         {
@@ -155,7 +156,6 @@ export default function Messages() {
         async (payload) => {
           const newMsg = payload.new as any;
           
-          // Отримуємо профіль відправника
           const { data: profiles } = await supabase
             .rpc('get_safe_public_profiles_by_ids', { _ids: [newMsg.sender_id] });
           
@@ -171,18 +171,14 @@ export default function Messages() {
             attachmentType: newMsg.attachment_type || undefined
           };
 
-          // Якщо це активний чат - додаємо повідомлення і позначаємо прочитаним
           if (currentActiveChat && currentActiveChat.user.id === newMsg.sender_id) {
             setMessages(prev => [...prev, messageForUI]);
             await MessagesService.markMessagesAsRead(currentUser.id, newMsg.sender_id);
-            // Примусово оновлюємо глобальний лічильник
             window.dispatchEvent(new CustomEvent('messages-read'));
           } else {
-            // Інакше - оновлюємо unreadCount у списку чатів та грає звук
             playNotificationSound();
           }
 
-          // Оновлюємо список чатів
           setChats(prevChats => {
             const existingChatIndex = prevChats.findIndex(c => c.user.id === newMsg.sender_id);
             
@@ -206,7 +202,6 @@ export default function Messages() {
                 return chat;
               });
             } else {
-              // Новий чат
               const newChat: ChatItem = {
                 id: `chat-${newMsg.sender_id}`,
                 user: {
@@ -226,6 +221,54 @@ export default function Messages() {
               return [newChat, ...prevChats];
             }
           });
+        }
+      )
+      // Оновлення повідомлень (редагування, прочитання)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiver_id=eq.${currentUser.id}`,
+        },
+        (payload) => {
+          const updated = payload.new as any;
+          setMessages(prev => prev.map(msg =>
+            msg.id === updated.id
+              ? { ...msg, text: updated.content, isEdited: updated.is_edited || false }
+              : msg
+          ));
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `sender_id=eq.${currentUser.id}`,
+        },
+        (payload) => {
+          const updated = payload.new as any;
+          setMessages(prev => prev.map(msg =>
+            msg.id === updated.id
+              ? { ...msg, text: updated.content, isEdited: updated.is_edited || false }
+              : msg
+          ));
+        }
+      )
+      // Видалення повідомлень
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          const deleted = payload.old as any;
+          setMessages(prev => prev.filter(msg => msg.id !== deleted.id));
         }
       )
       .subscribe();
