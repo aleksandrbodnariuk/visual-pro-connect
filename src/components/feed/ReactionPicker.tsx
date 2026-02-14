@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 export type ReactionType = 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'angry';
@@ -44,19 +44,23 @@ export function ReactionPicker({ onSelect, children, disabled }: ReactionPickerP
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const updatePosition = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setPickerPos({
+        top: rect.top - 48,
+        left: rect.left,
+      });
+    }
+  };
+
   const handleMouseEnter = () => {
     if (disabled) return;
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setPickerPos({
-          top: rect.top - 50,
-          left: rect.left + rect.width / 2,
-        });
-      }
+      updatePosition();
       setShowPicker(true);
-    }, 500);
+    }, 300);
   };
 
   const handleMouseLeave = () => {
@@ -83,7 +87,6 @@ export function ReactionPicker({ onSelect, children, disabled }: ReactionPickerP
           style={{
             top: `${pickerPos.top}px`,
             left: `${pickerPos.left}px`,
-            transform: 'translateX(-50%)',
           }}
           onMouseEnter={() => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
