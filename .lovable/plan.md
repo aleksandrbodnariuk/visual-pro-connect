@@ -1,101 +1,57 @@
 
+# Plan: Fix Reaction Picker, Realtime Subscriptions, and Messages
 
-# Plan: Fix Intermittent Loading Freeze on Smartphones
+## Problems Found
 
-## Root Cause
+1. **Realtime not working for posts/comments/reactions** -- Only the `messages` table is added to the Supabase Realtime publication. The tables `posts`, `comments`, `comment_likes`, and `post_likes` are missing, so `postgres_changes` subscriptions never fire.
 
-The app freezes on the loading spinner because **multiple independent auth initializations race against each other**, and **there is no timeout fallback** if any of them hang.
+2. **Reaction picker doesn't appear reliably** -- The hover-based approach with `setTimeout(500ms)` is unreliable, especially on touch devices. The positioning also centers the picker instead of aligning left edge to the button (as in Facebook).
 
-On every page load, these components each independently call Supabase auth:
+3. **Changing post reaction type fails** -- The `post_likes` table has no UPDATE RLS policy, so `supabase.from('post_likes').update(...)` silently fails.
 
-1. **AuthContext** -- `getSession()` + `onAuthStateChange` listener
-2. **useSupabaseAuth** (Navbar) -- another `getSession()` + `onAuthStateChange` + RPC call `get_my_profile`
-3. **useSupabaseAuth** (MobileNavigation via useAuthState) -- yet another independent instance with its own `getSession()` + `onAuthStateChange` + `get_my_profile`
-4. **useUnreadMessages** (MobileNavigation) -- another `getSession()` + `onAuthStateChange`
-5. **useDataSync** -- `getUser()` + 3 more Supabase queries
-6. **FaviconUpdater** -- another Supabase query
-7. **ThemeSyncer** -- another Supabase query
-
-That is **5+ simultaneous auth calls** and **4+ onAuthStateChange listeners** created on every page load. Each `useSupabaseAuth` instance also makes an RPC call (`get_my_profile`) to fetch the user profile.
-
-On smartphones with slow or unstable connections, any of these can hang indefinitely. Since `AuthContext.loading` has no timeout, the spinner shows forever.
+4. **Messages don't appear in realtime in active chat** -- The realtime subscription in Messages.tsx only listens for `INSERT` on `receiver_id`. Sent messages from the other user appear, but updates (edits, deletes) and the chat list don't refresh properly.
 
 ## Changes
 
-### 1. Add auth timeout to `src/context/AuthContext.tsx`
+### 1. Database Migration
 
-Add a 10-second safety timeout so the loading state resolves even if Supabase is unreachable:
+Add tables to Supabase Realtime publication and add missing RLS policy:
 
-```typescript
-useEffect(() => {
-  const timeout = setTimeout(() => {
-    if (loading) {
-      console.warn('Auth timeout - proceeding without session');
-      setLoading(false);
-    }
-  }, 10000);
-  return () => clearTimeout(timeout);
-}, [loading]);
+```sql
+-- Enable realtime for missing tables
+ALTER PUBLICATION supabase_realtime ADD TABLE posts;
+ALTER PUBLICATION supabase_realtime ADD TABLE comments;
+ALTER PUBLICATION supabase_realtime ADD TABLE comment_likes;
+ALTER PUBLICATION supabase_realtime ADD TABLE post_likes;
+
+-- Add missing UPDATE policy for post_likes (needed to change reaction type)
+CREATE POLICY "Users can update their post reactions"
+  ON post_likes FOR UPDATE
+  USING (user_id = auth.uid());
 ```
 
-### 2. Add loading timeout to `src/hooks/auth/useSupabaseAuth.ts`
+### 2. Fix ReactionPicker positioning and reliability (`src/components/feed/ReactionPicker.tsx`)
 
-Same 10-second timeout for the `loading` state in `useSupabaseAuth`, which blocks Navbar and MobileNavigation rendering:
+- Change positioning so the picker's left edge aligns with the button's left edge (like Facebook), not centered
+- Reduce hover delay from 500ms to 300ms for quicker response
+- Ensure the picker appears above the button with enough clearance
 
-```typescript
-useEffect(() => {
-  const timeout = setTimeout(() => {
-    if (loading) {
-      console.warn('useSupabaseAuth timeout - proceeding');
-      setLoading(false);
-    }
-  }, 10000);
-  return () => clearTimeout(timeout);
-}, [loading]);
-```
+### 3. Fix Messages realtime (`src/pages/Messages.tsx`)
 
-### 3. Protect `src/hooks/useDataSync.ts` with timeout
+- Add subscription for UPDATE and DELETE events on messages (for edits/deletes from the other user)
+- Listen for messages sent by the current user to other chats too (so the chat list updates)
 
-Wrap the sync queries in `fetchWithTimeout` (already exists in `src/lib/utils.ts`) so they don't block indefinitely:
-
-```typescript
-import { fetchWithTimeout } from '@/lib/utils';
-
-// Each query wrapped with 10s timeout
-const { data: friendRequests } = await fetchWithTimeout(
-  supabase.from('friend_requests').select('*').or(...),
-  10000
-);
-```
-
-### 4. Protect `src/hooks/useUnreadMessages.ts` with timeout
-
-Add a timeout to the `getSession()` call so it doesn't hang:
-
-```typescript
-const getUser = async () => {
-  try {
-    const { data: { session } } = await fetchWithTimeout(
-      supabase.auth.getSession(),
-      10000
-    );
-    // ...
-  } catch {
-    console.warn('Unread messages: session timeout');
-  }
-};
-```
-
-## Files to Modify (4 total)
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/context/AuthContext.tsx` | Add 10s loading timeout |
-| `src/hooks/auth/useSupabaseAuth.ts` | Add 10s loading timeout |
-| `src/hooks/useDataSync.ts` | Wrap queries with fetchWithTimeout |
-| `src/hooks/useUnreadMessages.ts` | Wrap getSession with timeout |
+| Database migration | Add 4 tables to realtime publication + UPDATE policy on post_likes |
+| `src/components/feed/ReactionPicker.tsx` | Fix positioning (left-aligned, above button) and reduce delay |
+| `src/pages/Messages.tsx` | Add UPDATE/DELETE realtime subscriptions for messages |
 
 ## Expected Result
 
-If Supabase is slow or unreachable on mobile, the app will stop showing the spinner after 10 seconds and display the page (either the Hero for unauthenticated users, or the feed). This prevents the "frozen" state entirely.
-
+- All 6 reaction emojis appear reliably on hover, positioned like Facebook (left-aligned above the button)
+- Comments, posts, reactions update in realtime without page reload
+- Messages appear instantly in chat without page reload
+- Changing reaction type on posts works correctly
