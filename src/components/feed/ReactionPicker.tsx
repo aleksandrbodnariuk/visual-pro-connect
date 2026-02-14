@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 export type ReactionType = 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'angry';
@@ -40,60 +41,62 @@ interface ReactionPickerProps {
 
 export function ReactionPicker({ onSelect, children, disabled }: ReactionPickerProps) {
   const [showPicker, setShowPicker] = useState(false);
-  const [pickerPos, setPickerPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const [pickerPos, setPickerPos] = useState({ top: 0, left: 0 });
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
 
-  const updatePosition = () => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      setPickerPos({
-        top: rect.top - 48,
-        left: rect.left,
-      });
+  const clearTimer = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
     }
   };
 
-  const handleMouseEnter = () => {
+  const scheduleShow = () => {
     if (disabled) return;
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    clearTimer();
     timeoutRef.current = setTimeout(() => {
-      updatePosition();
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setPickerPos({
+          top: rect.top - 46,
+          left: rect.left,
+        });
+      }
       setShowPicker(true);
     }, 300);
   };
 
-  const handleMouseLeave = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => setShowPicker(false), 300);
+  const scheduleHide = () => {
+    clearTimer();
+    timeoutRef.current = setTimeout(() => setShowPicker(false), 400);
   };
 
   const handleSelect = (type: ReactionType) => {
+    clearTimer();
     setShowPicker(false);
     onSelect(type);
   };
 
-  return (
-    <div
-      ref={containerRef}
-      className="relative inline-block"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      {children}
-      {showPicker && (
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => clearTimer();
+  }, []);
+
+  const pickerElement = showPicker
+    ? createPortal(
         <div
+          ref={pickerRef}
           className="fixed z-[9999]"
           style={{
             top: `${pickerPos.top}px`,
             left: `${pickerPos.left}px`,
           }}
-          onMouseEnter={() => {
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-          }}
-          onMouseLeave={handleMouseLeave}
+          onMouseEnter={clearTimer}
+          onMouseLeave={scheduleHide}
         >
-          <div className="flex items-center gap-1 bg-popover border border-border rounded-full px-2 py-1.5 shadow-lg animate-in fade-in-0 zoom-in-95 duration-200">
+          <div className="flex items-center gap-1 bg-popover border border-border rounded-full px-2 py-1.5 shadow-lg animate-in fade-in-0 zoom-in-95 duration-200 whitespace-nowrap">
             {REACTIONS.map((reaction) => (
               <button
                 key={reaction.type}
@@ -106,8 +109,20 @@ export function ReactionPicker({ onSelect, children, disabled }: ReactionPickerP
               </button>
             ))}
           </div>
-        </div>
-      )}
+        </div>,
+        document.body
+      )
+    : null;
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative inline-block"
+      onMouseEnter={scheduleShow}
+      onMouseLeave={scheduleHide}
+    >
+      {children}
+      {pickerElement}
     </div>
   );
 }
