@@ -28,7 +28,6 @@ export default function Messages() {
   useEffect(() => {
     const initializeMessages = async () => {
       try {
-        // Отримуємо сесію користувача з Supabase Auth
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -48,7 +47,6 @@ export default function Messages() {
         const receiverId = localStorage.getItem("currentChatReceiverId");
         setCurrentUser(session.user);
         
-        // Завантажуємо всі чати та повідомлення
         await loadChatsAndMessages(session.user.id, receiverId);
       } catch (error) {
         console.error("Помилка ініціалізації повідомлень:", error);
@@ -58,6 +56,16 @@ export default function Messages() {
     };
     
     initializeMessages();
+
+    // Слухаємо кастомну подію для примусового перезавантаження повідомлень
+    const handleForceReload = () => {
+      if (currentUser?.id) {
+        const receiverId = localStorage.getItem("currentChatReceiverId");
+        loadChatsAndMessages(currentUser.id, receiverId);
+      }
+    };
+    window.addEventListener('messages-force-reload', handleForceReload);
+    return () => window.removeEventListener('messages-force-reload', handleForceReload);
   }, [navigate]);
   
   // Завантаження чатів та повідомлень
@@ -138,144 +146,109 @@ export default function Messages() {
     setActiveChat(null);
   };
 
-  // Realtime підписка на нові повідомлення
+  // Функція перезавантаження повідомлень активного чату з БД
+  const reloadActiveChat = useCallback(async () => {
+    if (!currentUser?.id) return;
+    
+    const currentActiveChat = activeChatRef.current;
+    if (!currentActiveChat) return;
+    
+    // Перезавантажуємо повідомлення з БД для активного чату
+    const { data: messageData } = await supabase
+      .from('messages')
+      .select('id, sender_id, receiver_id, content, read, created_at, is_edited, edited_at, attachment_url, attachment_type')
+      .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${currentActiveChat.user.id}),and(sender_id.eq.${currentActiveChat.user.id},receiver_id.eq.${currentUser.id})`)
+      .order('created_at', { ascending: true });
+    
+    if (messageData) {
+      const updatedMessages: Message[] = messageData.map(msg => ({
+        id: msg.id,
+        text: msg.content,
+        timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isSender: msg.sender_id === currentUser.id,
+        isEdited: msg.is_edited || false,
+        editedAt: msg.edited_at ? new Date(msg.edited_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
+        attachmentUrl: msg.attachment_url || undefined,
+        attachmentType: msg.attachment_type || undefined
+      }));
+      setMessages(updatedMessages);
+    }
+  }, [currentUser?.id]);
+
+  // Realtime підписка на нові повідомлення — перезавантаження з БД при будь-якій зміні
   useEffect(() => {
     if (!currentUser?.id) return;
 
-    const channel = supabase
-      .channel('messages-realtime')
-      // Нові повідомлення для мене
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${currentUser.id}`,
-        },
-        async (payload) => {
-          const newMsg = payload.new as any;
-          
-          const { data: profiles } = await supabase
-            .rpc('get_safe_public_profiles_by_ids', { _ids: [newMsg.sender_id] });
-          
-          const senderProfile = profiles?.[0];
-          const currentActiveChat = activeChatRef.current;
+    const channelId = `messages-page-${currentUser.id}-${Math.random().toString(36).substring(7)}`;
 
-          const messageForUI: Message = {
-            id: newMsg.id,
-            text: newMsg.content,
-            timestamp: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            isSender: false,
-            attachmentUrl: newMsg.attachment_url || undefined,
-            attachmentType: newMsg.attachment_type || undefined
-          };
+    const handleChange = async (payload: any) => {
+      const eventType = payload.eventType;
+      const newRecord = payload.new as any;
+      const oldRecord = payload.old as any;
+      
+      const currentActiveChat = activeChatRef.current;
 
-          if (currentActiveChat && currentActiveChat.user.id === newMsg.sender_id) {
-            setMessages(prev => [...prev, messageForUI]);
-            await MessagesService.markMessagesAsRead(currentUser.id, newMsg.sender_id);
+      if (eventType === 'INSERT' && newRecord) {
+        // Нове повідомлення для мене
+        if (newRecord.receiver_id === currentUser.id) {
+          if (currentActiveChat && currentActiveChat.user.id === newRecord.sender_id) {
+            // Повідомлення від активного чату — перезавантажуємо і позначаємо як прочитане
+            await reloadActiveChat();
+            await MessagesService.markMessagesAsRead(currentUser.id, newRecord.sender_id);
             window.dispatchEvent(new CustomEvent('messages-read'));
           } else {
             playNotificationSound();
           }
-
-          setChats(prevChats => {
-            const existingChatIndex = prevChats.findIndex(c => c.user.id === newMsg.sender_id);
-            
-            if (existingChatIndex !== -1) {
-              return prevChats.map((chat, idx) => {
-                if (idx === existingChatIndex) {
-                  const isCurrentActive = currentActiveChat?.user.id === newMsg.sender_id;
-                  return {
-                    ...chat,
-                    messages: [...chat.messages, messageForUI],
-                    lastMessage: {
-                      text: newMsg.content || (newMsg.attachment_url ? "📷 Фото" : ""),
-                      timestamp: "Щойно"
-                    },
-                    user: {
-                      ...chat.user,
-                      unreadCount: isCurrentActive ? 0 : chat.user.unreadCount + 1
-                    }
-                  };
-                }
-                return chat;
-              });
-            } else {
-              const newChat: ChatItem = {
-                id: `chat-${newMsg.sender_id}`,
-                user: {
-                  id: newMsg.sender_id,
-                  name: senderProfile?.full_name || 'Користувач',
-                  username: 'user',
-                  avatarUrl: senderProfile?.avatar_url || '',
-                  lastSeen: 'Онлайн',
-                  unreadCount: 1
-                },
-                messages: [messageForUI],
-                lastMessage: {
-                  text: newMsg.content || "📷 Фото",
-                  timestamp: "Щойно"
-                }
-              };
-              return [newChat, ...prevChats];
-            }
-          });
+          
+          // Оновлюємо список чатів
+          await reloadChatList();
         }
-      )
-      // Оновлення повідомлень (редагування, прочитання)
+      } else if (eventType === 'UPDATE') {
+        // Редагування повідомлення — перезавантажуємо активний чат
+        await reloadActiveChat();
+      } else if (eventType === 'DELETE') {
+        // Видалення повідомлення
+        if (oldRecord?.id) {
+          setMessages(prev => prev.filter(msg => msg.id !== oldRecord.id));
+        }
+        await reloadChatList();
+      }
+    };
+
+    const channel = supabase
+      .channel(channelId)
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'messages',
           filter: `receiver_id=eq.${currentUser.id}`,
         },
-        (payload) => {
-          const updated = payload.new as any;
-          setMessages(prev => prev.map(msg =>
-            msg.id === updated.id
-              ? { ...msg, text: updated.content, isEdited: updated.is_edited || false }
-              : msg
-          ));
-        }
+        handleChange
       )
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'messages',
           filter: `sender_id=eq.${currentUser.id}`,
         },
-        (payload) => {
-          const updated = payload.new as any;
-          setMessages(prev => prev.map(msg =>
-            msg.id === updated.id
-              ? { ...msg, text: updated.content, isEdited: updated.is_edited || false }
-              : msg
-          ));
-        }
-      )
-      // Видалення повідомлень
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'messages',
-        },
-        (payload) => {
-          const deleted = payload.old as any;
-          setMessages(prev => prev.filter(msg => msg.id !== deleted.id));
-        }
+        handleChange
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
+  }, [currentUser?.id, reloadActiveChat]);
+
+  // Перезавантаження списку чатів
+  const reloadChatList = useCallback(async () => {
+    if (!currentUser?.id) return;
+    const { chats: loadedChats } = await MessagesService.fetchChatsAndMessages(currentUser.id, null);
+    setChats(loadedChats);
   }, [currentUser?.id]);
 
   const handleEditMessage = async (messageId: string, newText: string) => {
