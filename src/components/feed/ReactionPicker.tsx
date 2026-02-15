@@ -60,7 +60,7 @@ export function ReactionPicker({ onSelect, children, disabled }: ReactionPickerP
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         setPickerPos({
-          top: rect.top - 46,
+          top: rect.top - 56,
           left: rect.left,
         });
       }
@@ -109,6 +109,8 @@ export function ReactionPicker({ onSelect, children, disabled }: ReactionPickerP
               </button>
             ))}
           </div>
+          {/* Invisible bridge to maintain hover between picker and trigger */}
+          <div className="w-full h-4" />
         </div>,
         document.body
       )
