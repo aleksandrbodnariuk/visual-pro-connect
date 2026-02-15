@@ -43,6 +43,12 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
       </Link>
       <Link
         to="/messages"
+        onClick={(e) => {
+          if (location.pathname === '/messages') {
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent('messages-force-reload'));
+          }
+        }}
         className={`relative text-sm font-medium transition-colors hover:text-foreground/80 ${
           isActive("/messages") ? "text-foreground" : "text-foreground/60"
         }`}
