@@ -119,7 +119,7 @@ export function PostCard({
       }, () => {
         loadRecentComments();
         if (showAllComments) {
-          loadAllComments();
+          loadAllComments(true);
         }
       })
       .subscribe();
@@ -160,8 +160,9 @@ export function PostCard({
   };
 
   // Завантаження всіх коментарів для inline expand
-  const loadAllComments = async () => {
-    if (isLoadingAllComments || showAllComments) return;
+  const loadAllComments = async (forceReload = false) => {
+    if (isLoadingAllComments) return;
+    if (showAllComments && !forceReload) return;
     
     setIsLoadingAllComments(true);
     try {
@@ -393,7 +394,7 @@ export function PostCard({
         <div className="mt-2 flex flex-col">
           {totalRootComments > 2 && !showAllComments && (
             <button 
-              onClick={loadAllComments}
+              onClick={() => loadAllComments()}
               disabled={isLoadingAllComments}
               className="text-sm text-muted-foreground hover:underline text-left"
             >
