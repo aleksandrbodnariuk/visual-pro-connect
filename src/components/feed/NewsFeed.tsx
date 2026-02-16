@@ -47,7 +47,7 @@ export function NewsFeed() {
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'posts'
       }, () => {
-        loadPosts();
+        loadPosts(false);
       })
       .subscribe();
 
@@ -72,9 +72,9 @@ export function NewsFeed() {
 
   // Функція getUsername видалена - @username більше не показується в UI
 
-  const loadPosts = async () => {
+  const loadPosts = async (isInitial = true) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       
       // Timeout 15 секунд для завантаження постів
       const timeout = new Promise<never>((_, reject) => 

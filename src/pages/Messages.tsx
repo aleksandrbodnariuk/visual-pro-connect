@@ -157,7 +157,8 @@ export default function Messages() {
 
   // Функція перезавантаження повідомлень активного чату з БД
   const reloadActiveChat = useCallback(async () => {
-    if (!currentUser?.id) return;
+    const uid = currentUserRef.current?.id;
+    if (!uid) return;
     
     const currentActiveChat = activeChatRef.current;
     if (!currentActiveChat) return;
@@ -166,7 +167,7 @@ export default function Messages() {
     const { data: messageData } = await supabase
       .from('messages')
       .select('id, sender_id, receiver_id, content, read, created_at, is_edited, edited_at, attachment_url, attachment_type')
-      .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${currentActiveChat.user.id}),and(sender_id.eq.${currentActiveChat.user.id},receiver_id.eq.${currentUser.id})`)
+      .or(`and(sender_id.eq.${uid},receiver_id.eq.${currentActiveChat.user.id}),and(sender_id.eq.${currentActiveChat.user.id},receiver_id.eq.${uid})`)
       .order('created_at', { ascending: true });
     
     if (messageData) {
@@ -174,7 +175,7 @@ export default function Messages() {
         id: msg.id,
         text: msg.content,
         timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isSender: msg.sender_id === currentUser.id,
+        isSender: msg.sender_id === uid,
         isEdited: msg.is_edited || false,
         editedAt: msg.edited_at ? new Date(msg.edited_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
         attachmentUrl: msg.attachment_url || undefined,
@@ -182,7 +183,7 @@ export default function Messages() {
       }));
       setMessages(updatedMessages);
     }
-  }, [currentUser?.id]);
+  }, []);
 
   // Realtime підписка на нові повідомлення — перезавантаження з БД при будь-якій зміні
   useEffect(() => {
@@ -195,31 +196,39 @@ export default function Messages() {
       const newRecord = payload.new as any;
       const oldRecord = payload.old as any;
       
+      const uid = currentUserRef.current?.id;
+      if (!uid) return;
+      
       const currentActiveChat = activeChatRef.current;
 
       if (eventType === 'INSERT' && newRecord) {
-        // Нове повідомлення для мене
-        if (newRecord.receiver_id === currentUser.id) {
+        // Нове повідомлення — завжди перезавантажуємо активний чат якщо відповідає
+        const isForMe = newRecord.receiver_id === uid;
+        const isFromMe = newRecord.sender_id === uid;
+        
+        if (isForMe) {
           if (currentActiveChat && currentActiveChat.user.id === newRecord.sender_id) {
             // Повідомлення від активного чату — перезавантажуємо і позначаємо як прочитане
             await reloadActiveChat();
-            await MessagesService.markMessagesAsRead(currentUser.id, newRecord.sender_id);
+            await MessagesService.markMessagesAsRead(uid, newRecord.sender_id);
             window.dispatchEvent(new CustomEvent('messages-read'));
           } else {
             playNotificationSound();
           }
-          
           // Оновлюємо список чатів
+          await reloadChatList();
+        } else if (isFromMe && currentActiveChat && currentActiveChat.user.id === newRecord.receiver_id) {
+          // Моє відправлене повідомлення (з іншої вкладки) — теж перезавантажуємо
+          await reloadActiveChat();
           await reloadChatList();
         }
       } else if (eventType === 'UPDATE') {
-        // Редагування повідомлення — перезавантажуємо активний чат
         await reloadActiveChat();
       } else if (eventType === 'DELETE') {
-        // Видалення повідомлення
         if (oldRecord?.id) {
           setMessages(prev => prev.filter(msg => msg.id !== oldRecord.id));
         }
+        await reloadActiveChat();
         await reloadChatList();
       }
     };
@@ -255,10 +264,11 @@ export default function Messages() {
 
   // Перезавантаження списку чатів
   const reloadChatList = useCallback(async () => {
-    if (!currentUser?.id) return;
-    const { chats: loadedChats } = await MessagesService.fetchChatsAndMessages(currentUser.id, null);
+    const uid = currentUserRef.current?.id;
+    if (!uid) return;
+    const { chats: loadedChats } = await MessagesService.fetchChatsAndMessages(uid, null);
     setChats(loadedChats);
-  }, [currentUser?.id]);
+  }, []);
 
   const handleEditMessage = async (messageId: string, newText: string) => {
     const success = await MessagesService.editMessage(messageId, newText);
