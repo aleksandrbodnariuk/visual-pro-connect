@@ -19,11 +19,16 @@ export default function Messages() {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const activeChatRef = useRef<ChatItem | null>(null);
+  const currentUserRef = useRef<any>(null);
 
-  // Тримаємо ref актуальним
+  // Тримаємо refs актуальними
   useEffect(() => {
     activeChatRef.current = activeChat;
   }, [activeChat]);
+
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
 
   useEffect(() => {
     const initializeMessages = async () => {
@@ -57,16 +62,20 @@ export default function Messages() {
     
     initializeMessages();
 
-    // Слухаємо кастомну подію для примусового перезавантаження повідомлень
+  }, [navigate]);
+
+  // Окремий useEffect для force-reload з правильними залежностями
+  useEffect(() => {
     const handleForceReload = () => {
-      if (currentUser?.id) {
+      const uid = currentUserRef.current?.id;
+      if (uid) {
         const receiverId = localStorage.getItem("currentChatReceiverId");
-        loadChatsAndMessages(currentUser.id, receiverId);
+        loadChatsAndMessages(uid, receiverId);
       }
     };
     window.addEventListener('messages-force-reload', handleForceReload);
     return () => window.removeEventListener('messages-force-reload', handleForceReload);
-  }, [navigate]);
+  }, []);
   
   // Завантаження чатів та повідомлень
   const loadChatsAndMessages = async (userId: string, receiverId: string | null) => {
