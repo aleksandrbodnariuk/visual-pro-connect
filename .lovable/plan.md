@@ -1,61 +1,87 @@
 
-# Plan: Fix Realtime Updates and Reaction Picker
 
-## Problem Analysis
+# Plan: Fix Realtime for Messages, Posts, Comments, and Likes
 
-### 1. Reaction Picker Not Appearing
-The ReactionPicker uses `onMouseEnter`/`onMouseLeave` on the container, but the picker is rendered via a portal at a fixed position. When the user moves the mouse from the button up to the picker, they leave the container div, which triggers `scheduleHide`. There's a gap between the container and the picker (the picker appears 46px above). The mouse passes through empty space where neither the container nor the picker receives hover events, causing the picker to disappear before the user reaches it.
+## Problem Summary
 
-**Fix**: Add an invisible "bridge" element between the container and the picker to maintain the hover zone. Also ensure the picker positioning accounts for the gap.
+There are multiple issues preventing real-time updates from working:
 
-### 2. Realtime Not Working (Posts, Comments, Reactions)
-The database migration to add tables to `supabase_realtime` publication was applied successfully -- all 5 tables (messages, posts, comments, comment_likes, post_likes) are confirmed in the publication. The subscriptions in code look correct. The issue is likely that the Supabase Realtime connection uses WebSocket, and the channel subscriptions might have a naming conflict or the filters are not matching. 
+1. **Messages button not working when already on /messages**: The `messages-force-reload` event handler captures a stale `currentUser` (which is `null` at mount time) due to incorrect `useEffect` dependencies.
 
-Possible root cause: The Supabase Realtime system requires `REPLICA IDENTITY` to be set to `FULL` on tables for filtered subscriptions (`filter: post_id=eq.xxx`) to work. By default, tables have `REPLICA IDENTITY DEFAULT` which only includes the primary key in the old record, meaning filtered subscriptions on non-PK columns silently fail.
+2. **Messages not appearing in real-time in active chat**: The realtime subscription and re-fetch logic has a subtle bug -- when `reloadChatList()` is called, it fetches all chats with `receiverId=null`, which may not properly preserve the active chat's message state. Also, the `messages-force-reload` handler never fires because of the stale closure issue.
 
-**Fix**: Set `REPLICA IDENTITY FULL` on all relevant tables so that filtered realtime subscriptions work correctly.
+3. **Posts not appearing in real-time**: The `NewsFeed` component has a correct subscription on the `posts` table (unfiltered), and `REPLICA IDENTITY FULL` is set. The subscription calls `loadPosts()` which should work. This needs verification -- it may be a production vs test environment issue (the migration may not have been published yet).
 
-### 3. Messages Not Appearing in Realtime in Active Chat
-Same root cause as above -- the `receiver_id` filter on the messages table subscription requires `REPLICA IDENTITY FULL`. The unread badge (useUnreadMessages) also uses a filtered subscription but re-fetches the count, so the badge appears after page reload but the inline messages don't update.
+4. **Likes and comments not updating in real-time**: Same root cause -- filtered subscriptions on `post_likes` and `comments` tables by `post_id` require `REPLICA IDENTITY FULL`. The migration was applied in test but may not be published to production yet.
 
-**Fix**: Set `REPLICA IDENTITY FULL` on the messages table as well.
+## Root Causes
+
+1. **Stale closure in `messages-force-reload` handler** -- The `useEffect` at line 60 in `Messages.tsx` depends on `[navigate]` but uses `currentUser` which starts as `null`. When the handler fires, `currentUser?.id` is always `null`.
+
+2. **Missing production deployment** -- The `REPLICA IDENTITY FULL` migration was applied to the test database but may not yet be published to the production (live) environment.
+
+3. **Realtime subscription not handling chat list reload properly** -- When a new message arrives and the chat list is reloaded, the active chat state may become inconsistent because `reloadChatList` calls `fetchChatsAndMessages(userId, null)` which doesn't account for the currently active chat.
 
 ## Changes
 
-### 1. Database Migration
-Set `REPLICA IDENTITY FULL` on all tables that use filtered realtime subscriptions:
+### 1. Fix `Messages.tsx` -- Stale Closure and Realtime Logic
 
-```sql
-ALTER TABLE messages REPLICA IDENTITY FULL;
-ALTER TABLE posts REPLICA IDENTITY FULL;
-ALTER TABLE comments REPLICA IDENTITY FULL;
-ALTER TABLE comment_likes REPLICA IDENTITY FULL;
-ALTER TABLE post_likes REPLICA IDENTITY FULL;
+**Problem**: The `messages-force-reload` handler and the realtime subscription reference `currentUser` which is `null` initially. The `useEffect` that sets up the force-reload listener runs once at mount and never re-runs when `currentUser` changes.
+
+**Fix**:
+- Use a `currentUserRef` (similar to `activeChatRef`) to always have access to the latest `currentUser` value
+- Add `currentUser?.id` to the dependency array of the force-reload `useEffect`
+- Simplify the `reloadChatList` to properly update chats without disrupting the active chat
+- Move the force-reload handler into the effect that has access to the correct user state
+
+### 2. Fix `NavbarNavigation.tsx` -- Navigation to /messages
+
+**Problem**: When clicking "Повідомлення" while already on `/messages`, the `e.preventDefault()` prevents navigation, and the custom event fires but is handled by a stale closure. Even when navigating from another page to `/messages`, clicking works because React Router performs navigation which re-mounts the component.
+
+**Fix**: Instead of preventing default and dispatching an event, use `navigate('/messages')` with a force re-render approach, or fix the event handler in Messages.tsx to properly reference the current user.
+
+### 3. Publish Migration to Production
+
+The user needs to publish the latest changes to production so that `REPLICA IDENTITY FULL` takes effect on the live database. Without this, realtime filtered subscriptions will silently fail in production.
+
+## Technical Details
+
+### Messages.tsx Changes
+
+```text
+Key changes:
+1. Add currentUserRef to track latest currentUser
+2. Fix force-reload useEffect to depend on currentUser?.id
+3. Use currentUserRef in the force-reload handler
+4. Improve reloadChatList to not reset active chat state
 ```
 
-### 2. Fix ReactionPicker (`src/components/feed/ReactionPicker.tsx`)
-- Add an invisible bridge div between the trigger and the picker to prevent hover gap
-- Position the bridge to fill the space between the button and the picker
-- This ensures continuous hover area so the picker doesn't disappear when moving the mouse upward
+Specific code changes in `src/pages/Messages.tsx`:
 
-### 3. Messages Realtime Improvements (`src/pages/Messages.tsx`)
-The current code already has INSERT/UPDATE/DELETE subscriptions. Once REPLICA IDENTITY FULL is set, the filtered subscriptions will start working. No code changes needed for messages -- the database fix resolves the issue.
+- Add `const currentUserRef = useRef<any>(null);` and keep it synced with `currentUser`
+- In the `messages-force-reload` handler, use `currentUserRef.current?.id` instead of `currentUser?.id`
+- Split the `initializeMessages` effect and the `force-reload` listener into separate effects
+- The force-reload effect should depend on `[currentUser?.id]` so it re-subscribes with the correct closure
+
+### NavbarNavigation.tsx Changes
+
+No changes needed if the Messages.tsx fix resolves the stale closure issue. The custom event approach will work correctly once the handler has access to the right user.
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| New database migration | Set REPLICA IDENTITY FULL on 5 tables |
-| `src/components/feed/ReactionPicker.tsx` | Add invisible hover bridge between trigger and picker |
+| `src/pages/Messages.tsx` | Fix stale closure for `currentUser`, improve realtime handling |
 
-## Technical Details
+## Expected Results
 
-**Why REPLICA IDENTITY FULL is needed:**
-Supabase Realtime uses PostgreSQL logical replication. When a filter like `filter: receiver_id=eq.xxx` is used, the system needs the column value in the WAL (Write-Ahead Log) output. With the default replica identity (which only includes PK columns), non-PK column values are not available for filtering, so filtered subscriptions silently receive no events. Setting REPLICA IDENTITY FULL includes all columns in the WAL output, enabling proper filtering.
+- Messages appear instantly in the active chat without any button clicks or page reloads
+- The "Повідомлення" navigation button works correctly when clicked while on /messages
+- Posts appear in the news feed in real-time when other users publish them
+- Likes and comments update in real-time across all users
+- Message edits and deletes reflect immediately for the recipient
 
-## Expected Result
-- All 6 reaction emojis appear reliably on hover for both posts and comments
-- New posts appear in the feed in realtime without page reload
-- Comments and reactions update in realtime
-- Messages appear instantly in active chat without page reload
-- Message edits and deletes are reflected in realtime for the recipient
+## Post-Implementation
+
+After applying these code changes, the user should **publish to production** so the `REPLICA IDENTITY FULL` migration takes effect on the live site. Without publishing, the realtime features will only work in the preview/test environment.
+
