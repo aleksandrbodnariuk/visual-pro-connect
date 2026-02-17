@@ -207,12 +207,55 @@ export function useFriendActions() {
     }
   };
 
+  const blockUser = async (userId: string) => {
+    setIsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("Потрібно авторизуватися");
+        return false;
+      }
+
+      // Спочатку видаляємо будь-які існуючі зв'язки
+      await supabase
+        .from('friend_requests')
+        .delete()
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${user.id})`);
+
+      // Створюємо запис блокування
+      const { error } = await supabase
+        .from('friend_requests')
+        .insert({
+          sender_id: user.id,
+          receiver_id: userId,
+          status: 'blocked'
+        });
+
+      if (error) {
+        if (import.meta.env.DEV) console.error("Error blocking user:", error);
+        toast.error("Не вдалося заблокувати користувача");
+        return false;
+      }
+
+      toast.success("Користувача заблоковано");
+      return true;
+    } catch (error) {
+      if (import.meta.env.DEV) console.error("Error blocking user:", error);
+      toast.error("Помилка блокування користувача");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     sendFriendRequest,
     acceptFriendRequest,
     rejectFriendRequest,
     respondToFriendRequest,
     removeFriend,
+    blockUser,
     isLoading
   };
 }

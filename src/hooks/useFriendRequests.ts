@@ -20,7 +20,8 @@ export function useFriendRequests() {
     acceptFriendRequest,
     rejectFriendRequest,
     respondToFriendRequest,
-    removeFriend
+    removeFriend,
+    blockUser
   } = useFriendActions();
 
   const {
@@ -44,6 +45,7 @@ export function useFriendRequests() {
     rejectFriendRequest,
     respondToFriendRequest,
     removeFriend,
+    blockUser,
     checkFriendshipStatus
   };
 }
