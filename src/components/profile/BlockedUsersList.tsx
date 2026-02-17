@@ -40,7 +40,7 @@ export function BlockedUsersList() {
     setUnblockTarget(null);
   };
 
-  if (!blockedUsers || blockedUsers.length === 0) return null;
+  const hasBlocked = blockedUsers && blockedUsers.length > 0;
 
   return (
     <>
@@ -48,49 +48,55 @@ export function BlockedUsersList() {
         <CardContent className="p-4">
           <div className="mb-4">
             <h3 className="font-semibold text-lg">Заблоковані</h3>
-            <p className="text-sm text-muted-foreground">{blockedUsers.length} заблокованих</p>
+            <p className="text-sm text-muted-foreground">
+              {hasBlocked ? `${blockedUsers.length} заблокованих` : 'Немає заблокованих користувачів'}
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-3 gap-2 sm:gap-3">
-            {blockedUsers.map((user) => (
-              <ContextMenu key={user?.id}>
-                <ContextMenuTrigger asChild>
-                  <Link
-                    to={`/profile/${user?.id}`}
-                    className="group"
-                  >
-                    <div className="aspect-square overflow-hidden rounded-lg bg-muted opacity-60">
-                      {user?.avatar_url ? (
-                        <img
-                          src={user.avatar_url}
-                          alt={user.full_name || 'Користувач'}
-                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center text-xl sm:text-2xl md:text-3xl font-medium text-muted-foreground">
-                          {getInitials(user?.full_name)}
-                        </div>
-                      )}
-                    </div>
-                    <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-medium truncate text-center text-muted-foreground">
-                      {user?.full_name || 'Користувач'}
-                    </p>
-                  </Link>
-                </ContextMenuTrigger>
-                <ContextMenuContent>
-                  <ContextMenuItem
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setUnblockTarget({ id: user!.id!, name: user?.full_name || 'Користувач' });
-                    }}
-                  >
-                    <ShieldOff className="mr-2 h-4 w-4" />
-                    Розблокувати
-                  </ContextMenuItem>
-                </ContextMenuContent>
-              </ContextMenu>
-            ))}
-          </div>
+          {hasBlocked ? (
+            <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-3 gap-2 sm:gap-3">
+              {blockedUsers.map((user) => (
+                <ContextMenu key={user?.id}>
+                  <ContextMenuTrigger asChild>
+                    <Link
+                      to={`/profile/${user?.id}`}
+                      className="group"
+                    >
+                      <div className="aspect-square overflow-hidden rounded-lg bg-muted opacity-60">
+                        {user?.avatar_url ? (
+                          <img
+                            src={user.avatar_url}
+                            alt={user.full_name || 'Користувач'}
+                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-xl sm:text-2xl md:text-3xl font-medium text-muted-foreground">
+                            {getInitials(user?.full_name)}
+                          </div>
+                        )}
+                      </div>
+                      <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-medium truncate text-center text-muted-foreground">
+                        {user?.full_name || 'Користувач'}
+                      </p>
+                    </Link>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuItem
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setUnblockTarget({ id: user!.id!, name: user?.full_name || 'Користувач' });
+                      }}
+                    >
+                      <ShieldOff className="mr-2 h-4 w-4" />
+                      Розблокувати
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">Немає заблокованих користувачів</p>
+          )}
         </CardContent>
       </Card>
 
