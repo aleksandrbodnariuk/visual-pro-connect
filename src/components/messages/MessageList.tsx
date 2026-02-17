@@ -153,45 +153,9 @@ export function MessageList({
                 key={message.id}
                 className={`flex ${message.isSender ? "justify-end" : "justify-start"}`}
               >
-                <div className={`flex items-start gap-1 group ${message.isSender ? "flex-row-reverse" : ""}`}>
-                  <div className="flex flex-col">
-                    <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                        message.isSender
-                          ? "bg-gradient-purple text-white"
-                          : "bg-muted"
-                      }`}
-                    >
-                      {message.attachmentUrl && message.attachmentType === 'image' && (
-                        <img 
-                          src={message.attachmentUrl} 
-                          alt="Вкладення" 
-                          className="max-w-[200px] rounded-lg cursor-pointer mb-2 hover:opacity-90 transition-opacity"
-                          onClick={() => setZoomedImage(message.attachmentUrl!)}
-                        />
-                      )}
-                      
-                      {message.text && <p className="text-sm">{message.text}</p>}
-                      
-                      <div className={`mt-1 flex items-center gap-1 text-xs ${
-                        message.isSender ? "justify-end text-white/70" : "text-muted-foreground"
-                      }`}>
-                        {message.isEdited && (
-                          <span className="italic">(редаговано)</span>
-                        )}
-                        <span>{message.timestamp}</span>
-                      </div>
-                    </div>
-                    
-                    {/* Reactions display */}
-                    <MessageReactions
-                      reactions={reactions[message.id] || []}
-                      onToggle={(emoji) => handleReaction(message.id, emoji)}
-                    />
-                  </div>
-                  
-                  {/* Action buttons */}
-                  <div className={`flex items-center gap-0.5 ${message.isSender ? "flex-row-reverse" : ""}`}>
+                <div className={`relative group max-w-[80%]`}>
+                  {/* Reaction picker - appears above message */}
+                  <div className={`absolute -top-8 z-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 ${message.isSender ? "right-0" : "left-0"}`}>
                     <MessageReactionPicker
                       onSelect={(emoji) => handleReaction(message.id, emoji)}
                       existingReaction={getOwnReaction(message.id)}
@@ -205,6 +169,40 @@ export function MessageList({
                       />
                     )}
                   </div>
+
+                  <div
+                    className={`rounded-2xl px-4 py-2 ${
+                      message.isSender
+                        ? "bg-gradient-purple text-white"
+                        : "bg-muted"
+                    }`}
+                  >
+                    {message.attachmentUrl && message.attachmentType === 'image' && (
+                      <img 
+                        src={message.attachmentUrl} 
+                        alt="Вкладення" 
+                        className="max-w-[200px] rounded-lg cursor-pointer mb-2 hover:opacity-90 transition-opacity"
+                        onClick={() => setZoomedImage(message.attachmentUrl!)}
+                      />
+                    )}
+                    
+                    {message.text && <p className="text-sm">{message.text}</p>}
+                    
+                    <div className={`mt-1 flex items-center gap-1 text-xs ${
+                      message.isSender ? "justify-end text-white/70" : "text-muted-foreground"
+                    }`}>
+                      {message.isEdited && (
+                        <span className="italic">(редаговано)</span>
+                      )}
+                      <span>{message.timestamp}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Reactions display */}
+                  <MessageReactions
+                    reactions={reactions[message.id] || []}
+                    onToggle={(emoji) => handleReaction(message.id, emoji)}
+                  />
                 </div>
               </div>
             ))
