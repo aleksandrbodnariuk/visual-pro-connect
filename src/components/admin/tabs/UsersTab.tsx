@@ -313,81 +313,89 @@ export function UsersTab() {
 
   const changeUserRole = async (userId: string, newRole: string) => {
     try {
-      const updates: any = { role: newRole };
-      
-      if (newRole === "Адміністратор") {
-        updates.is_admin = true;
-      } else {
-        updates.is_admin = false;
-      }
-      
-      if (newRole === "Акціонер" || newRole === "Адміністратор") {
-        updates.is_shareholder = true;
-      } else {
-        updates.is_shareholder = false;
-      }
+      // Map UI role names to DB values
+      const roleMap: Record<string, string[]> = {
+        "Учасник": ["user"],
+        "Акціонер": ["user", "shareholder"],
+        "Модератор": ["user", "moderator"],
+        "Адміністратор": ["user", "admin"],
+      };
 
-      // 1. Оновлюємо таблицю users
+      const targetRoles = roleMap[newRole] || ["user"];
+      const isAdmin = targetRoles.includes("admin");
+      const isShareholder = targetRoles.includes("shareholder");
+
+      // 1. Update is_admin and is_shareholder flags on users table (no 'role' column exists)
       const { error: usersError } = await supabase
         .from('users')
-        .update(updates)
+        .update({ is_admin: isAdmin, is_shareholder: isShareholder })
         .eq('id', userId);
 
       if (usersError) {
-        console.error("Помилка оновлення ролі в Supabase:", usersError);
+        console.error("Помилка оновлення користувача:", usersError);
         toast.error("Не вдалося зберегти роль");
         return;
       }
-      
-      // 2. Синхронізуємо з таблицею user_roles для статусу акціонера
-      if (updates.is_shareholder) {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .upsert(
-            { user_id: userId, role: 'shareholder' as const },
-            { onConflict: 'user_id,role' }
-          );
-        
-        if (roleError) {
-          console.error("Помилка додавання ролі shareholder:", roleError);
-        }
-      } else {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', userId)
-          .eq('role', 'shareholder');
-        
-        if (roleError) {
-          console.error("Помилка видалення ролі shareholder:", roleError);
-        }
+
+      // 2. Replace roles in user_roles table: delete non-founder roles, then insert new ones
+      // Keep 'founder' role if it exists
+      const existingRoles = userRoles[userId] || [];
+      const hasFounder = existingRoles.includes('founder');
+
+      // Delete all non-founder roles
+      const { error: deleteError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId)
+        .neq('role', 'founder');
+
+      if (deleteError) {
+        console.error("Помилка видалення старих ролей:", deleteError);
       }
 
-      const updatedUsers = users.map(user => 
-        user.id === userId 
-          ? { 
-              ...user, 
-              role: newRole,
-              is_admin: updates.is_admin,
-              isAdmin: updates.is_admin,
-              is_shareholder: updates.is_shareholder,
-              isShareHolder: updates.is_shareholder
+      // Insert new roles
+      const rolesToInsert = targetRoles.map(role => ({
+        user_id: userId,
+        role: role as any,
+      }));
+
+      const { error: insertError } = await supabase
+        .from('user_roles')
+        .upsert(rolesToInsert, { onConflict: 'user_id,role' });
+
+      if (insertError) {
+        console.error("Помилка додавання нових ролей:", insertError);
+        toast.error("Помилка збереження ролей");
+        return;
+      }
+
+      // 3. Update local state
+      const updatedUsers = users.map(user =>
+        user.id === userId
+          ? {
+              ...user,
+              is_admin: isAdmin,
+              isAdmin: isAdmin,
+              is_shareholder: isShareholder,
+              isShareHolder: isShareholder,
             }
           : user
       );
-      
+
       setUsers(updatedUsers);
       localStorage.setItem('users', JSON.stringify(updatedUsers));
-      
-      // Відправляємо подію для оновлення статистики
-      const statusUpdateEvent = new CustomEvent('shareholder-status-updated', { 
-        detail: { 
-          userId: userId,
-          isShareHolder: updates.is_shareholder 
-        }
-      });
-      window.dispatchEvent(statusUpdateEvent);
-      
+
+      // Update local roles state
+      setUserRoles(prev => ({
+        ...prev,
+        [userId]: hasFounder ? ['founder', ...targetRoles] : targetRoles,
+      }));
+
+      // Dispatch event for stats update
+      window.dispatchEvent(new CustomEvent('shareholder-status-updated', {
+        detail: { userId, isShareHolder: isShareholder }
+      }));
+
       toast.success(`Роль змінено на "${newRole}"`);
     } catch (error) {
       console.error("Помилка зміни ролі:", error);
