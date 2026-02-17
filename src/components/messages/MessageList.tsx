@@ -1,5 +1,8 @@
-import { ReactNode, useState, useRef, useEffect } from "react";
+import { ReactNode, useState, useRef, useEffect, useCallback } from "react";
 import { MessageActions } from "./MessageActions";
+import { MessageReactionPicker } from "./MessageReactionPicker";
+import { MessageReactions } from "./MessageReactions";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +19,12 @@ interface Message {
   attachmentType?: string;
 }
 
+interface ReactionData {
+  emoji: string;
+  users: string[];
+  isOwn: boolean;
+}
+
 interface MessageListProps {
   messages: Message[];
   emptyStateMessage?: ReactNode;
@@ -30,8 +39,94 @@ export function MessageList({
   onDeleteMessage 
 }: MessageListProps) {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [reactions, setReactions] = useState<Record<string, ReactionData[]>>({});
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Get current user
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setCurrentUserId(data.session?.user?.id || null);
+    });
+  }, []);
+
+  // Fetch reactions for visible messages
+  const fetchReactions = useCallback(async () => {
+    if (messages.length === 0 || !currentUserId) return;
+    
+    const messageIds = messages.map(m => m.id);
+    
+    const { data, error } = await supabase
+      .from('message_reactions')
+      .select('id, message_id, user_id, reaction_type')
+      .in('message_id', messageIds);
+
+    if (error || !data) return;
+
+    const grouped: Record<string, ReactionData[]> = {};
+    
+    // Group by message, then by emoji
+    const byMessage: Record<string, Record<string, string[]>> = {};
+    data.forEach(r => {
+      if (!byMessage[r.message_id]) byMessage[r.message_id] = {};
+      if (!byMessage[r.message_id][r.reaction_type]) byMessage[r.message_id][r.reaction_type] = [];
+      byMessage[r.message_id][r.reaction_type].push(r.user_id);
+    });
+
+    Object.entries(byMessage).forEach(([msgId, emojis]) => {
+      grouped[msgId] = Object.entries(emojis).map(([emoji, users]) => ({
+        emoji,
+        users,
+        isOwn: users.includes(currentUserId),
+      }));
+    });
+
+    setReactions(grouped);
+  }, [messages, currentUserId]);
+
+  useEffect(() => {
+    fetchReactions();
+  }, [fetchReactions]);
+
+  const handleReaction = async (messageId: string, emoji: string) => {
+    if (!currentUserId) return;
+
+    // Check if user already reacted to this message
+    const { data: existing } = await supabase
+      .from('message_reactions')
+      .select('id, reaction_type')
+      .eq('message_id', messageId)
+      .eq('user_id', currentUserId)
+      .maybeSingle();
+
+    if (existing) {
+      if (existing.reaction_type === emoji) {
+        // Remove reaction (toggle off)
+        await supabase.from('message_reactions').delete().eq('id', existing.id);
+      } else {
+        // Update to new emoji
+        await supabase.from('message_reactions').update({ reaction_type: emoji }).eq('id', existing.id);
+      }
+    } else {
+      // Insert new reaction
+      await supabase.from('message_reactions').insert({
+        message_id: messageId,
+        user_id: currentUserId,
+        reaction_type: emoji,
+      });
+    }
+
+    await fetchReactions();
+  };
+
+  // Get user's own reaction for a message
+  const getOwnReaction = (messageId: string): string | null => {
+    const msgReactions = reactions[messageId];
+    if (!msgReactions || !currentUserId) return null;
+    const own = msgReactions.find(r => r.isOwn);
+    return own?.emoji || null;
+  };
 
   // Auto-scroll to bottom when new messages arrive (only if near bottom)
   useEffect(() => {
@@ -59,41 +154,57 @@ export function MessageList({
                 className={`flex ${message.isSender ? "justify-end" : "justify-start"}`}
               >
                 <div className={`flex items-start gap-1 group ${message.isSender ? "flex-row-reverse" : ""}`}>
-                  <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                      message.isSender
-                        ? "bg-gradient-purple text-white"
-                        : "bg-muted"
-                    }`}
-                  >
-                    {message.attachmentUrl && message.attachmentType === 'image' && (
-                      <img 
-                        src={message.attachmentUrl} 
-                        alt="Вкладення" 
-                        className="max-w-[200px] rounded-lg cursor-pointer mb-2 hover:opacity-90 transition-opacity"
-                        onClick={() => setZoomedImage(message.attachmentUrl!)}
+                  <div className="flex flex-col">
+                    <div
+                      className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                        message.isSender
+                          ? "bg-gradient-purple text-white"
+                          : "bg-muted"
+                      }`}
+                    >
+                      {message.attachmentUrl && message.attachmentType === 'image' && (
+                        <img 
+                          src={message.attachmentUrl} 
+                          alt="Вкладення" 
+                          className="max-w-[200px] rounded-lg cursor-pointer mb-2 hover:opacity-90 transition-opacity"
+                          onClick={() => setZoomedImage(message.attachmentUrl!)}
+                        />
+                      )}
+                      
+                      {message.text && <p className="text-sm">{message.text}</p>}
+                      
+                      <div className={`mt-1 flex items-center gap-1 text-xs ${
+                        message.isSender ? "justify-end text-white/70" : "text-muted-foreground"
+                      }`}>
+                        {message.isEdited && (
+                          <span className="italic">(редаговано)</span>
+                        )}
+                        <span>{message.timestamp}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Reactions display */}
+                    <MessageReactions
+                      reactions={reactions[message.id] || []}
+                      onToggle={(emoji) => handleReaction(message.id, emoji)}
+                    />
+                  </div>
+                  
+                  {/* Action buttons */}
+                  <div className={`flex items-center gap-0.5 ${message.isSender ? "flex-row-reverse" : ""}`}>
+                    <MessageReactionPicker
+                      onSelect={(emoji) => handleReaction(message.id, emoji)}
+                      existingReaction={getOwnReaction(message.id)}
+                    />
+                    {message.isSender && onEditMessage && onDeleteMessage && (
+                      <MessageActions
+                        messageId={message.id}
+                        messageText={message.text}
+                        onEdit={onEditMessage}
+                        onDelete={onDeleteMessage}
                       />
                     )}
-                    
-                    {message.text && <p className="text-sm">{message.text}</p>}
-                    
-                    <div className={`mt-1 flex items-center gap-1 text-xs ${
-                      message.isSender ? "justify-end text-white/70" : "text-muted-foreground"
-                    }`}>
-                      {message.isEdited && (
-                        <span className="italic">(редаговано)</span>
-                      )}
-                      <span>{message.timestamp}</span>
-                    </div>
                   </div>
-                  {message.isSender && onEditMessage && onDeleteMessage && (
-                    <MessageActions
-                      messageId={message.id}
-                      messageText={message.text}
-                      onEdit={onEditMessage}
-                      onDelete={onDeleteMessage}
-                    />
-                  )}
                 </div>
               </div>
             ))
