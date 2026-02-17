@@ -249,6 +249,39 @@ export function useFriendActions() {
     }
   };
 
+  const unblockUser = async (userId: string) => {
+    setIsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Потрібно авторизуватися");
+        return false;
+      }
+
+      const { error } = await supabase
+        .from('friend_requests')
+        .delete()
+        .eq('sender_id', user.id)
+        .eq('receiver_id', userId)
+        .eq('status', 'blocked');
+
+      if (error) {
+        if (import.meta.env.DEV) console.error("Error unblocking user:", error);
+        toast.error("Не вдалося розблокувати користувача");
+        return false;
+      }
+
+      toast.success("Користувача розблоковано");
+      return true;
+    } catch (error) {
+      if (import.meta.env.DEV) console.error("Error unblocking user:", error);
+      toast.error("Помилка розблокування");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     sendFriendRequest,
     acceptFriendRequest,
@@ -256,6 +289,7 @@ export function useFriendActions() {
     respondToFriendRequest,
     removeFriend,
     blockUser,
+    unblockUser,
     isLoading
   };
 }

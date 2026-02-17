@@ -11,6 +11,7 @@ export function useFriendRequests() {
     setFriendRequests,
     friends,
     setFriends,
+    blockedUsers,
     isLoading,
     refreshFriendRequests
   } = useFetchFriends();
@@ -21,7 +22,8 @@ export function useFriendRequests() {
     rejectFriendRequest,
     respondToFriendRequest,
     removeFriend,
-    blockUser
+    blockUser,
+    unblockUser
   } = useFriendActions();
 
   const {
@@ -38,6 +40,7 @@ export function useFriendRequests() {
   return {
     friendRequests,
     friends,
+    blockedUsers,
     isLoading,
     refreshFriendRequests,
     sendFriendRequest,
@@ -46,6 +49,7 @@ export function useFriendRequests() {
     respondToFriendRequest,
     removeFriend,
     blockUser,
+    unblockUser,
     checkFriendshipStatus
   };
 }
