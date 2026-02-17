@@ -189,16 +189,19 @@ export default function Messages() {
   useEffect(() => {
     const handleNewMessage = async () => {
       const currentActiveChat = activeChatRef.current;
+      const myId = currentUserRef.current?.id;
+      
+      // Якщо чат відкритий — спочатку позначаємо як прочитані, потім оновлюємо списки
+      if (currentActiveChat && myId) {
+        await MessagesService.markMessagesAsRead(myId, currentActiveChat.user.id);
+        window.dispatchEvent(new CustomEvent('messages-read'));
+      }
+      
       await reloadActiveChat();
       await reloadChatList();
+      
       if (!currentActiveChat) {
         playNotificationSound();
-      } else {
-        const myId = currentUserRef.current?.id;
-        if (myId) {
-          await MessagesService.markMessagesAsRead(myId, currentActiveChat.user.id);
-          window.dispatchEvent(new CustomEvent('messages-read'));
-        }
       }
     };
 
@@ -243,6 +246,8 @@ export default function Messages() {
       if (uid && chatUserId) {
         await MessagesService.markMessagesAsRead(uid, chatUserId);
         window.dispatchEvent(new CustomEvent('messages-read'));
+        // Оновлюємо список чатів щоб прибрати бейдж непрочитаних
+        await reloadChatList();
       }
     }, 3000);
 
