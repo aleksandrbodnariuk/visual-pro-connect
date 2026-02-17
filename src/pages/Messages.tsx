@@ -185,80 +185,53 @@ export default function Messages() {
     }
   }, []);
 
-  // Realtime підписка на нові повідомлення — перезавантаження з БД при будь-якій зміні
+  // Realtime підписка — ДВА окремі канали для receiver та sender
   useEffect(() => {
     if (!currentUser?.id) return;
 
-    const channelId = `messages-page-${currentUser.id}-${Math.random().toString(36).substring(7)}`;
+    const uid = currentUser.id;
+    const suffix = Math.random().toString(36).substring(7);
 
-    const handleChange = async (payload: any) => {
-      const eventType = payload.eventType;
-      const newRecord = payload.new as any;
-      const oldRecord = payload.old as any;
-      
-      const uid = currentUserRef.current?.id;
-      if (!uid) return;
-      
-      const currentActiveChat = activeChatRef.current;
-
-      if (eventType === 'INSERT' && newRecord) {
-        // Нове повідомлення — завжди перезавантажуємо активний чат якщо відповідає
-        const isForMe = newRecord.receiver_id === uid;
-        const isFromMe = newRecord.sender_id === uid;
-        
-        if (isForMe) {
-          if (currentActiveChat && currentActiveChat.user.id === newRecord.sender_id) {
-            // Повідомлення від активного чату — перезавантажуємо і позначаємо як прочитане
-            await reloadActiveChat();
-            await MessagesService.markMessagesAsRead(uid, newRecord.sender_id);
-            window.dispatchEvent(new CustomEvent('messages-read'));
-          } else {
-            playNotificationSound();
-          }
-          // Оновлюємо список чатів
-          await reloadChatList();
-        } else if (isFromMe && currentActiveChat && currentActiveChat.user.id === newRecord.receiver_id) {
-          // Моє відправлене повідомлення (з іншої вкладки) — теж перезавантажуємо
-          await reloadActiveChat();
-          await reloadChatList();
-        }
-      } else if (eventType === 'UPDATE') {
-        await reloadActiveChat();
-      } else if (eventType === 'DELETE') {
-        if (oldRecord?.id) {
-          setMessages(prev => prev.filter(msg => msg.id !== oldRecord.id));
-        }
+    // Канал 1: повідомлення ДЛЯ мене
+    const recvChannel = supabase
+      .channel(`msg-recv-${uid}-${suffix}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'messages',
+        filter: `receiver_id=eq.${uid}`
+      }, async () => {
+        const currentActiveChat = activeChatRef.current;
         await reloadActiveChat();
         await reloadChatList();
-      }
-    };
+        // Звук тільки якщо повідомлення не для активного чату
+        // (спрощено — завжди перезавантажуємо, звук якщо немає активного чату)
+        if (!currentActiveChat) {
+          playNotificationSound();
+        } else {
+          // Позначаємо як прочитане
+          const myId = currentUserRef.current?.id;
+          if (myId) {
+            await MessagesService.markMessagesAsRead(myId, currentActiveChat.user.id);
+            window.dispatchEvent(new CustomEvent('messages-read'));
+          }
+        }
+      })
+      .subscribe();
 
-    const channel = supabase
-      .channel(channelId)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${currentUser.id}`,
-        },
-        handleChange
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `sender_id=eq.${currentUser.id}`,
-        },
-        handleChange
-      )
+    // Канал 2: повідомлення ВІД мене (інша вкладка)
+    const sendChannel = supabase
+      .channel(`msg-send-${uid}-${suffix}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'messages',
+        filter: `sender_id=eq.${uid}`
+      }, async () => {
+        await reloadActiveChat();
+        await reloadChatList();
+      })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(recvChannel);
+      supabase.removeChannel(sendChannel);
     };
   }, [currentUser?.id, reloadActiveChat]);
 

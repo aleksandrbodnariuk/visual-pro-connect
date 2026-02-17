@@ -42,8 +42,9 @@ export function NewsFeed() {
 
   // Realtime підписка на нові/видалені пости
   useEffect(() => {
+    const channelName = `realtime_posts_feed_${Math.random().toString(36).substring(7)}`;
     const channel = supabase
-      .channel('realtime_posts_feed')
+      .channel(channelName)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'posts'
       }, () => {

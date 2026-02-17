@@ -111,8 +111,9 @@ export function PostCard({
 
   // Realtime підписка на коментарі
   useEffect(() => {
+    const channelName = `realtime_comments_${id}_${Math.random().toString(36).substring(7)}`;
     const channel = supabase
-      .channel(`realtime_comments_${id}`)
+      .channel(channelName)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'comments',
         filter: `post_id=eq.${id}`

@@ -54,8 +54,9 @@ export function usePostLikes(postId: string, initialLikesCount: number) {
 
   // Підписка на зміни лайків
   useEffect(() => {
+    const channelName = `post_likes_${postId}_${Math.random().toString(36).substring(7)}`;
     const channel = supabase
-      .channel(`post_likes_${postId}`)
+      .channel(channelName)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'post_likes',
         filter: `post_id=eq.${postId}`
