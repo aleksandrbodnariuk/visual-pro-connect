@@ -336,7 +336,7 @@ export default function Messages() {
             </div>
             
             {/* Вікно чату - показувати тільки коли є activeChat на мобільному */}
-            <div className={`flex h-[calc(100vh-8rem)] md:h-[80vh] flex-col md:col-span-2 lg:col-span-3 pb-16 md:pb-0 ${!activeChat ? 'hidden md:flex' : 'flex'}`}>
+            <div className={`flex h-[calc(100vh-8rem)] md:h-[calc(100vh-6rem)] flex-col md:col-span-2 lg:col-span-3 pb-16 md:pb-0 ${!activeChat ? 'hidden md:flex' : 'flex'}`}>
               {activeChat ? (
                 <>
                   <ChatHeader user={activeChat.user} onBack={handleBackToList} />
