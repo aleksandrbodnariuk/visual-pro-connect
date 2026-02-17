@@ -332,6 +332,36 @@ export class MessagesService {
     }
   }
 
+  static async deleteChat(userId: string, chatUserId: string): Promise<boolean> {
+    try {
+      // Delete all messages between the two users (only ones the current user can delete via RLS)
+      const { error: error1 } = await supabase
+        .from('messages')
+        .delete()
+        .eq('sender_id', userId)
+        .eq('receiver_id', chatUserId);
+
+      const { error: error2 } = await supabase
+        .from('messages')
+        .delete()
+        .eq('sender_id', chatUserId)
+        .eq('receiver_id', userId);
+
+      if (error1 || error2) {
+        if (import.meta.env.DEV) console.error("Помилка при видаленні чату:", error1 || error2);
+        toast.error("Не вдалося видалити чат");
+        return false;
+      }
+
+      toast.success("Чат видалено");
+      return true;
+    } catch (err) {
+      if (import.meta.env.DEV) console.error("Помилка при видаленні чату:", err);
+      toast.error("Помилка видалення чату");
+      return false;
+    }
+  }
+
   static async markMessagesAsRead(userId: string, chatUserId: string): Promise<boolean> {
     try {
       const { error } = await supabase

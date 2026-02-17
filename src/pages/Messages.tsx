@@ -155,6 +155,19 @@ export default function Messages() {
     setActiveChat(null);
   };
 
+  // Видалення чату
+  const handleDeleteChat = async (chat: ChatItem) => {
+    if (!currentUser) return;
+    const success = await MessagesService.deleteChat(currentUser.id, chat.user.id);
+    if (success) {
+      setChats(prev => prev.filter(c => c.id !== chat.id));
+      if (activeChat?.id === chat.id) {
+        setActiveChat(null);
+        setMessages([]);
+      }
+    }
+  };
+
   // Функція перезавантаження повідомлень активного чату з БД
   const reloadActiveChat = useCallback(async () => {
     const uid = currentUserRef.current?.id;
@@ -331,7 +344,8 @@ export default function Messages() {
               <ChatList 
                 chats={chats} 
                 activeChat={activeChat} 
-                onSelectChat={selectChat} 
+                onSelectChat={selectChat}
+                onDeleteChat={handleDeleteChat}
               />
             </div>
             
