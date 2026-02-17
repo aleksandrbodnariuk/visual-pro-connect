@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Image, Video, Users, Send, X, Pencil } from "lucide-react";
+import { Image, Video, Users, Send, X, Pencil, Music } from "lucide-react";
+import { AudioPlayer } from "./AudioPlayer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "./PostCard";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +30,7 @@ export function NewsFeed() {
   const [isUploading, setIsUploading] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
   const [showImageEditor, setShowImageEditor] = useState(false);
   const [originalImageSrc, setOriginalImageSrc] = useState<string | null>(null);
 
@@ -124,12 +126,17 @@ export function NewsFeed() {
   };
 
   // Обробник вибору файлу
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video' | 'audio' = 'image') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Валідація типу файлу
-    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+    if (type === 'audio') {
+      if (!file.type.startsWith('audio/')) {
+        toast({ title: 'Підтримуються лише аудіо файли', variant: 'destructive' });
+        return;
+      }
+    } else if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
       toast({ title: 'Підтримуються лише зображення та відео', variant: 'destructive' });
       return;
     }
@@ -141,8 +148,10 @@ export function NewsFeed() {
       return;
     }
 
-    if (file.type.startsWith('image/')) {
-      // Open image editor for images
+    if (type === 'audio') {
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    } else if (file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = (event) => {
         setOriginalImageSrc(event.target?.result as string);
@@ -150,7 +159,6 @@ export function NewsFeed() {
       };
       reader.readAsDataURL(file);
     } else {
-      // Videos: set directly
       setSelectedFile(file);
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -158,6 +166,9 @@ export function NewsFeed() {
       };
       reader.readAsDataURL(file);
     }
+    
+    // Reset input
+    if (e.target) e.target.value = '';
   };
 
   const handleCropComplete = async (croppedDataUrl: string) => {
@@ -187,10 +198,14 @@ export function NewsFeed() {
 
   // Видалення вибраного файлу
   const removeFile = () => {
+    if (previewUrl && selectedFile?.type.startsWith('audio/')) {
+      URL.revokeObjectURL(previewUrl);
+    }
     setSelectedFile(null);
     setPreviewUrl(null);
     if (imageInputRef.current) imageInputRef.current.value = '';
     if (videoInputRef.current) videoInputRef.current.value = '';
+    if (audioInputRef.current) audioInputRef.current.value = '';
   };
 
   // Обробник кнопки "Подія"
@@ -313,7 +328,14 @@ export function NewsFeed() {
       return false;
     }
     
-    // Інші категорії (музика, події) - за збереженою категорією
+    // Фільтр "Музика" - пости з аудіо файлами
+    if (activeCategory === "music") {
+      if (!post.media_url) return false;
+      const audioExtensions = ['.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a', '.wma'];
+      return audioExtensions.some(ext => post.media_url?.toLowerCase().includes(ext));
+    }
+    
+    // Інші категорії - за збереженою категорією
     return post.category === activeCategory;
   });
 
@@ -342,14 +364,21 @@ export function NewsFeed() {
             ref={imageInputRef}
             type="file"
             accept="image/*"
-            onChange={handleFileSelect}
+            onChange={(e) => handleFileSelect(e, 'image')}
             className="hidden"
           />
           <input
             ref={videoInputRef}
             type="file"
             accept="video/*"
-            onChange={handleFileSelect}
+            onChange={(e) => handleFileSelect(e, 'video')}
+            className="hidden"
+          />
+          <input
+            ref={audioInputRef}
+            type="file"
+            accept="audio/*,.mp3,.wav,.ogg,.flac,.aac,.m4a"
+            onChange={(e) => handleFileSelect(e, 'audio')}
             className="hidden"
           />
 
@@ -389,6 +418,15 @@ export function NewsFeed() {
             <Button 
               variant="ghost" 
               size="icon"
+              onClick={() => audioInputRef.current?.click()}
+              className="shrink-0 hover:bg-accent/50"
+              title="Додати музику"
+            >
+              <Music className="h-5 w-5 text-accent-foreground" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon"
               onClick={handleEventClick}
               className="shrink-0 hover:bg-blue-50"
               title="Створити подію"
@@ -400,7 +438,11 @@ export function NewsFeed() {
           {/* Превʼю вибраного файлу */}
           {previewUrl && selectedFile && (
             <div className="mt-3 relative rounded-lg overflow-hidden border bg-muted/30">
-              {selectedFile.type.startsWith('image/') ? (
+              {selectedFile.type.startsWith('audio/') ? (
+                <div className="p-2">
+                  <AudioPlayer src={previewUrl} title={selectedFile.name.replace(/\.[^.]+$/, '')} />
+                </div>
+              ) : selectedFile.type.startsWith('image/') ? (
                 <>
                   <img 
                     src={previewUrl} 
