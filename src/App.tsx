@@ -22,6 +22,7 @@ import Friends from "./pages/Friends";
 import Admin from "./pages/Admin";
 import StockMarket from "./pages/StockMarket";
 import Post from "./pages/Post";
+import MyFiles from "./pages/MyFiles";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,8 @@ const AppContent = () => {
         <Route path="/admin/:tabName" element={<Admin />} />
         <Route path="/stock-market" element={<StockMarket />} />
         <Route path="/post/:postId" element={<Post />} />
+        <Route path="/my-files" element={<MyFiles />} />
+        <Route path="/my-files/:type" element={<MyFiles />} />
         <Route path="/category/:categoryId" element={<Search />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
