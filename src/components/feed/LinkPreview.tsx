@@ -95,13 +95,12 @@ export function LinkPreview({ url }: LinkPreviewProps) {
     >
       {/* Image */}
       {preview.image && (
-        <div className="relative aspect-[1.91/1] overflow-hidden bg-muted">
+        <div className="relative overflow-hidden bg-muted">
           <img
             src={preview.image}
             alt={preview.title || 'Link preview'}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full max-h-[400px] object-contain group-hover:scale-105 transition-transform duration-300"
             onError={(e) => {
-              // Hide broken images
               (e.target as HTMLImageElement).style.display = 'none';
             }}
           />
