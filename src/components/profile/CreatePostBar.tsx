@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Video, Image, Users, X, Loader2, Edit2 } from "lucide-react";
+import { Video, Image, Users, X, Loader2, Edit2, Music } from "lucide-react";
+import { AudioPlayer } from "@/components/feed/AudioPlayer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { compressImageAsFile, dataUrlToBlob } from "@/lib/imageCompression";
@@ -28,6 +29,7 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
   
   const photoInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoClick = () => {
     photoInputRef.current?.click();
@@ -37,7 +39,11 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
     videoInputRef.current?.click();
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'photo' | 'video') => {
+  const handleAudioClick = () => {
+    audioInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'photo' | 'video' | 'audio') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -56,13 +62,16 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
       };
       reader.readAsDataURL(file);
     } else if (type === 'video') {
-      // Videos are set directly without editing
       setMediaFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setMediaPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    } else if (type === 'audio') {
+      setMediaFile(file);
+      const url = URL.createObjectURL(file);
+      setMediaPreview(url);
     }
     
     // Reset input
@@ -108,10 +117,14 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
   };
 
   const clearMedia = () => {
+    if (mediaPreview && mediaFile?.type.startsWith('audio/')) {
+      URL.revokeObjectURL(mediaPreview);
+    }
     setMediaFile(null);
     setMediaPreview(null);
     if (photoInputRef.current) photoInputRef.current.value = "";
     if (videoInputRef.current) videoInputRef.current.value = "";
+    if (audioInputRef.current) audioInputRef.current.value = "";
   };
 
   const openEditorForCurrentImage = () => {
@@ -234,6 +247,17 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
               variant="ghost"
               size="icon"
               className="h-9 w-9 text-accent-foreground hover:bg-accent"
+              onClick={handleAudioClick}
+              title="Музика"
+            >
+              <Music className="h-5 w-5" />
+            </Button>
+            
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 text-accent-foreground hover:bg-accent"
               title="Подія"
               disabled
             >
@@ -244,38 +268,52 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
 
         {/* Media Preview */}
         {mediaPreview && (
-          <div className="mt-3 relative inline-block">
-            {mediaFile?.type.startsWith('video/') ? (
-              <video 
-                src={mediaPreview} 
-                className="max-h-64 rounded-lg"
-                controls
-              />
-            ) : (
-              <div className="relative group">
-                <img 
-                  src={mediaPreview} 
-                  alt="Preview" 
-                  className="max-h-64 max-w-full rounded-lg object-contain bg-muted/30"
-                />
-                {/* Edit button overlay */}
+          <div className="mt-3 relative">
+            {mediaFile?.type.startsWith('audio/') ? (
+              <div className="relative">
+                <AudioPlayer src={mediaPreview} title={mediaFile.name.replace(/\.[^.]+$/, '')} />
                 <button
                   type="button"
-                  onClick={openEditorForCurrentImage}
-                  className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm text-foreground rounded-full p-2 shadow-md hover:bg-background transition-colors opacity-0 group-hover:opacity-100"
-                  title="Редагувати зображення"
+                  onClick={clearMedia}
+                  className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90 z-10"
                 >
-                  <Edit2 className="h-4 w-4" />
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="relative inline-block">
+                {mediaFile?.type.startsWith('video/') ? (
+                  <video 
+                    src={mediaPreview} 
+                    className="max-h-64 rounded-lg"
+                    controls
+                  />
+                ) : (
+                  <div className="relative group">
+                    <img 
+                      src={mediaPreview} 
+                      alt="Preview" 
+                      className="max-h-64 max-w-full rounded-lg object-contain bg-muted/30"
+                    />
+                    <button
+                      type="button"
+                      onClick={openEditorForCurrentImage}
+                      className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm text-foreground rounded-full p-2 shadow-md hover:bg-background transition-colors opacity-0 group-hover:opacity-100"
+                      title="Редагувати зображення"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={clearMedia}
+                  className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90"
+                >
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             )}
-            <button
-              type="button"
-              onClick={clearMedia}
-              className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
         )}
 
@@ -313,6 +351,13 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
           accept="video/*"
           className="hidden"
           onChange={(e) => handleFileChange(e, 'video')}
+        />
+        <input
+          ref={audioInputRef}
+          type="file"
+          accept="audio/*,.mp3,.wav,.ogg,.flac,.aac,.m4a"
+          className="hidden"
+          onChange={(e) => handleFileChange(e, 'audio')}
         />
       </div>
 

@@ -12,6 +12,7 @@ import { PostMenu } from "@/components/profile/PostMenu";
 import { useAuthState } from "@/hooks/auth/useAuthState";
 import { extractVideoEmbed } from "@/lib/videoEmbed";
 import { VideoPreview } from "./VideoPreview";
+import { AudioPlayer } from "./AudioPlayer";
 import { CommentItem, CommentData } from "./CommentItem";
 import { supabase } from "@/integrations/supabase/client";
 import { ReactionPicker, ReactionType, getReactionEmoji, getReactionColor } from "./ReactionPicker";
@@ -100,6 +101,9 @@ export function PostCard({
   
   // Виявлення вбудованого відео/посилання
   const videoEmbed = extractVideoEmbed(caption);
+  
+  // Перевірка чи media_url є аудіо
+  const isAudioUrl = imageUrl && /\.(mp3|wav|ogg|flac|aac|m4a|wma)(\?|$)/i.test(imageUrl);
   
   // Очищений текст без URL
   const cleanCaption = removeUrls(caption);
@@ -286,8 +290,15 @@ export function PostCard({
         />
       </div>
 
-      {/* Зображення - показуємо тільки якщо є */}
-      {imageUrl && (
+      {/* Аудіо плеєр */}
+      {isAudioUrl && imageUrl && (
+        <div className="px-3 pt-2">
+          <AudioPlayer src={imageUrl} />
+        </div>
+      )}
+
+      {/* Зображення - показуємо тільки якщо є і не аудіо */}
+      {imageUrl && !isAudioUrl && (
         <div className="relative overflow-hidden bg-muted">
           <img
             src={imageUrl}
@@ -298,7 +309,7 @@ export function PostCard({
       )}
 
       {/* Вбудоване відео превʼю - показуємо тільки якщо немає зображення */}
-      {!imageUrl && videoEmbed && (
+      {!imageUrl && !isAudioUrl && videoEmbed && (
         <div className="px-3 pt-2">
           <VideoPreview embed={videoEmbed} />
         </div>
