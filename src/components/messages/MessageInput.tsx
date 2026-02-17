@@ -151,7 +151,8 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
           placeholder="Напишіть повідомлення..."
           className="flex-1"
           value={messageText}
-          onChange={(e) => setMessageText(e.target.value)}
+          onChange={(e) => setMessageText(e.target.value.slice(0, 5000))}
+          maxLength={5000}
           onKeyPress={handleKeyPress}
           disabled={isUploading}
         />
