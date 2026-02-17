@@ -1,8 +1,9 @@
 import { useState, useRef } from "react";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Send, Paperclip, X } from "lucide-react";
 import { EmojiPicker } from "./EmojiPicker";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -16,6 +17,7 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -97,8 +99,9 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !isUploading) {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey && !isUploading) {
+      e.preventDefault();
       handleSendMessage();
     }
   };
@@ -146,14 +149,14 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
           onChange={handleFileSelect}
         />
 
-        <Input
-          type="text"
+        <Textarea
           placeholder="Напишіть повідомлення..."
-          className="flex-1"
+          className="flex-1 min-h-[40px] max-h-[120px] md:min-h-[40px] md:max-h-[40px] resize-none"
+          rows={isMobile ? 3 : 1}
           value={messageText}
           onChange={(e) => setMessageText(e.target.value.slice(0, 5000))}
           maxLength={5000}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyPress}
           disabled={isUploading}
         />
 
