@@ -1,6 +1,6 @@
 
 // Types related to friend requests and friends
-export type FriendRequestStatus = 'pending' | 'accepted' | 'rejected';
+export type FriendRequestStatus = 'pending' | 'accepted' | 'rejected' | 'blocked';
 
 export interface FriendRequest {
   id: string;

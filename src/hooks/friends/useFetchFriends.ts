@@ -5,6 +5,7 @@ import { FriendRequest, Friend, FriendRequestStatus } from './types';
 export function useFetchFriends() {
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
+  const [blockedUsers, setBlockedUsers] = useState<Friend[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -58,6 +59,7 @@ export function useFetchFriends() {
         console.log("📋 No friend requests found");
         setFriendRequests([]);
         setFriends([]);
+        setBlockedUsers([]);
         return;
       }
       
@@ -106,6 +108,15 @@ export function useFetchFriends() {
         
       setFriends(friendsList as Friend[]);
       console.log("✅ Friends list:", friendsList);
+
+      // Extract blocked users
+      const blockedList = typedRequests
+        .filter(request => request.status === 'blocked' && request.sender_id === userId)
+        .map(request => request.receiver)
+        .filter(user => user !== null);
+      
+      setBlockedUsers(blockedList as Friend[]);
+      console.log("🚫 Blocked users:", blockedList);
     } catch (error) {
       console.error('❌ Error in refreshFriendRequests:', error);
     } finally {
@@ -155,6 +166,7 @@ export function useFetchFriends() {
     setFriendRequests,
     friends,
     setFriends,
+    blockedUsers,
     isLoading,
     refreshFriendRequests
   };
