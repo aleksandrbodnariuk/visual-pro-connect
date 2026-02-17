@@ -3,20 +3,34 @@ import { Button } from "@/components/ui/button";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Trash2, Ban } from "lucide-react";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function FriendsList({ userId }: { userId?: string }) {
-  const { friends, refreshFriendRequests } = useFriendRequests();
+  const { friends, refreshFriendRequests, removeFriend, blockUser } = useFriendRequests();
   const [isLoading, setIsLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [blockTarget, setBlockTarget] = useState<{ id: string; name: string } | null>(null);
   
   useEffect(() => {
     const loadFriendData = async () => {
       setIsLoading(true);
-      
-      // Timeout 15 секунд для запиту друзів
-      const timeout = setTimeout(() => {
-        setIsLoading(false);
-      }, 15000);
-      
+      const timeout = setTimeout(() => setIsLoading(false), 15000);
       try {
         await refreshFriendRequests();
       } catch (error) {
@@ -26,7 +40,6 @@ export function FriendsList({ userId }: { userId?: string }) {
         setIsLoading(false);
       }
     };
-    
     loadFriendData();
   }, [userId, refreshFriendRequests]);
   
@@ -41,8 +54,21 @@ export function FriendsList({ userId }: { userId?: string }) {
     return name.charAt(0);
   };
 
-  // Показуємо максимум 9 друзів у сітці
   const displayedFriends = friendsList.slice(0, 9);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const success = await removeFriend(deleteTarget.id);
+    if (success) await refreshFriendRequests();
+    setDeleteTarget(null);
+  };
+
+  const handleBlock = async () => {
+    if (!blockTarget) return;
+    const success = await blockUser(blockTarget.id);
+    if (success) await refreshFriendRequests();
+    setBlockTarget(null);
+  };
 
   if (isLoading) {
     return (
@@ -57,52 +83,120 @@ export function FriendsList({ userId }: { userId?: string }) {
   }
 
   return (
-    <Card>
-      <CardContent className="p-4">
-        {/* Заголовок з кількістю друзів */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="font-semibold text-lg">Друзі</h3>
-            <p className="text-sm text-muted-foreground">{friendsList.length} друзів</p>
+    <>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-semibold text-lg">Друзі</h3>
+              <p className="text-sm text-muted-foreground">{friendsList.length} друзів</p>
+            </div>
+            {friendsList.length > 9 && (
+              <Button variant="link" asChild className="text-primary">
+                <Link to="/friends">Переглянути всіх друзів</Link>
+              </Button>
+            )}
           </div>
-          {friendsList.length > 9 && (
-            <Button variant="link" asChild className="text-primary">
-              <Link to="/friends">Переглянути всіх друзів</Link>
-            </Button>
-          )}
-        </div>
 
-        {friendsList.length > 0 ? (
-          <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-3 gap-2 sm:gap-3">
-            {displayedFriends.map((friend) => (
-              <Link 
-                key={friend?.id}
-                to={`/profile/${friend?.id}`}
-                className="group"
-              >
-                <div className="aspect-square overflow-hidden rounded-lg bg-muted">
-                  {friend?.avatar_url ? (
-                    <img 
-                      src={friend.avatar_url} 
-                      alt={friend.full_name || 'Друг'}
-                      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
-                    />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center text-xl sm:text-2xl md:text-3xl font-medium text-muted-foreground">
-                      {getInitials(friend?.full_name)}
-                    </div>
-                  )}
-                </div>
-                <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-medium truncate text-center">
-                  {friend?.full_name || 'Користувач'}
-                </p>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-center py-6 sm:py-8">Поки що немає друзів</p>
-        )}
-      </CardContent>
-    </Card>
+          {friendsList.length > 0 ? (
+            <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-3 gap-2 sm:gap-3">
+              {displayedFriends.map((friend) => (
+                <ContextMenu key={friend?.id}>
+                  <ContextMenuTrigger asChild>
+                    <Link 
+                      to={`/profile/${friend?.id}`}
+                      className="group"
+                    >
+                      <div className="aspect-square overflow-hidden rounded-lg bg-muted">
+                        {friend?.avatar_url ? (
+                          <img 
+                            src={friend.avatar_url} 
+                            alt={friend.full_name || 'Друг'}
+                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-xl sm:text-2xl md:text-3xl font-medium text-muted-foreground">
+                            {getInitials(friend?.full_name)}
+                          </div>
+                        )}
+                      </div>
+                      <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-medium truncate text-center">
+                        {friend?.full_name || 'Користувач'}
+                      </p>
+                    </Link>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setDeleteTarget({ id: friend!.id, name: friend?.full_name || 'Користувач' });
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Видалити з друзів
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setBlockTarget({ id: friend!.id, name: friend?.full_name || 'Користувач' });
+                      }}
+                    >
+                      <Ban className="mr-2 h-4 w-4" />
+                      Заблокувати
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-6 sm:py-8">Поки що немає друзів</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Видалити з друзів?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ви впевнені, що хочете видалити <strong>{deleteTarget?.name}</strong> зі списку друзів?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Скасувати</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Видалити
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Block confirmation */}
+      <AlertDialog open={!!blockTarget} onOpenChange={(open) => !open && setBlockTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Заблокувати користувача?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ви впевнені, що хочете заблокувати <strong>{blockTarget?.name}</strong>? Цей користувач більше не зможе надсилати вам запити на дружбу.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Скасувати</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBlock}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Заблокувати
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
