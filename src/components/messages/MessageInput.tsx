@@ -151,8 +151,8 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
 
         <Textarea
           placeholder="Напишіть повідомлення..."
-          className="flex-1 min-h-[40px] max-h-[120px] md:min-h-[40px] md:max-h-[40px] resize-none"
-          rows={isMobile ? 3 : 1}
+          className="flex-1 min-h-[40px] max-h-[200px] md:min-h-[40px] md:max-h-[40px] resize-none"
+          rows={isMobile ? 5 : 1}
           value={messageText}
           onChange={(e) => setMessageText(e.target.value.slice(0, 5000))}
           maxLength={5000}
