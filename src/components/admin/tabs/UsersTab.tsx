@@ -501,7 +501,7 @@ export function UsersTab() {
               </div>
               <div>{user.full_name || 'Не вказано'}</div>
               <div>{isValidPhoneNumber(user.phone_number) ? user.phone_number : 'Не вказано'}</div>
-              <UserRole user={user} onRoleChange={changeUserRole} />
+              <UserRole user={user} userRoles={userRoles[user.id]} onRoleChange={changeUserRole} />
               <UserTitle user={user} onTitleChange={changeUserTitle} />
               <ShareholderToggle user={user} onToggleShareholder={toggleShareholderStatus} />
               <SpecialistToggle 
@@ -541,7 +541,7 @@ export function UsersTab() {
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="flex items-center gap-2">
                     <span className="text-muted-foreground">Роль:</span>
-                    <UserRole user={user} onRoleChange={changeUserRole} />
+                    <UserRole user={user} userRoles={userRoles[user.id]} onRoleChange={changeUserRole} />
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-muted-foreground">Титул:</span>
