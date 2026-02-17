@@ -36,15 +36,18 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
     }
 
     setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
+    
+    // Використовуємо FileReader для надійного превʼю
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setPreviewUrl(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const clearFile = () => {
     setSelectedFile(null);
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
-    }
+    setPreviewUrl(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
