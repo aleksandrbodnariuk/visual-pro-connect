@@ -51,7 +51,7 @@ export function MessageReactionPicker({ onSelect, existingReaction }: MessageRea
     >
       <button
         type="button"
-        className="h-6 w-6 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted"
+        className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-muted/50"
         onClick={() => setShowPicker(!showPicker)}
       >
         {existingReaction ? (
@@ -63,17 +63,17 @@ export function MessageReactionPicker({ onSelect, existingReaction }: MessageRea
 
       {showPicker && (
         <div
-          className="absolute bottom-full mb-1 z-50"
+          className="absolute bottom-full left-0 mb-1 z-50"
           onMouseEnter={clearTimer}
           onMouseLeave={scheduleHide}
         >
-          <div className="flex items-center gap-0.5 bg-popover border border-border rounded-full px-2 py-1.5 shadow-lg animate-in fade-in-0 zoom-in-95 duration-200 whitespace-nowrap">
+          <div className="flex items-center gap-0.5 bg-popover border border-border rounded-full px-2 py-1 shadow-lg animate-in fade-in-0 zoom-in-95 duration-200 whitespace-nowrap">
             {MESSAGE_REACTIONS.map((reaction) => (
               <button
                 key={reaction.emoji}
                 onClick={() => handleSelect(reaction.emoji)}
                 className={cn(
-                  "text-xl hover:scale-125 transition-transform duration-150 px-0.5 cursor-pointer",
+                  "text-lg hover:scale-125 transition-transform duration-150 px-0.5 cursor-pointer",
                   existingReaction === reaction.emoji && "scale-125 bg-accent rounded-full"
                 )}
                 title={reaction.label}
