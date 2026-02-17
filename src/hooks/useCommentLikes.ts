@@ -14,8 +14,9 @@ export function useCommentLikes(commentId: string) {
 
   // Realtime підписка на лайки коментарів
   useEffect(() => {
+    const channelName = `realtime_comment_likes_${commentId}_${Math.random().toString(36).substring(7)}`;
     const channel = supabase
-      .channel(`realtime_comment_likes_${commentId}`)
+      .channel(channelName)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'comment_likes',
         filter: `comment_id=eq.${commentId}`
