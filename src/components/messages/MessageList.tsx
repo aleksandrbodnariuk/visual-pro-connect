@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useRef, useEffect } from "react";
 import { MessageActions } from "./MessageActions";
 import {
   Dialog,
@@ -30,10 +30,27 @@ export function MessageList({
   onDeleteMessage 
 }: MessageListProps) {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new messages arrive (only if near bottom)
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+    if (isNearBottom) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages.length]);
+
+  // Scroll to bottom on initial mount
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView();
+  }, []);
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto p-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4">
         <div className="space-y-4">
           {messages.length > 0 ? (
             messages.map((message) => (
@@ -49,7 +66,6 @@ export function MessageList({
                         : "bg-muted"
                     }`}
                   >
-                    {/* Зображення вкладення */}
                     {message.attachmentUrl && message.attachmentType === 'image' && (
                       <img 
                         src={message.attachmentUrl} 
@@ -86,10 +102,10 @@ export function MessageList({
               {emptyStateMessage || "Початок розмови"}
             </div>
           )}
+          <div ref={bottomRef} />
         </div>
       </div>
 
-      {/* Модальне вікно для збільшеного зображення */}
       <Dialog open={!!zoomedImage} onOpenChange={() => setZoomedImage(null)}>
         <DialogContent className="max-w-3xl p-0 overflow-hidden">
           {zoomedImage && (

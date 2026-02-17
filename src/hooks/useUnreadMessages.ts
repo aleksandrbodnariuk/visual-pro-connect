@@ -2,12 +2,49 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchWithTimeout } from "@/lib/utils";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+
+// ── Singleton state shared across all hook instances ──
+let sharedChannel: RealtimeChannel | null = null;
+let sharedUserId: string | null = null;
+let subscriberCount = 0;
+const listeners = new Set<(uid: string) => void>();
+
+function createSharedChannel(uid: string) {
+  if (sharedChannel) return;
+  sharedUserId = uid;
+
+  sharedChannel = supabase
+    .channel('unread-messages-singleton')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'messages',
+        filter: `receiver_id=eq.${uid}`,
+      },
+      () => {
+        // Notify every hook instance
+        listeners.forEach(fn => fn(uid));
+        // Broadcast to other parts of the app (Messages page, etc.)
+        window.dispatchEvent(new CustomEvent('new-message-received'));
+      }
+    )
+    .subscribe();
+}
+
+function destroySharedChannel() {
+  if (sharedChannel) {
+    supabase.removeChannel(sharedChannel);
+    sharedChannel = null;
+    sharedUserId = null;
+  }
+}
 
 export function useUnreadMessages() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
-  // Унікальний ID для цієї інстанції хука, щоб уникнути конфліктів каналів
-  const instanceId = useRef(`unread-messages-${Math.random().toString(36).substring(7)}`);
 
   const fetchUnreadCount = useCallback(async (uid: string) => {
     const { count, error } = await supabase
@@ -52,29 +89,27 @@ export function useUnreadMessages() {
     return () => subscription.unsubscribe();
   }, [fetchUnreadCount]);
 
-  // Підписка на realtime зміни повідомлень
+  // ── Singleton Realtime subscription ──
   useEffect(() => {
     if (!userId) return;
 
-    const channel = supabase
-      .channel(instanceId.current)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${userId}`,
-        },
-      () => {
-          fetchUnreadCount(userId);
-          window.dispatchEvent(new CustomEvent('new-message-received'));
-        }
-      )
-      .subscribe();
+    // Register this instance's listener
+    const listener = (uid: string) => fetchUnreadCount(uid);
+    listeners.add(listener);
+    subscriberCount++;
+
+    // Create the shared channel only once
+    if (subscriberCount === 1 || sharedUserId !== userId) {
+      destroySharedChannel();
+      createSharedChannel(userId);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      listeners.delete(listener);
+      subscriberCount--;
+      if (subscriberCount === 0) {
+        destroySharedChannel();
+      }
     };
   }, [userId, fetchUnreadCount]);
 
