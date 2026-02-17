@@ -2,7 +2,14 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { DeleteMessageDialog } from "@/components/messages/DeleteMessageDialog";
 
 interface ChatItem {
   id: string;
@@ -25,11 +32,13 @@ interface ChatListProps {
   chats: ChatItem[];
   activeChat: ChatItem | null;
   onSelectChat: (chat: ChatItem) => void;
+  onDeleteChat?: (chat: ChatItem) => void;
   isLoading?: boolean;
 }
 
-export function ChatList({ chats, activeChat, onSelectChat, isLoading }: ChatListProps) {
+export function ChatList({ chats, activeChat, onSelectChat, onDeleteChat, isLoading }: ChatListProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [chatToDelete, setChatToDelete] = useState<ChatItem | null>(null);
 
   const filteredChats = chats.filter(chat => 
     chat.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -62,43 +71,55 @@ export function ChatList({ chats, activeChat, onSelectChat, isLoading }: ChatLis
       <div className="h-[calc(100vh-12rem)] md:h-[calc(80vh-120px)] overflow-y-auto">
         {filteredChats.length > 0 ? (
           filteredChats.map((chat) => (
-            <div 
-              key={chat.id}
-              className={`flex items-start gap-3 border-b p-3 transition-colors hover:bg-muted/50 cursor-pointer ${activeChat?.id === chat.id ? 'bg-muted/80' : ''}`}
-              onClick={() => onSelectChat(chat)}
-            >
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={chat.user.avatarUrl} alt={chat.user.name} />
-                <AvatarFallback>
-                  {chat.user.name
-                    .split(" ")
-                    .map((n: string) => n[0])
-                    .join("")}
-                </AvatarFallback>
-              </Avatar>
-              
-              <div className="flex-1 overflow-hidden">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold">{chat.user.name}</h3>
-                  <span className="text-xs text-muted-foreground">{chat.lastMessage.timestamp}</span>
+            <ContextMenu key={chat.id}>
+              <ContextMenuTrigger asChild>
+                <div 
+                  className={`flex items-start gap-3 border-b p-3 transition-colors hover:bg-muted/50 cursor-pointer ${activeChat?.id === chat.id ? 'bg-muted/80' : ''}`}
+                  onClick={() => onSelectChat(chat)}
+                >
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={chat.user.avatarUrl} alt={chat.user.name} />
+                    <AvatarFallback>
+                      {chat.user.name
+                        .split(" ")
+                        .map((n: string) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 overflow-hidden">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold">{chat.user.name}</h3>
+                      <span className="text-xs text-muted-foreground">{chat.lastMessage.timestamp}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <p className="truncate text-sm text-muted-foreground">
+                        {chat.lastMessage.text}
+                      </p>
+                      {chat.user.unreadCount > 0 && (
+                        <span className="flex h-5 min-w-5 px-1 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-medium">
+                          {chat.user.unreadCount > 9 ? "9+" : chat.user.unreadCount}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {chat.user.lastSeen}
+                    </p>
+                  </div>
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <p className="truncate text-sm text-muted-foreground">
-                    {chat.lastMessage.text}
-                  </p>
-                  {chat.user.unreadCount > 0 && (
-                    <span className="flex h-5 min-w-5 px-1 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-medium">
-                      {chat.user.unreadCount > 9 ? "9+" : chat.user.unreadCount}
-                    </span>
-                  )}
-                </div>
-                
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {chat.user.lastSeen}
-                </p>
-              </div>
-            </div>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                <ContextMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => setChatToDelete(chat)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Видалити чат
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
           ))
         ) : (
           <div className="p-4 text-center text-muted-foreground">
@@ -106,6 +127,17 @@ export function ChatList({ chats, activeChat, onSelectChat, isLoading }: ChatLis
           </div>
         )}
       </div>
+
+      <DeleteMessageDialog
+        open={!!chatToDelete}
+        onOpenChange={(open) => !open && setChatToDelete(null)}
+        onConfirm={() => {
+          if (chatToDelete && onDeleteChat) {
+            onDeleteChat(chatToDelete);
+          }
+          setChatToDelete(null);
+        }}
+      />
     </>
   );
 }
