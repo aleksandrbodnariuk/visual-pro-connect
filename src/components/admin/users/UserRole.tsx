@@ -9,17 +9,29 @@ const AVAILABLE_ROLES = [
   "Адміністратор"
 ];
 
+// Map DB roles to UI labels
+const dbRoleToUiLabel = (roles: string[]): string => {
+  if (roles.includes('admin')) return "Адміністратор";
+  if (roles.includes('moderator')) return "Модератор";
+  if (roles.includes('shareholder')) return "Акціонер";
+  return "Учасник";
+};
+
 interface UserRoleProps {
   user: any;
+  userRoles?: string[];
   onRoleChange: (userId: string, newRole: string) => void;
 }
 
-export function UserRole({ user, onRoleChange }: UserRoleProps) {
-  const getUserRole = (user: any) => {
+export function UserRole({ user, userRoles, onRoleChange }: UserRoleProps) {
+  const getUserRole = () => {
     if (user.founder_admin || user.phone_number === '0507068007') return "Засновник";
+    if (userRoles && userRoles.length > 0) {
+      return dbRoleToUiLabel(userRoles);
+    }
     if (user.is_admin || user.isAdmin) return "Адміністратор";
     if (user.is_shareholder || user.isShareHolder) return "Акціонер";
-    return user.role || "Учасник";
+    return "Учасник";
   };
 
   const isFounder = user.founder_admin || user.phone_number === '0507068007';
@@ -28,7 +40,7 @@ export function UserRole({ user, onRoleChange }: UserRoleProps) {
     <div>
       {!isFounder ? (
         <Select 
-          value={getUserRole(user)} 
+          value={getUserRole()} 
           onValueChange={(value) => onRoleChange(user.id, value)}
         >
           <SelectTrigger className="w-[130px]">
