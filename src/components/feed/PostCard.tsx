@@ -457,8 +457,8 @@ export function PostCard({
             )}
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={authUser.avatar_url || ''} />
-                <AvatarFallback>{authUser.full_name?.[0] || 'U'}</AvatarFallback>
+                <AvatarImage src={authUser.avatar_url || authUser.avatarUrl || ''} />
+                <AvatarFallback>{authUser.full_name?.[0] || authUser.firstName?.[0] || 'U'}</AvatarFallback>
               </Avatar>
               <Input
                 ref={commentInputRef}
