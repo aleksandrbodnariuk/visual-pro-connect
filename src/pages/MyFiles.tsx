@@ -9,6 +9,8 @@ import { Image, Video, Music, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AudioPlayer } from "@/components/feed/AudioPlayer";
 import { Skeleton } from "@/components/ui/skeleton";
+import { extractVideoEmbed, VideoEmbed } from "@/lib/videoEmbed";
+import { VideoPreview } from "@/components/feed/VideoPreview";
 
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a', '.wma', '.webm'];
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
@@ -16,12 +18,23 @@ const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.sv
 
 type FileType = "photos" | "videos" | "music";
 
-function getFileType(url: string): FileType | null {
-  const lower = url.toLowerCase();
+interface FileItem {
+  id: string;
+  media_url: string | null;
+  content: string | null;
+  created_at: string | null;
+  videoEmbed?: VideoEmbed | null;
+}
+
+function getFileType(item: FileItem): FileType | null {
+  // Check for video embed from content
+  if (item.videoEmbed && item.videoEmbed.platform !== 'link') return "videos";
+  
+  if (!item.media_url) return null;
+  const lower = item.media_url.toLowerCase();
   if (AUDIO_EXTENSIONS.some(ext => lower.includes(ext))) return "music";
   if (VIDEO_EXTENSIONS.some(ext => lower.includes(ext))) return "videos";
   if (IMAGE_EXTENSIONS.some(ext => lower.includes(ext))) return "photos";
-  // Default images (supabase urls without clear extension)
   if (lower.includes("/posts/") && !AUDIO_EXTENSIONS.some(ext => lower.includes(ext)) && !VIDEO_EXTENSIONS.some(ext => lower.includes(ext))) return "photos";
   return null;
 }
@@ -37,7 +50,7 @@ export default function MyFiles() {
   const navigate = useNavigate();
   const { getCurrentUser } = useAuthState();
   const currentUser = getCurrentUser();
-  const [files, setFiles] = useState<{ id: string; media_url: string; content: string | null; created_at: string | null }[]>([]);
+  const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const activeTab: FileType = (type as FileType) || "photos";
@@ -51,11 +64,20 @@ export default function MyFiles() {
         .from("posts")
         .select("id, media_url, content, created_at")
         .eq("user_id", currentUser.id)
-        .not("media_url", "is", null)
         .order("created_at", { ascending: false });
 
       if (!error && data) {
-        setFiles(data.filter(p => p.media_url));
+        const processed: FileItem[] = data
+          .map(p => {
+            const videoEmbed = p.content ? extractVideoEmbed(p.content) : null;
+            const hasVideoEmbed = videoEmbed && videoEmbed.platform !== 'link';
+            return {
+              ...p,
+              videoEmbed: hasVideoEmbed ? videoEmbed : null,
+            };
+          })
+          .filter(p => p.media_url || p.videoEmbed);
+        setFiles(processed);
       }
       setLoading(false);
     };
@@ -63,7 +85,7 @@ export default function MyFiles() {
     fetchFiles();
   }, [currentUser?.id]);
 
-  const filtered = files.filter(f => getFileType(f.media_url!) === activeTab);
+  const filtered = files.filter(f => getFileType(f) === activeTab);
 
   if (!currentUser) {
     return (
@@ -107,7 +129,7 @@ export default function MyFiles() {
                   <tab.icon className="h-4 w-4" />
                   {tab.label}
                   <span className="text-xs opacity-70">
-                    ({files.filter(f => getFileType(f.media_url!) === tab.id).length})
+                    ({files.filter(f => getFileType(f) === tab.id).length})
                   </span>
                 </Button>
               ))}
@@ -152,12 +174,18 @@ export default function MyFiles() {
                     className="rounded-lg overflow-hidden border bg-muted cursor-pointer"
                     onClick={() => navigate(`/post/${file.id}`)}
                   >
-                    <video
-                      src={file.media_url!}
-                      className="w-full aspect-video object-cover"
-                      preload="metadata"
-                      muted
-                    />
+                    {file.videoEmbed && file.videoEmbed.platform !== 'link' ? (
+                      <div className="pointer-events-none">
+                        <VideoPreview embed={file.videoEmbed} />
+                      </div>
+                    ) : file.media_url ? (
+                      <video
+                        src={file.media_url}
+                        className="w-full aspect-video object-cover"
+                        preload="metadata"
+                        muted
+                      />
+                    ) : null}
                     {file.content && (
                       <p className="p-2 text-sm truncate">{file.content}</p>
                     )}
