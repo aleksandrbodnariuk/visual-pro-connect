@@ -66,8 +66,9 @@ export function useUnreadMessages() {
           table: 'messages',
           filter: `receiver_id=eq.${userId}`,
         },
-        () => {
+      () => {
           fetchUnreadCount(userId);
+          window.dispatchEvent(new CustomEvent('new-message-received'));
         }
       )
       .subscribe();

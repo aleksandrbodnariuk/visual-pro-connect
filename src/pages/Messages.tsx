@@ -185,39 +185,34 @@ export default function Messages() {
     }
   }, []);
 
-  // Realtime підписка — ДВА окремі канали для receiver та sender
+  // Слухаємо подію від useUnreadMessages (єдина підписка на receiver_id)
+  useEffect(() => {
+    const handleNewMessage = async () => {
+      const currentActiveChat = activeChatRef.current;
+      await reloadActiveChat();
+      await reloadChatList();
+      if (!currentActiveChat) {
+        playNotificationSound();
+      } else {
+        const myId = currentUserRef.current?.id;
+        if (myId) {
+          await MessagesService.markMessagesAsRead(myId, currentActiveChat.user.id);
+          window.dispatchEvent(new CustomEvent('messages-read'));
+        }
+      }
+    };
+
+    window.addEventListener('new-message-received', handleNewMessage);
+    return () => window.removeEventListener('new-message-received', handleNewMessage);
+  }, [reloadActiveChat]);
+
+  // Канал для повідомлень ВІД мене (інша вкладка / cross-tab sync)
   useEffect(() => {
     if (!currentUser?.id) return;
 
     const uid = currentUser.id;
     const suffix = Math.random().toString(36).substring(7);
 
-    // Канал 1: повідомлення ДЛЯ мене
-    const recvChannel = supabase
-      .channel(`msg-recv-${uid}-${suffix}`)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'messages',
-        filter: `receiver_id=eq.${uid}`
-      }, async () => {
-        const currentActiveChat = activeChatRef.current;
-        await reloadActiveChat();
-        await reloadChatList();
-        // Звук тільки якщо повідомлення не для активного чату
-        // (спрощено — завжди перезавантажуємо, звук якщо немає активного чату)
-        if (!currentActiveChat) {
-          playNotificationSound();
-        } else {
-          // Позначаємо як прочитане
-          const myId = currentUserRef.current?.id;
-          if (myId) {
-            await MessagesService.markMessagesAsRead(myId, currentActiveChat.user.id);
-            window.dispatchEvent(new CustomEvent('messages-read'));
-          }
-        }
-      })
-      .subscribe();
-
-    // Канал 2: повідомлення ВІД мене (інша вкладка)
     const sendChannel = supabase
       .channel(`msg-send-${uid}-${suffix}`)
       .on('postgres_changes', {
@@ -230,7 +225,6 @@ export default function Messages() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(recvChannel);
       supabase.removeChannel(sendChannel);
     };
   }, [currentUser?.id, reloadActiveChat]);
