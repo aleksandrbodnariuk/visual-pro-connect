@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Users, Plus, MessageSquare, Menu, User, Bell, Search, Settings, LogOut, Camera, Video, Music, Mic, Sparkles, UtensilsCrossed, Car, Flower2, UserPlus } from "lucide-react";
+import { Home, Users, Plus, MessageSquare, Menu, User, Bell, Search, Settings, LogOut, Camera, Video, Music, Mic, Sparkles, UtensilsCrossed, Car, Flower2, UserPlus, FolderOpen, Image } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -137,6 +137,36 @@ export function MobileNavigation() {
                       >
                         <Settings className="h-5 w-5" />
                         <span>Налаштування</span>
+                      </Link>
+                      
+                      <Separator className="my-4" />
+                      
+                      {/* Мої файли */}
+                      <p className="text-sm font-medium text-muted-foreground px-3 mb-2">Мої файли</p>
+                      
+                      <Link
+                        to="/my-files/photos"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <Image className="h-5 w-5" />
+                        <span>Фото</span>
+                      </Link>
+                      <Link
+                        to="/my-files/videos"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <Video className="h-5 w-5" />
+                        <span>Відео</span>
+                      </Link>
+                      <Link
+                        to="/my-files/music"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <Music className="h-5 w-5" />
+                        <span>Музика</span>
                       </Link>
                       
                       <Separator className="my-4" />

@@ -2,7 +2,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Search, Bell, MessageSquare, User, Settings, Users, Camera, Music, Video, Sparkles, UtensilsCrossed, Car, Flower2 } from 'lucide-react';
+import { Home, Search, Bell, MessageSquare, User, Settings, Users, Camera, Music, Video, Sparkles, UtensilsCrossed, Car, Flower2, FolderOpen, Image } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 import { useAuthState } from "@/hooks/auth/useAuthState";
@@ -140,6 +140,39 @@ export function Sidebar({ className }: SidebarProps) {
           >
             <Settings className="mr-2 h-4 w-4" />
             {t.settings}
+          </Button>
+        </nav>
+      </div>
+
+      <div className="border-t p-3 md:p-4 3xl:p-5">
+        <h2 className="text-base md:text-lg 3xl:text-xl font-semibold mb-3 md:mb-4">Мої файли</h2>
+        <nav className="space-y-1 md:space-y-2">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start" 
+            onClick={() => handleNavigate('/my-files/photos')}
+            data-active={location.pathname === "/my-files/photos"}
+          >
+            <Image className="mr-2 h-4 w-4" />
+            Фото
+          </Button>
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start" 
+            onClick={() => handleNavigate('/my-files/videos')}
+            data-active={location.pathname === "/my-files/videos"}
+          >
+            <Video className="mr-2 h-4 w-4" />
+            Відео
+          </Button>
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start" 
+            onClick={() => handleNavigate('/my-files/music')}
+            data-active={location.pathname === "/my-files/music"}
+          >
+            <Music className="mr-2 h-4 w-4" />
+            Музика
           </Button>
         </nav>
       </div>
