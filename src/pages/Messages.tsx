@@ -323,7 +323,7 @@ export default function Messages() {
     <div className="min-h-screen pb-20 md:pb-0">
       <Navbar />
       
-      <div className="container mt-8 pb-4 md:pb-10 px-2 sm:px-4 md:px-6">
+      <div className="container mt-8 md:mt-16 3xl:mt-20 pb-4 md:pb-10 px-2 sm:px-4 md:px-6">
         <div className="rounded-xl border">
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
             {/* Список чатів - приховувати на мобільному коли є activeChat */}
