@@ -233,10 +233,17 @@ export default function Messages() {
   useEffect(() => {
     if (!currentUser?.id) return;
 
-    const interval = setInterval(() => {
-      if (document.hidden) return; // skip when tab not visible
-      if (!activeChatRef.current) return; // skip when no active chat
-      reloadActiveChat();
+    const interval = setInterval(async () => {
+      if (document.hidden) return;
+      if (!activeChatRef.current) return;
+      await reloadActiveChat();
+      // Mark messages as read while chat is open
+      const uid = currentUserRef.current?.id;
+      const chatUserId = activeChatRef.current?.user.id;
+      if (uid && chatUserId) {
+        await MessagesService.markMessagesAsRead(uid, chatUserId);
+        window.dispatchEvent(new CustomEvent('messages-read'));
+      }
     }, 3000);
 
     return () => clearInterval(interval);
