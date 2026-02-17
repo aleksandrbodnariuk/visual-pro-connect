@@ -108,10 +108,23 @@ export function PostCard({
   // Очищений текст без URL
   const cleanCaption = removeUrls(caption);
 
-  // Завантаження останніх коментарів
+  // Завантаження останніх коментарів (також при зміні comments count від батька)
   useEffect(() => {
     loadRecentComments();
-  }, [id]);
+  }, [id, comments]);
+
+  // Фоновий polling для коментарів як резервний механізм (кожні 5 сек)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadRecentComments();
+        if (showAllComments) {
+          loadAllComments(true);
+        }
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [id, showAllComments]);
 
   // Realtime підписка на коментарі
   useEffect(() => {

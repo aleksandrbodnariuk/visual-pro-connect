@@ -28,6 +28,16 @@ export function useCommentLikes(commentId: string) {
     return () => { supabase.removeChannel(channel); };
   }, [commentId]);
 
+  // Фоновий polling як резервний механізм (кожні 5 сек)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadLikes();
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [commentId]);
+
   const loadLikes = async () => {
     try {
       // Get all likes for this comment
