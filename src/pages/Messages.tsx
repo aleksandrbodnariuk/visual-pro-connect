@@ -229,6 +229,19 @@ export default function Messages() {
     };
   }, [currentUser?.id, reloadActiveChat]);
 
+  // ── Polling fallback (3s) ──
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const interval = setInterval(() => {
+      if (document.hidden) return; // skip when tab not visible
+      if (!activeChatRef.current) return; // skip when no active chat
+      reloadActiveChat();
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [currentUser?.id, reloadActiveChat]);
+
   // Перезавантаження списку чатів
   const reloadChatList = useCallback(async () => {
     const uid = currentUserRef.current?.id;
