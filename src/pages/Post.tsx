@@ -124,7 +124,12 @@ export default function PostPage() {
   };
 
   const handleSubmitComment = async () => {
-    if (!newComment.trim() || !currentUser?.id || !postId) return;
+    const trimmed = newComment.trim();
+    if (!trimmed || !currentUser?.id || !postId) return;
+    if (trimmed.length > 2000) {
+      toast({ title: "Коментар не може перевищувати 2000 символів", variant: "destructive" });
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -133,7 +138,7 @@ export default function PostPage() {
         .insert({
           post_id: postId,
           user_id: currentUser.id,
-          content: newComment.trim()
+          content: trimmed
         });
 
       if (error) throw error;
@@ -291,7 +296,8 @@ export default function PostPage() {
                   <Textarea
                     placeholder="Написати коментар..."
                     value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
+                    onChange={(e) => setNewComment(e.target.value.slice(0, 2000))}
+                    maxLength={2000}
                     className="min-h-[60px] resize-none"
                   />
                   <div className="flex justify-end mt-2">

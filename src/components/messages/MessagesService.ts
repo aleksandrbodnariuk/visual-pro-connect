@@ -234,6 +234,11 @@ export class MessagesService {
     if ((!messageText.trim() && !attachmentUrl) || !currentUser) {
       return { success: false };
     }
+
+    if (messageText.length > 5000) {
+      toast.error("Повідомлення не може перевищувати 5000 символів.");
+      return { success: false };
+    }
     
     if (import.meta.env.DEV) console.log("Sending message from", currentUser.id, "to", receiverId);
     
