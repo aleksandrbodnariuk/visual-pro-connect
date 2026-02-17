@@ -61,12 +61,26 @@ export function usePostLikes(postId: string, initialLikesCount: number) {
         event: '*', schema: 'public', table: 'post_likes',
         filter: `post_id=eq.${postId}`
       }, async () => {
-        const { data } = await supabase
-          .from('posts')
-          .select('likes_count')
-          .eq('id', postId)
-          .single();
-        if (data) setLikesCount(data.likes_count);
+        // Count directly from post_likes for immediate accuracy
+        const { count } = await supabase
+          .from('post_likes')
+          .select('*', { count: 'exact', head: true })
+          .eq('post_id', postId);
+        if (count !== null) setLikesCount(count);
+        
+        // Re-check current user's reaction
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: myLike } = await supabase
+            .from('post_likes')
+            .select('reaction_type')
+            .eq('post_id', postId)
+            .eq('user_id', user.id)
+            .maybeSingle();
+          setLiked(!!myLike);
+          setReactionType(myLike ? (myLike.reaction_type as ReactionType) : null);
+        }
+        
         loadTopReactions();
       })
       .subscribe();
