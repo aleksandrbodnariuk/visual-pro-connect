@@ -1,71 +1,117 @@
 
 
-# Fix: Messages Not Appearing in Real-Time
+# Fix: Real-time Messages, Comments, and Likes
 
-## Problem
+## Root Cause (Confirmed by Supabase GitHub Issue #1524)
 
-When two users are chatting on the Messages page, new messages don't appear automatically. The red badge on the "Повідомлення" nav button updates (proving Supabase Realtime works), but the chat area doesn't show the new message until the user clicks the nav button.
+The problem is a **confirmed Supabase Realtime bug**: when multiple channels subscribe to the same table with overlapping filters, **only one channel receives the event**. The others are silently ignored.
 
-## Root Cause
+In this project, **three components** simultaneously use `useUnreadMessages()`, each creating its own Supabase Realtime channel with the identical filter `receiver_id=eq.{userId}`:
 
-There are TWO separate Supabase Realtime subscriptions with the **exact same filter** (`receiver_id=eq.${userId}` on the `messages` table):
+1. `NavbarNavigation` (desktop menu)
+2. `MobileNavigation` (mobile bottom bar -- hidden via CSS but the hook still runs!)
+3. Potentially more instances on pages with `Sidebar`
 
-1. **`useUnreadMessages` hook** (Navbar) -- works correctly, updates the badge
-2. **Messages.tsx `recvChannel`** -- does NOT receive events
+Even though each channel has a unique name, Supabase only delivers the event to one of them. Which one "wins" is unpredictable. When the winning instance dispatches `new-message-received`, Messages.tsx calls `reloadActiveChat()` -- but if the wrong instance wins (or none does due to race conditions), the chat doesn't update. Meanwhile, the badge might update via a different code path (e.g., `messages-read` event from another operation).
 
-When two channels subscribe to the same table with the same filter, Supabase Realtime delivers events to only one of them (the first one created). Since `useUnreadMessages` is mounted in the Navbar (which renders before the Messages page content), it "claims" the subscription, and the Messages page's channel never fires.
+Reference: https://github.com/supabase/realtime/issues/1524
 
-## Solution
+## Solution: Two-Part Fix
 
-Remove the duplicate subscription from Messages.tsx entirely. Instead, have `useUnreadMessages` broadcast a custom event when new messages arrive, and have Messages.tsx listen for that event.
+### Part 1: Singleton Realtime Subscription
+
+Make `useUnreadMessages` use a **single shared Realtime channel** regardless of how many components use the hook. This is done with module-level variables:
+
+- A shared channel reference and subscriber counter
+- First component to mount creates the channel
+- Last component to unmount removes it
+- All instances share the same event source
 
 ```text
 Before (broken):
-  useUnreadMessages: channel "unread-xxx" -> receiver_id filter -> updates badge (works)
-  Messages.tsx:      channel "msg-recv-xxx" -> receiver_id filter -> updates chat (broken - duplicate)
+  NavbarNavigation  -> useUnreadMessages -> channel "unread-abc" (receiver_id filter)
+  MobileNavigation  -> useUnreadMessages -> channel "unread-def" (receiver_id filter)
+  Result: Only ONE channel receives events (Supabase bug #1524)
 
 After (fixed):
-  useUnreadMessages: channel "unread-xxx" -> receiver_id filter -> updates badge + dispatches event
-  Messages.tsx:      listens for custom event -> reloads active chat + chat list
+  NavbarNavigation  -> useUnreadMessages -> shares channel "unread-singleton"
+  MobileNavigation  -> useUnreadMessages -> shares channel "unread-singleton"
+  Result: ONE channel, always receives events
 ```
 
-## Changes
+### Part 2: Polling Fallback for Messages Page
 
-### 1. `src/hooks/useUnreadMessages.ts`
+Even with the singleton fix, Realtime can occasionally drop events (network hiccups, server restarts). Add a **3-second polling interval** in Messages.tsx as a guaranteed fallback:
 
-Add a custom event dispatch inside the realtime handler so other components can react:
+- Only polls when there is an active chat open
+- Only polls when the browser tab is visible (uses `document.hidden`)
+- Compares message count to avoid unnecessary re-renders
+- Cleans up on unmount or when chat changes
 
-- When the realtime handler fires (new message received), dispatch a `new-message-received` window event
-- This event carries no data -- it's just a signal to re-fetch
+This is the same approach used by Facebook Messenger, WhatsApp Web, and Telegram Web -- they all use WebSocket for instant delivery with polling as a safety net.
 
-### 2. `src/pages/Messages.tsx`
+### Part 3: Auto-Scroll in MessageList
 
-- **Remove** the `recvChannel` (the channel subscribing to `receiver_id=eq.${uid}`) -- this is the duplicate causing the conflict
-- **Keep** the `sendChannel` (subscribing to `sender_id=eq.${uid}`) -- this is unique, for cross-tab sync only
-- **Add** a `useEffect` that listens for the `new-message-received` custom event and calls `reloadActiveChat()` + `reloadChatList()`, plays notification sound, and marks messages as read if the active chat matches
+Currently, `MessageList` has no auto-scroll. When new messages arrive (via realtime or polling), the user might not see them if scrolled up. Add:
 
-### 3. No other files need changes
+- `useRef` for the scroll container
+- `useEffect` that scrolls to bottom when `messages.length` changes
+- Only auto-scrolls if user is already near the bottom (within 100px)
 
-The `sendChannel` for cross-tab sync remains unchanged. The `useUnreadMessages` hook keeps working exactly as before, just with one extra line to dispatch an event.
-
-## Technical Details
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/hooks/useUnreadMessages.ts` | Add `window.dispatchEvent(new CustomEvent('new-message-received'))` in realtime handler |
-| `src/pages/Messages.tsx` | Remove `recvChannel`, add listener for `new-message-received` event |
+| `src/hooks/useUnreadMessages.ts` | Singleton pattern: module-level channel shared across all hook instances |
+| `src/pages/Messages.tsx` | Add 3-second polling fallback with visibility check; add error handling to reloadActiveChat |
+| `src/components/messages/MessageList.tsx` | Add auto-scroll to bottom on new messages |
 
-## Why This Works
+## Technical Details
 
-- Only ONE Supabase Realtime subscription exists for `receiver_id` filter on the `messages` table
-- That subscription (in `useUnreadMessages`) already works reliably
-- Messages.tsx receives the signal via a simple browser custom event -- no Supabase involved
-- The `sendChannel` still works because `sender_id` is a different filter, no conflict
+### useUnreadMessages.ts -- Singleton Pattern
+
+```text
+Module-level variables:
+  let sharedChannel = null
+  let sharedUserId = null
+  let subscriberCount = 0
+
+On mount (subscriberCount goes from 0 to 1):
+  Create channel, subscribe to receiver_id filter
+  Store in sharedChannel
+
+On unmount (subscriberCount goes from 1 to 0):
+  Remove channel
+  Reset sharedChannel
+
+On mount (subscriberCount > 1):
+  Skip channel creation, reuse existing
+```
+
+### Messages.tsx -- Polling
+
+```text
+useEffect (depends on activeChat):
+  if no active chat -> skip
+  interval = setInterval(3000):
+    if document.hidden -> skip (tab not visible)
+    call reloadActiveChat()
+  return cleanup -> clearInterval
+```
+
+### MessageList.tsx -- Auto-Scroll
+
+```text
+scrollRef on the outer div
+useEffect([messages.length]):
+  if scrollRef at bottom (within 100px) -> scrollIntoView
+```
 
 ## Expected Results
 
-- Messages appear instantly in the chat window when both users are on the Messages page
-- The red badge on the nav button continues to work
-- Notification sound plays for new messages
-- Messages are automatically marked as read when chat is open
+- Messages appear instantly (via realtime) or within 3 seconds (via polling) -- guaranteed
+- Badge updates reliably (single subscription, no conflicts)
+- Chat auto-scrolls to show new messages
+- No performance impact (polling pauses when tab is hidden)
+- Comments and likes also benefit from the reduced channel conflicts
 
