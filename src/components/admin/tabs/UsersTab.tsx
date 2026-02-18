@@ -496,8 +496,23 @@ export function UsersTab() {
                   <Copy className="h-3 w-3" />
                 </Button>
               </div>
-              <div className="text-sm truncate" title={user.email || 'Не вказано'}>
-                {user.email || 'Не вказано'}
+              <div className="text-sm flex items-center gap-1">
+                <span className="truncate max-w-[140px]" title={user.email || 'Не вказано'}>
+                  {user.email || 'Не вказано'}
+                </span>
+                {user.email && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 shrink-0"
+                    onClick={() => {
+                      navigator.clipboard.writeText(user.email);
+                      toast.success("Email скопійовано");
+                    }}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
               <div>{user.full_name || 'Не вказано'}</div>
               <div>{isValidPhoneNumber(user.phone_number) ? user.phone_number : 'Не вказано'}</div>
@@ -530,7 +545,22 @@ export function UsersTab() {
                 <div className="flex justify-between items-start">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold truncate">{user.full_name || 'Не вказано'}</h3>
-                    <p className="text-sm text-muted-foreground truncate">{user.email || 'Не вказано'}</p>
+                    <p className="text-sm text-muted-foreground truncate flex items-center gap-1">
+                      <span className="truncate">{user.email || 'Не вказано'}</span>
+                      {user.email && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 w-5 p-0 shrink-0"
+                          onClick={() => {
+                            navigator.clipboard.writeText(user.email);
+                            toast.success("Email скопійовано");
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {isValidPhoneNumber(user.phone_number) ? user.phone_number : 'Телефон не вказано'}
                     </p>
