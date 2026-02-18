@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -10,6 +10,7 @@ import { UserTitle } from "@/components/admin/users/UserTitle";
 import { ShareholderToggle } from "@/components/admin/users/ShareholderToggle";
 import { SpecialistToggle } from "@/components/admin/users/SpecialistToggle";
 import { UserActions } from "@/components/admin/users/UserActions";
+import { DeleteUserDialog } from "@/components/admin/users/DeleteUserDialog";
 import { Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -27,6 +28,8 @@ export function UsersTab() {
   const [userRoles, setUserRoles] = useState<Record<string, string[]>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [showBlocked, setShowBlocked] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
 
   useEffect(() => {
     loadUsers();
@@ -403,23 +406,25 @@ export function UsersTab() {
     }
   };
 
-  const deleteUser = async (userId: string) => {
-    if (!confirm("Ви впевнені, що хочете видалити цього користувача?")) {
-      return;
+  const openDeleteDialog = (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      setUserToDelete(user);
+      setDeleteDialogOpen(true);
     }
+  };
 
+  const executeDelete = useCallback(async () => {
+    if (!userToDelete) return;
+    const userId = userToDelete.id;
     try {
-      try {
-        const { error } = await supabase
-          .from('users')
-          .delete()
-          .eq('id', userId);
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
 
-        if (error) {
-          console.error("Помилка видалення користувача з Supabase:", error);
-        }
-      } catch (supabaseError) {
-        console.warn("Не вдалося видалити з Supabase, видаляємо локально:", supabaseError);
+      if (error) {
+        console.error("Помилка видалення користувача з Supabase:", error);
       }
 
       const updatedUsers = users.filter(user => user.id !== userId);
@@ -431,7 +436,8 @@ export function UsersTab() {
       console.error("Помилка видалення користувача:", error);
       toast.error("Помилка видалення користувача");
     }
-  };
+    setUserToDelete(null);
+  }, [userToDelete, users]);
 
   const toggleBlockUser = async (userId: string) => {
     try {
@@ -556,7 +562,7 @@ export function UsersTab() {
               />
               <UserActions 
                 user={user} 
-                onDeleteUser={deleteUser}
+                onDeleteUser={openDeleteDialog}
                 onToggleBlock={toggleBlockUser}
               />
             </div>
@@ -597,7 +603,7 @@ export function UsersTab() {
                       {isValidPhoneNumber(user.phone_number) ? user.phone_number : 'Телефон не вказано'}
                     </p>
                   </div>
-                  <UserActions user={user} onDeleteUser={deleteUser} onToggleBlock={toggleBlockUser} />
+                  <UserActions user={user} onDeleteUser={openDeleteDialog} onToggleBlock={toggleBlockUser} />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-2 text-sm">
@@ -635,6 +641,13 @@ export function UsersTab() {
           )}
         </div>
       </CardContent>
+
+      <DeleteUserDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        userName={userToDelete?.full_name || 'Без імені'}
+        onConfirmDelete={executeDelete}
+      />
     </Card>
   );
 }
