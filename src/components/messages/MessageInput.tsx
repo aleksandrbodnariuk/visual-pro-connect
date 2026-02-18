@@ -147,8 +147,8 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
-          hidden
+          accept="image/jpeg,image/png,image/webp,image/gif,image/*"
+          className="hidden"
           onChange={handleFileSelect}
         />
 
