@@ -590,6 +590,7 @@ export type Database = {
           id: string
           instagram: string | null
           is_admin: boolean | null
+          is_blocked: boolean | null
           is_shareholder: boolean | null
           phone_number: string
           theme: string | null
@@ -611,6 +612,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           is_admin?: boolean | null
+          is_blocked?: boolean | null
           is_shareholder?: boolean | null
           phone_number: string
           theme?: string | null
@@ -632,6 +634,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           is_admin?: boolean | null
+          is_blocked?: boolean | null
           is_shareholder?: boolean | null
           phone_number?: string
           theme?: string | null
@@ -812,6 +815,7 @@ export type Database = {
           id: string
           instagram: string
           is_admin: boolean
+          is_blocked: boolean
           is_shareholder: boolean
           phone_number: string
           title: string

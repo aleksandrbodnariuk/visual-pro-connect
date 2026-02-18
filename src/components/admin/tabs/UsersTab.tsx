@@ -433,11 +433,42 @@ export function UsersTab() {
     }
   };
 
+  const toggleBlockUser = async (userId: string) => {
+    try {
+      const currentUser = users.find(u => u.id === userId);
+      if (!currentUser) return;
+      
+      const newStatus = !Boolean(currentUser.is_blocked);
+      
+      const { error } = await supabase
+        .from('users')
+        .update({ is_blocked: newStatus })
+        .eq('id', userId);
+      
+      if (error) {
+        console.error("Помилка блокування:", error);
+        toast.error("Помилка зміни статусу блокування");
+        return;
+      }
+      
+      const updatedUsers = users.map(u => 
+        u.id === userId ? { ...u, is_blocked: newStatus } : u
+      );
+      setUsers(updatedUsers);
+      toast.success(newStatus ? "Користувача заблоковано" : "Користувача розблоковано");
+    } catch (error) {
+      console.error("Помилка блокування:", error);
+      toast.error("Помилка зміни статусу блокування");
+    }
+  };
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.phone_number?.includes(searchTerm) ||
                          user.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+    const isBlocked = Boolean(user.is_blocked);
+    if (showBlocked) return matchesSearch && isBlocked;
+    return matchesSearch && !isBlocked;
   });
 
   return (
@@ -525,7 +556,8 @@ export function UsersTab() {
               />
               <UserActions 
                 user={user} 
-                onDeleteUser={deleteUser} 
+                onDeleteUser={deleteUser}
+                onToggleBlock={toggleBlockUser}
               />
             </div>
           ))}
@@ -565,7 +597,7 @@ export function UsersTab() {
                       {isValidPhoneNumber(user.phone_number) ? user.phone_number : 'Телефон не вказано'}
                     </p>
                   </div>
-                  <UserActions user={user} onDeleteUser={deleteUser} />
+                  <UserActions user={user} onDeleteUser={deleteUser} onToggleBlock={toggleBlockUser} />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-2 text-sm">
