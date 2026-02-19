@@ -499,6 +499,35 @@ export type Database = {
         }
         Relationships: []
       }
+      site_visits: {
+        Row: {
+          id: string
+          user_id: string | null
+          visit_date: string
+          visited_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          visit_date?: string
+          visited_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          visit_date?: string
+          visited_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_visits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           approved_by_admin: boolean | null
@@ -592,6 +621,7 @@ export type Database = {
           is_admin: boolean | null
           is_blocked: boolean | null
           is_shareholder: boolean | null
+          last_seen: string | null
           phone_number: string
           theme: string | null
           title: string | null
@@ -614,6 +644,7 @@ export type Database = {
           is_admin?: boolean | null
           is_blocked?: boolean | null
           is_shareholder?: boolean | null
+          last_seen?: string | null
           phone_number: string
           theme?: string | null
           title?: string | null
@@ -636,6 +667,7 @@ export type Database = {
           is_admin?: boolean | null
           is_blocked?: boolean | null
           is_shareholder?: boolean | null
+          last_seen?: string | null
           phone_number?: string
           theme?: string | null
           title?: string | null
@@ -817,10 +849,19 @@ export type Database = {
           is_admin: boolean
           is_blocked: boolean
           is_shareholder: boolean
+          last_seen: string
           phone_number: string
           title: string
           viber: string
           website: string
+        }[]
+      }
+      get_visit_stats: {
+        Args: never
+        Returns: {
+          visits_month: number
+          visits_today: number
+          visits_year: number
         }[]
       }
       has_role: {
@@ -833,6 +874,7 @@ export type Database = {
       is_admin: { Args: { user_id: string }; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
       is_user_admin: { Args: { _user_id: string }; Returns: boolean }
+      record_visit: { Args: never; Returns: undefined }
       search_users_public: {
         Args: { search_term: string }
         Returns: {

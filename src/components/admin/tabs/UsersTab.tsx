@@ -11,8 +11,25 @@ import { ShareholderToggle } from "@/components/admin/users/ShareholderToggle";
 import { SpecialistToggle } from "@/components/admin/users/SpecialistToggle";
 import { UserActions } from "@/components/admin/users/UserActions";
 import { DeleteUserDialog } from "@/components/admin/users/DeleteUserDialog";
-import { Copy } from "lucide-react";
+import { Copy, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+// Format last_seen date to a human-readable string
+const formatLastSeen = (lastSeen: string | null | undefined): string => {
+  if (!lastSeen) return 'Ніколи';
+  const date = new Date(lastSeen);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMin < 1) return 'Щойно';
+  if (diffMin < 60) return `${diffMin} хв тому`;
+  if (diffHours < 24) return `${diffHours} год тому`;
+  if (diffDays < 7) return `${diffDays} дн тому`;
+  return date.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
 
 // Перевіряє чи це номер телефону, а не email
 const isValidPhoneNumber = (value: string | null | undefined): boolean => {
@@ -503,7 +520,7 @@ export function UsersTab() {
 
         {/* Desktop Table - hidden on mobile */}
         <div className="hidden md:block space-y-4">
-          <div className="grid grid-cols-9 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
+          <div className="grid grid-cols-10 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
             <div>ID</div>
             <div>Email</div>
             <div>Ім'я</div>
@@ -512,11 +529,12 @@ export function UsersTab() {
             <div>Титул</div>
             <div>Акціонер</div>
             <div>Фахівець</div>
+            <div>Останній візит</div>
             <div>Дії</div>
           </div>
 
           {filteredUsers.map((user) => (
-            <div key={user.id} className="grid grid-cols-9 gap-4 items-center py-2 border-b">
+            <div key={user.id} className="grid grid-cols-10 gap-4 items-center py-2 border-b">
               <div className="text-xs font-mono flex items-center gap-1">
                 <span className="truncate max-w-[120px]" title={user.id}>
                   {user.id}
@@ -560,6 +578,10 @@ export function UsersTab() {
                 user={{ ...user, is_specialist: isSpecialist(user.id) }} 
                 onToggleSpecialist={toggleSpecialistStatus} 
               />
+              <div className="text-xs text-muted-foreground flex items-center gap-1" title={user.last_seen ? new Date(user.last_seen).toLocaleString('uk-UA') : 'Ніколи'}>
+                <Clock className="h-3 w-3 shrink-0" />
+                <span>{formatLastSeen(user.last_seen)}</span>
+              </div>
               <UserActions 
                 user={user} 
                 onDeleteUser={openDeleteDialog}
@@ -628,6 +650,10 @@ export function UsersTab() {
                       user={{ ...user, is_specialist: isSpecialist(user.id) }} 
                       onToggleSpecialist={toggleSpecialistStatus} 
                     />
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    <span>{formatLastSeen(user.last_seen)}</span>
                   </div>
                 </div>
               </div>
