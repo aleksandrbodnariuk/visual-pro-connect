@@ -83,6 +83,19 @@ export class MessagesService {
           });
         }
         
+        // Fetch last_seen for chat partners
+        const { data: lastSeenData } = await supabase
+          .from('users')
+          .select('id, last_seen')
+          .in('id', Array.from(userIds));
+        
+        const lastSeenMap = new Map<string, string | null>();
+        if (lastSeenData) {
+          lastSeenData.forEach((u: any) => {
+            lastSeenMap.set(u.id, u.last_seen);
+          });
+        }
+        
         // Групуємо повідомлення по користувачам
         const chatUsers = new Map<string, { id: string; messages: any[] }>();
         
@@ -115,6 +128,8 @@ export class MessagesService {
             msg => msg.receiver_id === userId && msg.read === false
           );
           
+          const userLastSeen = lastSeenMap.get(chat.id) || null;
+          
           return {
             id: `chat-${chat.id}`,
             user: {
@@ -122,7 +137,7 @@ export class MessagesService {
               name: profile?.full_name || 'Користувач',
               username: 'user',
               avatarUrl: profile?.avatar_url || '',
-              lastSeen: 'Онлайн',
+              lastSeen: userLastSeen || '',
               unreadCount: unreadMessages.length
             },
             messages: sortedMessages.map((msg) => ({
@@ -191,6 +206,13 @@ export class MessagesService {
       if (userData) {
         if (import.meta.env.DEV) console.log("Found user in Supabase:", userData);
         // Створюємо новий чат
+        // Fetch last_seen for new chat partner
+        const { data: lastSeenRow } = await supabase
+          .from('users')
+          .select('last_seen')
+          .eq('id', receiverId)
+          .single();
+        
         const newChat: ChatItem = {
           id: `chat-${receiverId}`,
           user: {
@@ -198,7 +220,7 @@ export class MessagesService {
             name: userData.full_name || 'Користувач',
             username: 'user',
             avatarUrl: userData.avatar_url || '',
-            lastSeen: 'Онлайн',
+            lastSeen: lastSeenRow?.last_seen || '',
             unreadCount: 0
           },
           messages: [],
