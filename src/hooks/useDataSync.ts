@@ -1,8 +1,10 @@
 import { useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchWithTimeout } from '@/lib/utils';
+import { useVisitTracker } from '@/hooks/useVisitTracker';
 
 export function useDataSync() {
+  useVisitTracker();
   // Синхронізує дані з Supabase при завантаженні компонента
   const syncDataOnStartup = useCallback(async () => {
     try {
