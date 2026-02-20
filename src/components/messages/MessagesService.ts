@@ -83,11 +83,9 @@ export class MessagesService {
           });
         }
         
-        // Fetch last_seen for chat partners
+        // Fetch last_seen for chat partners via RPC (bypasses RLS for non-admins)
         const { data: lastSeenData } = await supabase
-          .from('users')
-          .select('id, last_seen')
-          .in('id', Array.from(userIds));
+          .rpc('get_users_last_seen', { _ids: Array.from(userIds) });
         
         const lastSeenMap = new Map<string, string | null>();
         if (lastSeenData) {
@@ -206,12 +204,10 @@ export class MessagesService {
       if (userData) {
         if (import.meta.env.DEV) console.log("Found user in Supabase:", userData);
         // Створюємо новий чат
-        // Fetch last_seen for new chat partner
-        const { data: lastSeenRow } = await supabase
-          .from('users')
-          .select('last_seen')
-          .eq('id', receiverId)
-          .single();
+        // Fetch last_seen for new chat partner via RPC (bypasses RLS for non-admins)
+        const { data: lastSeenRows } = await supabase
+          .rpc('get_users_last_seen', { _ids: [receiverId] });
+        const lastSeenRow = lastSeenRows?.[0];
         
         const newChat: ChatItem = {
           id: `chat-${receiverId}`,

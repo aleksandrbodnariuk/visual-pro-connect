@@ -856,6 +856,13 @@ export type Database = {
           website: string
         }[]
       }
+      get_users_last_seen: {
+        Args: { _ids: string[] }
+        Returns: {
+          id: string
+          last_seen: string
+        }[]
+      }
       get_visit_stats: {
         Args: never
         Returns: {
