@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { EditPublicationModal } from "@/components/publications/EditPublicationModal";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { uploadToStorage } from "@/lib/storage";
 import { extractVideoEmbed } from "@/lib/videoEmbed";
 import { ImageCropEditor } from "@/components/ui/ImageCropEditor";
@@ -20,6 +20,7 @@ export function NewsFeed() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [newPostContent, setNewPostContent] = useState("");
+  const [isFormExpanded, setIsFormExpanded] = useState(false);
   const [activeCategory, setActiveCategory] = useState("all");
   const [editPostOpen, setEditPostOpen] = useState(false);
   const [postToEdit, setPostToEdit] = useState<any>(null);
@@ -148,6 +149,9 @@ export function NewsFeed() {
       return;
     }
 
+    // Розгортаємо форму при додаванні медіа
+    setIsFormExpanded(true);
+
     if (type === 'audio') {
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
@@ -255,6 +259,7 @@ export function NewsFeed() {
 
       setPosts([data, ...posts]);
       setNewPostContent("");
+      setIsFormExpanded(false);
       setSelectedFile(null);
       setPreviewUrl(null);
       toast({ title: "Публікацію створено!" });
@@ -360,79 +365,38 @@ export function NewsFeed() {
       <Card>
         <CardContent className="p-3 md:p-4">
           {/* Приховані input для вибору файлів */}
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/*"
-            onChange={(e) => handleFileSelect(e, 'image')}
-            className="hidden"
-          />
-          <input
-            ref={videoInputRef}
-            type="file"
-            accept="video/*"
-            onChange={(e) => handleFileSelect(e, 'video')}
-            className="hidden"
-          />
-          <input
-            ref={audioInputRef}
-            type="file"
-            accept="audio/*,.mp3,.wav,.ogg,.flac,.aac,.m4a"
-            onChange={(e) => handleFileSelect(e, 'audio')}
-            className="hidden"
-          />
+          <input ref={imageInputRef} type="file" accept="image/*"
+            onChange={(e) => handleFileSelect(e, 'image')} className="hidden" />
+          <input ref={videoInputRef} type="file" accept="video/*"
+            onChange={(e) => handleFileSelect(e, 'video')} className="hidden" />
+          <input ref={audioInputRef} type="file" accept="audio/*,.mp3,.wav,.ogg,.flac,.aac,.m4a"
+            onChange={(e) => handleFileSelect(e, 'audio')} className="hidden" />
 
-          {/* Компактний рядок: аватар + поле вводу + іконки */}
-          <div className="flex items-center gap-2 md:gap-3">
-            <Avatar className="h-9 w-9 md:h-10 md:w-10 shrink-0">
+          {/* Аватар + textarea або placeholder */}
+          <div className="flex items-start gap-2 md:gap-3">
+            <Avatar className="h-9 w-9 md:h-10 md:w-10 shrink-0 mt-0.5">
               <AvatarImage src={currentUser?.avatar_url} />
               <AvatarFallback>{currentUser?.full_name?.[0] || 'U'}</AvatarFallback>
             </Avatar>
-            
-            <Input
-              placeholder="Що у вас нового?"
-              value={newPostContent}
-              onChange={(e) => setNewPostContent(e.target.value)}
-              className="flex-1 h-10 bg-muted/50 border-0 focus-visible:ring-1"
-            />
-            
-            {/* Кольорові іконки як у Facebook */}
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => videoInputRef.current?.click()}
-              className="shrink-0 hover:bg-red-50"
-              title="Додати відео"
-            >
-              <Video className="h-5 w-5 text-red-500" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => imageInputRef.current?.click()}
-              className="shrink-0 hover:bg-green-50"
-              title="Додати фото"
-            >
-              <Image className="h-5 w-5 text-green-500" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => audioInputRef.current?.click()}
-              className="shrink-0 hover:bg-accent/50"
-              title="Додати музику"
-            >
-              <Music className="h-5 w-5 text-accent-foreground" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={handleEventClick}
-              className="shrink-0 hover:bg-blue-50"
-              title="Створити подію"
-            >
-              <Users className="h-5 w-5 text-blue-500" />
-            </Button>
+
+            {isFormExpanded ? (
+              <Textarea
+                placeholder="Що у вас нового? Напишіть опис публікації..."
+                value={newPostContent}
+                onChange={(e) => setNewPostContent(e.target.value.slice(0, 10000))}
+                rows={3}
+                className="flex-1 resize-none bg-muted/30 border-0 focus-visible:ring-1 text-sm"
+                autoFocus
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsFormExpanded(true)}
+                className="flex-1 text-left bg-muted/50 rounded-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-muted transition-colors"
+              >
+                Що у вас нового?
+              </button>
+            )}
           </div>
 
           {/* Превʼю вибраного файлу */}
@@ -444,9 +408,9 @@ export function NewsFeed() {
                 </div>
               ) : selectedFile.type.startsWith('image/') ? (
                 <>
-                  <img 
-                    src={previewUrl} 
-                    alt="Preview" 
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
                     className="w-full max-h-80 object-contain"
                   />
                   <Button
@@ -463,8 +427,8 @@ export function NewsFeed() {
                   </Button>
                 </>
               ) : (
-                <video 
-                  src={previewUrl} 
+                <video
+                  src={previewUrl}
                   className="w-full max-h-80 object-contain"
                   controls
                 />
@@ -480,20 +444,62 @@ export function NewsFeed() {
             </div>
           )}
 
-          {/* Кнопка публікації - показуємо якщо є контент або файл */}
-          {(newPostContent.trim() || selectedFile) && (
-            <div className="mt-3 flex justify-end">
-              <Button 
+          {/* Розділювач + кнопки медіа + публікація */}
+          <div className="border-t mt-3 pt-3 flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => videoInputRef.current?.click()}
+                className="h-9 px-2 sm:px-3 text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
+                title="Відео"
+              >
+                <Video className="h-5 w-5" />
+                <span className="text-xs hidden sm:inline">Відео</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => imageInputRef.current?.click()}
+                className="h-9 px-2 sm:px-3 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950 gap-1.5"
+                title="Фото"
+              >
+                <Image className="h-5 w-5" />
+                <span className="text-xs hidden sm:inline">Фото</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => audioInputRef.current?.click()}
+                className="h-9 px-2 sm:px-3 text-orange-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950 gap-1.5"
+                title="Музика"
+              >
+                <Music className="h-5 w-5" />
+                <span className="text-xs hidden sm:inline">Музика</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleEventClick}
+                className="h-9 px-2 sm:px-3 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 gap-1.5"
+                title="Подія"
+              >
+                <Users className="h-5 w-5" />
+                <span className="text-xs hidden sm:inline">Подія</span>
+              </Button>
+            </div>
+
+            {(newPostContent.trim() || selectedFile) && (
+              <Button
                 onClick={handleCreatePost}
                 disabled={isUploading}
-                className="bg-primary hover:bg-primary/90"
                 size="sm"
               >
                 <Send className="h-4 w-4 mr-2" />
                 {isUploading ? "Завантаження..." : "Опублікувати"}
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </CardContent>
       </Card>
 
