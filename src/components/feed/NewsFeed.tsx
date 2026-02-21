@@ -60,12 +60,12 @@ export function NewsFeed() {
 
   const loadCurrentUser = async () => {
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
         const { data } = await supabase
           .from('users')
           .select('*')
-          .eq('id', authUser.id)
+          .eq('id', session.user.id)
           .maybeSingle();
         setCurrentUser(data);
       }

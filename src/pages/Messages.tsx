@@ -245,7 +245,7 @@ export default function Messages() {
     };
   }, [currentUser?.id, reloadActiveChat]);
 
-  // ── Polling fallback (3s) ──
+  // ── Polling fallback (30s) — only as safety net if realtime fails ──
   useEffect(() => {
     if (!currentUser?.id) return;
 
@@ -253,16 +253,7 @@ export default function Messages() {
       if (document.hidden) return;
       if (!activeChatRef.current) return;
       await reloadActiveChat();
-      // Mark messages as read while chat is open
-      const uid = currentUserRef.current?.id;
-      const chatUserId = activeChatRef.current?.user.id;
-      if (uid && chatUserId) {
-        await MessagesService.markMessagesAsRead(uid, chatUserId);
-        window.dispatchEvent(new CustomEvent('messages-read'));
-        // Оновлюємо список чатів щоб прибрати бейдж непрочитаних
-        await reloadChatList();
-      }
-    }, 3000);
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [currentUser?.id, reloadActiveChat]);

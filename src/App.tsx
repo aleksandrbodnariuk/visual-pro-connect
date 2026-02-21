@@ -25,7 +25,16 @@ import Post from "./pages/Post";
 import MyFiles from "./pages/MyFiles";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
+    },
+  },
+});
 
 const AppContent = () => {
   // Синхронізуємо дані з Supabase при завантаженні додатку
