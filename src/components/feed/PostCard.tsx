@@ -113,18 +113,7 @@ export function PostCard({
     loadRecentComments();
   }, [id, comments]);
 
-  // Фоновий polling для коментарів як резервний механізм (кожні 5 сек)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        loadRecentComments();
-        if (showAllComments) {
-          loadAllComments(true);
-        }
-      }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [id, showAllComments]);
+  // Polling removed — realtime subscription handles updates
 
   // Realtime підписка на коментарі
   useEffect(() => {
