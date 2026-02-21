@@ -303,6 +303,13 @@ export function PostCard({
         />
       </div>
 
+      {/* Текст публікації - окремий блок над медіа, як у Facebook */}
+      {cleanCaption && (
+        <div className="px-3 pb-2">
+          <p className="text-sm whitespace-pre-wrap">{cleanCaption}</p>
+        </div>
+      )}
+
       {/* Аудіо плеєр */}
       {isAudioUrl && imageUrl && (
         <div className="px-3 pt-2">
@@ -391,13 +398,13 @@ export function PostCard({
           <span className="text-sm font-semibold ml-0.5">{likesCount} вподобань</span>
         </div>
 
-        {/* Опис (без URL - для приватності) */}
+        {/* Опис - тепер показується над медіа, тут тільки ім'я якщо немає тексту */}
         <div className="mt-1">
           <p className="text-sm">
             <Link to={`/profile/${author.id}`} className="font-semibold">
               {author.name}
             </Link>{" "}
-            {cleanCaption || (videoEmbed ? '' : '')}
+            {!cleanCaption && !videoEmbed ? '' : (videoEmbed && !cleanCaption ? '' : '')}
           </p>
         </div>
 
