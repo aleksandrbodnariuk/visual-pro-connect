@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ReactionPicker, ReactionType, getReactionEmoji, getReactionLabel, getReactionColor } from "./ReactionPicker";
-import { useCommentLikes } from "@/hooks/useCommentLikes";
+import { CommentLikesData } from "@/hooks/useCommentLikesBatch";
 
 export interface CommentData {
   id: string;
@@ -24,6 +24,12 @@ interface CommentItemProps {
   depth?: number;
   postAuthorId: string;
   onReply: (commentId: string, userName: string) => void;
+  /** Function to get likes data for a specific comment from batch */
+  getLikes: (commentId: string) => CommentLikesData;
+  /** Toggle reaction callback from batch hook */
+  onToggleReaction: (commentId: string, reactionType: ReactionType) => void;
+  /** Whether reaction toggle is loading */
+  likesLoading?: boolean;
 }
 
 // Форматування часу
@@ -43,14 +49,14 @@ const formatTimeAgo = (dateString: string): string => {
   return date.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
 };
 
-export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: CommentItemProps) {
+export function CommentItem({ comment, depth = 0, postAuthorId, onReply, getLikes, onToggleReaction, likesLoading = false }: CommentItemProps) {
   const isPostAuthor = comment.user_id === postAuthorId;
   const maxDepth = 2;
-  const { userReaction, likesCount, topReactions, toggleReaction, isLoading } = useCommentLikes(comment.id);
+  
+  const { userReaction, likesCount, topReactions } = getLikes(comment.id);
 
   const handleLikeClick = () => {
-    // Default to 'like' on simple click
-    toggleReaction(userReaction ? userReaction : 'like');
+    onToggleReaction(comment.id, userReaction ? userReaction : 'like');
   };
 
   return (
@@ -77,13 +83,12 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
           <span className="break-words">{comment.content}</span>
         </div>
         
-        {/* Дії під коментарем */}
         <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground px-1">
           <span>{formatTimeAgo(comment.created_at)}</span>
-          <ReactionPicker onSelect={toggleReaction} disabled={isLoading}>
+          <ReactionPicker onSelect={(type) => onToggleReaction(comment.id, type)} disabled={likesLoading}>
             <button 
               onClick={handleLikeClick}
-              disabled={isLoading}
+              disabled={likesLoading}
               className={cn(
                 "hover:underline transition-colors",
                 userReaction 
@@ -110,7 +115,6 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
           </button>
         </div>
         
-        {/* Вкладені відповіді */}
         {comment.replies && comment.replies.length > 0 && depth < maxDepth && (
           <div className="mt-0.5">
             {comment.replies.map(reply => (
@@ -120,6 +124,9 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
                 depth={depth + 1}
                 postAuthorId={postAuthorId}
                 onReply={onReply}
+                getLikes={getLikes}
+                onToggleReaction={onToggleReaction}
+                likesLoading={likesLoading}
               />
             ))}
           </div>
@@ -134,6 +141,9 @@ export function CommentItem({ comment, depth = 0, postAuthorId, onReply }: Comme
                 depth={maxDepth}
                 postAuthorId={postAuthorId}
                 onReply={onReply}
+                getLikes={getLikes}
+                onToggleReaction={onToggleReaction}
+                likesLoading={likesLoading}
               />
             ))}
           </div>
