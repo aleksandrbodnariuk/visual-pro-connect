@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ReactionPicker, ReactionType, getReactionEmoji, getReactionLabel, getReactionColor } from "./ReactionPicker";
-import { CommentLikesData } from "@/hooks/useCommentLikesBatch";
+import { CommentLikesData } from "@/hooks/useFeedData";
 
 export interface CommentData {
   id: string;
@@ -18,6 +18,9 @@ export interface CommentData {
   };
   replies?: CommentData[];
 }
+
+// Re-export FeedComment as CommentData for backward compat
+export type { FeedComment } from "@/hooks/useFeedData";
 
 interface CommentItemProps {
   comment: CommentData;

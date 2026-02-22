@@ -1,22 +1,30 @@
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { MessageCircle, Share2, Bookmark, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { usePostLikes } from "@/hooks/usePostLikes";
 import { usePostShares } from "@/hooks/usePostShares";
 import { PostMenu } from "@/components/profile/PostMenu";
-import { useAuthState } from "@/hooks/auth/useAuthState";
 import { extractVideoEmbed } from "@/lib/videoEmbed";
 import { VideoPreview } from "./VideoPreview";
 import { AudioPlayer } from "./AudioPlayer";
-import { CommentItem, CommentData } from "./CommentItem";
+import { CommentItem } from "./CommentItem";
 import { supabase } from "@/integrations/supabase/client";
-import { ReactionPicker, ReactionType, getReactionEmoji, getReactionColor } from "./ReactionPicker";
-import { useCommentLikesBatch } from "@/hooks/useCommentLikesBatch";
+import { ReactionPicker, ReactionType, getReactionEmoji } from "./ReactionPicker";
+import { FeedComment, CommentLikesData, PostLikesData } from "@/hooks/useFeedData";
+
+// Функція групування коментарів з відповідями
+const groupCommentsWithReplies = (comments: FeedComment[]): FeedComment[] => {
+  const rootComments = comments.filter(c => !c.parent_id);
+  const addReplies = (parentComment: FeedComment): FeedComment => {
+    const directReplies = comments.filter(c => c.parent_id === parentComment.id);
+    return { ...parentComment, replies: directReplies.map(reply => addReplies(reply)) };
+  };
+  return rootComments.map(root => addReplies(root));
+};
 
 export interface PostCardProps {
   id: string;
@@ -37,24 +45,15 @@ export interface PostCardProps {
   onEdit?: (postId: string) => void;
   onDelete?: (postId: string) => void;
   currentUser?: any;
+  // Centralized data from NewsFeed
+  feedComments?: FeedComment[];
+  postLikesData?: PostLikesData;
+  getCommentLikes?: (commentId: string) => CommentLikesData;
+  onTogglePostReaction?: (postId: string, reaction: ReactionType) => void;
+  onToggleCommentReaction?: (commentId: string, reaction: ReactionType) => void;
+  postLikeLoading?: boolean;
+  commentLikeLoading?: boolean;
 }
-
-// Функція групування коментарів з відповідями
-const groupCommentsWithReplies = (comments: CommentData[]): CommentData[] => {
-  // Спочатку отримуємо кореневі коментарі (parent_id = null)
-  const rootComments = comments.filter(c => !c.parent_id);
-  
-  // Рекурсивно додаємо відповіді до кожного коментаря
-  const addReplies = (parentComment: CommentData): CommentData => {
-    const directReplies = comments.filter(c => c.parent_id === parentComment.id);
-    return {
-      ...parentComment,
-      replies: directReplies.map(reply => addReplies(reply))
-    };
-  };
-  
-  return rootComments.map(root => addReplies(root));
-};
 
 export function PostCard({
   id,
@@ -68,186 +67,77 @@ export function PostCard({
   onEdit,
   onDelete,
   currentUser,
+  feedComments = [],
+  postLikesData,
+  getCommentLikes,
+  onTogglePostReaction,
+  onToggleCommentReaction,
+  postLikeLoading = false,
+  commentLikeLoading = false,
 }: PostCardProps) {
   const [saved, setSaved] = useState(false);
   const [commentText, setCommentText] = useState("");
-  const [recentComments, setRecentComments] = useState<CommentData[]>([]);
-  const [allComments, setAllComments] = useState<CommentData[]>([]);
   const [showAllComments, setShowAllComments] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [isLoadingAllComments, setIsLoadingAllComments] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<{
-    commentId: string;
-    userName: string;
-  } | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ commentId: string; userName: string } | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
-  
-  const { getCurrentUser } = useAuthState();
-  const authUser = currentUser || getCurrentUser();
-  
-  // Використовуємо хуки для лайків та репостів
-  const { liked, likesCount, toggleLike, isLoading: likesLoading, reactionType, topReactions, toggleReaction } = usePostLikes(id, likes);
-  const { shared, toggleShare, isLoading: sharesLoading } = usePostShares(id);
-  
+
+  const authUser = currentUser;
   const isAuthor = authUser?.id === author.id;
-  
-  // Перевіряємо чи поточний користувач є інвестором (для показу титулів)
   const isCurrentUserInvestor = authUser?.isShareHolder || authUser?.is_shareholder;
-  
-  // Функція для видалення URL з тексту (для приватності)
+
+  // Post likes from centralized data
+  const liked = postLikesData?.liked || false;
+  const likesCount = postLikesData?.likesCount ?? likes;
+  const reactionType = postLikesData?.reactionType || null;
+  const topReactions = postLikesData?.topReactions || [];
+
+  const { shared, toggleShare, isLoading: sharesLoading } = usePostShares(id);
+
   const removeUrls = (text: string | null | undefined): string => {
     if (!text) return '';
     return text.replace(/(https?:\/\/[^\s]+)/g, '').trim();
   };
-  
-  // Виявлення вбудованого відео/посилання
+
   const videoEmbed = extractVideoEmbed(caption);
-  
-  // Перевірка чи media_url є аудіо
   const isAudioUrl = imageUrl && /\.(mp3|wav|ogg|flac|aac|m4a|wma)(\?|$)/i.test(imageUrl);
-  
-  // Очищений текст без URL
   const cleanCaption = removeUrls(caption);
 
-  // Завантаження останніх коментарів (також при зміні comments count від батька)
-  useEffect(() => {
-    loadRecentComments();
-  }, [id, comments]);
+  // Group comments with replies from centralized data
+  const groupedComments = useMemo(() => groupCommentsWithReplies(feedComments), [feedComments]);
+  const displayedComments = showAllComments ? groupedComments : groupedComments.slice(-2);
+  const totalRootComments = groupedComments.length;
 
-  // Polling removed — realtime subscription handles updates
+  const defaultGetCommentLikes = (cid: string): CommentLikesData => ({ likesCount: 0, userReaction: null, topReactions: [] });
+  const actualGetCommentLikes = getCommentLikes || defaultGetCommentLikes;
+  const actualToggleCommentReaction = onToggleCommentReaction || (() => {});
 
-  // Realtime підписка на коментарі
-  useEffect(() => {
-    const channelName = `realtime_comments_${id}_${Math.random().toString(36).substring(7)}`;
-    const channel = supabase
-      .channel(channelName)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'comments',
-        filter: `post_id=eq.${id}`
-      }, () => {
-        loadRecentComments();
-        if (showAllComments) {
-          loadAllComments(true);
-        }
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [id, showAllComments]);
-
-  const loadRecentComments = async () => {
-    try {
-      const { data: commentsData, error } = await supabase
-        .from('comments')
-        .select('*')
-        .eq('post_id', id)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      if (commentsData && commentsData.length > 0) {
-        const userIds = [...new Set(commentsData.map(c => c.user_id))];
-        const { data: users } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: userIds });
-        
-        const commentsWithUsers: CommentData[] = commentsData.map(comment => ({
-          ...comment,
-          parent_id: (comment as any).parent_id || null,
-          user: users?.find((u: any) => u.id === comment.user_id)
-        }));
-        
-        // Групуємо коментарі з відповідями
-        const grouped = groupCommentsWithReplies(commentsWithUsers);
-        // Показуємо останні 2 кореневі коментарі
-        setRecentComments(grouped.slice(-2));
-      } else {
-        setRecentComments([]);
-      }
-    } catch (error) {
-      console.error("Error loading comments:", error);
-    }
-  };
-
-  // Завантаження всіх коментарів для inline expand
-  const loadAllComments = async (forceReload = false) => {
-    if (isLoadingAllComments) return;
-    if (showAllComments && !forceReload) return;
-    
-    setIsLoadingAllComments(true);
-    try {
-      const { data: commentsData, error } = await supabase
-        .from('comments')
-        .select('*')
-        .eq('post_id', id)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      if (commentsData && commentsData.length > 0) {
-        const userIds = [...new Set(commentsData.map(c => c.user_id))];
-        const { data: users } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: userIds });
-        
-        const commentsWithUsers: CommentData[] = commentsData.map(comment => ({
-          ...comment,
-          parent_id: (comment as any).parent_id || null,
-          user: users?.find((u: any) => u.id === comment.user_id)
-        }));
-        
-        // Групуємо коментарі з відповідями
-        const grouped = groupCommentsWithReplies(commentsWithUsers);
-        setAllComments(grouped);
-        setShowAllComments(true);
-      }
-    } catch (error) {
-      console.error("Error loading all comments:", error);
-    } finally {
-      setIsLoadingAllComments(false);
-    }
-  };
-
-  // Фокус на поле коментаря
-  const handleCommentFocus = () => {
-    commentInputRef.current?.focus();
-  };
-
-  // Відповідь на коментар
+  const handleCommentFocus = () => commentInputRef.current?.focus();
   const handleReply = (commentId: string, userName: string) => {
     setReplyingTo({ commentId, userName });
     commentInputRef.current?.focus();
   };
+  const cancelReply = () => setReplyingTo(null);
 
-  // Скасування відповіді
-  const cancelReply = () => {
-    setReplyingTo(null);
+  const handleToggleLike = () => {
+    if (onTogglePostReaction) onTogglePostReaction(id, reactionType || 'like');
+  };
+
+  const handleToggleReaction = (reaction: ReactionType) => {
+    if (onTogglePostReaction) onTogglePostReaction(id, reaction);
   };
 
   const handleCommentSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && commentText.trim() && authUser?.id) {
       setIsSubmittingComment(true);
       try {
-        const insertData: any = {
-          post_id: id,
-          user_id: authUser.id,
-          content: commentText.trim()
-        };
-        
-        // Додаємо parent_id якщо це відповідь
-        if (replyingTo) {
-          insertData.parent_id = replyingTo.commentId;
-        }
-        
+        const insertData: any = { post_id: id, user_id: authUser.id, content: commentText.trim() };
+        if (replyingTo) insertData.parent_id = replyingTo.commentId;
         const { error } = await supabase.from('comments').insert(insertData);
-        
         if (error) throw error;
-        
         setCommentText("");
         setReplyingTo(null);
-        // Перезавантажуємо коментарі
-        loadRecentComments();
-        if (showAllComments) {
-          // Перезавантажуємо всі коментарі
-          setShowAllComments(false);
-          setTimeout(() => loadAllComments(), 100);
-        }
+        // Realtime will handle refresh via centralized hook
       } catch (error) {
         console.error("Error submitting comment:", error);
       } finally {
@@ -256,43 +146,17 @@ export function PostCard({
     }
   };
 
-  // Підрахунок загальної кількості коментарів (кореневих)
-  const displayedComments = showAllComments ? allComments : recentComments;
-  const totalRootComments = showAllComments ? allComments.length : comments;
-
-  // Collect ALL comment IDs (including nested replies) for batch likes loading
-  const allCommentIds = useMemo(() => {
-    const collectIds = (comments: CommentData[]): string[] => {
-      const ids: string[] = [];
-      comments.forEach(c => {
-        ids.push(c.id);
-        if (c.replies) ids.push(...collectIds(c.replies));
-      });
-      return ids;
-    };
-    return collectIds(displayedComments);
-  }, [displayedComments]);
-
-  // ONE batch query for all comment likes instead of N+1
-  const { getLikes, toggleReaction: toggleCommentReaction, isLoading: commentLikesLoading } = useCommentLikesBatch(allCommentIds);
-
   return (
     <div className={cn("creative-card card-hover", className)}>
-      {/* Заголовок публікації */}
+      {/* Header */}
       <div className="flex items-center justify-between p-3">
         <Link to={`/profile/${author.id}`} className="flex items-center gap-2">
           <Avatar className="h-8 w-8 border">
             <AvatarImage src={author.avatarUrl} alt={author.name} />
-            <AvatarFallback>
-              {author.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")}
-            </AvatarFallback>
+            <AvatarFallback>{author.name.split(" ").map((n) => n[0]).join("")}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
             <span className="text-sm font-semibold">{author.name}</span>
-            {/* Титули показуються тільки інвесторам (без @username - як у Facebook) */}
             {author.profession && isCurrentUserInvestor && (
               <span className={`profession-badge profession-badge-${author.profession.toLowerCase()} text-[10px]`}>
                 {author.profession}
@@ -300,173 +164,104 @@ export function PostCard({
             )}
           </div>
         </Link>
-        <PostMenu 
-          postId={id}
-          isAuthor={isAuthor}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          caption={caption}
-        />
+        <PostMenu postId={id} isAuthor={isAuthor} onEdit={onEdit} onDelete={onDelete} caption={caption} />
       </div>
 
-      {/* Текст публікації - окремий блок над медіа, як у Facebook */}
       {cleanCaption && (
         <div className="px-3 pb-2">
           <p className="text-sm whitespace-pre-wrap">{cleanCaption}</p>
         </div>
       )}
 
-      {/* Аудіо плеєр */}
       {isAudioUrl && imageUrl && (
-        <div className="px-3 pt-2">
-          <AudioPlayer src={imageUrl} />
-        </div>
+        <div className="px-3 pt-2"><AudioPlayer src={imageUrl} /></div>
       )}
 
-      {/* Зображення - показуємо тільки якщо є і не аудіо */}
       {imageUrl && !isAudioUrl && (
         <div className="relative overflow-hidden bg-muted">
-          <img
-            src={imageUrl}
-            alt={caption}
-            className="w-full object-contain max-h-[600px] transition-all hover:scale-105"
-          />
+          <img src={imageUrl} alt={caption} className="w-full object-contain max-h-[600px] transition-all hover:scale-105" />
         </div>
       )}
 
-      {/* Вбудоване відео превʼю - показуємо тільки якщо немає зображення */}
       {!imageUrl && !isAudioUrl && videoEmbed && (
-        <div className="px-3 pt-2">
-          <VideoPreview embed={videoEmbed} />
-        </div>
+        <div className="px-3 pt-2"><VideoPreview embed={videoEmbed} /></div>
       )}
 
-      {/* Дії */}
+      {/* Actions */}
       <div className="p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ReactionPicker onSelect={toggleReaction} disabled={likesLoading}>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="rounded-full"
-                onClick={toggleLike}
-                disabled={likesLoading}
-              >
+            <ReactionPicker onSelect={handleToggleReaction} disabled={postLikeLoading}>
+              <Button variant="ghost" size="icon" className="rounded-full" onClick={handleToggleLike} disabled={postLikeLoading}>
                 {liked ? (
                   <span className="text-xl leading-none">{getReactionEmoji(reactionType || 'like')}</span>
                 ) : (
                   <span className="text-xl leading-none opacity-60">👍</span>
                 )}
-                <span className="sr-only">Лайк</span>
               </Button>
             </ReactionPicker>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="rounded-full"
-              onClick={handleCommentFocus}
-            >
+            <Button variant="ghost" size="icon" className="rounded-full" onClick={handleCommentFocus}>
               <MessageCircle className="h-5 w-5" />
-              <span className="sr-only">Коментар</span>
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="rounded-full"
-              onClick={toggleShare}
-              disabled={sharesLoading}
-            >
-              <Share2 
-                className={cn("h-5 w-5 transition-all", shared && "fill-primary text-primary")} 
-              />
-              <span className="sr-only">Поширити</span>
+            <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleShare} disabled={sharesLoading}>
+              <Share2 className={cn("h-5 w-5 transition-all", shared && "fill-primary text-primary")} />
             </Button>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="rounded-full"
-            onClick={() => setSaved(!saved)}
-          >
-            <Bookmark 
-              className={cn("h-5 w-5", saved && "fill-secondary text-secondary")} 
-            />
-            <span className="sr-only">Зберегти</span>
+          <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setSaved(!saved)}>
+            <Bookmark className={cn("h-5 w-5", saved && "fill-secondary text-secondary")} />
           </Button>
         </div>
 
-        {/* Лайки */}
         <div className="mt-2 flex items-center gap-1">
-          {topReactions && topReactions.length > 0 && topReactions.map((type, i) => (
-            <span key={i} className="text-sm -ml-0.5 first:ml-0">{getReactionEmoji(type)}</span>
+          {topReactions.length > 0 && topReactions.map((type, i) => (
+            <span key={i} className="text-sm -ml-0.5 first:ml-0">{getReactionEmoji(type as ReactionType)}</span>
           ))}
           <span className="text-sm font-semibold ml-0.5">{likesCount} вподобань</span>
         </div>
 
-        {/* Опис - тепер показується над медіа, тут тільки ім'я якщо немає тексту */}
         <div className="mt-1">
           <p className="text-sm">
-            <Link to={`/profile/${author.id}`} className="font-semibold">
-              {author.name}
-            </Link>{" "}
-            {!cleanCaption && !videoEmbed ? '' : (videoEmbed && !cleanCaption ? '' : '')}
+            <Link to={`/profile/${author.id}`} className="font-semibold">{author.name}</Link>
           </p>
         </div>
 
-        {/* Inline коментарі з вкладеними відповідями */}
+        {/* Comments */}
         {displayedComments.length > 0 && (
           <div className="mt-3 space-y-1">
             {displayedComments.map(comment => (
-              <CommentItem 
-                key={comment.id} 
+              <CommentItem
+                key={comment.id}
                 comment={comment}
                 postAuthorId={author.id}
                 onReply={handleReply}
-                getLikes={getLikes}
-                onToggleReaction={toggleCommentReaction}
-                likesLoading={commentLikesLoading}
+                getLikes={actualGetCommentLikes}
+                onToggleReaction={actualToggleCommentReaction}
+                likesLoading={commentLikeLoading}
               />
             ))}
           </div>
         )}
 
-        {/* Кнопка "Переглянути більше коментарів" - inline expand */}
         <div className="mt-2 flex flex-col">
           {totalRootComments > 2 && !showAllComments && (
-            <button 
-              onClick={() => loadAllComments()}
-              disabled={isLoadingAllComments}
-              className="text-sm text-muted-foreground hover:underline text-left"
-            >
-              {isLoadingAllComments 
-                ? "Завантаження..." 
-                : `Переглянути ще ${totalRootComments - Math.min(recentComments.length, 2)} коментарів`
-              }
+            <button onClick={() => setShowAllComments(true)} className="text-sm text-muted-foreground hover:underline text-left">
+              Переглянути ще {totalRootComments - Math.min(displayedComments.length, 2)} коментарів
             </button>
           )}
-          {showAllComments && allComments.length > 2 && (
-            <button 
-              onClick={() => setShowAllComments(false)}
-              className="text-sm text-muted-foreground hover:underline text-left"
-            >
+          {showAllComments && groupedComments.length > 2 && (
+            <button onClick={() => setShowAllComments(false)} className="text-sm text-muted-foreground hover:underline text-left">
               Згорнути коментарі
             </button>
           )}
           <span className="mt-1 text-xs text-muted-foreground">{timeAgo}</span>
         </div>
 
-        {/* Inline форма коментаря */}
         {authUser && (
           <div className="mt-3 pt-3 border-t">
-            {/* Показуємо кому відповідаємо */}
             {replyingTo && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2 bg-muted/30 rounded-lg px-3 py-1.5">
                 <span>Відповідь для <strong>{replyingTo.userName}</strong></span>
-                <button 
-                  onClick={cancelReply} 
-                  className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
-                >
+                <button onClick={cancelReply} className="ml-auto text-muted-foreground hover:text-destructive transition-colors">
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
