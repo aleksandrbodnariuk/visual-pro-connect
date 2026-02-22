@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { MessageCircle, Share2, Bookmark, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,6 +16,7 @@ import { AudioPlayer } from "./AudioPlayer";
 import { CommentItem, CommentData } from "./CommentItem";
 import { supabase } from "@/integrations/supabase/client";
 import { ReactionPicker, ReactionType, getReactionEmoji, getReactionColor } from "./ReactionPicker";
+import { useCommentLikesBatch } from "@/hooks/useCommentLikesBatch";
 
 export interface PostCardProps {
   id: string;
@@ -259,6 +260,22 @@ export function PostCard({
   const displayedComments = showAllComments ? allComments : recentComments;
   const totalRootComments = showAllComments ? allComments.length : comments;
 
+  // Collect ALL comment IDs (including nested replies) for batch likes loading
+  const allCommentIds = useMemo(() => {
+    const collectIds = (comments: CommentData[]): string[] => {
+      const ids: string[] = [];
+      comments.forEach(c => {
+        ids.push(c.id);
+        if (c.replies) ids.push(...collectIds(c.replies));
+      });
+      return ids;
+    };
+    return collectIds(displayedComments);
+  }, [displayedComments]);
+
+  // ONE batch query for all comment likes instead of N+1
+  const { getLikes, toggleReaction: toggleCommentReaction, isLoading: commentLikesLoading } = useCommentLikesBatch(allCommentIds);
+
   return (
     <div className={cn("creative-card card-hover", className)}>
       {/* Заголовок публікації */}
@@ -406,6 +423,9 @@ export function PostCard({
                 comment={comment}
                 postAuthorId={author.id}
                 onReply={handleReply}
+                getLikes={getLikes}
+                onToggleReaction={toggleCommentReaction}
+                likesLoading={commentLikesLoading}
               />
             ))}
           </div>
