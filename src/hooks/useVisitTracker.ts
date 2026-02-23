@@ -1,16 +1,21 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
 const HEARTBEAT_INTERVAL = 30 * 1000; // Update last_seen every 30 seconds
 
 export function useVisitTracker() {
+  const { user } = useAuth();
+
   useEffect(() => {
-    let userId: string | null = null;
+    if (!user?.id) return;
+
+    const userId = user.id;
     let intervalId: ReturnType<typeof setInterval> | null = null;
     let mounted = true;
 
     const updateLastSeen = async () => {
-      if (!userId) return;
+      if (!mounted) return;
       try {
         await supabase
           .from('users')
@@ -42,30 +47,17 @@ export function useVisitTracker() {
       }
     };
 
-    const init = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user || !mounted) return;
-        userId = user.id;
+    // Record visit (for stats)
+    Promise.resolve(supabase.rpc('record_visit')).catch(() => {});
 
-        // Record visit (for stats)
-        await supabase.rpc('record_visit');
-
-        // Start heartbeat to keep last_seen fresh
-        startHeartbeat();
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-      } catch {
-        // Not logged in or error
-      }
-    };
-
-    init();
+    // Start heartbeat to keep last_seen fresh
+    startHeartbeat();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       mounted = false;
       stopHeartbeat();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [user?.id]);
 }

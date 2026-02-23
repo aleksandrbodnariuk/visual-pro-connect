@@ -2,19 +2,20 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 
 export function useCategories() {
   const [userCategories, setUserCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   const updateUserCategories = async (categories: string[]) => {
-    const { data: currentUser } = await supabase.auth.getUser();
-    if (!currentUser.user) return;
+    if (!user?.id) return;
 
     const { error } = await supabase
       .from('users')
       .update({ categories })
-      .eq('id', currentUser.user.id);
+      .eq('id', user.id);
 
     if (error) {
       toast.error('Помилка при оновленні категорій');
@@ -26,14 +27,13 @@ export function useCategories() {
   };
 
   useEffect(() => {
-    const fetchUserCategories = async () => {
-      const { data: currentUser } = await supabase.auth.getUser();
-      if (!currentUser.user) return;
+    if (!user?.id) return;
 
+    const fetchUserCategories = async () => {
       const { data, error } = await supabase
         .from('users')
         .select('categories')
-        .eq('id', currentUser.user.id)
+        .eq('id', user.id)
         .single();
 
       if (error) {
@@ -46,7 +46,7 @@ export function useCategories() {
     };
 
     fetchUserCategories();
-  }, []);
+  }, [user?.id]);
 
   return {
     userCategories,

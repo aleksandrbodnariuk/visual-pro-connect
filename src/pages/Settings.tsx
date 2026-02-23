@@ -27,11 +27,11 @@ export default function Settings() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isSavingCategories, setIsSavingCategories] = useState(false);
 
-  // Отримуємо email з auth
+  // Отримуємо email з auth session (local, no REST call)
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user?.email) {
-        setUserEmail(data.user.email);
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user?.email) {
+        setUserEmail(data.session.user.email);
       }
     });
   }, []);

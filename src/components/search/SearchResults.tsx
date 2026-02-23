@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, UserPlus, Trash2 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useFriendRequests } from '@/hooks/useFriendRequests';
 import { toast } from 'sonner';
@@ -27,16 +28,15 @@ export function SearchResults({ category }: { category: string }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const { sendFriendRequest, friends } = useFriendRequests();
+  const { user: authUser } = useAuth();
 
   useEffect(() => {
     // Check if current user is admin - server-side only
     const checkAdmin = async () => {
       try {
-        const { data } = await supabase.auth.getUser();
-        if (data?.user?.id) {
-          // Use RPC to check admin status securely
+        if (authUser?.id) {
           const { data: isAdminResult, error } = await supabase
-            .rpc('is_user_admin', { _user_id: data.user.id });
+            .rpc('is_user_admin', { _user_id: authUser.id });
             
           if (!error) {
             setIsAdmin(isAdminResult === true);

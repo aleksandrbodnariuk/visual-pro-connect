@@ -3,23 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Check, X, Loader2 } from "lucide-react";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from '@/context/AuthContext';
 
 export function FriendRequestsList() {
   const { friendRequests, respondToFriendRequest, isLoading } = useFriendRequests();
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  
-  // Get current user from Supabase Auth
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setCurrentUserId(user.id);
-      }
-    };
-    getCurrentUser();
-  }, []);
+  const { user: authUser } = useAuth();
+  const currentUserId = authUser?.id || null;
   
   // Filter requests that came to the current user
   const incomingRequests = friendRequests.filter(
