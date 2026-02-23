@@ -101,8 +101,10 @@ export function NewsFeed() {
     getCommentsForPost,
     getCommentLikes,
     getPostLikes,
+    getPostShare,
     togglePostReaction,
     toggleCommentReaction,
+    toggleShare,
     postLikeLoading,
     commentLikeLoading,
   } = useFeedData(postIds);
@@ -345,6 +347,8 @@ export function NewsFeed() {
                   onToggleCommentReaction={toggleCommentReaction}
                   postLikeLoading={postLikeLoading.has(post.id)}
                   commentLikeLoading={commentLikeLoading}
+                  postShareData={getPostShare(post.id)}
+                  onToggleShare={toggleShare}
                 />
               );
             })

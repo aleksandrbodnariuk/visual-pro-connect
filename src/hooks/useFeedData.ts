@@ -38,9 +38,14 @@ export interface ProfileData {
   is_shareholder?: boolean;
 }
 
+export interface PostShareData {
+  shared: boolean;
+  isLoading: boolean;
+}
+
 /**
  * Centralized feed data hook.
- * Loads ALL comments, comment_likes, post_likes, and profiles
+ * Loads ALL comments, comment_likes, post_likes, post_shares, and profiles
  * in batch queries at the NewsFeed level. No child component should fetch.
  */
 export function useFeedData(postIds: string[]) {
@@ -51,8 +56,10 @@ export function useFeedData(postIds: string[]) {
   const [commentsMap, setCommentsMap] = useState<Map<string, FeedComment[]>>(new Map());
   const [commentLikesMap, setCommentLikesMap] = useState<Map<string, CommentLikesData>>(new Map());
   const [postLikesMap, setPostLikesMap] = useState<Map<string, PostLikesData>>(new Map());
+  const [postSharesMap, setPostSharesMap] = useState<Map<string, boolean>>(new Map());
   const [profilesMap, setProfilesMap] = useState<Map<string, ProfileData>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
+  const [shareLoading, setShareLoading] = useState<Set<string>>(new Set());
 
   // Track action loading states
   const [postLikeLoading, setPostLikeLoading] = useState<Set<string>>(new Set());
@@ -96,6 +103,17 @@ export function useFeedData(postIds: string[]) {
         .from('post_likes')
         .select('post_id, user_id, reaction_type')
         .in('post_id', postIds);
+
+      // 3b) Load ALL post_shares for current user in ONE query
+      let userSharePostIds: Set<string> = new Set();
+      if (userId) {
+        const { data: sharesData } = await supabase
+          .from('post_shares')
+          .select('post_id')
+          .eq('user_id', userId)
+          .in('post_id', postIds);
+        (sharesData || []).forEach(s => userSharePostIds.add(s.post_id));
+      }
 
       // 4) Load ALL profiles in ONE RPC call
       const allUserIds = [...new Set([...commentUserIds])];
@@ -188,6 +206,11 @@ export function useFeedData(postIds: string[]) {
         }
       }
       setPostLikesMap(plMap);
+
+      // ---- Build post_shares map ----
+      const psMap = new Map<string, boolean>();
+      postIds.forEach(pid => psMap.set(pid, userSharePostIds.has(pid)));
+      setPostSharesMap(psMap);
     } catch (error) {
       console.error('Error loading feed data:', error);
     } finally {
@@ -305,6 +328,29 @@ export function useFeedData(postIds: string[]) {
     }
   };
 
+  // ============ SHARE ACTION ============
+  const toggleShare = async (postId: string) => {
+    if (!userId) { toast.error("Потрібно авторизуватися"); return; }
+    setShareLoading(prev => new Set(prev).add(postId));
+    try {
+      const isShared = postSharesMap.get(postId) || false;
+      if (isShared) {
+        await supabase.from('post_shares').delete().eq('post_id', postId).eq('user_id', userId);
+        setPostSharesMap(prev => { const m = new Map(prev); m.set(postId, false); return m; });
+        toast.success("Репост скасовано");
+      } else {
+        await supabase.from('post_shares').insert([{ post_id: postId, user_id: userId }]);
+        setPostSharesMap(prev => { const m = new Map(prev); m.set(postId, true); return m; });
+        toast.success("Публікація поширена!");
+      }
+    } catch (error) {
+      console.error("Error toggling share:", error);
+      toast.error("Помилка при роботі з репостом");
+    } finally {
+      setShareLoading(prev => { const s = new Set(prev); s.delete(postId); return s; });
+    }
+  };
+
   // ============ GETTERS ============
 
   const getCommentsForPost = useCallback((postId: string): FeedComment[] => {
@@ -323,14 +369,20 @@ export function useFeedData(postIds: string[]) {
     return profilesMap.get(userId);
   }, [profilesMap]);
 
+  const getPostShare = useCallback((postId: string): PostShareData => {
+    return { shared: postSharesMap.get(postId) || false, isLoading: shareLoading.has(postId) };
+  }, [postSharesMap, shareLoading]);
+
   return {
     isLoading,
     getCommentsForPost,
     getCommentLikes,
     getPostLikes,
+    getPostShare,
     getProfile,
     togglePostReaction,
     toggleCommentReaction,
+    toggleShare,
     postLikeLoading,
     commentLikeLoading,
     reload: loadAllData,

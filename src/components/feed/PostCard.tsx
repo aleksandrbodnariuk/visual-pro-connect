@@ -6,7 +6,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { usePostShares } from "@/hooks/usePostShares";
 import { PostMenu } from "@/components/profile/PostMenu";
 import { extractVideoEmbed } from "@/lib/videoEmbed";
 import { VideoPreview } from "./VideoPreview";
@@ -14,7 +13,7 @@ import { AudioPlayer } from "./AudioPlayer";
 import { CommentItem } from "./CommentItem";
 import { supabase } from "@/integrations/supabase/client";
 import { ReactionPicker, ReactionType, getReactionEmoji } from "./ReactionPicker";
-import { FeedComment, CommentLikesData, PostLikesData } from "@/hooks/useFeedData";
+import { FeedComment, CommentLikesData, PostLikesData, PostShareData } from "@/hooks/useFeedData";
 
 // Функція групування коментарів з відповідями
 const groupCommentsWithReplies = (comments: FeedComment[]): FeedComment[] => {
@@ -53,6 +52,8 @@ export interface PostCardProps {
   onToggleCommentReaction?: (commentId: string, reaction: ReactionType) => void;
   postLikeLoading?: boolean;
   commentLikeLoading?: boolean;
+  postShareData?: PostShareData;
+  onToggleShare?: (postId: string) => void;
 }
 
 export function PostCard({
@@ -74,6 +75,8 @@ export function PostCard({
   onToggleCommentReaction,
   postLikeLoading = false,
   commentLikeLoading = false,
+  postShareData,
+  onToggleShare,
 }: PostCardProps) {
   const [saved, setSaved] = useState(false);
   const [commentText, setCommentText] = useState("");
@@ -92,7 +95,9 @@ export function PostCard({
   const reactionType = postLikesData?.reactionType || null;
   const topReactions = postLikesData?.topReactions || [];
 
-  const { shared, toggleShare, isLoading: sharesLoading } = usePostShares(id);
+  const shared = postShareData?.shared || false;
+  const sharesLoading = postShareData?.isLoading || false;
+  const handleToggleShare = () => { if (onToggleShare) onToggleShare(id); };
 
   const removeUrls = (text: string | null | undefined): string => {
     if (!text) return '';
@@ -203,7 +208,7 @@ export function PostCard({
             <Button variant="ghost" size="icon" className="rounded-full" onClick={handleCommentFocus}>
               <MessageCircle className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleShare} disabled={sharesLoading}>
+            <Button variant="ghost" size="icon" className="rounded-full" onClick={handleToggleShare} disabled={sharesLoading}>
               <Share2 className={cn("h-5 w-5 transition-all", shared && "fill-primary text-primary")} />
             </Button>
           </div>
