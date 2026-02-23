@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useNavigate } from "react-router-dom";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from '@/context/AuthContext';
 import { toast } from "sonner";
 
 
@@ -23,19 +24,15 @@ export default function Connect() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   const { sendFriendRequest, friendRequests, checkFriendshipStatus } = useFriendRequests();
 
   useEffect(() => {
-    const checkCurrentUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (data.user) {
-        setCurrentUserId(data.user.id);
-      }
-    };
-    
-    checkCurrentUser();
+    if (authUser?.id) {
+      setCurrentUserId(authUser.id);
+    }
     fetchUsers();
-  }, []);
+  }, [authUser?.id]);
 
   const fetchUsers = async () => {
     try {

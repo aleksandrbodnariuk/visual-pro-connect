@@ -4,12 +4,14 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Sun, Moon, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 
 export function ThemeSettings() {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [isSaving, setIsSaving] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const { user: authUser } = useAuth();
 
   // Avoid hydration mismatch
   useEffect(() => {
@@ -21,12 +23,11 @@ export function ThemeSettings() {
     setTheme(newTheme);
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      if (authUser?.id) {
         const { error } = await supabase
           .from('users')
           .update({ theme: newTheme })
-          .eq('id', user.id);
+          .eq('id', authUser.id);
         
         if (error) throw error;
         toast.success('Тему змінено');

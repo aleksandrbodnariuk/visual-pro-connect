@@ -8,26 +8,26 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from '@/context/AuthContext';
 
 export default function Notifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user: authUser } = useAuth();
 
   const fetchNotifications = async () => {
     setIsLoading(true);
     try {
-      // Використовуємо Supabase Auth як єдине джерело правди
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user?.id) {
+      if (!authUser?.id) {
         throw new Error("User not authenticated");
       }
+      const userId = authUser.id;
       
       // Get notifications from Supabase
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
         
       if (error) {
@@ -98,14 +98,11 @@ export default function Notifications() {
 
   const markAllAsRead = async () => {
     try {
-      // Використовуємо Supabase Auth як єдине джерело правди
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user?.id) {
+      if (authUser?.id) {
         const { error } = await supabase
           .from('notifications')
           .update({ is_read: true })
-          .eq('user_id', user.id)
+          .eq('user_id', authUser.id)
           .eq('is_read', false);
           
         if (error) {
@@ -162,14 +159,11 @@ export default function Notifications() {
   
   const deleteAllNotifications = async () => {
     try {
-      // Використовуємо Supabase Auth як єдине джерело правди
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user?.id) {
+      if (authUser?.id) {
         const { error } = await supabase
           .from('notifications')
           .delete()
-          .eq('user_id', user.id);
+          .eq('user_id', authUser.id);
           
         if (error) {
           console.error("Error deleting all notifications from Supabase:", error);

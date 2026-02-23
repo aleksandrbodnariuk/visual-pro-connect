@@ -75,8 +75,8 @@ export default function Profile() {
       
       try {
         // ВАЖЛИВО: Використовуємо Supabase Auth як єдине джерело правди
-        const { data: authData } = await supabase.auth.getUser();
-        const authUserId = authData?.user?.id || null;
+        const { data: { session } } = await supabase.auth.getSession();
+        const authUserId = session?.user?.id || null;
         
         // Тільки Supabase Auth - без localStorage fallback
         const currentUserId = authUserId || null;
