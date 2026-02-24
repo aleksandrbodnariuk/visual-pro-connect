@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "./context/LanguageContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
+import { SiteSettingsProvider } from "./context/SiteSettingsContext";
 import { useDataSync } from "./hooks/useDataSync";
 import { FaviconUpdater } from "./components/layout/FaviconUpdater";
 import { MobileNavigation } from "./components/layout/MobileNavigation";
@@ -72,12 +73,14 @@ const App = () => (
     <AuthProvider>
       <ThemeProvider>
         <LanguageProvider>
-          <TooltipProvider>
-            <FaviconUpdater />
-            <Toaster />
-            <Sonner />
-            <AppContent />
-          </TooltipProvider>
+          <SiteSettingsProvider>
+            <TooltipProvider>
+              <FaviconUpdater />
+              <Toaster />
+              <Sonner />
+              <AppContent />
+            </TooltipProvider>
+          </SiteSettingsProvider>
         </LanguageProvider>
       </ThemeProvider>
     </AuthProvider>

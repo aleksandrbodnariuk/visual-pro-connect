@@ -1,47 +1,33 @@
 import { useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useSiteSettings } from '@/context/SiteSettingsContext';
 
 export function FaviconUpdater() {
+  const { logoUrl } = useSiteSettings();
+
   useEffect(() => {
-    const updateFavicon = async () => {
-      try {
-        const { data } = await supabase
-          .from('site_settings')
-          .select('value')
-          .eq('id', 'site-logo')
-          .maybeSingle();
+    if (!logoUrl || logoUrl === '/default-logo.png') return;
+    
+    let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+    if (link) {
+      link.href = logoUrl;
+    } else {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      link.type = 'image/png';
+      link.href = logoUrl;
+      document.head.appendChild(link);
+    }
+  }, [logoUrl]);
 
-        if (data?.value) {
-          let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
-          if (link) {
-            link.href = data.value;
-          } else {
-            link = document.createElement('link');
-            link.rel = 'icon';
-            link.type = 'image/png';
-            link.href = data.value;
-            document.head.appendChild(link);
-          }
-        }
-      } catch (error) {
-        console.error('Помилка оновлення favicon:', error);
-      }
-    };
-
-    updateFavicon();
-
+  // Also listen for direct logo-updated events (from admin settings save)
+  useEffect(() => {
     const handleLogoUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
       if (customEvent.detail?.url) {
         const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
-        if (link) {
-          link.href = customEvent.detail.url;
-        }
-      } else {
-        updateFavicon();
+        if (link) link.href = customEvent.detail.url;
       }
     };
-
     window.addEventListener('logo-updated', handleLogoUpdate);
     return () => window.removeEventListener('logo-updated', handleLogoUpdate);
   }, []);

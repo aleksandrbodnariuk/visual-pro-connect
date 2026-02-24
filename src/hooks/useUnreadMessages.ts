@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchWithTimeout } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 // ── Singleton state shared across all hook instances ──
@@ -9,6 +9,11 @@ let sharedChannel: RealtimeChannel | null = null;
 let sharedUserId: string | null = null;
 let subscriberCount = 0;
 const listeners = new Set<(uid: string) => void>();
+
+// Module-level cache for initial fetch deduplication
+let initialFetchPromise: Promise<number> | null = null;
+let cachedCount: number | null = null;
+let cachedForUserId: string | null = null;
 
 function createSharedChannel(uid: string) {
   if (sharedChannel) return;
@@ -25,9 +30,10 @@ function createSharedChannel(uid: string) {
         filter: `receiver_id=eq.${uid}`,
       },
       () => {
-        // Notify every hook instance
+        // Invalidate cache on new message
+        cachedCount = null;
+        initialFetchPromise = null;
         listeners.forEach(fn => fn(uid));
-        // Broadcast to other parts of the app (Messages page, etc.)
         window.dispatchEvent(new CustomEvent('new-message-received'));
       }
     )
@@ -42,63 +48,57 @@ function destroySharedChannel() {
   }
 }
 
+async function fetchUnreadFromDb(uid: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('messages')
+    .select('*', { count: 'exact', head: true })
+    .eq('receiver_id', uid)
+    .eq('read', false);
+  return (!error && count !== null) ? count : 0;
+}
+
 export function useUnreadMessages() {
+  const { user } = useAuth();
+  const userId = user?.id || null;
   const [unreadCount, setUnreadCount] = useState(0);
-  const [userId, setUserId] = useState<string | null>(null);
 
   const fetchUnreadCount = useCallback(async (uid: string) => {
-    const { count, error } = await supabase
-      .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('receiver_id', uid)
-      .eq('read', false);
-
-    if (!error && count !== null) {
-      setUnreadCount(count);
-    }
+    const count = await fetchUnreadFromDb(uid);
+    cachedCount = count;
+    cachedForUserId = uid;
+    setUnreadCount(count);
   }, []);
 
+  // Initial fetch — deduplicated via module-level promise
   useEffect(() => {
-    const getUser = async () => {
-      try {
-        const { data: { session } } = await fetchWithTimeout(
-          supabase.auth.getSession(),
-          10000
-        );
-        if (session?.user?.id) {
-          setUserId(session.user.id);
-          fetchUnreadCount(session.user.id);
-        }
-      } catch {
-        console.warn('Unread messages: session timeout');
-      }
-    };
+    if (!userId) return;
 
-    getUser();
+    // If cached for this user, use immediately
+    if (cachedCount !== null && cachedForUserId === userId) {
+      setUnreadCount(cachedCount);
+      return;
+    }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      if (session?.user?.id) {
-        setUserId(session.user.id);
-        fetchUnreadCount(session.user.id);
-      } else {
-        setUserId(null);
-        setUnreadCount(0);
-      }
+    // Deduplicate: only one in-flight request at a time
+    if (!initialFetchPromise || cachedForUserId !== userId) {
+      initialFetchPromise = fetchUnreadFromDb(userId);
+      cachedForUserId = userId;
+    }
+
+    initialFetchPromise.then(count => {
+      cachedCount = count;
+      setUnreadCount(count);
     });
-
-    return () => subscription.unsubscribe();
-  }, [fetchUnreadCount]);
+  }, [userId]);
 
   // ── Singleton Realtime subscription ──
   useEffect(() => {
     if (!userId) return;
 
-    // Register this instance's listener
     const listener = (uid: string) => fetchUnreadCount(uid);
     listeners.add(listener);
     subscriberCount++;
 
-    // Create the shared channel only once
     if (subscriberCount === 1 || sharedUserId !== userId) {
       destroySharedChannel();
       createSharedChannel(userId);
@@ -113,10 +113,12 @@ export function useUnreadMessages() {
     };
   }, [userId, fetchUnreadCount]);
 
-  // Слухаємо кастомну подію для примусового оновлення лічильника
+  // Listen for messages-read events
   useEffect(() => {
     const handleMessagesRead = () => {
       if (userId) {
+        cachedCount = null;
+        initialFetchPromise = null;
         fetchUnreadCount(userId);
       }
     };
