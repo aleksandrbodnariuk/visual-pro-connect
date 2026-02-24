@@ -48,27 +48,7 @@ export function useDataSync() {
       console.warn("Не вдалося синхронізувати повідомлення:", error);
     }
 
-    // Синхронізуємо налаштування сайту
-    try {
-      const { data: siteSettings } = await fetchWithTimeout(
-        Promise.resolve(supabase
-          .from('site_settings')
-          .select('*')),
-        10000
-      );
-
-      if (siteSettings && siteSettings.length > 0) {
-        siteSettings.forEach(setting => {
-          if (setting.id === 'site-logo') {
-            localStorage.setItem('customLogo', setting.value);
-          } else if (setting.id === 'site-name') {
-            localStorage.setItem('siteName', setting.value);
-          }
-        });
-      }
-    } catch (error) {
-      console.warn("Не вдалося синхронізувати налаштування сайту:", error);
-    }
+    // site_settings are now loaded centrally in SiteSettingsContext
   }, [user?.id]);
 
   useEffect(() => {

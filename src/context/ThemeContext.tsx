@@ -10,12 +10,13 @@ interface ThemeProviderProps {
 // Inner component to sync theme with Supabase after mount
 function ThemeSyncer() {
   const { setTheme } = useTheme();
-  const { user, loading } = useAuth();
+  const { user, loading, appUser } = useAuth();
 
   useEffect(() => {
-    // Завантажуємо тему тільки коли user вже визначений
     if (loading || !user) return;
-    
+
+    // If appUser is loaded, we can try to get theme from users table
+    // This runs once when appUser is available
     const loadTheme = async () => {
       try {
         const { data } = await supabase
@@ -23,7 +24,7 @@ function ThemeSyncer() {
           .select('theme')
           .eq('id', user.id)
           .maybeSingle();
-        
+
         if (data?.theme) {
           setTheme(data.theme);
         }
@@ -31,9 +32,9 @@ function ThemeSyncer() {
         console.error('Error loading theme:', error);
       }
     };
-    
+
     loadTheme();
-  }, [user, loading, setTheme]);
+  }, [user?.id, loading, setTheme]); // Only re-run when user ID changes, not on every appUser update
 
   return null;
 }
