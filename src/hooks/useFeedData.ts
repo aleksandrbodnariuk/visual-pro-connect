@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { ReactionType } from '@/components/feed/ReactionPicker';
@@ -63,7 +63,10 @@ export function useFeedData(postIds: string[]) {
 
   // Track action loading states
   const [postLikeLoading, setPostLikeLoading] = useState<Set<string>>(new Set());
-  const [commentLikeLoading, setCommentLikeLoading] = useState(false);
+  const [commentLikeLoading, setCommentLikeLoading] = useState<Set<string>>(new Set());
+
+  // Ref to track known comment IDs for realtime filtering (avoids stale closure)
+  const knownCommentIdsRef = useRef<Set<string>>(new Set());
 
   const idsKey = postIds.join(',');
 
@@ -147,6 +150,10 @@ export function useFeedData(postIds: string[]) {
         list.push(enriched);
         cMap.set(c.post_id, list);
       });
+      // Update known comment IDs ref
+      const allKnownIds = new Set<string>();
+      cMap.forEach(list => list.forEach(c => allKnownIds.add(c.id)));
+      knownCommentIdsRef.current = allKnownIds;
       setCommentsMap(cMap);
 
       // ---- Build comment_likes map ----
@@ -238,14 +245,15 @@ export function useFeedData(postIds: string[]) {
     return () => { supabase.removeChannel(ch); };
   }, [idsKey, loadAllData]);
 
-  // ============ REALTIME: 1 channel for comment_likes ============
+   // ============ REALTIME: 1 channel for comment_likes ============
   useEffect(() => {
     if (postIds.length === 0) return;
     const ch = supabase
       .channel(`feed_comment_likes_${Math.random().toString(36).substring(7)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comment_likes' }, (payload) => {
         const cid = (payload.new as any)?.comment_id || (payload.old as any)?.comment_id;
-        if (cid && commentLikesMap.has(cid)) {
+        // Use ref instead of stale closure
+        if (cid && knownCommentIdsRef.current.has(cid)) {
           loadAllData();
         }
       })
@@ -309,22 +317,43 @@ export function useFeedData(postIds: string[]) {
   };
 
   const toggleCommentReaction = async (commentId: string, reactionType: ReactionType) => {
-    if (!userId || commentLikeLoading) return;
-    setCommentLikeLoading(true);
+    if (!userId || commentLikeLoading.has(commentId)) return;
+    setCommentLikeLoading(prev => new Set(prev).add(commentId));
     try {
-      const current = commentLikesMap.get(commentId);
-      if (current?.userReaction === reactionType) {
+      const current = commentLikesMap.get(commentId) || { likesCount: 0, userReaction: null, topReactions: [] };
+
+      if (current.userReaction === reactionType) {
+        // Remove reaction — optimistic
+        setCommentLikesMap(prev => {
+          const m = new Map(prev);
+          m.set(commentId, { ...current, userReaction: null, likesCount: Math.max(0, current.likesCount - 1) });
+          return m;
+        });
         await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', userId);
-      } else if (current?.userReaction) {
+      } else if (current.userReaction) {
+        // Change reaction — optimistic
+        setCommentLikesMap(prev => {
+          const m = new Map(prev);
+          m.set(commentId, { ...current, userReaction: reactionType });
+          return m;
+        });
         await supabase.from('comment_likes').update({ reaction_type: reactionType }).eq('comment_id', commentId).eq('user_id', userId);
       } else {
+        // Add reaction — optimistic
+        setCommentLikesMap(prev => {
+          const m = new Map(prev);
+          m.set(commentId, { ...current, userReaction: reactionType, likesCount: current.likesCount + 1 });
+          return m;
+        });
         await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: userId, reaction_type: reactionType });
       }
-      // Realtime handles refresh
+      // Realtime handles topReactions refresh
     } catch (error) {
       console.error('Error toggling comment reaction:', error);
+      // Revert on error
+      loadAllData();
     } finally {
-      setCommentLikeLoading(false);
+      setCommentLikeLoading(prev => { const s = new Set(prev); s.delete(commentId); return s; });
     }
   };
 
