@@ -346,7 +346,7 @@ export function NewsFeed() {
                   onTogglePostReaction={togglePostReaction}
                   onToggleCommentReaction={toggleCommentReaction}
                   postLikeLoading={postLikeLoading.has(post.id)}
-                  commentLikeLoading={commentLikeLoading}
+                  commentLikeLoading={false}
                   postShareData={getPostShare(post.id)}
                   onToggleShare={toggleShare}
                 />
