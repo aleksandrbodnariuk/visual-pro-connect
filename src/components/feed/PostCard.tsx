@@ -50,6 +50,8 @@ export interface PostCardProps {
   getCommentLikes?: (commentId: string) => CommentLikesData;
   onTogglePostReaction?: (postId: string, reaction: ReactionType) => void;
   onToggleCommentReaction?: (commentId: string, reaction: ReactionType) => void;
+  onEditComment?: (commentId: string, newContent: string) => void;
+  onDeleteComment?: (commentId: string) => void;
   postLikeLoading?: boolean;
   commentLikeLoading?: boolean;
   postShareData?: PostShareData;
@@ -73,6 +75,8 @@ export function PostCard({
   getCommentLikes,
   onTogglePostReaction,
   onToggleCommentReaction,
+  onEditComment,
+  onDeleteComment,
   postLikeLoading = false,
   commentLikeLoading = false,
   postShareData,
@@ -238,9 +242,12 @@ export function PostCard({
                 key={comment.id}
                 comment={comment}
                 postAuthorId={author.id}
+                currentUserId={authUser?.id}
                 onReply={handleReply}
                 getLikes={actualGetCommentLikes}
                 onToggleReaction={actualToggleCommentReaction}
+                onEditComment={onEditComment}
+                onDeleteComment={onDeleteComment}
                 likesLoading={commentLikeLoading}
               />
             ))}

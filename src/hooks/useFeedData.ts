@@ -357,6 +357,47 @@ export function useFeedData(postIds: string[]) {
     }
   };
 
+  // ============ COMMENT EDIT / DELETE ============
+  const editComment = async (commentId: string, newContent: string) => {
+    if (!userId) return;
+    try {
+      // Optimistic update
+      setCommentsMap(prev => {
+        const m = new Map(prev);
+        m.forEach((comments, pid) => {
+          m.set(pid, comments.map(c => c.id === commentId ? { ...c, content: newContent } : c));
+        });
+        return m;
+      });
+      const { error } = await supabase.from('comments').update({ content: newContent }).eq('id', commentId).eq('user_id', userId);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error editing comment:', error);
+      toast.error('Помилка редагування коментаря');
+      loadAllData();
+    }
+  };
+
+  const deleteComment = async (commentId: string) => {
+    if (!userId) return;
+    try {
+      // Optimistic update
+      setCommentsMap(prev => {
+        const m = new Map(prev);
+        m.forEach((comments, pid) => {
+          m.set(pid, comments.filter(c => c.id !== commentId && c.parent_id !== commentId));
+        });
+        return m;
+      });
+      const { error } = await supabase.from('comments').delete().eq('id', commentId).eq('user_id', userId);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      toast.error('Помилка видалення коментаря');
+      loadAllData();
+    }
+  };
+
   // ============ SHARE ACTION ============
   const toggleShare = async (postId: string) => {
     if (!userId) { toast.error("Потрібно авторизуватися"); return; }
@@ -412,6 +453,8 @@ export function useFeedData(postIds: string[]) {
     togglePostReaction,
     toggleCommentReaction,
     toggleShare,
+    editComment,
+    deleteComment,
     postLikeLoading,
     commentLikeLoading,
     reload: loadAllData,
