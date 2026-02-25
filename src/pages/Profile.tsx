@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/layout/Navbar";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { RightSidebar } from "@/components/layout/RightSidebar";
 import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Edit } from "lucide-react";
@@ -356,7 +357,7 @@ export default function Profile() {
         <div className="hidden md:block md:col-span-4 lg:col-span-3" aria-hidden="true" />
         
         {/* Основний контент профілю */}
-        <div className="col-span-12 md:col-span-8 lg:col-span-9">
+        <div className="col-span-12 md:col-span-8 lg:col-span-6">
           <ProfileHeader user={user} onEditProfile={handleEditProfile} />
           
           <main className="mt-6">
@@ -465,6 +466,15 @@ export default function Profile() {
           </Tabs>
           </main>
         </div>
+
+        {/* Правий сайдбар - Мої файли */}
+        {user?.id && (
+          <div className="hidden lg:block lg:col-span-3">
+            <div className="sticky top-20 3xl:top-24 max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-hide">
+              <RightSidebar userId={user.id} />
+            </div>
+          </div>
+        )}
       </div>
       {isCurrentUser && (
         <>
