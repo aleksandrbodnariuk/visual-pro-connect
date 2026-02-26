@@ -353,13 +353,13 @@ export default function Profile() {
       <Sidebar />
 
       {/* Fixed Right Sidebar */}
-      <div className="hidden lg:block fixed top-14 sm:top-16 3xl:top-20 right-0 z-30 overflow-y-auto" style={{ width: 'calc(25% - 1.5rem)', height: 'calc(100vh - 3.5rem)' }}>
-        <div className="p-4">
+      <div className="hidden lg:block fixed top-14 sm:top-16 3xl:top-20 right-0 z-30 overflow-y-auto" style={{ width: 'calc(25% - 0.25rem)', height: 'calc(100vh - 3.5rem)' }}>
+        <div className="p-3">
           <RightSidebar userId={user.id} />
         </div>
       </div>
       
-      <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-4 md:py-6">
+      <div className="container grid grid-cols-12 gap-1 md:gap-2 px-2 sm:px-3 md:px-4 py-4 md:py-6">
         {/* Spacer для fixed sidebar */}
         <div className="hidden md:block md:col-span-4 lg:col-span-3" aria-hidden="true" />
         
