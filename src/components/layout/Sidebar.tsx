@@ -47,20 +47,13 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <aside 
       className={cn(
-        // Fixed positioning - завжди видимий
-        "fixed top-20 3xl:top-24",
-        // Ширина відповідає 3 колонкам з 12 у container
-        "w-[calc(33.333%-0.25rem)] lg:w-[calc(25%-0.25rem)]",
-        "max-w-[320px]",
-        // Лівий відступ відповідає container padding
-        "left-2 sm:left-3 md:left-4",
+        // Sticky positioning within grid column
+        "sticky top-20 3xl:top-24 self-start",
         // Максимальна висота з власною прокруткою
         "max-h-[calc(100vh-6rem)] 3xl:max-h-[calc(100vh-7rem)]",
         "overflow-y-auto",
         // Стилізація
         "rounded-lg border bg-card scrollbar-hide",
-        // Приховано на мобільних
-        "hidden md:block",
         className
       )}
     >
