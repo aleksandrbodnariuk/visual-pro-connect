@@ -5,7 +5,6 @@ import { Image, Video, Music, FolderOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { extractVideoEmbed, VideoEmbed } from "@/lib/videoEmbed";
 import { AudioPlayer } from "@/components/feed/AudioPlayer";
-import { VideoPreview } from "@/components/feed/VideoPreview";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -31,6 +30,11 @@ function getFileType(item: MediaItem): FileType | null {
   if (VIDEO_EXTENSIONS.some(ext => lower.includes(ext))) return "videos";
   if (IMAGE_EXTENSIONS.some(ext => lower.includes(ext))) return "photos";
   if (lower.includes("/posts/") && !AUDIO_EXTENSIONS.some(ext => lower.includes(ext)) && !VIDEO_EXTENSIONS.some(ext => lower.includes(ext))) return "photos";
+  return null;
+}
+
+function getVideoThumbnail(item: MediaItem): string | null {
+  if (item.videoEmbed?.thumbnailUrl) return item.videoEmbed.thumbnailUrl;
   return null;
 }
 
@@ -77,16 +81,20 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
 
   if (loading) {
     return (
-      <aside className={cn("space-y-4", className)}>
-        <div className="rounded-lg border bg-card p-4">
-          <Skeleton className="h-5 w-24 mb-3" />
+      <div className={cn("space-y-3", className)}>
+        <h2 className="font-bold text-sm flex items-center gap-2 px-1">
+          <FolderOpen className="h-4 w-4 text-primary" />
+          Мої файли
+        </h2>
+        <div className="rounded-lg border bg-card p-3">
+          <Skeleton className="h-4 w-16 mb-2" />
           <div className="grid grid-cols-3 gap-1">
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="aspect-square rounded" />
             ))}
           </div>
         </div>
-      </aside>
+      </div>
     );
   }
 
@@ -95,18 +103,24 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
   if (!hasAnyMedia) return null;
 
   return (
-    <aside className={cn("space-y-4", className)}>
+    <div className={cn("space-y-3", className)}>
+      {/* Заголовок */}
+      <h2 className="font-bold text-sm flex items-center gap-2 px-1">
+        <FolderOpen className="h-4 w-4 text-primary" />
+        Мої файли
+      </h2>
+
       {/* Фото */}
       {photos.length > 0 && (
-        <div className="rounded-lg border bg-card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold flex items-center gap-2">
-              <Image className="h-4 w-4 text-primary" />
+        <div className="rounded-lg border bg-card p-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-semibold flex items-center gap-1.5">
+              <Image className="h-3.5 w-3.5 text-primary" />
               Фото
             </h3>
             <button
               onClick={() => navigate(`/my-files/photos`)}
-              className="text-xs text-primary hover:underline"
+              className="text-[10px] text-primary hover:underline"
             >
               Переглянути всі ({photos.length})
             </button>
@@ -130,40 +144,54 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
         </div>
       )}
 
-      {/* Відео */}
+      {/* Відео — компактна сітка 2 колонки */}
       {videos.length > 0 && (
-        <div className="rounded-lg border bg-card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold flex items-center gap-2">
-              <Video className="h-4 w-4 text-primary" />
+        <div className="rounded-lg border bg-card p-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-semibold flex items-center gap-1.5">
+              <Video className="h-3.5 w-3.5 text-primary" />
               Відео
             </h3>
             <button
               onClick={() => navigate(`/my-files/videos`)}
-              className="text-xs text-primary hover:underline"
+              className="text-[10px] text-primary hover:underline"
             >
               Переглянути всі ({videos.length})
             </button>
           </div>
-          <div className="space-y-2">
-            {videos.slice(0, 3).map(file => (
+          <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
+            {videos.slice(0, 4).map(file => (
               <div
                 key={file.id}
-                className="rounded-lg overflow-hidden border cursor-pointer"
+                className="aspect-video cursor-pointer overflow-hidden bg-muted group relative"
                 onClick={() => navigate(`/post/${file.id}`)}
               >
-                {file.videoEmbed && file.videoEmbed.platform !== 'link' ? (
-                  <div className="pointer-events-none">
-                    <VideoPreview embed={file.videoEmbed} />
-                  </div>
-                ) : file.media_url ? (
+                {/* Thumbnail */}
+                {file.videoEmbed?.thumbnailUrl ? (
+                  <img
+                    src={file.videoEmbed.thumbnailUrl}
+                    alt=""
+                    className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                    loading="lazy"
+                  />
+                ) : file.media_url && VIDEO_EXTENSIONS.some(ext => file.media_url!.toLowerCase().includes(ext)) ? (
                   <video
                     src={file.media_url}
-                    className="w-full aspect-video object-cover"
+                    className="w-full h-full object-cover"
                     preload="metadata"
                     muted
                   />
-                ) : null}
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-muted">
+                    <Video className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                )}
+                {/* Play icon overlay */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-black/50 flex items-center justify-center">
+                    <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-[8px] border-l-white border-b-[5px] border-b-transparent ml-0.5" />
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -172,15 +200,15 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
 
       {/* Музика */}
       {music.length > 0 && (
-        <div className="rounded-lg border bg-card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold flex items-center gap-2">
-              <Music className="h-4 w-4 text-primary" />
+        <div className="rounded-lg border bg-card p-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-semibold flex items-center gap-1.5">
+              <Music className="h-3.5 w-3.5 text-primary" />
               Музика
             </h3>
             <button
               onClick={() => navigate(`/my-files/music`)}
-              className="text-xs text-primary hover:underline"
+              className="text-[10px] text-primary hover:underline"
             >
               Переглянути всі ({music.length})
             </button>
@@ -194,6 +222,6 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
           </div>
         </div>
       )}
-    </aside>
+    </div>
   );
 }
