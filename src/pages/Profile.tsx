@@ -351,6 +351,13 @@ export default function Profile() {
       
       {/* Fixed Sidebar - рендериться окремо від grid */}
       <Sidebar />
+
+      {/* Fixed Right Sidebar */}
+      <div className="hidden lg:block fixed top-14 sm:top-16 3xl:top-20 right-0 z-30 overflow-y-auto" style={{ width: 'calc(25% - 1.5rem)', height: 'calc(100vh - 3.5rem)' }}>
+        <div className="p-4">
+          <RightSidebar userId={user.id} />
+        </div>
+      </div>
       
       <div className="container grid grid-cols-12 gap-6 px-4 md:px-6 py-4 md:py-6">
         {/* Spacer для fixed sidebar */}
@@ -467,14 +474,8 @@ export default function Profile() {
           </main>
         </div>
 
-        {/* Правий сайдбар - Мої файли */}
-        {user?.id && (
-          <div className="hidden lg:block lg:col-span-3">
-            <div className="sticky top-20 3xl:top-24 max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-hide">
-              <RightSidebar userId={user.id} />
-            </div>
-          </div>
-        )}
+        {/* Spacer для правого fixed sidebar */}
+        <div className="hidden lg:block lg:col-span-3" aria-hidden="true" />
       </div>
       {isCurrentUser && (
         <>

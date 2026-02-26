@@ -30,6 +30,14 @@ const Index = () => {
     <div className="min-h-screen bg-background pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
       <Navbar />
       <Sidebar />
+      {/* Fixed Right Sidebar */}
+      {appUser?.id && (
+        <div className="hidden lg:block fixed top-14 sm:top-16 3xl:top-20 right-0 z-30 overflow-y-auto" style={{ width: 'calc(25% - 1.5rem)', height: 'calc(100vh - 3.5rem)' }}>
+          <div className="p-4">
+            <RightSidebar userId={appUser.id} />
+          </div>
+        </div>
+      )}
       
       <div className="container grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 3xl:gap-8 px-3 sm:px-4 md:px-6 py-4 md:py-6">
         {/* Spacer для fixed sidebar */}
@@ -43,13 +51,9 @@ const Index = () => {
           <NewsFeed />
         </main>
 
-        {/* Правий сайдбар - Мої файли */}
+        {/* Spacer для правого fixed sidebar */}
         {appUser?.id && (
-          <div className="hidden lg:block lg:col-span-3">
-            <div className="sticky top-20 3xl:top-24 max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-hide">
-              <RightSidebar userId={appUser.id} />
-            </div>
-          </div>
+          <div className="hidden lg:block lg:col-span-3" aria-hidden="true" />
         )}
       </div>
     </div>
