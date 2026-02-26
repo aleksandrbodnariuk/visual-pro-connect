@@ -307,7 +307,9 @@ export default function StockMarket() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container grid grid-cols-12 gap-1 md:gap-2 px-2 sm:px-3 md:px-4 py-6">
-        <Sidebar className="hidden lg:block col-span-3" />
+        <div className="hidden lg:block col-span-3">
+          <Sidebar />
+        </div>
         
         <main className="col-span-12 lg:col-span-9">
           <div className="flex justify-between items-center mb-6">

@@ -85,9 +85,10 @@ export default function Settings() {
   return (
     <div className="min-h-screen pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
       <Navbar />
-      <Sidebar />
       <div className="container grid grid-cols-12 gap-1 md:gap-2 px-2 sm:px-3 md:px-4 py-6">
-        <div className="hidden md:block md:col-span-4 lg:col-span-3" aria-hidden="true" />
+        <div className="hidden md:block md:col-span-4 lg:col-span-3">
+          <Sidebar />
+        </div>
         
         <main className="col-span-12 md:col-span-8 lg:col-span-9">
           <h1 className="text-3xl font-bold mb-6">{t.settings}</h1>

@@ -29,19 +29,12 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
       <Navbar />
-      <Sidebar />
-      {/* Fixed Right Sidebar */}
-      {appUser?.id && (
-        <div className="hidden lg:block fixed top-14 sm:top-16 3xl:top-20 right-0 z-30 overflow-y-auto" style={{ width: 'calc(25% - 0.25rem)', height: 'calc(100vh - 3.5rem)' }}>
-          <div className="p-3">
-            <RightSidebar userId={appUser.id} />
-          </div>
-        </div>
-      )}
       
       <div className="container grid grid-cols-1 md:grid-cols-12 gap-1 md:gap-2 px-2 sm:px-3 md:px-4 py-4 md:py-6">
-        {/* Spacer для fixed sidebar */}
-        <div className="hidden md:block md:col-span-4 lg:col-span-3" aria-hidden="true" />
+        {/* Left Sidebar */}
+        <div className="hidden md:block md:col-span-4 lg:col-span-3">
+          <Sidebar />
+        </div>
         
         {/* Основний контент */}
         <main className="col-span-1 md:col-span-8 lg:col-span-6">
@@ -51,9 +44,13 @@ const Index = () => {
           <NewsFeed />
         </main>
 
-        {/* Spacer для правого fixed sidebar */}
+        {/* Right Sidebar */}
         {appUser?.id && (
-          <div className="hidden lg:block lg:col-span-3" aria-hidden="true" />
+          <div className="hidden lg:block lg:col-span-3">
+            <div className="sticky top-20 3xl:top-24 max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-hide">
+              <RightSidebar userId={appUser.id} />
+            </div>
+          </div>
         )}
       </div>
     </div>
