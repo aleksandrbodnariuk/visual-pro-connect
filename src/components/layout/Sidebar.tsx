@@ -50,10 +50,10 @@ export function Sidebar({ className }: SidebarProps) {
         // Fixed positioning - завжди видимий
         "fixed top-20 3xl:top-24",
         // Ширина відповідає 3 колонкам з 12 у container
-        "w-[calc(33.333%-1.5rem)] lg:w-[calc(25%-1.5rem)]",
+        "w-[calc(33.333%-0.25rem)] lg:w-[calc(25%-0.25rem)]",
         "max-w-[320px]",
         // Лівий відступ відповідає container padding
-        "left-3 sm:left-4 md:left-6",
+        "left-2 sm:left-3 md:left-4",
         // Максимальна висота з власною прокруткою
         "max-h-[calc(100vh-6rem)] 3xl:max-h-[calc(100vh-7rem)]",
         "overflow-y-auto",
