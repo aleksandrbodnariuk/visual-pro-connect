@@ -47,11 +47,6 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <aside 
       className={cn(
-        // Sticky positioning within grid column
-        "sticky top-20 3xl:top-24 self-start",
-        // Максимальна висота з власною прокруткою
-        "max-h-[calc(100vh-6rem)] 3xl:max-h-[calc(100vh-7rem)]",
-        "overflow-y-auto",
         // Стилізація
         "rounded-lg border bg-card scrollbar-hide",
         className
