@@ -225,7 +225,7 @@ export function NewsFeed() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <div className="animate-pulse">
           <div className="h-32 bg-gray-200 rounded-lg mb-4"></div>
           <div className="space-y-4">{[1, 2, 3].map((i) => (<div key={i} className="h-20 bg-gray-200 rounded-lg"></div>))}</div>
@@ -235,7 +235,7 @@ export function NewsFeed() {
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-4 md:space-y-6">
+    <div className="w-full space-y-4 md:space-y-6">
       {/* Create post form */}
       <Card>
         <CardContent className="p-3 md:p-4">
