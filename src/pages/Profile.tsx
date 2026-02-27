@@ -349,10 +349,12 @@ export default function Profile() {
     <div className="min-h-screen pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
       <Navbar />
       
-      <div className="container grid grid-cols-12 gap-1 md:gap-2 px-2 sm:px-3 md:px-4 py-4 md:py-6">
+      <div className="container grid grid-cols-12 gap-0 px-2 sm:px-3 md:px-4 py-4 md:py-6">
         {/* Left Sidebar */}
         <div className="hidden md:block md:col-span-4 lg:col-span-3">
-          <Sidebar />
+          <div className="sticky top-14 sm:top-16 3xl:top-20 max-h-[calc(100vh-3.5rem)] sm:max-h-[calc(100vh-4rem)] 3xl:max-h-[calc(100vh-5rem)] overflow-y-auto scrollbar-hide">
+            <Sidebar />
+          </div>
         </div>
         
         {/* Основний контент профілю */}
@@ -468,7 +470,7 @@ export default function Profile() {
 
         {/* Right Sidebar */}
         <div className="hidden lg:block lg:col-span-3">
-          <div className="sticky top-20 3xl:top-24 max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-hide">
+          <div className="sticky top-14 sm:top-16 3xl:top-20 max-h-[calc(100vh-3.5rem)] sm:max-h-[calc(100vh-4rem)] 3xl:max-h-[calc(100vh-5rem)] overflow-y-auto scrollbar-hide">
             <RightSidebar userId={user.id} />
           </div>
         </div>

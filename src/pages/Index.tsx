@@ -30,24 +30,23 @@ const Index = () => {
     <div className="min-h-screen bg-background pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
       <Navbar />
       
-      <div className="container grid grid-cols-1 md:grid-cols-12 gap-1 md:gap-2 px-2 sm:px-3 md:px-4 py-4 md:py-6">
+      <div className="container grid grid-cols-1 md:grid-cols-12 gap-0 px-2 sm:px-3 md:px-4 py-4 md:py-6">
         {/* Left Sidebar */}
         <div className="hidden md:block md:col-span-4 lg:col-span-3">
-          <Sidebar />
+          <div className="sticky top-14 sm:top-16 3xl:top-20 max-h-[calc(100vh-3.5rem)] sm:max-h-[calc(100vh-4rem)] 3xl:max-h-[calc(100vh-5rem)] overflow-y-auto scrollbar-hide">
+            <Sidebar />
+          </div>
         </div>
         
         {/* Основний контент */}
         <main className="col-span-1 md:col-span-8 lg:col-span-6">
-          <div className="mb-4 md:mb-6">
-            <h1 className="text-xl sm:text-2xl 3xl:text-3xl font-bold">Стрічка новин</h1>
-          </div>
           <NewsFeed />
         </main>
 
         {/* Right Sidebar */}
         {appUser?.id && (
           <div className="hidden lg:block lg:col-span-3">
-            <div className="sticky top-20 3xl:top-24 max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-hide">
+            <div className="sticky top-14 sm:top-16 3xl:top-20 max-h-[calc(100vh-3.5rem)] sm:max-h-[calc(100vh-4rem)] 3xl:max-h-[calc(100vh-5rem)] overflow-y-auto scrollbar-hide">
               <RightSidebar userId={appUser.id} />
             </div>
           </div>
