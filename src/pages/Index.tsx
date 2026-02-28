@@ -32,10 +32,8 @@ const Index = () => {
       
       <div className="container grid grid-cols-1 md:grid-cols-12 gap-0 px-2 sm:px-3 md:px-4 py-4 md:py-6">
         {/* Left Sidebar */}
-        <div className="hidden md:block md:col-span-4 lg:col-span-3">
-          <div className="sticky top-14 sm:top-16 3xl:top-20 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] 3xl:h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain scrollbar-hide">
-            <Sidebar />
-          </div>
+        <div className="hidden md:block md:col-span-4 lg:col-span-3 sticky top-14 sm:top-16 3xl:top-20 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] 3xl:h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain scrollbar-hide">
+          <Sidebar />
         </div>
         
         {/* Основний контент */}
@@ -45,10 +43,8 @@ const Index = () => {
 
         {/* Right Sidebar */}
         {appUser?.id && (
-          <div className="hidden lg:block lg:col-span-3">
-            <div className="sticky top-14 sm:top-16 3xl:top-20 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] 3xl:h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain scrollbar-hide">
-              <RightSidebar userId={appUser.id} />
-            </div>
+          <div className="hidden lg:block lg:col-span-3 sticky top-14 sm:top-16 3xl:top-20 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] 3xl:h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain scrollbar-hide">
+            <RightSidebar userId={appUser.id} />
           </div>
         )}
       </div>
