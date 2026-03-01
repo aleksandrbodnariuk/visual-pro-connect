@@ -344,8 +344,10 @@ export default function PostPage() {
             <div className="pt-3 border-t">
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={currentUser.avatar_url || ''} />
-                  <AvatarFallback>{currentUser.full_name?.[0] || 'U'}</AvatarFallback>
+                  <AvatarImage src={currentUser.avatar_url || currentUser.avatarUrl || ''} />
+                  <AvatarFallback>
+                    {(currentUser.full_name || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'U')[0]}
+                  </AvatarFallback>
                 </Avatar>
                 <input
                   type="text"

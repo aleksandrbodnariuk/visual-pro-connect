@@ -346,17 +346,17 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
+    <div className="h-screen overflow-hidden pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
       <Navbar />
       
-      <div className="container grid grid-cols-12 items-start gap-0 px-2 sm:px-3 md:px-4 py-4 md:py-6">
+      <div className="container grid grid-cols-12 items-start gap-0 px-2 sm:px-3 md:px-4 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] 3xl:h-[calc(100vh-5rem)]">
         {/* Left Sidebar */}
-        <div className="hidden md:block md:col-span-4 lg:col-span-3 sticky top-14 sm:top-16 3xl:top-20 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] 3xl:h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain scrollbar-hide">
+        <div className="hidden md:block md:col-span-4 lg:col-span-3 h-full overflow-y-auto overscroll-contain scrollbar-hide py-4 md:py-6">
           <Sidebar />
         </div>
         
         {/* Основний контент профілю */}
-        <div className="col-span-12 md:col-span-8 lg:col-span-6">
+        <div className="col-span-12 md:col-span-8 lg:col-span-6 h-full overflow-y-auto overscroll-contain scrollbar-hide py-4 md:py-6">
           <ProfileHeader user={user} onEditProfile={handleEditProfile} />
           
           <main className="mt-6">
@@ -467,7 +467,7 @@ export default function Profile() {
         </div>
 
         {/* Right Sidebar */}
-        <div className="hidden lg:block lg:col-span-3 sticky top-14 sm:top-16 3xl:top-20 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] 3xl:h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain scrollbar-hide">
+        <div className="hidden lg:block lg:col-span-3 h-full overflow-y-auto overscroll-contain scrollbar-hide py-4 md:py-6">
           <RightSidebar userId={user.id} />
         </div>
       </div>
