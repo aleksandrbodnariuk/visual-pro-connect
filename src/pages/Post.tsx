@@ -283,96 +283,81 @@ export default function PostPage() {
           </CardContent>
         </Card>
 
-        {/* Add comment */}
-        {currentUser && (
-          <Card className="mb-6">
-            <CardContent className="p-4">
-              <div className="flex gap-3">
+        {/* Comments section - inline like main feed */}
+        <div className="creative-card p-4">
+          {/* Comments list */}
+          {comments.length > 0 && (
+            <div className="space-y-1 mb-3">
+              {comments.map((comment) => (
+                <div key={comment.id} className="flex gap-2 group">
+                  <Link to={`/profile/${comment.user_id}`} className="flex-shrink-0">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={comment.user?.avatar_url || ''} />
+                      <AvatarFallback>{comment.user?.full_name?.[0] || 'U'}</AvatarFallback>
+                    </Avatar>
+                  </Link>
+                  <div className="flex-1 min-w-0">
+                    <div className="bg-muted/50 rounded-xl px-3 py-1.5 inline-block max-w-full">
+                      <Link to={`/profile/${comment.user_id}`} className="font-semibold text-sm hover:underline">
+                        {comment.user?.full_name || 'Користувач'}
+                      </Link>
+                      <p className="text-sm leading-[1.1]">{comment.content}</p>
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5 px-1">
+                      <span className="text-xs text-muted-foreground">{formatTimeAgo(comment.created_at)}</span>
+                      <button className="text-xs text-muted-foreground hover:text-foreground font-medium">Подобається</button>
+                      <button className="text-xs text-muted-foreground hover:text-foreground font-medium">Відповісти</button>
+                      {currentUser?.id === comment.user_id && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <button className="text-xs text-muted-foreground hover:text-destructive font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Видалити коментар?</AlertDialogTitle>
+                              <AlertDialogDescription>Цю дію неможливо скасувати.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Скасувати</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteComment(comment.id)}>Видалити</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {comments.length === 0 && (
+            <p className="text-center text-muted-foreground py-4 text-sm">
+              Поки немає коментарів. Будьте першим!
+            </p>
+          )}
+
+          {/* Comment input */}
+          {currentUser && (
+            <div className="pt-3 border-t">
+              <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={currentUser.avatar_url || ''} />
                   <AvatarFallback>{currentUser.full_name?.[0] || 'U'}</AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
-                  <Textarea
-                    placeholder="Написати коментар..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value.slice(0, 2000))}
-                    maxLength={2000}
-                    className="min-h-[60px] resize-none"
-                  />
-                  <div className="flex justify-end mt-2">
-                    <Button 
-                      onClick={handleSubmitComment} 
-                      disabled={!newComment.trim() || submitting}
-                      size="sm"
-                    >
-                      {submitting ? "Надсилання..." : "Коментувати"}
-                    </Button>
-                  </div>
-                </div>
+                <input
+                  type="text"
+                  placeholder="Написати коментар..."
+                  className="flex-1 h-9 bg-muted/50 border-0 rounded-full px-4 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value.slice(0, 2000))}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && newComment.trim()) handleSubmitComment(); }}
+                  disabled={submitting}
+                />
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Comments list */}
-        <div className="space-y-4">
-          <h3 className="font-semibold text-lg">Коментарі ({comments.length})</h3>
-          {comments.length > 0 ? (
-            comments.map((comment) => (
-              <Card key={comment.id}>
-                <CardContent className="p-4">
-                  <div className="flex gap-3">
-                    <Link to={`/profile/${comment.user_id}`}>
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={comment.user?.avatar_url || ''} />
-                        <AvatarFallback>{comment.user?.full_name?.[0] || 'U'}</AvatarFallback>
-                      </Avatar>
-                    </Link>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Link to={`/profile/${comment.user_id}`} className="font-medium hover:underline">
-                            {comment.user?.full_name || 'Користувач'}
-                          </Link>
-                          <span className="text-sm text-muted-foreground ml-2">
-                            {formatTimeAgo(comment.created_at)}
-                          </span>
-                        </div>
-                        {currentUser?.id === comment.user_id && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <Trash2 className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Видалити коментар?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Цю дію неможливо скасувати.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Скасувати</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeleteComment(comment.id)}>
-                                  Видалити
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
-                      <p className="mt-1 text-foreground">{comment.content}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <p className="text-center text-muted-foreground py-8">
-              Поки немає коментарів. Будьте першим!
-            </p>
+            </div>
           )}
         </div>
       </div>
