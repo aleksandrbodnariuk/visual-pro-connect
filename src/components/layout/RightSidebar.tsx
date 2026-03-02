@@ -7,6 +7,7 @@ import { extractVideoEmbed, VideoEmbed } from "@/lib/videoEmbed";
 import { AudioPlayer } from "@/components/feed/AudioPlayer";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuthState } from "@/hooks/auth/useAuthState";
 
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a', '.wma', '.webm'];
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
@@ -33,11 +34,6 @@ function getFileType(item: MediaItem): FileType | null {
   return null;
 }
 
-function getVideoThumbnail(item: MediaItem): string | null {
-  if (item.videoEmbed?.thumbnailUrl) return item.videoEmbed.thumbnailUrl;
-  return null;
-}
-
 interface RightSidebarProps {
   userId: string;
   className?: string;
@@ -45,8 +41,12 @@ interface RightSidebarProps {
 
 export function RightSidebar({ userId, className }: RightSidebarProps) {
   const navigate = useNavigate();
+  const { getCurrentUser } = useAuthState();
+  const currentUser = getCurrentUser();
   const [files, setFiles] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const isOwnFiles = userId === currentUser?.id;
 
   useEffect(() => {
     if (!userId) return;
@@ -79,12 +79,18 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
   const videos = files.filter(f => getFileType(f) === "videos");
   const music = files.filter(f => getFileType(f) === "music");
 
+  // Build "view all" URL based on whether it's own or someone else's files
+  const buildViewAllUrl = (type: string) => {
+    if (isOwnFiles) return `/my-files/${type}`;
+    return `/files/${userId}/${type}`;
+  };
+
   if (loading) {
     return (
       <div className={cn("space-y-3", className)}>
         <h2 className="font-bold text-sm flex items-center gap-2 px-1">
           <FolderOpen className="h-4 w-4 text-primary" />
-          Мої файли
+          {isOwnFiles ? "Мої файли" : "Файли"}
         </h2>
         <div className="rounded-lg border bg-card p-3">
           <Skeleton className="h-4 w-16 mb-2" />
@@ -104,10 +110,9 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
 
   return (
     <div className={cn("space-y-3", className)}>
-      {/* Заголовок */}
       <h2 className="font-bold text-sm flex items-center gap-2 px-1">
         <FolderOpen className="h-4 w-4 text-primary" />
-        Мої файли
+        {isOwnFiles ? "Мої файли" : "Файли"}
       </h2>
 
       {/* Фото */}
@@ -119,7 +124,7 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
               Фото
             </h3>
             <button
-              onClick={() => navigate(`/my-files/photos`)}
+              onClick={() => navigate(buildViewAllUrl("photos"))}
               className="text-[10px] text-primary hover:underline"
             >
               Переглянути всі ({photos.length})
@@ -144,7 +149,7 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
         </div>
       )}
 
-      {/* Відео — компактна сітка 2 колонки */}
+      {/* Відео */}
       {videos.length > 0 && (
         <div className="rounded-lg border bg-card p-3">
           <div className="flex items-center justify-between mb-2">
@@ -153,47 +158,66 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
               Відео
             </h3>
             <button
-              onClick={() => navigate(`/my-files/videos`)}
+              onClick={() => navigate(buildViewAllUrl("videos"))}
               className="text-[10px] text-primary hover:underline"
             >
               Переглянути всі ({videos.length})
             </button>
           </div>
           <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
-            {videos.slice(0, 4).map(file => (
-              <div
-                key={file.id}
-                className="aspect-video cursor-pointer overflow-hidden bg-muted group relative"
-                onClick={() => navigate(`/post/${file.id}`)}
-              >
-                {/* Thumbnail */}
-                {file.videoEmbed?.thumbnailUrl ? (
-                  <img
-                    src={file.videoEmbed.thumbnailUrl}
-                    alt=""
-                    className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                    loading="lazy"
-                  />
-                ) : file.media_url && VIDEO_EXTENSIONS.some(ext => file.media_url!.toLowerCase().includes(ext)) ? (
-                  <video
-                    src={file.media_url}
-                    className="w-full h-full object-cover"
-                    preload="metadata"
-                    muted
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-muted">
-                    <Video className="h-6 w-6 text-muted-foreground" />
+            {videos.slice(0, 4).map(file => {
+              const thumbnail = file.videoEmbed?.thumbnailUrl || null;
+              const platform = file.videoEmbed?.platform;
+              const label = platform === 'youtube' 
+                ? (file.videoEmbed?.isVertical ? 'YOUTUBE SHORTS' : 'YOUTUBE.COM')
+                : platform === 'facebook'
+                ? (file.videoEmbed?.isVertical ? 'FACEBOOK REELS' : 'FACEBOOK.COM')
+                : platform === 'tiktok' ? 'TIKTOK'
+                : platform === 'instagram' ? 'INSTAGRAM'
+                : null;
+
+              return (
+                <div
+                  key={file.id}
+                  className="cursor-pointer overflow-hidden bg-muted group relative"
+                  onClick={() => navigate(`/post/${file.id}`)}
+                >
+                  <div className="aspect-video relative">
+                    {thumbnail ? (
+                      <img
+                        src={thumbnail}
+                        alt=""
+                        className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                        loading="lazy"
+                      />
+                    ) : file.media_url && VIDEO_EXTENSIONS.some(ext => file.media_url!.toLowerCase().includes(ext)) ? (
+                      <video
+                        src={file.media_url}
+                        className="w-full h-full object-cover"
+                        preload="metadata"
+                        muted
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-muted">
+                        <Video className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    )}
+                    {/* Play icon overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full bg-black/50 flex items-center justify-center">
+                        <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-[8px] border-l-white border-b-[5px] border-b-transparent ml-0.5" />
+                      </div>
+                    </div>
                   </div>
-                )}
-                {/* Play icon overlay */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-8 h-8 rounded-full bg-black/50 flex items-center justify-center">
-                    <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-[8px] border-l-white border-b-[5px] border-b-transparent ml-0.5" />
-                  </div>
+                  {label && (
+                    <div className="px-2 py-1">
+                      <p className="text-[10px] font-medium text-muted-foreground">{label}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{file.videoEmbed?.originalUrl || ''}</p>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -207,7 +231,7 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
               Музика
             </h3>
             <button
-              onClick={() => navigate(`/my-files/music`)}
+              onClick={() => navigate(buildViewAllUrl("music"))}
               className="text-[10px] text-primary hover:underline"
             >
               Переглянути всі ({music.length})

@@ -60,6 +60,8 @@ const AppContent = () => {
         <Route path="/post/:postId" element={<Post />} />
         <Route path="/my-files" element={<MyFiles />} />
         <Route path="/my-files/:type" element={<MyFiles />} />
+        <Route path="/files/:userId" element={<MyFiles />} />
+        <Route path="/files/:userId/:type" element={<MyFiles />} />
         <Route path="/category/:categoryId" element={<Search />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
