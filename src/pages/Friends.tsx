@@ -13,7 +13,7 @@ export default function Friends() {
         <div className="hidden md:block md:col-span-4 lg:col-span-3 sticky top-14 sm:top-16 3xl:top-20 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] 3xl:h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain scrollbar-hide">
           <Sidebar />
         </div>
-        <main className="col-span-12 md:col-span-8 lg:col-span-9">
+        <main className="col-span-12 md:col-span-8 lg:col-span-9 md:pl-4">
           <div className="max-w-4xl">
             <div className="mb-6">
               <h1 className="text-3xl font-bold text-foreground mb-2">Друзі</h1>
