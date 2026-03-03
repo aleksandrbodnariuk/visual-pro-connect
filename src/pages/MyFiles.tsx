@@ -102,7 +102,7 @@ export default function MyFiles() {
   const [uploading, setUploading] = useState(false);
   const [uploadFolderId, setUploadFolderId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const targetUserId = routeUserId || currentUser?.id;
   const isOwnFiles = !routeUserId || routeUserId === currentUser?.id;
@@ -223,51 +223,66 @@ export default function MyFiles() {
     fetchFiles();
   };
 
-  // Upload file
+  // Helper: get file name without extension
+  const getFileNameWithoutExt = (name: string) => {
+    const parts = name.split('.');
+    if (parts.length > 1) parts.pop();
+    return parts.join('.');
+  };
+
+  // Upload file(s)
   const handleUpload = async () => {
     if (!authUser?.id) return;
     setUploading(true);
 
     try {
-      let fileUrl = "";
-      let fileType: string = "photo";
-
       if (videoLink.trim()) {
         // Video link
-        fileUrl = videoLink.trim();
-        fileType = "video";
-      } else if (selectedFile) {
-        const detected = detectFileType(selectedFile);
-        fileType = detected === 'photos' ? 'photo' : detected === 'videos' ? 'video' : 'music';
-        const ext = selectedFile.name.split('.').pop() || 'bin';
-        const filePath = `${authUser.id}/${Date.now()}.${ext}`;
+        const { error } = await supabase.from("user_files").insert({
+          user_id: authUser.id,
+          file_url: videoLink.trim(),
+          file_type: "video",
+          title: uploadTitle.trim() || null,
+          folder_id: uploadFolderId || null,
+        });
+        if (error) throw error;
+      } else if (selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          const detected = detectFileType(file);
+          const fileType = detected === 'photos' ? 'photo' : detected === 'videos' ? 'video' : 'music';
+          const ext = file.name.split('.').pop() || 'bin';
+          const filePath = `${authUser.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from("posts")
-          .upload(filePath, selectedFile, { upsert: true, contentType: selectedFile.type });
-        if (uploadError) throw uploadError;
+          const { error: uploadError } = await supabase.storage
+            .from("posts")
+            .upload(filePath, file, { upsert: true, contentType: file.type });
+          if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage.from("posts").getPublicUrl(filePath);
-        fileUrl = urlData.publicUrl;
+          const { data: urlData } = supabase.storage.from("posts").getPublicUrl(filePath);
+
+          // Auto-use original filename as title if no custom title and multiple files
+          const autoTitle = selectedFiles.length === 1 && uploadTitle.trim()
+            ? uploadTitle.trim()
+            : getFileNameWithoutExt(file.name);
+
+          const { error } = await supabase.from("user_files").insert({
+            user_id: authUser.id,
+            file_url: urlData.publicUrl,
+            file_type: fileType,
+            title: autoTitle,
+            folder_id: uploadFolderId || null,
+          });
+          if (error) throw error;
+        }
       } else {
         toast.error("Оберіть файл або вставте посилання");
         setUploading(false);
         return;
       }
 
-      const { error } = await supabase.from("user_files").insert({
-        user_id: authUser.id,
-        file_url: fileUrl,
-        file_type: fileType,
-        title: uploadTitle.trim() || null,
-        folder_id: uploadFolderId || null,
-      });
-
-      if (error) throw error;
-
-      toast.success("Файл завантажено!");
+      toast.success(selectedFiles.length > 1 ? `Завантажено ${selectedFiles.length} файлів!` : "Файл завантажено!");
       setShowUploadDialog(false);
-      setSelectedFile(null);
+      setSelectedFiles([]);
       setUploadTitle("");
       setVideoLink("");
       setUploadFolderId(null);
@@ -323,7 +338,7 @@ export default function MyFiles() {
               </h1>
               {isOwnFiles && (
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setShowUploadDialog(true)} className="gap-1.5">
+                  <Button size="sm" variant="outline" onClick={() => { setUploadFolderId(activeFolderId); setShowUploadDialog(true); }} className="gap-1.5">
                     <Upload className="h-4 w-4" />
                     <span className="hidden sm:inline">Завантажити</span>
                   </Button>
@@ -463,7 +478,7 @@ export default function MyFiles() {
                   variant="outline"
                   size="sm"
                   className="mt-3 gap-2"
-                  onClick={() => setShowUploadDialog(true)}
+                  onClick={() => { setUploadFolderId(activeFolderId); setShowUploadDialog(true); }}
                 >
                   <Upload className="h-4 w-4" />
                   Завантажити файл
@@ -565,8 +580,9 @@ export default function MyFiles() {
               <input
                 ref={fileInputRef}
                 type="file"
+                multiple
                 accept="image/jpeg,image/png,image/webp,image/gif,image/*,audio/mpeg,audio/wav,audio/ogg,audio/flac,audio/aac,audio/mp4,audio/x-m4a,audio/webm,video/mp4,video/webm"
-                onChange={e => { setSelectedFile(e.target.files?.[0] || null); setVideoLink(""); }}
+                onChange={e => { setSelectedFiles(e.target.files ? Array.from(e.target.files) : []); setVideoLink(""); }}
                 className="hidden"
               />
               <Button
@@ -575,7 +591,11 @@ export default function MyFiles() {
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Plus className="h-4 w-4" />
-                {selectedFile ? selectedFile.name : "Обрати файл"}
+                {selectedFiles.length > 1
+                  ? `Обрано ${selectedFiles.length} файлів`
+                  : selectedFiles.length === 1
+                    ? selectedFiles[0].name
+                    : "Обрати файл(и)"}
               </Button>
             </div>
 
@@ -592,7 +612,7 @@ export default function MyFiles() {
                 <LinkIcon className="h-4 w-4 mt-2.5 text-muted-foreground shrink-0" />
                 <Input
                   value={videoLink}
-                  onChange={e => { setVideoLink(e.target.value); setSelectedFile(null); }}
+                  onChange={e => { setVideoLink(e.target.value); setSelectedFiles([]); }}
                   placeholder="https://youtube.com/watch?v=..."
                   className="flex-1"
                 />
@@ -600,15 +620,20 @@ export default function MyFiles() {
               <p className="text-[10px] text-muted-foreground mt-1">YouTube, Instagram, TikTok, Facebook</p>
             </div>
 
-            {/* Title */}
+            {/* Title - only for single file or video link */}
+            {(selectedFiles.length <= 1 || videoLink.trim()) && (
             <div>
               <label className="text-sm font-medium mb-1.5 block">Назва (необов'язково)</label>
               <Input
                 value={uploadTitle}
                 onChange={e => setUploadTitle(e.target.value)}
-                placeholder="Назва файлу"
+                placeholder={selectedFiles.length === 1 ? selectedFiles[0].name : "Назва файлу"}
               />
             </div>
+            )}
+            {selectedFiles.length > 1 && (
+              <p className="text-xs text-muted-foreground">При завантаженні кількох файлів назви зберігаються автоматично</p>
+            )}
 
             {/* Folder select */}
             {folders.length > 0 && (
@@ -642,7 +667,7 @@ export default function MyFiles() {
 
           <DialogFooter>
             <Button variant="ghost" onClick={() => setShowUploadDialog(false)}>Скасувати</Button>
-            <Button onClick={handleUpload} disabled={uploading || (!selectedFile && !videoLink.trim())} className="gap-2">
+            <Button onClick={handleUpload} disabled={uploading || (selectedFiles.length === 0 && !videoLink.trim())} className="gap-2">
               {uploading ? "Завантаження..." : "Завантажити"}
             </Button>
           </DialogFooter>
