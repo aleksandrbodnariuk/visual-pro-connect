@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, DragEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -8,7 +8,7 @@ import { useAuthState } from "@/hooks/auth/useAuthState";
 import { useAuth } from "@/context/AuthContext";
 import {
   Image, Video, Music, FolderOpen, FolderPlus, Upload, Plus, ArrowLeft,
-  Trash2, Edit2, Check, X, Link as LinkIcon
+  Trash2, Edit2, Check, X, Link as LinkIcon, GripVertical
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,8 @@ import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a', '.wma', '.webm'];
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
@@ -104,6 +106,10 @@ export default function MyFiles() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
+  // Drag & drop / multi-select
+  const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
+
   const targetUserId = routeUserId || currentUser?.id;
   const isOwnFiles = !routeUserId || routeUserId === currentUser?.id;
   const activeTab: FileType = (type as FileType) || "photos";
@@ -131,7 +137,6 @@ export default function MyFiles() {
     if (!targetUserId) return;
     setLoading(true);
 
-    // Fetch from posts
     const { data: postsData } = await supabase
       .from("posts")
       .select("id, media_url, content, created_at")
@@ -146,7 +151,6 @@ export default function MyFiles() {
       })
       .filter(p => p.media_url || p.videoEmbed);
 
-    // Fetch uploaded files (only own)
     let uploadedFiles: FileItem[] = [];
     if (isOwnFiles && authUser?.id) {
       const { data: ufData } = await supabase
@@ -179,10 +183,15 @@ export default function MyFiles() {
   useEffect(() => { fetchFolders(); }, [fetchFolders]);
   useEffect(() => { fetchFiles(); }, [fetchFiles]);
 
-  // Filter by tab + folder
+  // Filter: when viewing a folder - show only that folder's files
+  // When viewing general - show files WITHOUT folder_id (uploaded) + post files
   const filtered = files.filter(f => {
     if (getFileType(f) !== activeTab) return false;
-    if (activeFolderId) return f.source === 'uploaded' && f.folder_id === activeFolderId;
+    if (activeFolderId) {
+      return f.source === 'uploaded' && f.folder_id === activeFolderId;
+    }
+    // General view: exclude uploaded files that belong to a folder
+    if (f.source === 'uploaded' && f.folder_id) return false;
     return true;
   });
 
@@ -223,7 +232,6 @@ export default function MyFiles() {
     fetchFiles();
   };
 
-  // Helper: get file name without extension
   const getFileNameWithoutExt = (name: string) => {
     const parts = name.split('.');
     if (parts.length > 1) parts.pop();
@@ -237,7 +245,6 @@ export default function MyFiles() {
 
     try {
       if (videoLink.trim()) {
-        // Video link
         const { error } = await supabase.from("user_files").insert({
           user_id: authUser.id,
           file_url: videoLink.trim(),
@@ -260,7 +267,6 @@ export default function MyFiles() {
 
           const { data: urlData } = supabase.storage.from("posts").getPublicUrl(filePath);
 
-          // Auto-use original filename as title if no custom title and multiple files
           const autoTitle = selectedFiles.length === 1 && uploadTitle.trim()
             ? uploadTitle.trim()
             : getFileNameWithoutExt(file.name);
@@ -301,6 +307,58 @@ export default function MyFiles() {
     fetchFiles();
   };
 
+  // --- Drag & Drop: move files to folders ---
+  const toggleSelectFile = (fileId: string) => {
+    setSelectedFileIds(prev => {
+      const next = new Set(prev);
+      if (next.has(fileId)) next.delete(fileId);
+      else next.add(fileId);
+      return next;
+    });
+  };
+
+  const handleDragStart = (e: DragEvent, fileId: string) => {
+    // If dragging a selected file, drag all selected; otherwise drag just this one
+    const ids = selectedFileIds.has(fileId)
+      ? Array.from(selectedFileIds)
+      : [fileId];
+    e.dataTransfer.setData("application/json", JSON.stringify(ids));
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleFolderDragOver = (e: DragEvent, folderId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverFolderId(folderId);
+  };
+
+  const handleFolderDragLeave = () => {
+    setDragOverFolderId(null);
+  };
+
+  const handleFolderDrop = async (e: DragEvent, folderId: string) => {
+    e.preventDefault();
+    setDragOverFolderId(null);
+    try {
+      const ids: string[] = JSON.parse(e.dataTransfer.getData("application/json"));
+      if (!ids.length) return;
+
+      // Update all files to belong to this folder
+      for (const id of ids) {
+        await supabase.from("user_files").update({ folder_id: folderId }).eq("id", id);
+      }
+      toast.success(`Переміщено ${ids.length} файл(ів) у папку`);
+      setSelectedFileIds(new Set());
+      fetchFiles();
+    } catch {
+      toast.error("Помилка переміщення");
+    }
+  };
+
+  // Check if any uploaded files (without folder) are in current view for selection mode
+  const uploadedInView = filtered.filter(f => f.source === 'uploaded' && !f.folder_id);
+  const canDragDrop = isOwnFiles && !activeFolderId && folders.length > 0 && uploadedInView.length > 0;
+
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-background">
@@ -319,6 +377,149 @@ export default function MyFiles() {
 
   const activeFolder = folders.find(f => f.id === activeFolderId);
 
+  const renderFileCard = (file: FileItem) => {
+    const isUploaded = file.source === 'uploaded';
+    const isSelected = selectedFileIds.has(file.id);
+    const isDraggable = isUploaded && !activeFolderId && isOwnFiles;
+
+    if (activeTab === "photos") {
+      return (
+        <div
+          key={file.id}
+          draggable={isDraggable}
+          onDragStart={isDraggable ? (e) => handleDragStart(e, file.id) : undefined}
+          className={cn(
+            "group relative aspect-square rounded-lg overflow-hidden border bg-muted cursor-pointer transition-all",
+            isSelected && "ring-2 ring-primary ring-offset-2",
+            isDraggable && "cursor-grab active:cursor-grabbing"
+          )}
+          onClick={() => {
+            if (selectedFileIds.size > 0 && isDraggable) {
+              toggleSelectFile(file.id);
+              return;
+            }
+            file.source === 'post' ? navigate(`/post/${file.id}`) : window.open(file.media_url!, '_blank');
+          }}
+        >
+          <img
+            src={file.media_url!}
+            alt={file.content || "Фото"}
+            className="w-full h-full object-cover transition-transform group-hover:scale-105"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+          {isDraggable && (
+            <div className="absolute top-1.5 left-1.5">
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => toggleSelectFile(file.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-background/80 border-muted-foreground/50"
+              />
+            </div>
+          )}
+          {isUploaded && isOwnFiles && (
+            <button
+              onClick={e => { e.stopPropagation(); deleteFile(file.id); }}
+              className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {file.content && (
+            <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/60 to-transparent">
+              <p className="text-[10px] text-white truncate">{file.content}</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (activeTab === "videos") {
+      return (
+        <div
+          key={file.id}
+          draggable={isDraggable}
+          onDragStart={isDraggable ? (e) => handleDragStart(e, file.id) : undefined}
+          className={cn(
+            "rounded-lg overflow-hidden border bg-muted cursor-pointer relative group transition-all",
+            isSelected && "ring-2 ring-primary ring-offset-2",
+            isDraggable && "cursor-grab active:cursor-grabbing"
+          )}
+          onClick={() => {
+            if (selectedFileIds.size > 0 && isDraggable) {
+              toggleSelectFile(file.id);
+              return;
+            }
+            file.source === 'post' ? navigate(`/post/${file.id}`) : (file.videoEmbed ? window.open(file.videoEmbed.originalUrl, '_blank') : null);
+          }}
+        >
+          {isDraggable && (
+            <div className="absolute top-1.5 left-1.5 z-10">
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => toggleSelectFile(file.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-background/80 border-muted-foreground/50"
+              />
+            </div>
+          )}
+          {file.videoEmbed && file.videoEmbed.platform !== 'link' ? (
+            <div className="pointer-events-none">
+              <VideoPreview embed={file.videoEmbed} />
+            </div>
+          ) : file.media_url ? (
+            <video src={file.media_url} className="w-full aspect-video object-cover" preload="metadata" muted />
+          ) : null}
+          {file.content && <p className="p-2 text-sm truncate">{file.content}</p>}
+          {isUploaded && isOwnFiles && (
+            <button
+              onClick={e => { e.stopPropagation(); deleteFile(file.id); }}
+              className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    // Music
+    return (
+      <div
+        key={file.id}
+        draggable={isDraggable}
+        onDragStart={isDraggable ? (e) => handleDragStart(e, file.id) : undefined}
+        className={cn(
+          "relative group transition-all rounded-lg",
+          isSelected && "ring-2 ring-primary ring-offset-2",
+          isDraggable && "cursor-grab active:cursor-grabbing"
+        )}
+      >
+        <div className="flex items-center gap-2">
+          {isDraggable && (
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => toggleSelectFile(file.id)}
+              className="shrink-0"
+            />
+          )}
+          <div className="flex-1">
+            <AudioPlayer src={file.media_url!} title={file.content || undefined} />
+          </div>
+        </div>
+        {isUploaded && isOwnFiles && (
+          <button
+            onClick={() => deleteFile(file.id)}
+            className="absolute top-2 right-2 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="h-screen overflow-hidden bg-background">
       <Navbar />
@@ -336,14 +537,20 @@ export default function MyFiles() {
                 <FolderOpen className="h-6 w-6 text-primary" />
                 {activeFolder ? activeFolder.name : title}
               </h1>
-              {isOwnFiles && (
-                <div className="flex gap-2">
+              <div className="flex gap-2">
+                {selectedFileIds.size > 0 && (
+                  <Button size="sm" variant="ghost" onClick={() => setSelectedFileIds(new Set())} className="gap-1.5 text-xs">
+                    <X className="h-3.5 w-3.5" />
+                    Скасувати ({selectedFileIds.size})
+                  </Button>
+                )}
+                {isOwnFiles && (
                   <Button size="sm" variant="outline" onClick={() => { setUploadFolderId(activeFolderId); setShowUploadDialog(true); }} className="gap-1.5">
                     <Upload className="h-4 w-4" />
                     <span className="hidden sm:inline">Завантажити</span>
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
             {activeFolder ? (
               <button
@@ -358,7 +565,7 @@ export default function MyFiles() {
             )}
           </div>
 
-          {/* Folders section (own files only) */}
+          {/* Folders section (own files only, general view) */}
           {isOwnFiles && !activeFolderId && (
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-2">
@@ -369,6 +576,11 @@ export default function MyFiles() {
                 >
                   <FolderPlus className="h-4 w-4" />
                 </button>
+                {canDragDrop && (
+                  <span className="text-[10px] text-muted-foreground ml-auto">
+                    Перетягніть файли в папку
+                  </span>
+                )}
               </div>
 
               {showNewFolderInput && (
@@ -395,10 +607,16 @@ export default function MyFiles() {
                   {folders.map(folder => (
                     <div
                       key={folder.id}
-                      className="flex items-center gap-2 p-2.5 rounded-lg border bg-card hover:bg-accent/50 cursor-pointer transition-colors group"
+                      className={cn(
+                        "flex items-center gap-2 p-2.5 rounded-lg border bg-card hover:bg-accent/50 cursor-pointer transition-all group",
+                        dragOverFolderId === folder.id && "ring-2 ring-primary bg-primary/10 scale-[1.02]"
+                      )}
                       onClick={() => {
                         if (editingFolderId !== folder.id) setActiveFolderId(folder.id);
                       }}
+                      onDragOver={(e) => handleFolderDragOver(e, folder.id)}
+                      onDragLeave={handleFolderDragLeave}
+                      onDrop={(e) => handleFolderDrop(e, folder.id)}
                     >
                       <FolderOpen className="h-5 w-5 text-primary shrink-0" />
                       {editingFolderId === folder.id ? (
@@ -455,6 +673,7 @@ export default function MyFiles() {
                   ({files.filter(f => {
                     if (getFileType(f) !== tab.id) return false;
                     if (activeFolderId) return f.source === 'uploaded' && f.folder_id === activeFolderId;
+                    if (f.source === 'uploaded' && f.folder_id) return false;
                     return true;
                   }).length})
                 </span>
@@ -487,77 +706,15 @@ export default function MyFiles() {
             </div>
           ) : activeTab === "photos" ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {filtered.map(file => (
-                <div
-                  key={file.id}
-                  className="group relative aspect-square rounded-lg overflow-hidden border bg-muted cursor-pointer"
-                  onClick={() => file.source === 'post' ? navigate(`/post/${file.id}`) : window.open(file.media_url!, '_blank')}
-                >
-                  <img
-                    src={file.media_url!}
-                    alt={file.content || "Фото"}
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                  {file.source === 'uploaded' && isOwnFiles && (
-                    <button
-                      onClick={e => { e.stopPropagation(); deleteFile(file.id); }}
-                      className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                  {file.content && (
-                    <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/60 to-transparent">
-                      <p className="text-[10px] text-white truncate">{file.content}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
+              {filtered.map(renderFileCard)}
             </div>
           ) : activeTab === "videos" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {filtered.map(file => (
-                <div
-                  key={file.id}
-                  className="rounded-lg overflow-hidden border bg-muted cursor-pointer relative group"
-                  onClick={() => file.source === 'post' ? navigate(`/post/${file.id}`) : (file.videoEmbed ? window.open(file.videoEmbed.originalUrl, '_blank') : null)}
-                >
-                  {file.videoEmbed && file.videoEmbed.platform !== 'link' ? (
-                    <div className="pointer-events-none">
-                      <VideoPreview embed={file.videoEmbed} />
-                    </div>
-                  ) : file.media_url ? (
-                    <video src={file.media_url} className="w-full aspect-video object-cover" preload="metadata" muted />
-                  ) : null}
-                  {file.content && <p className="p-2 text-sm truncate">{file.content}</p>}
-                  {file.source === 'uploaded' && isOwnFiles && (
-                    <button
-                      onClick={e => { e.stopPropagation(); deleteFile(file.id); }}
-                      className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
+              {filtered.map(renderFileCard)}
             </div>
           ) : (
             <div className="space-y-3">
-              {filtered.map(file => (
-                <div key={file.id} className="relative group">
-                  <AudioPlayer src={file.media_url!} title={file.content || undefined} />
-                  {file.source === 'uploaded' && isOwnFiles && (
-                    <button
-                      onClick={() => deleteFile(file.id)}
-                      className="absolute top-2 right-2 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
+              {filtered.map(renderFileCard)}
             </div>
           )}
         </main>
@@ -574,7 +731,6 @@ export default function MyFiles() {
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* File input */}
             <div>
               <label className="text-sm font-medium mb-1.5 block">Файл (фото або музика)</label>
               <input
@@ -605,7 +761,6 @@ export default function MyFiles() {
               <div className="h-px flex-1 bg-border" />
             </div>
 
-            {/* Video link */}
             <div>
               <label className="text-sm font-medium mb-1.5 block">Посилання на відео</label>
               <div className="flex gap-2">
@@ -620,16 +775,15 @@ export default function MyFiles() {
               <p className="text-[10px] text-muted-foreground mt-1">YouTube, Instagram, TikTok, Facebook</p>
             </div>
 
-            {/* Title - only for single file or video link */}
             {(selectedFiles.length <= 1 || videoLink.trim()) && (
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Назва (необов'язково)</label>
-              <Input
-                value={uploadTitle}
-                onChange={e => setUploadTitle(e.target.value)}
-                placeholder={selectedFiles.length === 1 ? selectedFiles[0].name : "Назва файлу"}
-              />
-            </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Назва (необов'язково)</label>
+                <Input
+                  value={uploadTitle}
+                  onChange={e => setUploadTitle(e.target.value)}
+                  placeholder={selectedFiles.length === 1 ? selectedFiles[0].name : "Назва файлу"}
+                />
+              </div>
             )}
             {selectedFiles.length > 1 && (
               <p className="text-xs text-muted-foreground">При завантаженні кількох файлів назви зберігаються автоматично</p>
