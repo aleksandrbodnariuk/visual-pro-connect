@@ -87,6 +87,7 @@ export function PostCard({
   const [showAllComments, setShowAllComments] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ commentId: string; userName: string } | null>(null);
+  const [showFullCaption, setShowFullCaption] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
 
   const authUser = currentUser;
@@ -173,15 +174,10 @@ export function PostCard({
             )}
           </div>
         </Link>
-        <PostMenu postId={id} isAuthor={isAuthor} onEdit={onEdit} onDelete={onDelete} caption={caption} />
+      <PostMenu postId={id} isAuthor={isAuthor} onEdit={onEdit} onDelete={onDelete} caption={caption} />
       </div>
 
-      {cleanCaption && (
-        <div className="px-3 pb-2">
-          <p className="text-sm whitespace-pre-wrap">{cleanCaption}</p>
-        </div>
-      )}
-
+      {/* Media first (Facebook-style) */}
       {isAudioUrl && imageUrl && (
         <div className="px-3 pt-2"><AudioPlayer src={imageUrl} /></div>
       )}
@@ -194,6 +190,25 @@ export function PostCard({
 
       {!imageUrl && !isAudioUrl && videoEmbed && (
         <div className="px-3 pt-2"><VideoPreview embed={videoEmbed} /></div>
+      )}
+
+      {/* Caption below media with truncation */}
+      {cleanCaption && (
+        <div className="px-3 pt-2 pb-1">
+          <p className={cn("text-sm whitespace-pre-wrap", !showFullCaption && cleanCaption.length > 200 && "line-clamp-3")}>
+            {cleanCaption}
+          </p>
+          {cleanCaption.length > 200 && !showFullCaption && (
+            <button onClick={() => setShowFullCaption(true)} className="text-sm font-semibold text-muted-foreground hover:underline mt-0.5">
+              Показати більше
+            </button>
+          )}
+          {cleanCaption.length > 200 && showFullCaption && (
+            <button onClick={() => setShowFullCaption(false)} className="text-sm font-semibold text-muted-foreground hover:underline mt-0.5">
+              Згорнути
+            </button>
+          )}
+        </div>
       )}
 
       {/* Actions */}
