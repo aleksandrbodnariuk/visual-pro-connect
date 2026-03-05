@@ -704,18 +704,35 @@ export default function MyFiles() {
                 </Button>
               )}
             </div>
-          ) : activeTab === "photos" ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {filtered.map(renderFileCard)}
-            </div>
-          ) : activeTab === "videos" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {filtered.map(renderFileCard)}
-            </div>
           ) : (
-            <div className="space-y-3">
-              {filtered.map(renderFileCard)}
-            </div>
+            <>
+              {isOwnFiles && (
+                <div className="flex justify-end mb-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => { setUploadFolderId(activeFolderId); setShowUploadDialog(true); }}
+                  >
+                    <Upload className="h-4 w-4" />
+                    Завантажити файл
+                  </Button>
+                </div>
+              )}
+              {activeTab === "photos" ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {filtered.map(renderFileCard)}
+                </div>
+              ) : activeTab === "videos" ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {filtered.map(renderFileCard)}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filtered.map(renderFileCard)}
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>
