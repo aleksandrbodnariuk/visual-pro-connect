@@ -55,6 +55,8 @@ const AppContent = () => {
   useDataSync();
   // Auto-subscribe to push notifications if permission was previously granted
   usePushAutoSubscribe();
+  // Clear app badge when user opens/focuses the app
+  useBadgeClear();
   
   return (
     <BrowserRouter>
