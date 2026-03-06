@@ -114,7 +114,7 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
   };
 
   return (
-    <div className="border-t p-3">
+    <div className="border-t p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] md:pb-3">
       {/* Превʼю вибраного файлу */}
       {previewUrl && (
         <div className="mb-2 relative inline-block">
