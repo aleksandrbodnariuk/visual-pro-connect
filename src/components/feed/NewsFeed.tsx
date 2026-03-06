@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { uploadToStorage } from "@/lib/storage";
 import { extractVideoEmbed } from "@/lib/videoEmbed";
 import { ImageCropEditor } from "@/components/ui/ImageCropEditor";
-import { compressImageFromDataUrl, dataUrlToBlob } from "@/lib/imageCompression";
+import { compressImageFromDataUrl, dataUrlToBlob, validateImageSize, OUTPUT_FORMAT, OUTPUT_EXTENSION } from '@/lib/imageCompression';
 import { useFeedData } from "@/hooks/useFeedData";
 
 export function NewsFeed() {
@@ -141,11 +141,11 @@ export function NewsFeed() {
       const compressed = await compressImageFromDataUrl(croppedDataUrl, 'post');
       setPreviewUrl(compressed);
       const blob = dataUrlToBlob(compressed);
-      setSelectedFile(new File([blob], `post-${Date.now()}.jpg`, { type: 'image/jpeg' }));
+      setSelectedFile(new File([blob], `post-${Date.now()}${OUTPUT_EXTENSION}`, { type: OUTPUT_FORMAT }));
     } catch {
       setPreviewUrl(croppedDataUrl);
       const blob = dataUrlToBlob(croppedDataUrl);
-      setSelectedFile(new File([blob], `post-${Date.now()}.jpg`, { type: 'image/jpeg' }));
+      setSelectedFile(new File([blob], `post-${Date.now()}${OUTPUT_EXTENSION}`, { type: OUTPUT_FORMAT }));
     }
     setShowImageEditor(false);
     setOriginalImageSrc(null);
