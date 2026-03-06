@@ -1,7 +1,9 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NavbarNavigationProps {
   isAdmin: boolean;
@@ -10,6 +12,14 @@ interface NavbarNavigationProps {
 export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
   const location = useLocation();
   const { unreadCount } = useUnreadMessages();
+  const { user } = useAuth();
+  const [isSpecialist, setIsSpecialist] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setIsSpecialist(false); return; }
+    supabase.rpc('has_role', { _user_id: user.id, _role: 'specialist' as any })
+      .then(({ data }) => setIsSpecialist(data === true));
+  }, [user]);
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -68,6 +78,16 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
       >
         Біржа
       </Link>
+      {(isSpecialist || isAdmin) && (
+        <Link
+          to="/panel-fahivtsya"
+          className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
+            isActive("/panel-fahivtsya") ? "text-foreground" : "text-foreground/60"
+          }`}
+        >
+          Кабінет
+        </Link>
+      )}
       {isAdmin && (
         <Link
           to="/admin"
