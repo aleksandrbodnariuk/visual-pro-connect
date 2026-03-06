@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { updateAppBadge } from "@/lib/badgeApi";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 // ── Singleton state shared across all hook instances ──
@@ -14,6 +15,9 @@ const listeners = new Set<(uid: string) => void>();
 let initialFetchPromise: Promise<number> | null = null;
 let cachedCount: number | null = null;
 let cachedForUserId: string | null = null;
+
+// Track notification count separately for combined badge
+let lastNotificationCount = 0;
 
 function createSharedChannel(uid: string) {
   if (sharedChannel) return;
@@ -57,6 +61,26 @@ async function fetchUnreadFromDb(uid: string): Promise<number> {
   return (!error && count !== null) ? count : 0;
 }
 
+async function fetchUnreadNotifications(uid: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', uid)
+    .eq('is_read', false);
+  return (!error && count !== null) ? count : 0;
+}
+
+async function updateBadgeWithTotalCount(uid: string, messageCount: number) {
+  try {
+    const notifCount = await fetchUnreadNotifications(uid);
+    lastNotificationCount = notifCount;
+    await updateAppBadge(messageCount + notifCount);
+  } catch {
+    // Just update with message count if notifications fail
+    await updateAppBadge(messageCount);
+  }
+}
+
 export function useUnreadMessages() {
   const { user } = useAuth();
   const userId = user?.id || null;
@@ -67,6 +91,8 @@ export function useUnreadMessages() {
     cachedCount = count;
     cachedForUserId = uid;
     setUnreadCount(count);
+    // Update app badge with combined count
+    updateBadgeWithTotalCount(uid, count);
   }, []);
 
   // Initial fetch — deduplicated via module-level promise
@@ -88,6 +114,7 @@ export function useUnreadMessages() {
     initialFetchPromise.then(count => {
       cachedCount = count;
       setUnreadCount(count);
+      updateBadgeWithTotalCount(userId, count);
     });
   }, [userId]);
 
@@ -126,6 +153,20 @@ export function useUnreadMessages() {
     window.addEventListener('messages-read', handleMessagesRead);
     return () => window.removeEventListener('messages-read', handleMessagesRead);
   }, [userId, fetchUnreadCount]);
+
+  // Listen for notification changes to update badge
+  useEffect(() => {
+    if (!userId) return;
+
+    const handleNotificationChange = () => {
+      if (cachedCount !== null) {
+        updateBadgeWithTotalCount(userId, cachedCount);
+      }
+    };
+
+    window.addEventListener('notifications-updated', handleNotificationChange);
+    return () => window.removeEventListener('notifications-updated', handleNotificationChange);
+  }, [userId]);
 
   return { unreadCount, refreshUnreadCount: () => userId && fetchUnreadCount(userId) };
 }

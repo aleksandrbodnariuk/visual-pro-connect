@@ -18,6 +18,9 @@ const STATIC_ASSETS = [
 const MAX_IMAGE_CACHE = 100;
 const MAX_API_CACHE = 50;
 
+// Badge counter stored in SW scope
+let badgeCount = 0;
+
 // ── Install ─────────────────────────────────────────────
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -158,6 +161,9 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  // Increment badge counter
+  badgeCount++;
+
   const options = {
     body: data.body,
     icon: '/android-chrome-192x192.png',
@@ -169,7 +175,15 @@ self.addEventListener('push', (event) => {
     actions: data.actions || [],
   };
 
-  event.waitUntil(self.registration.showNotification(data.title, options));
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(data.title, options),
+      // Update app badge if supported
+      self.registration.setAppBadge
+        ? self.registration.setAppBadge(badgeCount).catch(() => {})
+        : Promise.resolve(),
+    ])
+  );
 });
 
 // ── Notification Click ──────────────────────────────────
@@ -177,6 +191,12 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const targetUrl = event.notification.data?.url || '/';
+
+  // Clear badge when user taps notification
+  badgeCount = 0;
+  if (self.registration.clearAppBadge) {
+    self.registration.clearAppBadge().catch(() => {});
+  }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
@@ -191,4 +211,23 @@ self.addEventListener('notificationclick', (event) => {
       return clients.openWindow(targetUrl);
     })
   );
+});
+
+// ── Message from client to manage badge ─────────────────
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SET_BADGE') {
+    badgeCount = event.data.count || 0;
+    if (self.registration.setAppBadge && badgeCount > 0) {
+      self.registration.setAppBadge(badgeCount).catch(() => {});
+    } else if (self.registration.clearAppBadge && badgeCount === 0) {
+      self.registration.clearAppBadge().catch(() => {});
+    }
+  }
+
+  if (event.data && event.data.type === 'CLEAR_BADGE') {
+    badgeCount = 0;
+    if (self.registration.clearAppBadge) {
+      self.registration.clearAppBadge().catch(() => {});
+    }
+  }
 });
