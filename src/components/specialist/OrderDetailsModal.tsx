@@ -84,6 +84,13 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
 
   const handleSave = async () => {
     if (!date) return;
+
+    // Also add pending participant if selected
+    if (addSpecId) {
+      await onAddParticipant(order.id, addSpecId, addSpecRole);
+      setAddSpecId('');
+    }
+
     const success = await onUpdate(order.id, {
       title: title.trim(),
       description: description.trim() || null,
