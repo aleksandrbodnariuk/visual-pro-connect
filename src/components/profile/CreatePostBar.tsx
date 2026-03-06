@@ -41,6 +41,13 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // HEIC check
+    const HEIC_TYPES = ['image/heic', 'image/heif'];
+    if (HEIC_TYPES.includes(file.type) || file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+      toast.error('Цей формат зображення не підтримується. Будь ласка, використайте JPEG або PNG.');
+      return;
+    }
+
     if (file.size > 50 * 1024 * 1024) {
       toast.error("Файл занадто великий. Максимум 50MB");
       return;
@@ -130,7 +137,10 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
 
         const { error: uploadError } = await supabase.storage
           .from('posts')
-          .upload(fileName, mediaFile);
+          .upload(fileName, mediaFile, {
+            contentType: mediaFile.type,
+            cacheControl: '86400'
+          });
 
         if (uploadError) {
           console.error('Upload error:', uploadError);
