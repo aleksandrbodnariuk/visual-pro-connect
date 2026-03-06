@@ -89,6 +89,7 @@ const AppContent = () => {
       </ErrorBoundary>
       <MobileNavigation />
       <InstallPrompt />
+      <PushOnboarding />
     </BrowserRouter>
   );
 };
