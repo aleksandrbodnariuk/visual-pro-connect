@@ -2,11 +2,14 @@
   "name": "Спільнота B&C",
   "short_name": "B&C",
   "description": "Спільнота фотографів, відеографів та музикантів B&C — платформа для професіоналів",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0b0b0b",
   "theme_color": "#0b0b0b",
+  "prefer_related_applications": false,
   "categories": ["social", "photography", "music", "entertainment"],
   "icons": [
     {
@@ -29,13 +32,25 @@
       "src": "/android-chrome-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/android-chrome-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "screenshots": [

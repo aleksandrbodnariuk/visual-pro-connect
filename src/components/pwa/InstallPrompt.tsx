@@ -9,6 +9,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 const DISMISSED_KEY = "pwa-install-dismissed";
 const INSTALLED_KEY = "pwa-installed";
+const DISMISS_COOLDOWN_MS = 3 * 24 * 60 * 60 * 1000; // 3 days (was 7)
 
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -19,7 +20,7 @@ export function InstallPrompt() {
     if (localStorage.getItem(INSTALLED_KEY)) return;
 
     const dismissed = localStorage.getItem(DISMISSED_KEY);
-    if (dismissed && Date.now() - Number(dismissed) < 7 * 24 * 60 * 60 * 1000) return;
+    if (dismissed && Date.now() - Number(dismissed) < DISMISS_COOLDOWN_MS) return;
 
     const handler = (e: Event) => {
       e.preventDefault();
