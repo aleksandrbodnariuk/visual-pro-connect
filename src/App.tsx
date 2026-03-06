@@ -15,6 +15,7 @@ import { useBadgeClear } from "./hooks/useBadgeClear";
 import { FaviconUpdater } from "./components/layout/FaviconUpdater";
 import { MobileNavigation } from "./components/layout/MobileNavigation";
 import { InstallPrompt } from "./components/pwa/InstallPrompt";
+import { PushOnboarding } from "./components/pwa/PushOnboarding";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import Index from "./pages/Index";
 
@@ -88,6 +89,7 @@ const AppContent = () => {
       </ErrorBoundary>
       <MobileNavigation />
       <InstallPrompt />
+      <PushOnboarding />
     </BrowserRouter>
   );
 };
