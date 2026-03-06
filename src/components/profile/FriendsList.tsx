@@ -140,57 +140,86 @@ export function FriendsList({ userId, isCurrentUser = true }: { userId?: string;
               {displayedFriends.map((friend) => {
                 const online = isUserOnline(lastSeenMap.get(friend!.id) ?? null);
                 return (
-                  <ContextMenu key={friend?.id}>
-                    <ContextMenuTrigger asChild>
-                      <Link
-                        to={`/profile/${friend?.id}`}
-                        className="group"
-                      >
-                        <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
-                          {friend?.avatar_url ? (
-                            <img
-                              src={friend.avatar_url}
-                              alt={friend.full_name || 'Друг'}
-                              loading="lazy"
-                              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
-                            />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center text-xl sm:text-2xl md:text-3xl font-medium text-muted-foreground">
-                              {getInitials(friend?.full_name)}
-                            </div>
-                          )}
-                          {online && (
-                            <span className="absolute bottom-2 right-2 block h-4 w-4 rounded-full bg-green-500 ring-2 ring-background" />
-                          )}
-                        </div>
-                        <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-medium truncate text-center">
-                          {friend?.full_name || 'Користувач'}
-                        </p>
-                      </Link>
-                    </ContextMenuTrigger>
-                    <ContextMenuContent>
-                      <ContextMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setDeleteTarget({ id: friend!.id, name: friend?.full_name || 'Користувач' });
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Видалити з друзів
-                      </ContextMenuItem>
-                      <ContextMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setBlockTarget({ id: friend!.id, name: friend?.full_name || 'Користувач' });
-                        }}
-                      >
-                        <Ban className="mr-2 h-4 w-4" />
-                        Заблокувати
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
+                  {isCurrentUser ? (
+                    <ContextMenu key={friend?.id}>
+                      <ContextMenuTrigger asChild>
+                        <Link
+                          to={`/profile/${friend?.id}`}
+                          className="group"
+                        >
+                          <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
+                            {friend?.avatar_url ? (
+                              <img
+                                src={friend.avatar_url}
+                                alt={friend.full_name || 'Друг'}
+                                loading="lazy"
+                                className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
+                              />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center text-xl sm:text-2xl md:text-3xl font-medium text-muted-foreground">
+                                {getInitials(friend?.full_name)}
+                              </div>
+                            )}
+                            {online && (
+                              <span className="absolute bottom-2 right-2 block h-4 w-4 rounded-full bg-green-500 ring-2 ring-background" />
+                            )}
+                          </div>
+                          <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-medium truncate text-center">
+                            {friend?.full_name || 'Користувач'}
+                          </p>
+                        </Link>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent>
+                        <ContextMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setDeleteTarget({ id: friend!.id, name: friend?.full_name || 'Користувач' });
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Видалити з друзів
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setBlockTarget({ id: friend!.id, name: friend?.full_name || 'Користувач' });
+                          }}
+                        >
+                          <Ban className="mr-2 h-4 w-4" />
+                          Заблокувати
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  ) : (
+                    <Link
+                      key={friend?.id}
+                      to={`/profile/${friend?.id}`}
+                      className="group"
+                    >
+                      <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
+                        {friend?.avatar_url ? (
+                          <img
+                            src={friend.avatar_url}
+                            alt={friend.full_name || 'Друг'}
+                            loading="lazy"
+                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-xl sm:text-2xl md:text-3xl font-medium text-muted-foreground">
+                            {getInitials(friend?.full_name)}
+                          </div>
+                        )}
+                        {online && (
+                          <span className="absolute bottom-2 right-2 block h-4 w-4 rounded-full bg-green-500 ring-2 ring-background" />
+                        )}
+                      </div>
+                      <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-medium truncate text-center">
+                        {friend?.full_name || 'Користувач'}
+                      </p>
+                    </Link>
+                  )}
                 );
               })}
             </div>
