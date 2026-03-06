@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { uploadToStorage } from '@/lib/storage';
 import { supabase } from '@/integrations/supabase/client';
-import { compressImageFromDataUrl, dataUrlToBlob } from '@/lib/imageCompression';
+import { compressImageFromDataUrl, dataUrlToBlob, validateImageSize, OUTPUT_FORMAT, OUTPUT_EXTENSION } from '@/lib/imageCompression';
 
 export function useAvatarUpload(
   userId: string,
@@ -33,16 +33,16 @@ export function useAvatarUpload(
       // Convert data URL to Blob
       const blob = dataUrlToBlob(compressedDataUrl);
       
-      // Create file from blob
-      const file = new File([blob], `avatar-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      // Create file from blob (WebP)
+      const file = new File([blob], `avatar-${Date.now()}${OUTPUT_EXTENSION}`, { type: OUTPUT_FORMAT });
       
       console.log('Розмір файлу:', file.size, 'байт');
       
-      // Create unique file name - path is just the filename, bucket handles the folder
-      const uniqueFileName = `${userId}-${Date.now()}.jpg`;
+      // Create unique file name
+      const uniqueFileName = `${userId}-${Date.now()}${OUTPUT_EXTENSION}`;
       
-      // Upload to storage - use only filename, not nested path
-      const publicUrl = await uploadToStorage('avatars', uniqueFileName, file, 'image/jpeg');
+      // Upload to storage
+      const publicUrl = await uploadToStorage('avatars', uniqueFileName, file, OUTPUT_FORMAT);
       
       console.log('Аватар успішно завантажено, URL:', publicUrl);
 
@@ -96,9 +96,9 @@ export function useAvatarUpload(
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      toast.error('Розмір файлу не повинен перевищувати 5MB');
+    const sizeCheck = validateImageSize(file, 'avatar');
+    if (!sizeCheck.valid) {
+      toast.error(sizeCheck.message);
       return;
     }
 
