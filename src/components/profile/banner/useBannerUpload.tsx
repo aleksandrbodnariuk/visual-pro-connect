@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { uploadToStorage } from '@/lib/storage';
 import { supabase } from '@/integrations/supabase/client';
-import { compressImageFromDataUrl, dataUrlToBlob } from '@/lib/imageCompression';
+import { compressImageFromDataUrl, dataUrlToBlob, validateImageSize, OUTPUT_FORMAT, OUTPUT_EXTENSION } from '@/lib/imageCompression';
 
 export function useBannerUpload(
   userId: string,
@@ -35,16 +35,16 @@ export function useBannerUpload(
       // Convert data URL to Blob
       const blob = dataUrlToBlob(compressedDataUrl);
       
-      // Create file from blob
-      const file = new File([blob], `banner-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      // Create file from blob (WebP)
+      const file = new File([blob], `banner-${Date.now()}${OUTPUT_EXTENSION}`, { type: OUTPUT_FORMAT });
       
       console.log('Розмір файлу банера:', file.size, 'байт');
       
-      // Create unique file name - path inside the bucket
-      const uniqueFileName = `${userId}-${Date.now()}.jpg`;
+      // Create unique file name
+      const uniqueFileName = `${userId}-${Date.now()}${OUTPUT_EXTENSION}`;
       
-      // Upload to storage - use only filename, bucket handles the folder
-      const publicUrl = await uploadToStorage('banners', uniqueFileName, file, 'image/jpeg');
+      // Upload to storage
+      const publicUrl = await uploadToStorage('banners', uniqueFileName, file, OUTPUT_FORMAT);
       uploadedUrl = publicUrl;
       
       console.log('Банер успішно завантажено, URL:', publicUrl);
@@ -97,9 +97,9 @@ export function useBannerUpload(
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      toast.error('Розмір файлу не повинен перевищувати 10MB для банера');
+    const sizeCheck = validateImageSize(file, 'banner');
+    if (!sizeCheck.valid) {
+      toast.error(sizeCheck.message);
       return;
     }
 

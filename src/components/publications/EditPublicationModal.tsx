@@ -10,7 +10,7 @@ import { uploadToStorage } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { ImageCropEditor } from "@/components/ui/ImageCropEditor";
-import { compressImageAsFile, dataUrlToBlob } from "@/lib/imageCompression";
+import { compressImageAsFile, dataUrlToBlob, OUTPUT_FORMAT, OUTPUT_EXTENSION } from "@/lib/imageCompression";
 
 const postSchema = z.object({
   content: z.string()
@@ -105,7 +105,7 @@ export function EditPublicationModal({
       
       // Convert data URL to File
       const blob = dataUrlToBlob(croppedImageUrl);
-      const file = new File([blob], `post-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      const file = new File([blob], `post-${Date.now()}${OUTPUT_EXTENSION}`, { type: OUTPUT_FORMAT });
       
       // Compress the cropped image
       const compressedFile = await compressImageAsFile(file, 'post');
