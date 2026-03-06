@@ -13,6 +13,7 @@ import { useDataSync } from "./hooks/useDataSync";
 import { FaviconUpdater } from "./components/layout/FaviconUpdater";
 import { MobileNavigation } from "./components/layout/MobileNavigation";
 import { InstallPrompt } from "./components/pwa/InstallPrompt";
+import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import Index from "./pages/Index";
 
 // Lazy-loaded pages for code splitting
@@ -53,30 +54,32 @@ const AppContent = () => {
   
   return (
     <BrowserRouter>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/profile/:userId" element={<Profile />} />
-          <Route path="/messages" element={<Messages />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/connect" element={<Connect />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/friends" element={<Friends />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/admin/:tabName" element={<Admin />} />
-          <Route path="/stock-market" element={<StockMarket />} />
-          <Route path="/post/:postId" element={<Post />} />
-          <Route path="/my-files" element={<MyFiles />} />
-          <Route path="/my-files/:type" element={<MyFiles />} />
-          <Route path="/files/:userId" element={<MyFiles />} />
-          <Route path="/files/:userId/:type" element={<MyFiles />} />
-          <Route path="/category/:categoryId" element={<Search />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Suspense>
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:userId" element={<Profile />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/connect" element={<Connect />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/friends" element={<Friends />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/admin/:tabName" element={<Admin />} />
+            <Route path="/stock-market" element={<StockMarket />} />
+            <Route path="/post/:postId" element={<Post />} />
+            <Route path="/my-files" element={<MyFiles />} />
+            <Route path="/my-files/:type" element={<MyFiles />} />
+            <Route path="/files/:userId" element={<MyFiles />} />
+            <Route path="/files/:userId/:type" element={<MyFiles />} />
+            <Route path="/category/:categoryId" element={<Search />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
       <MobileNavigation />
       <InstallPrompt />
     </BrowserRouter>
