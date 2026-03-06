@@ -145,7 +145,7 @@ export function MessageList({
 
   return (
     <>
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 flex flex-col justify-end min-h-0">
         <div className="space-y-4">
           {messages.length > 0 ? (
             messages.map((message) => (
