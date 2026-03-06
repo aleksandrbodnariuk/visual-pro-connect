@@ -41,8 +41,11 @@ export async function getVapidPublicKey(): Promise<string> {
     const data = await res.json();
     console.log('[Push] VAPID response data:', data);
     if (data.vapidPublicKey) {
-      cachedVapidKey = data.vapidPublicKey;
-      return data.vapidPublicKey;
+      // Strip accidental surrounding quotes from the key
+      const cleanKey = data.vapidPublicKey.replace(/^"|"$/g, '').trim();
+      console.log('[Push] Clean VAPID key:', cleanKey.substring(0, 20) + '...');
+      cachedVapidKey = cleanKey;
+      return cleanKey;
     }
     console.warn('[Push] No vapidPublicKey in response');
   } catch (err) {
