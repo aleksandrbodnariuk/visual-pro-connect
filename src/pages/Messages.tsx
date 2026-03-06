@@ -84,8 +84,6 @@ export default function Messages() {
       toast.error("Не вдалося завантажити повідомлення");
     } finally {
       setIsLoading(false);
-      // Clear the temporary receiverId from localStorage
-      localStorage.removeItem("currentChatReceiverId");
     }
   };
 
