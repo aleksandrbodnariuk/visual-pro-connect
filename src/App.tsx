@@ -1,4 +1,5 @@
 
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,19 +13,27 @@ import { useDataSync } from "./hooks/useDataSync";
 import { FaviconUpdater } from "./components/layout/FaviconUpdater";
 import { MobileNavigation } from "./components/layout/MobileNavigation";
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Profile from "./pages/Profile";
-import Messages from "./pages/Messages";
-import Search from "./pages/Search";
-import Settings from "./pages/Settings";
-import Connect from "./pages/Connect";
-import Notifications from "./pages/Notifications";
-import Friends from "./pages/Friends";
-import Admin from "./pages/Admin";
-import StockMarket from "./pages/StockMarket";
-import Post from "./pages/Post";
-import MyFiles from "./pages/MyFiles";
-import NotFound from "./pages/NotFound";
+
+// Lazy-loaded pages for code splitting
+const Auth = lazy(() => import("./pages/Auth"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Messages = lazy(() => import("./pages/Messages"));
+const Search = lazy(() => import("./pages/Search"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Connect = lazy(() => import("./pages/Connect"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const Friends = lazy(() => import("./pages/Friends"));
+const Admin = lazy(() => import("./pages/Admin"));
+const StockMarket = lazy(() => import("./pages/StockMarket"));
+const Post = lazy(() => import("./pages/Post"));
+const MyFiles = lazy(() => import("./pages/MyFiles"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  </div>
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,28 +52,30 @@ const AppContent = () => {
   
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/profile/:userId" element={<Profile />} />
-        <Route path="/messages" element={<Messages />} />
-        <Route path="/search" element={<Search />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/connect" element={<Connect />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/friends" element={<Friends />} />
-        <Route path="/admin" element={<Admin />} />
-        <Route path="/admin/:tabName" element={<Admin />} />
-        <Route path="/stock-market" element={<StockMarket />} />
-        <Route path="/post/:postId" element={<Post />} />
-        <Route path="/my-files" element={<MyFiles />} />
-        <Route path="/my-files/:type" element={<MyFiles />} />
-        <Route path="/files/:userId" element={<MyFiles />} />
-        <Route path="/files/:userId/:type" element={<MyFiles />} />
-        <Route path="/category/:categoryId" element={<Search />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/:userId" element={<Profile />} />
+          <Route path="/messages" element={<Messages />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/connect" element={<Connect />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/friends" element={<Friends />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/:tabName" element={<Admin />} />
+          <Route path="/stock-market" element={<StockMarket />} />
+          <Route path="/post/:postId" element={<Post />} />
+          <Route path="/my-files" element={<MyFiles />} />
+          <Route path="/my-files/:type" element={<MyFiles />} />
+          <Route path="/files/:userId" element={<MyFiles />} />
+          <Route path="/files/:userId/:type" element={<MyFiles />} />
+          <Route path="/category/:categoryId" element={<Search />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
       <MobileNavigation />
     </BrowserRouter>
   );

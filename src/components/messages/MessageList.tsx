@@ -181,6 +181,7 @@ export function MessageList({
                       <img 
                         src={message.attachmentUrl} 
                         alt="Вкладення" 
+                        loading="lazy"
                         className="max-w-[200px] rounded-lg cursor-pointer mb-2 hover:opacity-90 transition-opacity"
                         onClick={() => setZoomedImage(message.attachmentUrl!)}
                       />

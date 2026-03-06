@@ -184,7 +184,7 @@ export function PostCard({
 
       {imageUrl && !isAudioUrl && (
         <div className="relative overflow-hidden bg-muted">
-          <img src={imageUrl} alt={caption} className="w-full object-contain max-h-[600px] transition-all hover:scale-105" />
+          <img src={imageUrl} alt={caption} loading="lazy" className="w-full object-contain max-h-[600px] transition-all hover:scale-105" />
         </div>
       )}
 

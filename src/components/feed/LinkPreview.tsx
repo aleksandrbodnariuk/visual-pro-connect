@@ -99,6 +99,7 @@ export function LinkPreview({ url }: LinkPreviewProps) {
           <img
             src={preview.image}
             alt={preview.title || 'Link preview'}
+            loading="lazy"
             className="w-full max-h-[400px] object-contain group-hover:scale-105 transition-transform duration-300"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';

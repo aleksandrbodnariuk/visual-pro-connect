@@ -259,7 +259,7 @@ export default function PostPage() {
             {/* Media */}
             {post.media_url && (
               <div className="mb-4 rounded-lg overflow-hidden">
-                <img src={post.media_url} alt="Post media" className="w-full object-cover" />
+                <img src={post.media_url} alt="Post media" loading="lazy" className="w-full object-cover" />
               </div>
             )}
 

@@ -91,6 +91,7 @@ export function LogoSettings() {
                 <img 
                   src={logoUrl} 
                   alt="Логотип сайту" 
+                  loading="lazy"
                   className="h-24 object-contain"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
