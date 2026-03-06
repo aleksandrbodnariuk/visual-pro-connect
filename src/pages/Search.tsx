@@ -189,7 +189,7 @@ export default function Search() {
     const categoryData = CATEGORIES.find(cat => cat.id === primaryCategory);
     
     if (categoryData) {
-      const Icon = categoryData.icon;
+      const Icon = getIconComponent(categoryData.icon);
       return <Icon className="h-4 w-4" />;
     }
     
