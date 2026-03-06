@@ -63,6 +63,7 @@ const AppContent = () => {
   
   return (
     <BrowserRouter>
+      <AnalyticsTrackerInner />
       <ErrorBoundary>
         <Suspense fallback={<PageLoader />}>
           <Routes>
