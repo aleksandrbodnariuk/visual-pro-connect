@@ -12,6 +12,7 @@ import { SiteSettingsProvider } from "./context/SiteSettingsContext";
 import { useDataSync } from "./hooks/useDataSync";
 import { usePushAutoSubscribe } from "./hooks/usePushSubscription";
 import { useBadgeClear } from "./hooks/useBadgeClear";
+import { useAnalyticsTracker } from "./hooks/useAnalyticsTracker";
 import { FaviconUpdater } from "./components/layout/FaviconUpdater";
 import { MobileNavigation } from "./components/layout/MobileNavigation";
 import { InstallPrompt } from "./components/pwa/InstallPrompt";
@@ -59,6 +60,8 @@ const AppContent = () => {
   usePushAutoSubscribe();
   // Clear app badge when user opens/focuses the app
   useBadgeClear();
+  // Self-hosted analytics tracking
+  useAnalyticsTracker();
   
   return (
     <BrowserRouter>
