@@ -31,8 +31,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY');
-    const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
+    const vapidPublicKey = (Deno.env.get('VAPID_PUBLIC_KEY') || '').replace(/^"|"$/g, '').trim();
+    const vapidPrivateKey = (Deno.env.get('VAPID_PRIVATE_KEY') || '').replace(/^"|"$/g, '').trim();
 
     if (!vapidPublicKey || !vapidPrivateKey) {
       console.error('[Push] VAPID keys not configured');
