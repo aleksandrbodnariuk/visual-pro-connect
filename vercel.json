@@ -1,7 +1,18 @@
 {
+  "headers": [
+    {
+      "source": "/manifest.json",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|manifest\\.json|sw\\.js).*)",
       "destination": "/index.html"
     }
   ]

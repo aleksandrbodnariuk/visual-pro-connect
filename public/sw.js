@@ -11,7 +11,7 @@ const STATIC_ASSETS = [
   '/favicon-16x16.png',
   '/favicon-32x32.png',
   '/apple-touch-icon.png',
-  '/site.webmanifest',
+  '/manifest.json',
   '/sounds/notification.mp3',
 ];
 
