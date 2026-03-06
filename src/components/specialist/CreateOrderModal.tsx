@@ -58,7 +58,7 @@ export function CreateOrderModal({ open, onOpenChange, onSubmit, initialDate }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto w-[calc(100vw-2rem)]">
         <DialogHeader>
           <DialogTitle>Створити бронювання</DialogTitle>
         </DialogHeader>

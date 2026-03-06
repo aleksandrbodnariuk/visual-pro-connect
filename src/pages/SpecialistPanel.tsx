@@ -69,11 +69,11 @@ export default function SpecialistPanel() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto pt-16 sm:pt-20 px-3 sm:px-4 pb-24">
+      <div className="container mx-auto pt-16 sm:pt-20 px-3 sm:px-4 pb-safe-nav">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl sm:text-2xl font-bold">Кабінет фахівця</h1>
+          <h1 className="text-lg sm:text-2xl font-bold">Кабінет фахівця</h1>
           <Button onClick={() => setCreateOpen(true)} size="sm">
-            <Plus className="h-4 w-4 mr-1" /> Бронювання
+            <Plus className="h-4 w-4 mr-1" /> <span className="hidden xs:inline">Бронювання</span><span className="xs:hidden">Нове</span>
           </Button>
         </div>
 

@@ -151,6 +151,18 @@ export function MobileNavigation() {
                         <Settings className="h-5 w-5" />
                         <span>Налаштування</span>
                       </Link>
+
+                      {/* Кабінет фахівця */}
+                      {(isSpecialist || isAdmin) && (
+                        <Link
+                          to="/panel-fahivtsya"
+                          onClick={() => setIsMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <Briefcase className="h-5 w-5" />
+                          <span>Кабінет фахівця</span>
+                        </Link>
+                      )}
                       
                       <Separator className="my-4" />
                       
