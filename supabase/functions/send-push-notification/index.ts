@@ -13,7 +13,8 @@ Deno.serve(async (req) => {
 
   // GET request returns the VAPID public key for frontend subscription
   if (req.method === 'GET') {
-    const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY') || '';
+    // Strip any accidental surrounding quotes from the stored secret
+    const vapidPublicKey = (Deno.env.get('VAPID_PUBLIC_KEY') || '').replace(/^"|"$/g, '').trim();
     return new Response(
       JSON.stringify({ vapidPublicKey }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
