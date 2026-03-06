@@ -30,6 +30,19 @@ export function MobileNavigation() {
   const currentUser = getCurrentUser();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+  const [isSpecialist, setIsSpecialist] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser?.id) { setIsSpecialist(false); setIsAdmin(false); return; }
+    Promise.all([
+      supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'specialist' as any }),
+      supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'admin' as any }),
+    ]).then(([specRes, adminRes]) => {
+      setIsSpecialist(specRes.data === true);
+      setIsAdmin(adminRes.data === true || currentUser.founder_admin === true);
+    });
+  }, [currentUser?.id]);
 
   // Не показуємо для неавторизованих користувачів
   if (!currentUser) return null;
