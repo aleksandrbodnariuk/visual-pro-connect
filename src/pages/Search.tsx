@@ -57,6 +57,7 @@ interface Professional {
 }
 
 export default function Search() {
+  const { categories: CATEGORIES } = useDynamicCategories();
   const [searchQuery, setSearchQuery] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
