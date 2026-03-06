@@ -369,9 +369,7 @@ export default function Profile() {
               {(user?.role === "representative" || user?.status === "Представник" || (user?.categories && user?.categories.length > 0)) && (
                 <TabsTrigger value="services">Послуги</TabsTrigger>
               )}
-              {(user?.role === "shareholder" || user?.status === "Акціонер") && (
-                <TabsTrigger value="shareholder">Акціонер</TabsTrigger>
-              )}
+              <TabsTrigger value="files">Файли</TabsTrigger>
               <TabsTrigger value="friends">Друзі</TabsTrigger>
               <TabsTrigger value="reviews">Відгуки</TabsTrigger>
             </TabsList>
@@ -433,13 +431,9 @@ export default function Profile() {
               </TabsContent>
             )}
             
-            {(user?.role === "shareholder" || user?.status === "Акціонер") && (
-              <TabsContent value="shareholder" className="mt-6">
-                <Suspense fallback={<div>Завантаження інформації акціонера...</div>}>
-                  <ShareholderSection user={user} />
-                </Suspense>
-              </TabsContent>
-            )}
+            <TabsContent value="files" className="mt-6">
+              <RightSidebar userId={user.id} />
+            </TabsContent>
             
             <TabsContent value="friends" className="mt-6">
               <FriendsList userId={user?.id} />
@@ -464,10 +458,6 @@ export default function Profile() {
             </TabsContent>
           </Tabs>
 
-          {/* Files section for mobile/tablet (visible below tabs) */}
-          <div className="lg:hidden mt-6">
-            <RightSidebar userId={user.id} />
-          </div>
           </main>
         </div>
 
