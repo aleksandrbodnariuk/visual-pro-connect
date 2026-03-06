@@ -44,6 +44,7 @@ export type Database = {
           created_at: string
           icon: string
           id: string
+          is_visible: boolean
           name: string
           sort_order: number
         }
@@ -52,6 +53,7 @@ export type Database = {
           created_at?: string
           icon?: string
           id: string
+          is_visible?: boolean
           name: string
           sort_order?: number
         }
@@ -60,6 +62,7 @@ export type Database = {
           created_at?: string
           icon?: string
           id?: string
+          is_visible?: boolean
           name?: string
           sort_order?: number
         }
