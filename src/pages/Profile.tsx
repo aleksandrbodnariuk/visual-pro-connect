@@ -361,7 +361,7 @@ export default function Profile() {
           
           <main className="mt-6">
           <Tabs defaultValue="posts" className="w-full">
-            <TabsList className="mb-4">
+            <TabsList className="mb-4 w-full overflow-x-auto flex justify-start scrollbar-hide">
               <TabsTrigger value="posts">Публікації</TabsTrigger>
               {isSpecialist && (
                 <TabsTrigger value="portfolio">Портфоліо</TabsTrigger>
