@@ -1,7 +1,7 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Users, Plus, MessageSquare, Menu, User, Bell, Search, Settings, LogOut, Camera, Video, Music, Mic, Sparkles, UtensilsCrossed, Car, Flower2, UserPlus, FolderOpen, Image } from "lucide-react";
+import { Home, Users, Plus, MessageSquare, Menu, User, Bell, Search, Settings, LogOut, Camera, Video, Music, Mic, Sparkles, UtensilsCrossed, Car, Flower2, UserPlus, FolderOpen, Image, Briefcase } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -30,6 +30,19 @@ export function MobileNavigation() {
   const currentUser = getCurrentUser();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+  const [isSpecialist, setIsSpecialist] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser?.id) { setIsSpecialist(false); setIsAdmin(false); return; }
+    Promise.all([
+      supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'specialist' as any }),
+      supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'admin' as any }),
+    ]).then(([specRes, adminRes]) => {
+      setIsSpecialist(specRes.data === true);
+      setIsAdmin(adminRes.data === true || currentUser.founder_admin === true);
+    });
+  }, [currentUser?.id]);
 
   // Не показуємо для неавторизованих користувачів
   if (!currentUser) return null;
@@ -138,6 +151,18 @@ export function MobileNavigation() {
                         <Settings className="h-5 w-5" />
                         <span>Налаштування</span>
                       </Link>
+
+                      {/* Кабінет фахівця */}
+                      {(isSpecialist || isAdmin) && (
+                        <Link
+                          to="/panel-fahivtsya"
+                          onClick={() => setIsMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <Briefcase className="h-5 w-5" />
+                          <span>Кабінет фахівця</span>
+                        </Link>
+                      )}
                       
                       <Separator className="my-4" />
                       
