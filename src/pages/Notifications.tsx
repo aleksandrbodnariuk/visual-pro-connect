@@ -90,6 +90,9 @@ export default function Notifications() {
       
       // Update localStorage
       localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
+      
+      // Update badge
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
     } catch (error) {
       console.error("Error marking notification as read:", error);
       toast.error("Не вдалося позначити сповіщення як прочитане");
@@ -121,6 +124,9 @@ export default function Notifications() {
       // Update localStorage
       localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
       
+      // Update badge
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
+      
       toast.success("Всі сповіщення позначено як прочитані");
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
@@ -150,6 +156,9 @@ export default function Notifications() {
       // Update localStorage
       localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
       
+      // Update badge
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
+      
       toast.success("Сповіщення видалено");
     } catch (error) {
       console.error("Error deleting notification:", error);
@@ -175,6 +184,9 @@ export default function Notifications() {
       
       // Update localStorage
       localStorage.setItem("notifications", JSON.stringify([]));
+      
+      // Update badge
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
       
       toast.success("Всі сповіщення видалено");
     } catch (error) {

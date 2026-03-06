@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fetchWithTimeout } from '@/lib/utils';
 import { useVisitTracker } from '@/hooks/useVisitTracker';
 import { useAuth } from '@/context/AuthContext';
+import { clearAppBadge } from '@/lib/badgeApi';
 
 export function useDataSync() {
   useVisitTracker();
@@ -53,6 +54,22 @@ export function useDataSync() {
 
   useEffect(() => {
     syncDataOnStartup();
+    
+    // Clear badge when app becomes visible (user opens the app)
+    clearAppBadge();
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        clearAppBadge();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', () => clearAppBadge());
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [syncDataOnStartup]);
 
   return { syncDataOnStartup };
