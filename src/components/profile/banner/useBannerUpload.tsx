@@ -1,7 +1,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
-import { uploadToStorage } from '@/lib/storage';
+import { uploadToStorage, deleteOldFile } from '@/lib/storage';
 import { supabase } from '@/integrations/supabase/client';
 import { compressImageFromDataUrl, dataUrlToBlob, validateImageSize, OUTPUT_FORMAT, OUTPUT_EXTENSION } from '@/lib/imageCompression';
 
@@ -39,6 +39,9 @@ export function useBannerUpload(
       const file = new File([blob], `banner-${Date.now()}${OUTPUT_EXTENSION}`, { type: OUTPUT_FORMAT });
       
       console.log('Розмір файлу банера:', file.size, 'байт');
+      
+      // Delete old banner from storage before uploading new one
+      await deleteOldFile('banners', bannerUrl);
       
       // Create unique file name
       const uniqueFileName = `${userId}-${Date.now()}${OUTPUT_EXTENSION}`;
@@ -97,6 +100,13 @@ export function useBannerUpload(
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // HEIC check
+    const HEIC_TYPES = ['image/heic', 'image/heif'];
+    if (HEIC_TYPES.includes(file.type) || file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+      toast.error('Цей формат зображення не підтримується. Будь ласка, використайте JPEG або PNG.');
+      return;
+    }
+
     const sizeCheck = validateImageSize(file, 'banner');
     if (!sizeCheck.valid) {
       toast.error(sizeCheck.message);
@@ -138,6 +148,9 @@ export function useBannerUpload(
     let success = false;
 
     try {
+      // Delete banner file from storage
+      await deleteOldFile('banners', bannerUrl);
+
       const { error } = await supabase
         .from('users')
         .update({ banner_url: null })
