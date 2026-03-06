@@ -1081,6 +1081,14 @@ export type Database = {
       }
       is_admin: { Args: { user_id: string }; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
+      is_order_creator: {
+        Args: { _order_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_order_participant: {
+        Args: { _order_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_user_admin: { Args: { _user_id: string }; Returns: boolean }
       record_visit: { Args: never; Returns: undefined }
       search_users_public: {
