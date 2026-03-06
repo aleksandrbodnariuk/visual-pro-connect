@@ -10,6 +10,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
 import { SiteSettingsProvider } from "./context/SiteSettingsContext";
 import { useDataSync } from "./hooks/useDataSync";
+import { usePushAutoSubscribe } from "./hooks/usePushSubscription";
 import { FaviconUpdater } from "./components/layout/FaviconUpdater";
 import { MobileNavigation } from "./components/layout/MobileNavigation";
 import { InstallPrompt } from "./components/pwa/InstallPrompt";
@@ -51,6 +52,8 @@ const queryClient = new QueryClient({
 const AppContent = () => {
   // Синхронізуємо дані з Supabase при завантаженні додатку
   useDataSync();
+  // Auto-subscribe to push notifications if permission was previously granted
+  usePushAutoSubscribe();
   
   return (
     <BrowserRouter>
