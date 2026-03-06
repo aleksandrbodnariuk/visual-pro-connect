@@ -7,7 +7,7 @@ import { AdminStats } from "@/components/admin/AdminStats";
 import { AdminTabs } from "@/components/admin/AdminTabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useSupabaseAuth } from "@/hooks/auth/useSupabaseAuth";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Admin() {
   const [users, setUsers] = useState<any[]>([]);
@@ -17,8 +17,7 @@ export default function Admin() {
   
   const navigate = useNavigate();
   const { tabName } = useParams<{ tabName: string }>();
-  const { getCurrentUser, isAuthenticated, loading } = useSupabaseAuth();
-  const currentUser = getCurrentUser();
+  const { appUser: currentUser, isAuthenticated, loading } = useAuth();
   
   const loadUsersData = async () => {
     try {
@@ -48,52 +47,24 @@ export default function Admin() {
     }
   };
 
+  // Redirect to default tab
   useEffect(() => {
-    // Проверяем аутентификацию и права доступа
-    console.log('👨‍💼 Admin page: checking auth...', { 
-      loading, 
-      isAuthenticated: isAuthenticated(), 
-      currentUser: currentUser ? {
-        id: currentUser.id,
-        isAdmin: currentUser.isAdmin,
-        founder_admin: currentUser.founder_admin
-      } : null
-    });
-    
-    if (loading) return;
-    
-    if (!isAuthenticated() || !currentUser) {
-      console.log('❌ Admin access denied: no auth');
-      toast.error("Доступ заборонено: Необхідно увійти в систему");
-      navigate("/auth");
-      return;
-    }
-    
-    if (!currentUser.isAdmin && !currentUser.founder_admin) {
-      console.log('❌ Admin access denied: no admin rights', {
-        isAdmin: currentUser.isAdmin,
-        founder_admin: currentUser.founder_admin
-      });
-      toast.error("Доступ заборонено: Необхідні права адміністратора");
-      navigate("/");
-      return;
-    }
-    
-    console.log('✅ Admin access granted');
-    
-    // Если не указана вкладка, перенаправляем на вкладку "users"
     if (!tabName) {
-      navigate("/admin/users");
+      navigate("/admin/users", { replace: true });
     }
+  }, [tabName, navigate]);
+
+  // Load data when user is confirmed admin
+  useEffect(() => {
+    if (loading) return;
+    if (!currentUser) return; // still loading appUser
+    if (!currentUser.isAdmin && !currentUser.founder_admin) return;
     
-    // Загружаем данные пользователей
     loadUsersData();
     
-    // Загружаем заказы из localStorage (для совместимости)
     const storedOrders = JSON.parse(localStorage.getItem("orders") || "[]");
     setOrders(storedOrders);
     
-    // Устанавливаем цену акций
     const storedStockPrice = localStorage.getItem("stockPrice");
     if (storedStockPrice) {
       setStockPrice(storedStockPrice);
@@ -101,17 +72,8 @@ export default function Admin() {
       localStorage.setItem("stockPrice", stockPrice);
     }
 
-    // Слушатель для обновления статистики при изменении статуса акционера
-    const handleShareholderUpdate = () => {
-      console.log("Получено событие обновления акционера, перезагружаем данные...");
-      loadUsersData();
-    };
-
-    // Слухач для оновлення ціни акції
-    const handleStockPriceUpdate = (event: CustomEvent) => {
-      console.log("Отримано оновлення ціни акції:", event.detail.price);
-      setStockPrice(event.detail.price);
-    };
+    const handleShareholderUpdate = () => loadUsersData();
+    const handleStockPriceUpdate = (event: CustomEvent) => setStockPrice(event.detail.price);
 
     window.addEventListener('shareholder-status-updated', handleShareholderUpdate);
     window.addEventListener('stock-price-updated', handleStockPriceUpdate as EventListener);
@@ -122,23 +84,20 @@ export default function Admin() {
       window.removeEventListener('stock-price-updated', handleStockPriceUpdate as EventListener);
       window.removeEventListener('storage', loadUsersData);
     };
-  }, [navigate, stockPrice, tabName, loading, isAuthenticated, currentUser]);
+  }, [loading, currentUser?.id, stockPrice]);
 
-  if (loading) {
+  if (loading || (isAuthenticated && !currentUser)) {
     return <div className="container py-16 text-center">Завантаження...</div>;
   }
 
-  // Show loading while user data is being fetched
-  if (isAuthenticated() && !currentUser) {
-    return <div className="container py-16 text-center">Завантаження даних користувача...</div>;
-  }
-
-  if (!isAuthenticated() || !currentUser) {
-    return <div className="container py-16 text-center">Перенаправлення на сторінку авторизації...</div>;
+  if (!isAuthenticated || !currentUser) {
+    navigate("/auth");
+    return null;
   }
 
   if (!currentUser.isAdmin && !currentUser.founder_admin) {
-    return <div className="container py-16 text-center">Доступ заборонено</div>;
+    navigate("/");
+    return null;
   }
 
   return (

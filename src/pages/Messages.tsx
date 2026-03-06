@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { ChatList } from "@/components/messages/ChatList";
 import { ChatHeader } from "@/components/messages/ChatHeader";
 import { MessageList } from "@/components/messages/MessageList";
@@ -15,9 +16,10 @@ export default function Messages() {
   const [activeChat, setActiveChat] = useState<ChatItem | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [chats, setChats] = useState<ChatItem[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { user: authUser, isAuthenticated, loading: authLoading } = useAuth();
+  const currentUser = authUser;
   const activeChatRef = useRef<ChatItem | null>(null);
   const currentUserRef = useRef<any>(null);
 
@@ -30,39 +32,19 @@ export default function Messages() {
     currentUserRef.current = currentUser;
   }, [currentUser]);
 
+  // Initialize messages using auth context (no separate getSession)
   useEffect(() => {
-    const initializeMessages = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error("Помилка при отриманні сесії:", sessionError);
-          toast.error("Помилка авторизації");
-          setIsLoading(false);
-          return;
-        }
-        
-        if (!session?.user) {
-          toast.error("Будь ласка, увійдіть в систему для перегляду повідомлень");
-          setIsLoading(false);
-          navigate("/auth");
-          return;
-        }
-        
-        const receiverId = localStorage.getItem("currentChatReceiverId");
-        setCurrentUser(session.user);
-        
-        await loadChatsAndMessages(session.user.id, receiverId);
-      } catch (error) {
-        console.error("Помилка ініціалізації повідомлень:", error);
-        toast.error("Не вдалося завантажити повідомлення");
-        setIsLoading(false);
-      }
-    };
-    
-    initializeMessages();
+    if (authLoading) return;
 
-  }, [navigate]);
+    if (!isAuthenticated || !currentUser) {
+      toast.error("Будь ласка, увійдіть в систему для перегляду повідомлень");
+      navigate("/auth");
+      return;
+    }
+
+    const receiverId = localStorage.getItem("currentChatReceiverId");
+    loadChatsAndMessages(currentUser.id, receiverId);
+  }, [authLoading, isAuthenticated, currentUser?.id]);
 
   // Окремий useEffect для force-reload з правильними залежностями
   useEffect(() => {
