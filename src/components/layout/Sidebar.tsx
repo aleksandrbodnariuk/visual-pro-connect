@@ -133,7 +133,8 @@ export function Sidebar({ className }: SidebarProps) {
       </div>
 
       <div className="border-t p-3 md:p-4 3xl:p-5">
-        <h2 className="text-base md:text-lg 3xl:text-xl font-semibold mb-3 md:mb-4">{t.categories}</h2>
+        <h2 className="text-base md:text-lg 3xl:text-xl font-semibold mb-1">Знайти послугу</h2>
+        <p className="text-xs text-muted-foreground mb-3 md:mb-4">Категорії</p>
         <nav className="space-y-1 md:space-y-2">
           <Button 
             variant="ghost" 

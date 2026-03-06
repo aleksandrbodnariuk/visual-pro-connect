@@ -123,7 +123,8 @@ export function SearchCategories() {
 
   return (
     <div className="my-6">
-      <h2 className="mb-4 text-xl font-semibold">Категорії професіоналів</h2>
+      <h2 className="mb-1 text-xl font-semibold">Знайти послугу</h2>
+      <p className="mb-4 text-sm text-muted-foreground">Категорії</p>
       <div className="flex flex-wrap gap-3">
         {CATEGORIES.map((category) => (
           <button
