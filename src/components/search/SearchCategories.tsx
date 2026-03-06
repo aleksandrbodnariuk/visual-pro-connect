@@ -1,66 +1,9 @@
 
 import { useState, useEffect } from "react";
-import { Camera, Music, Video, Users, Sparkles, UtensilsCrossed, Car, Cake, Flower2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-
-export const CATEGORIES = [
-  {
-    id: "photographer",
-    name: "Фотографи",
-    icon: Camera,
-    color: "from-blue-500 to-cyan-500"
-  },
-  {
-    id: "videographer",
-    name: "Відеографи",
-    icon: Video,
-    color: "from-purple-500 to-violet-500"
-  },
-  {
-    id: "musician",
-    name: "Музиканти",
-    icon: Music,
-    color: "from-orange-500 to-amber-500"
-  },
-  {
-    id: "host",
-    name: "Ведучі",
-    icon: Users,
-    color: "from-indigo-500 to-purple-500"
-  },
-  {
-    id: "pyrotechnician",
-    name: "Піротехніки",
-    icon: Sparkles,
-    color: "from-red-500 to-rose-500"
-  },
-  {
-    id: "restaurant",
-    name: "Ресторани",
-    icon: UtensilsCrossed,
-    color: "from-amber-500 to-yellow-500"
-  },
-  {
-    id: "transport",
-    name: "Транспорт",
-    icon: Car,
-    color: "from-slate-500 to-gray-600"
-  },
-  {
-    id: "confectionery",
-    name: "Кондитери",
-    icon: Cake,
-    color: "from-pink-400 to-rose-400"
-  },
-  {
-    id: "florist",
-    name: "Флористи",
-    icon: Flower2,
-    color: "from-green-500 to-emerald-500"
-  },
-];
+import { useDynamicCategories, getIconComponent } from "@/hooks/useDynamicCategories";
 
 export function SearchCategories() {
   const navigate = useNavigate();
@@ -68,24 +11,17 @@ export function SearchCategories() {
   const searchParams = new URLSearchParams(location.search);
   const currentCategory = searchParams.get("category") || "";
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const { categories } = useDynamicCategories();
 
   useEffect(() => {
     const fetchCategoryCounts = async () => {
       try {
-        // Try to get counts from Supabase - тільки фахівці
-        const { data, error } = await supabase
-          .rpc('get_specialists');
-          
+        const { data, error } = await supabase.rpc('get_specialists');
         if (error) throw error;
         
         const categoryCounts: Record<string, number> = {};
+        categories.forEach(cat => { categoryCounts[cat.id] = 0; });
         
-        // Initialize all categories with 0
-        CATEGORIES.forEach(cat => {
-          categoryCounts[cat.id] = 0;
-        });
-        
-        // Count specialists in each category
         if (data) {
           data.forEach((user: any) => {
             if (user.categories && Array.isArray(user.categories)) {
@@ -97,24 +33,14 @@ export function SearchCategories() {
             }
           });
         }
-        
         setCounts(categoryCounts);
       } catch (error) {
         console.error("Error fetching category counts:", error);
-        
-        // Fallback: provide dummy counts
-        setCounts({
-          photographer: 12,
-          videographer: 8,
-          musician: 6,
-          host: 4,
-          pyrotechnician: 2
-        });
       }
     };
     
-    fetchCategoryCounts();
-  }, []);
+    if (categories.length > 0) fetchCategoryCounts();
+  }, [categories]);
 
   const handleCategoryClick = (categoryId: string) => {
     searchParams.set("category", categoryId);
@@ -126,27 +52,30 @@ export function SearchCategories() {
       <h2 className="mb-1 text-xl font-semibold">Знайти послугу</h2>
       <p className="mb-4 text-sm text-muted-foreground">Категорії</p>
       <div className="flex flex-wrap gap-3">
-        {CATEGORIES.map((category) => (
-          <button
-            key={category.id}
-            onClick={() => handleCategoryClick(category.id)}
-            className={cn(
-              "flex items-center gap-2 rounded-full px-4 py-2 text-white transition-all cursor-pointer",
-              `bg-gradient-to-r ${category.color}`,
-              currentCategory === category.id 
-                ? "ring-2 ring-white ring-offset-2 ring-offset-background" 
-                : "opacity-90 hover:opacity-100"
-            )}
-          >
-            <category.icon className="h-4 w-4" />
-            <span>{category.name}</span>
-            {counts[category.id] > 0 && (
-              <span className="ml-1 rounded-full bg-white bg-opacity-20 px-1.5 py-0.5 text-xs">
-                {counts[category.id]}
-              </span>
-            )}
-          </button>
-        ))}
+        {categories.map((category) => {
+          const Icon = getIconComponent(category.icon);
+          return (
+            <button
+              key={category.id}
+              onClick={() => handleCategoryClick(category.id)}
+              className={cn(
+                "flex items-center gap-2 rounded-full px-4 py-2 text-white transition-all cursor-pointer",
+                `bg-gradient-to-r ${category.color}`,
+                currentCategory === category.id 
+                  ? "ring-2 ring-white ring-offset-2 ring-offset-background" 
+                  : "opacity-90 hover:opacity-100"
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              <span>{category.name}</span>
+              {counts[category.id] > 0 && (
+                <span className="ml-1 rounded-full bg-white bg-opacity-20 px-1.5 py-0.5 text-xs">
+                  {counts[category.id]}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

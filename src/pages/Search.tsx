@@ -23,7 +23,8 @@ import {
   Star,
   Loader2
 } from "lucide-react";
-import { SearchCategories, CATEGORIES } from "@/components/search/SearchCategories";
+import { SearchCategories } from "@/components/search/SearchCategories";
+import { useDynamicCategories, getIconComponent } from "@/hooks/useDynamicCategories";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -56,6 +57,7 @@ interface Professional {
 }
 
 export default function Search() {
+  const { categories: CATEGORIES } = useDynamicCategories();
   const [searchQuery, setSearchQuery] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -187,7 +189,7 @@ export default function Search() {
     const categoryData = CATEGORIES.find(cat => cat.id === primaryCategory);
     
     if (categoryData) {
-      const Icon = categoryData.icon;
+      const Icon = getIconComponent(categoryData.icon);
       return <Icon className="h-4 w-4" />;
     }
     

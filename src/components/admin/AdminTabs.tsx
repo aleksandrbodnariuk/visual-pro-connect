@@ -7,6 +7,7 @@ import { ArchivedOrdersTab } from "./tabs/ArchivedOrdersTab";
 import { StockExchangeTab } from "./tabs/StockExchangeTab";
 import { PostsTab } from "./tabs/PostsTab";
 import { SettingsTab } from "./tabs/SettingsTab";
+import { CategoriesTab } from "./tabs/CategoriesTab";
 import { PortfolioManagementTab } from "./tabs/PortfolioManagementTab";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -41,6 +42,7 @@ export function AdminTabs() {
         <TabsTrigger value="archived-orders">Архів замовлень</TabsTrigger>
         <TabsTrigger value="stock-exchange">Ринок акцій</TabsTrigger>
         <TabsTrigger value="posts">Публікації</TabsTrigger>
+        <TabsTrigger value="categories">Категорії</TabsTrigger>
         <TabsTrigger value="settings">Налаштування</TabsTrigger>
       </TabsList>
       
@@ -66,6 +68,10 @@ export function AdminTabs() {
       
       <TabsContent value="stock-exchange">
         <StockExchangeTab />
+      </TabsContent>
+      
+      <TabsContent value="categories">
+        <CategoriesTab />
       </TabsContent>
       
       <TabsContent value="posts">

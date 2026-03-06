@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { PortfolioManager } from "./PortfolioManager";
-import { CATEGORIES } from "@/components/search/SearchCategories";
+import { useDynamicCategories, getIconComponent } from "@/hooks/useDynamicCategories";
 import { Slider } from "@/components/ui/slider";
 import { User } from "@/hooks/users/types";
 import { z } from "zod";
@@ -35,6 +35,7 @@ interface ProfileEditorProps {
 }
 
 export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: ProfileEditorProps) {
+  const { categories: CATEGORIES } = useDynamicCategories();
   const [country, setCountry] = useState(user?.country || "");
   const [city, setCity] = useState(user?.city || "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar_url || user?.avatarUrl || null);
@@ -368,7 +369,9 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
               <div>
                 <Label>Професійні категорії</Label>
                 <div className="grid grid-cols-2 gap-2 mt-2">
-                  {CATEGORIES.map(category => (
+                  {CATEGORIES.map(category => {
+                    const Icon = getIconComponent(category.icon);
+                    return (
                     <div 
                       key={category.id}
                       className={`flex items-center gap-2 p-2 rounded border ${
@@ -378,10 +381,11 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
                       } cursor-pointer`}
                       onClick={() => handleCategoryChange(category.id)}
                     >
-                      <category.icon className="h-4 w-4" />
+                      <Icon className="h-4 w-4" />
                       <span className="text-sm">{category.name}</span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
