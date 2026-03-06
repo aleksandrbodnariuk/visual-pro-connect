@@ -43,6 +43,8 @@ export default function Messages() {
     }
 
     const receiverId = localStorage.getItem("currentChatReceiverId");
+    // Clear immediately so navigating back to /messages shows the list
+    localStorage.removeItem("currentChatReceiverId");
     loadChatsAndMessages(currentUser.id, receiverId);
   }, [authLoading, isAuthenticated, currentUser?.id]);
 
@@ -52,6 +54,12 @@ export default function Messages() {
       const uid = currentUserRef.current?.id;
       if (uid) {
         const receiverId = localStorage.getItem("currentChatReceiverId");
+        localStorage.removeItem("currentChatReceiverId");
+        // If no specific receiver requested, reset to chat list
+        if (!receiverId) {
+          setActiveChat(null);
+          setMessages([]);
+        }
         loadChatsAndMessages(uid, receiverId);
       }
     };
@@ -76,8 +84,6 @@ export default function Messages() {
       toast.error("Не вдалося завантажити повідомлення");
     } finally {
       setIsLoading(false);
-      // Clear the temporary receiverId from localStorage
-      localStorage.removeItem("currentChatReceiverId");
     }
   };
 
