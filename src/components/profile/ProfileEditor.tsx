@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { PortfolioManager } from "./PortfolioManager";
-import { CATEGORIES } from "@/components/search/SearchCategories";
+import { useDynamicCategories, getIconComponent } from "@/hooks/useDynamicCategories";
 import { Slider } from "@/components/ui/slider";
 import { User } from "@/hooks/users/types";
 import { z } from "zod";

@@ -13,7 +13,7 @@ import { useAuthState } from '@/hooks/auth/useAuthState';
 import { AccountSettings } from '@/components/settings/AccountSettings';
 import { ThemeSettings } from '@/components/settings/ThemeSettings';
 import { supabase } from '@/integrations/supabase/client';
-import { CATEGORIES } from '@/components/search/SearchCategories';
+import { useDynamicCategories, getIconComponent } from '@/hooks/useDynamicCategories';
 import { toast } from 'sonner';
 import { Check } from 'lucide-react';
 
@@ -26,6 +26,7 @@ export default function Settings() {
   const [userEmail, setUserEmail] = useState<string>('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isSavingCategories, setIsSavingCategories] = useState(false);
+  const { categories: CATEGORIES } = useDynamicCategories();
 
   // Отримуємо email з auth session (local, no REST call)
   useEffect(() => {
@@ -163,7 +164,7 @@ export default function Settings() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {CATEGORIES.map(category => {
                       const isSelected = selectedCategories.includes(category.id);
-                      const IconComponent = category.icon;
+                      const IconComponent = getIconComponent(category.icon);
                       return (
                         <div
                           key={category.id}

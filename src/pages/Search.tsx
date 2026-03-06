@@ -23,7 +23,8 @@ import {
   Star,
   Loader2
 } from "lucide-react";
-import { SearchCategories, CATEGORIES } from "@/components/search/SearchCategories";
+import { SearchCategories } from "@/components/search/SearchCategories";
+import { useDynamicCategories, getIconComponent } from "@/hooks/useDynamicCategories";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
