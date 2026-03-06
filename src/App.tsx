@@ -53,6 +53,9 @@ const queryClient = new QueryClient({
   },
 });
 
+// Must be rendered inside BrowserRouter
+const AnalyticsTrackerInner = () => { useAnalyticsTracker(); return null; };
+
 const AppContent = () => {
   // Синхронізуємо дані з Supabase при завантаженні додатку
   useDataSync();
