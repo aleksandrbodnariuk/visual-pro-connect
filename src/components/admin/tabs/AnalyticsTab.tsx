@@ -176,8 +176,8 @@ export function AnalyticsTab() {
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900/30">
-                  <Eye className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <div className="p-2 rounded-full bg-primary/10">
+                  <Eye className="h-5 w-5 text-primary" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Перегляди</p>
@@ -187,8 +187,8 @@ export function AnalyticsTab() {
             </Card>
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/30">
-                  <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <div className="p-2 rounded-full bg-accent">
+                  <Users className="h-5 w-5 text-accent-foreground" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Унікальні відвідувачі</p>
@@ -198,8 +198,8 @@ export function AnalyticsTab() {
             </Card>
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 rounded-full bg-purple-100 dark:bg-purple-900/30">
-                  <Activity className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                <div className="p-2 rounded-full bg-secondary">
+                  <Activity className="h-5 w-5 text-secondary-foreground" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Сесії</p>
