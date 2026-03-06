@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Pencil, Trash2, GripVertical, Save, X } from "lucide-react";
 import { toast } from "sonner";
@@ -12,7 +13,7 @@ import { useDynamicCategories, getIconComponent, AVAILABLE_ICONS, AVAILABLE_COLO
 import { cn } from "@/lib/utils";
 
 export function CategoriesTab() {
-  const { categories, isLoading, refetch } = useDynamicCategories();
+  const { categories, isLoading, refetch } = useDynamicCategories(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [form, setForm] = useState({ id: "", name: "", icon: "Camera", color: AVAILABLE_COLORS[0] });
@@ -84,6 +85,18 @@ export function CategoriesTab() {
     }
     toast.success("Категорію видалено");
     if (editingId === id) resetForm();
+    refetch();
+  };
+
+  const handleToggleVisibility = async (id: string, currentVisible: boolean) => {
+    const { error } = await supabase
+      .from('categories')
+      .update({ is_visible: !currentVisible })
+      .eq('id', id);
+    if (error) {
+      toast.error("Помилка: " + error.message);
+      return;
+    }
     refetch();
   };
 
@@ -192,7 +205,10 @@ export function CategoriesTab() {
               return (
                 <div
                   key={cat.id}
-                  className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
+                  className={cn(
+                    "flex items-center justify-between rounded-lg border p-3 transition-colors",
+                    cat.is_visible ? "hover:bg-muted/50" : "opacity-50 bg-muted/30"
+                  )}
                 >
                   <div className="flex items-center gap-3">
                     <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -202,7 +218,12 @@ export function CategoriesTab() {
                     </span>
                     <span className="text-xs text-muted-foreground">ID: {cat.id}</span>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={cat.is_visible}
+                      onCheckedChange={() => handleToggleVisibility(cat.id, cat.is_visible)}
+                      aria-label={`Видимість ${cat.name}`}
+                    />
                     <Button
                       variant="ghost"
                       size="icon"

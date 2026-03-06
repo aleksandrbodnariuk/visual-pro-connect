@@ -9,6 +9,7 @@ export interface CategoryItem {
   icon: string;
   color: string;
   sort_order: number;
+  is_visible: boolean;
 }
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -45,17 +46,22 @@ export const AVAILABLE_COLORS = [
   'from-rose-500 to-pink-500',
 ];
 
-export function useDynamicCategories() {
+export function useDynamicCategories(includeHidden = false) {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchCategories = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('categories')
         .select('*')
         .order('sort_order', { ascending: true });
 
+      if (!includeHidden) {
+        query = query.eq('is_visible', true);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       setCategories(data || []);
     } catch (error) {
