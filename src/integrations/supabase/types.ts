@@ -588,6 +588,80 @@ export type Database = {
           },
         ]
       }
+      specialist_order_participants: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          role: string
+          specialist_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          role?: string
+          specialist_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          role?: string
+          specialist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specialist_order_participants_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "specialist_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      specialist_orders: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          notes: string | null
+          order_date: string
+          order_type: string
+          price: number | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          notes?: string | null
+          order_date: string
+          order_type?: string
+          price?: number | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string
+          order_type?: string
+          price?: number | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           approved_by_admin: boolean | null
