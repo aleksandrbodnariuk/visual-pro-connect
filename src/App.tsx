@@ -78,6 +78,7 @@ const AppContent = () => {
         </Routes>
       </Suspense>
       <MobileNavigation />
+      <InstallPrompt />
     </BrowserRouter>
   );
 };
