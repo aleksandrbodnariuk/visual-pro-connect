@@ -11,6 +11,15 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // GET request returns the VAPID public key for frontend subscription
+  if (req.method === 'GET') {
+    const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY') || '';
+    return new Response(
+      JSON.stringify({ vapidPublicKey }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     const { user_id, title, body, url } = await req.json();
 
