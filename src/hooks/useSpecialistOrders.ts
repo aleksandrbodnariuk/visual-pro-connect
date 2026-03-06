@@ -124,7 +124,10 @@ export function useSpecialistOrders(statusFilter: OrderStatus) {
   const addParticipant = useCallback(async (orderId: string, specialistId: string, role: string) => {
     const { error } = await (supabase as any)
       .from('specialist_order_participants')
-      .insert({ order_id: orderId, specialist_id: specialistId, role });
+      .upsert(
+        { order_id: orderId, specialist_id: specialistId, role },
+        { onConflict: 'order_id,specialist_id', ignoreDuplicates: true }
+      );
 
     if (error) {
       toast({ title: 'Помилка', description: error.message, variant: 'destructive' });
