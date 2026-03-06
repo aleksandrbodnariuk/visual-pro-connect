@@ -4,7 +4,7 @@ const IMAGE_CACHE = `images-${CACHE_VERSION}`;
 const OFFLINE_URL = '/';
 
 const STATIC_ASSETS = [
-  '/',
+  '/index.html',
   '/favicon.ico',
   '/favicon-16x16.png',
   '/favicon-32x32.png',
