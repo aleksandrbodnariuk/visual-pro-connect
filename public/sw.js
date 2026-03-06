@@ -38,6 +38,22 @@ self.addEventListener('fetch', (event) => {
 
   if (request.method !== 'GET') return;
 
+  // SPA navigation fallback — serve cached /index.html for offline navigations
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match('/index.html').then((cached) => cached || caches.match(OFFLINE_URL)))
+    );
+    return;
+  }
+
   // Images — cache first
   if (
     request.destination === 'image' ||
