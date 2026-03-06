@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          city: string | null
+          country: string | null
+          device_type: string | null
+          event_type: string
+          id: string
+          language: string | null
+          occurred_at: string
+          path: string
+          ref_domain: string | null
+          region: string | null
+          session_id: string
+          timezone: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          visitor_id: string
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          device_type?: string | null
+          event_type?: string
+          id?: string
+          language?: string | null
+          occurred_at?: string
+          path: string
+          ref_domain?: string | null
+          region?: string | null
+          session_id: string
+          timezone?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          visitor_id: string
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          device_type?: string | null
+          event_type?: string
+          id?: string
+          language?: string | null
+          occurred_at?: string
+          path?: string
+          ref_domain?: string | null
+          region?: string | null
+          session_id?: string
+          timezone?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          visitor_id?: string
+        }
+        Relationships: []
+      }
       bmbg: {
         Row: {
           avatar_url: string | null
@@ -901,6 +958,23 @@ export type Database = {
           title: string
           viber: string
           website: string
+        }[]
+      }
+      get_analytics_overview: {
+        Args: {
+          _country_filter?: string
+          _end_date: string
+          _path_filter?: string
+          _start_date: string
+        }
+        Returns: {
+          daily_stats: Json
+          top_countries: Json
+          top_pages: Json
+          top_sources: Json
+          total_pageviews: number
+          total_sessions: number
+          unique_visitors: number
         }[]
       }
       get_detailed_profile: {
