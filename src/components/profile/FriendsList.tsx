@@ -23,19 +23,28 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { isUserOnline } from "@/lib/onlineStatus";
 
-export function FriendsList({ userId }: { userId?: string }) {
-  const { friends, refreshFriendRequests, removeFriend, blockUser } = useFriendRequests();
+export function FriendsList({ userId, isCurrentUser = true }: { userId?: string; isCurrentUser?: boolean }) {
+  const { friends: myFriends, refreshFriendRequests, removeFriend, blockUser } = useFriendRequests();
+  const [otherUserFriends, setOtherUserFriends] = useState<Array<{ id: string; full_name: string | null; avatar_url: string | null }>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [blockTarget, setBlockTarget] = useState<{ id: string; name: string } | null>(null);
   const [lastSeenMap, setLastSeenMap] = useState<Map<string, string | null>>(new Map());
 
+  // For current user: use the hook. For other users: fetch via RPC.
   useEffect(() => {
     const loadFriendData = async () => {
       setIsLoading(true);
       const timeout = setTimeout(() => setIsLoading(false), 15000);
       try {
-        await refreshFriendRequests();
+        if (isCurrentUser) {
+          await refreshFriendRequests();
+        } else if (userId) {
+          const { data, error } = await supabase.rpc('get_user_friends', { _user_id: userId });
+          if (data && !error) {
+            setOtherUserFriends(data as Array<{ id: string; full_name: string | null; avatar_url: string | null }>);
+          }
+        }
       } catch (error) {
         console.error("Error loading friends:", error);
       } finally {
@@ -44,15 +53,18 @@ export function FriendsList({ userId }: { userId?: string }) {
       }
     };
     loadFriendData();
-  }, [userId, refreshFriendRequests]);
+  }, [userId, isCurrentUser, refreshFriendRequests]);
+
+  const friends = isCurrentUser 
+    ? myFriends.filter(f => f !== null) 
+    : otherUserFriends;
 
   // Fetch last_seen for all friends via RPC (bypasses RLS)
   useEffect(() => {
-    const validFriends = friends.filter(f => f !== null);
-    if (validFriends.length === 0) return;
+    if (friends.length === 0) return;
 
     const fetchLastSeen = async () => {
-      const ids = validFriends.map(f => f!.id);
+      const ids = friends.map(f => f!.id);
       const { data } = await supabase.rpc('get_users_last_seen', { _ids: ids });
       if (data) {
         const map = new Map<string, string | null>();

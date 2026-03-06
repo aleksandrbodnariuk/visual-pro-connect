@@ -436,7 +436,7 @@ export default function Profile() {
             </TabsContent>
             
             <TabsContent value="friends" className="mt-6">
-              <FriendsList userId={user?.id} />
+              <FriendsList userId={user?.id} isCurrentUser={isCurrentUser} />
             </TabsContent>
             
             <TabsContent value="reviews" className="mt-6">
