@@ -1,4 +1,5 @@
 
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,19 +13,27 @@ import { useDataSync } from "./hooks/useDataSync";
 import { FaviconUpdater } from "./components/layout/FaviconUpdater";
 import { MobileNavigation } from "./components/layout/MobileNavigation";
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Profile from "./pages/Profile";
-import Messages from "./pages/Messages";
-import Search from "./pages/Search";
-import Settings from "./pages/Settings";
-import Connect from "./pages/Connect";
-import Notifications from "./pages/Notifications";
-import Friends from "./pages/Friends";
-import Admin from "./pages/Admin";
-import StockMarket from "./pages/StockMarket";
-import Post from "./pages/Post";
-import MyFiles from "./pages/MyFiles";
-import NotFound from "./pages/NotFound";
+
+// Lazy-loaded pages for code splitting
+const Auth = lazy(() => import("./pages/Auth"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Messages = lazy(() => import("./pages/Messages"));
+const Search = lazy(() => import("./pages/Search"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Connect = lazy(() => import("./pages/Connect"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const Friends = lazy(() => import("./pages/Friends"));
+const Admin = lazy(() => import("./pages/Admin"));
+const StockMarket = lazy(() => import("./pages/StockMarket"));
+const Post = lazy(() => import("./pages/Post"));
+const MyFiles = lazy(() => import("./pages/MyFiles"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  </div>
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
