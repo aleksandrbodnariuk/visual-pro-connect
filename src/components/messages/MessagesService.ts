@@ -155,18 +155,19 @@ export class MessagesService {
           };
         });
         
-        let selectedChat;
-        
+        let selectedChat: ChatItem | undefined;
+
         if (receiverId) {
           selectedChat = chatsArray.find(chat => chat.user.id === receiverId);
           if (!selectedChat) {
             return MessagesService.createNewChat(receiverId, chatsArray);
           }
         }
-        
+
         return {
           chats: chatsArray,
-          activeChat: selectedChat || (chatsArray.length > 0 ? chatsArray[0] : undefined)
+          // Відкриваємо активний чат лише при явному receiverId (наприклад, кнопка "Написати")
+          activeChat: selectedChat
         };
       } else {
         if (receiverId) {
