@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Bell, BellOff, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
@@ -11,8 +10,6 @@ import {
   subscribeToPush,
   unsubscribeFromPush,
 } from '@/lib/pushNotifications';
-
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 
 export function NotificationSettings() {
   const [pushSupported, setPushSupported] = useState(false);
@@ -40,11 +37,6 @@ export function NotificationSettings() {
   }
 
   async function handleToggle(enabled: boolean) {
-    if (!VAPID_PUBLIC_KEY) {
-      toast.error('Push сповіщення не налаштовані на сервері');
-      return;
-    }
-
     setLoading(true);
     try {
       if (enabled) {
@@ -55,7 +47,7 @@ export function NotificationSettings() {
           setLoading(false);
           return;
         }
-        const sub = await subscribeToPush(VAPID_PUBLIC_KEY);
+        const sub = await subscribeToPush();
         if (sub) {
           setIsSubscribed(true);
           toast.success('Push сповіщення увімкнено');

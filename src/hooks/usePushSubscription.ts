@@ -6,8 +6,6 @@ import {
   subscribeToPush,
 } from '@/lib/pushNotifications';
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
-
 /**
  * Auto-subscribes the user to push notifications if they previously granted permission.
  * Does NOT prompt for permission — only re-subscribes silently.
@@ -17,14 +15,14 @@ export function usePushAutoSubscribe() {
   const attempted = useRef(false);
 
   useEffect(() => {
-    if (!user || attempted.current || !VAPID_PUBLIC_KEY) return;
+    if (!user || attempted.current) return;
     if (!isPushSupported()) return;
     if (getNotificationPermission() !== 'granted') return;
 
     attempted.current = true;
 
     // Silently re-subscribe (e.g., after SW update or new device login)
-    subscribeToPush(VAPID_PUBLIC_KEY).catch((err) => {
+    subscribeToPush().catch((err) => {
       console.warn('[Push] Auto-subscribe failed:', err);
     });
   }, [user]);

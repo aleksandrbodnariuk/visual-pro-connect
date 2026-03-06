@@ -23,13 +23,44 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   return Notification.requestPermission();
 }
 
+// Cache the VAPID key after fetching
+let cachedVapidKey: string | null = null;
+
+/**
+ * Fetch the VAPID public key from the edge function
+ */
+export async function getVapidPublicKey(): Promise<string> {
+  if (cachedVapidKey) return cachedVapidKey;
+
+  try {
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const res = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/send-push-notification`,
+      { method: 'GET' }
+    );
+    const data = await res.json();
+    if (data.vapidPublicKey) {
+      cachedVapidKey = data.vapidPublicKey;
+      return data.vapidPublicKey;
+    }
+  } catch (err) {
+    console.error('[Push] Failed to fetch VAPID key:', err);
+  }
+  return '';
+}
+
 /**
  * Subscribe to push notifications and save subscription to Supabase.
- * Requires VAPID public key to be set in site_settings or env.
  * Returns the PushSubscription or null on failure.
  */
-export async function subscribeToPush(vapidPublicKey: string): Promise<PushSubscription | null> {
+export async function subscribeToPush(vapidPublicKey?: string): Promise<PushSubscription | null> {
   try {
+    const key = vapidPublicKey || await getVapidPublicKey();
+    if (!key) {
+      console.error('[Push] No VAPID public key available');
+      return null;
+    }
+
     const registration = await navigator.serviceWorker.ready;
 
     // Check existing subscription
@@ -41,7 +72,7 @@ export async function subscribeToPush(vapidPublicKey: string): Promise<PushSubsc
 
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey).buffer as ArrayBuffer,
+      applicationServerKey: urlBase64ToUint8Array(key).buffer as ArrayBuffer,
     });
 
     await saveSubscription(subscription);
@@ -80,7 +111,6 @@ async function saveSubscription(subscription: PushSubscription) {
 
   const sub = subscription.toJSON();
 
-  // Save to push_subscriptions table (will be created when push is activated)
   await supabase.from("push_subscriptions" as any).upsert(
     {
       user_id: user.id,
