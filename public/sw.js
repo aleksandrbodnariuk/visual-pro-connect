@@ -165,15 +165,16 @@ self.addEventListener('push', (event) => {
   }
 
   // Use actual badge count from server payload (not a local counter)
-  const badgeCount = data.badgeCount || 1;
+  const badgeCount = typeof data.badgeCount === 'number' ? data.badgeCount : 1;
 
   const options = {
     body: data.body,
     icon: '/android-chrome-192x192.png',
     badge: '/favicon-32x32.png',
     vibrate: [100, 50, 100],
-    tag: data.tag || 'default',
-    renotify: !!data.tag,
+    // IMPORTANT: don't force a shared default tag, otherwise Android keeps only 1 active notification
+    // and launcher badge can get stuck at "1".
+    ...(data.tag ? { tag: data.tag, renotify: true } : {}),
     data: { url: data.url || '/' },
     actions: data.actions || [],
     silent: false,
@@ -224,10 +225,15 @@ self.addEventListener('notificationclick', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SET_BADGE') {
     const count = event.data.count || 0;
+
     if (self.registration.setAppBadge && count > 0) {
       self.registration.setAppBadge(count).catch(() => {});
     } else if (self.registration.clearAppBadge && count === 0) {
       self.registration.clearAppBadge().catch(() => {});
+      // Also close active notifications so Android launcher badge doesn't stay stuck.
+      self.registration.getNotifications().then((notifications) => {
+        notifications.forEach((notification) => notification.close());
+      }).catch(() => {});
     }
   }
 
@@ -235,5 +241,9 @@ self.addEventListener('message', (event) => {
     if (self.registration.clearAppBadge) {
       self.registration.clearAppBadge().catch(() => {});
     }
+    // Also close active notifications so Android launcher badge doesn't stay stuck.
+    self.registration.getNotifications().then((notifications) => {
+      notifications.forEach((notification) => notification.close());
+    }).catch(() => {});
   }
 });
