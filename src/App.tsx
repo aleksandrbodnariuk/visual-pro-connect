@@ -11,6 +11,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { SiteSettingsProvider } from "./context/SiteSettingsContext";
 import { useDataSync } from "./hooks/useDataSync";
 import { usePushAutoSubscribe } from "./hooks/usePushSubscription";
+import { useBadgeClear } from "./hooks/useBadgeClear";
 import { FaviconUpdater } from "./components/layout/FaviconUpdater";
 import { MobileNavigation } from "./components/layout/MobileNavigation";
 import { InstallPrompt } from "./components/pwa/InstallPrompt";
@@ -54,6 +55,8 @@ const AppContent = () => {
   useDataSync();
   // Auto-subscribe to push notifications if permission was previously granted
   usePushAutoSubscribe();
+  // Clear app badge when user opens/focuses the app
+  useBadgeClear();
   
   return (
     <BrowserRouter>

@@ -19,15 +19,11 @@ const STATIC_ASSETS = [
 const MAX_IMAGE_CACHE = 100;
 const MAX_API_CACHE = 50;
 
-// Badge counter stored in SW scope
-let badgeCount = 0;
-
 // ── Install — precache static assets ────────────────────
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS))
   );
-  // Activate immediately without waiting for old tabs to close
   self.skipWaiting();
 });
 
@@ -45,7 +41,6 @@ self.addEventListener('activate', (event) => {
           })
       )
     ).then(() => {
-      // Take control of all open pages immediately
       return self.clients.claim();
     })
   );
@@ -67,10 +62,9 @@ self.addEventListener('fetch', (event) => {
 
   if (request.method !== 'GET') return;
 
-  // Skip Supabase realtime / auth requests — never cache these
   if (url.pathname.startsWith('/auth/') || url.href.includes('realtime')) return;
 
-  // 1) SPA navigation — network first, fallback to cached index.html
+  // 1) SPA navigation
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
@@ -88,7 +82,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2) Images — cache first, network fallback (with limit)
+  // 2) Images
   if (
     request.destination === 'image' ||
     /\.(png|jpg|jpeg|gif|svg|webp|ico)$/i.test(url.pathname)
@@ -111,7 +105,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3) Supabase REST API — network first, stale fallback
+  // 3) Supabase REST API
   if (url.hostname.includes('supabase.co') && url.pathname.includes('/rest/')) {
     event.respondWith(
       fetch(request)
@@ -130,7 +124,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 4) Static assets (JS, CSS, fonts, audio) — cache first, network fallback
+  // 4) Static assets
   if (
     request.destination === 'script' ||
     request.destination === 'style' ||
@@ -170,8 +164,8 @@ self.addEventListener('push', (event) => {
     }
   }
 
-  // Increment badge counter
-  badgeCount++;
+  // Use actual badge count from server payload (not a local counter)
+  const badgeCount = data.badgeCount || 1;
 
   const options = {
     body: data.body,
@@ -188,7 +182,7 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     Promise.all([
       self.registration.showNotification(data.title, options),
-      // Update app badge if supported
+      // Set badge with actual count from server
       self.registration.setAppBadge
         ? self.registration.setAppBadge(badgeCount).catch(() => {})
         : Promise.resolve(),
@@ -209,7 +203,6 @@ self.addEventListener('notificationclick', (event) => {
   const targetUrl = event.notification.data?.url || '/';
 
   // Clear badge when user taps notification
-  badgeCount = 0;
   if (self.registration.clearAppBadge) {
     self.registration.clearAppBadge().catch(() => {});
   }
@@ -230,16 +223,15 @@ self.addEventListener('notificationclick', (event) => {
 // ── Message from client to manage badge ─────────────────
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SET_BADGE') {
-    badgeCount = event.data.count || 0;
-    if (self.registration.setAppBadge && badgeCount > 0) {
-      self.registration.setAppBadge(badgeCount).catch(() => {});
-    } else if (self.registration.clearAppBadge && badgeCount === 0) {
+    const count = event.data.count || 0;
+    if (self.registration.setAppBadge && count > 0) {
+      self.registration.setAppBadge(count).catch(() => {});
+    } else if (self.registration.clearAppBadge && count === 0) {
       self.registration.clearAppBadge().catch(() => {});
     }
   }
 
   if (event.data && event.data.type === 'CLEAR_BADGE') {
-    badgeCount = 0;
     if (self.registration.clearAppBadge) {
       self.registration.clearAppBadge().catch(() => {});
     }
