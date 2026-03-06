@@ -152,48 +152,63 @@ self.addEventListener('fetch', (event) => {
 
 // ── Push Notifications ──────────────────────────────────
 self.addEventListener('push', (event) => {
+  console.log('[SW] Push received in SW at', new Date().toISOString());
+
   let data = { title: 'Спільнота B&C', body: 'Нове повідомлення', url: '/' };
 
   try {
     if (event.data) {
-      data = { ...data, ...event.data.json() };
+      const json = event.data.json();
+      console.log('[SW] Push payload:', JSON.stringify(json));
+      data = { ...data, ...json };
+    } else {
+      console.log('[SW] Push received with no data');
     }
   } catch (e) {
+    console.warn('[SW] Push JSON parse failed, using text:', e);
     if (event.data) {
       data.body = event.data.text();
     }
   }
 
-  // Use actual badge count from server payload (not a local counter)
   const badgeCount = typeof data.badgeCount === 'number' ? data.badgeCount : 1;
 
   const options = {
     body: data.body,
     icon: '/android-chrome-192x192.png',
     badge: '/favicon-32x32.png',
-    vibrate: [100, 50, 100],
-    // IMPORTANT: don't force a shared default tag, otherwise Android keeps only 1 active notification
-    // and launcher badge can get stuck at "1".
+    vibrate: [200, 100, 200],
     ...(data.tag ? { tag: data.tag, renotify: true } : {}),
     data: { url: data.url || '/' },
     actions: data.actions || [],
     silent: false,
   };
 
+  console.log('[SW] Showing notification:', data.title, '| badge:', badgeCount);
+
   event.waitUntil(
-    Promise.all([
-      self.registration.showNotification(data.title, options),
-      // Set badge with actual count from server
-      self.registration.setAppBadge
-        ? self.registration.setAppBadge(badgeCount).catch(() => {})
-        : Promise.resolve(),
-      // Notify all open clients to play sound
-      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-        clients.forEach((client) => {
+    self.registration.showNotification(data.title, options)
+      .then(() => {
+        console.log('[SW] showNotification succeeded');
+        // Set badge — safe guard for missing API
+        if (typeof self.registration.setAppBadge === 'function') {
+          return self.registration.setAppBadge(badgeCount).catch((err) => {
+            console.warn('[SW] setAppBadge failed:', err);
+          });
+        }
+      })
+      .then(() => {
+        // Notify open clients to play sound
+        return self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      })
+      .then((windowClients) => {
+        windowClients.forEach((client) => {
           client.postMessage({ type: 'PUSH_RECEIVED', data });
         });
-      }),
-    ])
+      })
+      .catch((err) => {
+        console.error('[SW] Push handling error:', err);
+      })
   );
 });
 
