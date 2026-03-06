@@ -13,7 +13,6 @@ Deno.serve(async (req) => {
 
   // GET request returns the VAPID public key for frontend subscription
   if (req.method === 'GET') {
-    // Strip any accidental surrounding quotes from the stored secret
     const vapidPublicKey = (Deno.env.get('VAPID_PUBLIC_KEY') || '').replace(/^"|"$/g, '').trim();
     return new Response(
       JSON.stringify({ vapidPublicKey }),
@@ -74,12 +73,29 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Count actual unread messages for this user
+    const { count: unreadMessages } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('receiver_id', user_id)
+      .eq('read', false);
+
+    // Count actual unread notifications for this user
+    const { count: unreadNotifications } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user_id)
+      .eq('is_read', false);
+
+    const totalBadge = (unreadMessages || 0) + (unreadNotifications || 0);
+
     const payload = JSON.stringify({
       title: title || 'Нове повідомлення',
       body: body || '',
       url: url || '/messages',
       icon: '/android-chrome-192x192.png',
       badge: '/favicon-32x32.png',
+      badgeCount: totalBadge,
     });
 
     let sent = 0;
@@ -100,7 +116,6 @@ Deno.serve(async (req) => {
         sent++;
       } catch (err: any) {
         console.error(`[Push] Failed to send to ${sub.endpoint}:`, err.statusCode, err.message);
-        // If subscription is expired/invalid, remove it
         if (err.statusCode === 410 || err.statusCode === 404) {
           await supabase.from('push_subscriptions').delete().eq('id', sub.id);
           errors.push(`Removed expired subscription ${sub.id}`);
@@ -110,10 +125,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[Push] Sent ${sent}/${subscriptions.length} notifications to user ${user_id}`);
+    console.log(`[Push] Sent ${sent}/${subscriptions.length} notifications to user ${user_id}, badge: ${totalBadge}`);
 
     return new Response(
-      JSON.stringify({ sent, total: subscriptions.length, errors }),
+      JSON.stringify({ sent, total: subscriptions.length, badge: totalBadge, errors }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {
