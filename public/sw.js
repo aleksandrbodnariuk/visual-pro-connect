@@ -1,7 +1,7 @@
-const CACHE_VERSION = 'bc-v2';
-const STATIC_CACHE = `static-${CACHE_VERSION}`;
-const IMAGE_CACHE = `images-${CACHE_VERSION}`;
-const API_CACHE = `api-${CACHE_VERSION}`;
+const CACHE_VERSION = 'bc-v3';
+const STATIC_CACHE = `bc-static-${CACHE_VERSION}`;
+const IMAGE_CACHE = `bc-images-${CACHE_VERSION}`;
+const API_CACHE = `bc-api-${CACHE_VERSION}`;
 const OFFLINE_URL = '/';
 
 const STATIC_ASSETS = [
@@ -12,6 +12,7 @@ const STATIC_ASSETS = [
   '/favicon-32x32.png',
   '/apple-touch-icon.png',
   '/site.webmanifest',
+  '/sounds/notification.mp3',
 ];
 
 // Max cache sizes
@@ -21,15 +22,16 @@ const MAX_API_CACHE = 50;
 // Badge counter stored in SW scope
 let badgeCount = 0;
 
-// ── Install ─────────────────────────────────────────────
+// ── Install — precache static assets ────────────────────
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS))
   );
+  // Activate immediately without waiting for old tabs to close
   self.skipWaiting();
 });
 
-// ── Activate — clean old caches ─────────────────────────
+// ── Activate — clean old caches, claim clients ──────────
 self.addEventListener('activate', (event) => {
   const validCaches = [STATIC_CACHE, IMAGE_CACHE, API_CACHE];
   event.waitUntil(
@@ -37,11 +39,16 @@ self.addEventListener('activate', (event) => {
       Promise.all(
         keys
           .filter((key) => !validCaches.includes(key))
-          .map((key) => caches.delete(key))
+          .map((key) => {
+            console.log('[SW] Deleting old cache:', key);
+            return caches.delete(key);
+          })
       )
-    )
+    ).then(() => {
+      // Take control of all open pages immediately
+      return self.clients.claim();
+    })
   );
-  self.clients.claim();
 });
 
 // ── Helper: trim cache to max entries ───────────────────
@@ -60,7 +67,7 @@ self.addEventListener('fetch', (event) => {
 
   if (request.method !== 'GET') return;
 
-  // Skip Supabase realtime / auth requests
+  // Skip Supabase realtime / auth requests — never cache these
   if (url.pathname.startsWith('/auth/') || url.href.includes('realtime')) return;
 
   // 1) SPA navigation — network first, fallback to cached index.html
@@ -81,7 +88,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2) Images — cache first, network fallback
+  // 2) Images — cache first, network fallback (with limit)
   if (
     request.destination === 'image' ||
     /\.(png|jpg|jpeg|gif|svg|webp|ico)$/i.test(url.pathname)
@@ -104,7 +111,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3) Supabase REST API (read-only) — network first, stale fallback
+  // 3) Supabase REST API — network first, stale fallback
   if (url.hostname.includes('supabase.co') && url.pathname.includes('/rest/')) {
     event.respondWith(
       fetch(request)
@@ -123,25 +130,27 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 4) Static assets (JS, CSS, fonts) — network first, cache fallback
+  // 4) Static assets (JS, CSS, fonts, audio) — cache first, network fallback
   if (
     request.destination === 'script' ||
     request.destination === 'style' ||
     request.destination === 'font' ||
-    request.destination === 'document'
+    request.destination === 'audio' ||
+    /\.(js|css|woff2?|ttf|mp3|wav)$/i.test(url.pathname)
   ) {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() =>
-          caches.match(request).then((cached) => cached || caches.match(OFFLINE_URL))
+      caches.open(STATIC_CACHE).then((cache) =>
+        cache.match(request).then(
+          (cached) =>
+            cached ||
+            fetch(request).then((response) => {
+              if (response.ok) {
+                cache.put(request, response.clone());
+              }
+              return response;
+            }).catch(() => cached)
         )
+      )
     );
     return;
   }
@@ -173,6 +182,7 @@ self.addEventListener('push', (event) => {
     renotify: !!data.tag,
     data: { url: data.url || '/' },
     actions: data.actions || [],
+    silent: false,
   };
 
   event.waitUntil(
@@ -182,6 +192,12 @@ self.addEventListener('push', (event) => {
       self.registration.setAppBadge
         ? self.registration.setAppBadge(badgeCount).catch(() => {})
         : Promise.resolve(),
+      // Notify all open clients to play sound
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ type: 'PUSH_RECEIVED', data });
+        });
+      }),
     ])
   );
 });
@@ -200,14 +216,12 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Focus existing tab if found
       for (const client of windowClients) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
           client.navigate(targetUrl);
           return client.focus();
         }
       }
-      // Open new window
       return clients.openWindow(targetUrl);
     })
   );
