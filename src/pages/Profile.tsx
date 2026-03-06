@@ -356,7 +356,7 @@ export default function Profile() {
         </div>
         
         {/* Основний контент профілю */}
-        <div className="col-span-12 md:col-span-8 lg:col-span-6 h-full overflow-y-auto overscroll-contain scrollbar-hide py-4 md:py-6">
+        <div className="col-span-12 md:col-span-8 lg:col-span-6 h-full overflow-y-auto overscroll-contain scrollbar-hide py-4 md:py-6 pb-24 md:pb-6">
           <ProfileHeader user={user} onEditProfile={handleEditProfile} />
           
           <main className="mt-6">
