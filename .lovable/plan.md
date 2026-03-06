@@ -1,117 +1,64 @@
 
 
-# Fix: Real-time Messages, Comments, and Likes
+## Analysis: Blank Page on Navigation to Messages and Admin
 
-## Root Cause (Confirmed by Supabase GitHub Issue #1524)
+### Root Cause
 
-The problem is a **confirmed Supabase Realtime bug**: when multiple channels subscribe to the same table with overlapping filters, **only one channel receives the event**. The others are silently ignored.
+There are **two interrelated issues** causing blank pages during SPA navigation:
 
-In this project, **three components** simultaneously use `useUnreadMessages()`, each creating its own Supabase Realtime channel with the identical filter `receiver_id=eq.{userId}`:
+---
 
-1. `NavbarNavigation` (desktop menu)
-2. `MobileNavigation` (mobile bottom bar -- hidden via CSS but the hook still runs!)
-3. Potentially more instances on pages with `Sidebar`
+### Issue 1: Race Condition in Admin.tsx Auth Check
 
-Even though each channel has a unique name, Supabase only delivers the event to one of them. Which one "wins" is unpredictable. When the winning instance dispatches `new-message-received`, Messages.tsx calls `reloadActiveChat()` -- but if the wrong instance wins (or none does due to race conditions), the chat doesn't update. Meanwhile, the badge might update via a different code path (e.g., `messages-read` event from another operation).
+In `Admin.tsx`, the `useEffect` (line 63-125) runs this logic:
 
-Reference: https://github.com/supabase/realtime/issues/1524
-
-## Solution: Two-Part Fix
-
-### Part 1: Singleton Realtime Subscription
-
-Make `useUnreadMessages` use a **single shared Realtime channel** regardless of how many components use the hook. This is done with module-level variables:
-
-- A shared channel reference and subscriber counter
-- First component to mount creates the channel
-- Last component to unmount removes it
-- All instances share the same event source
-
-```text
-Before (broken):
-  NavbarNavigation  -> useUnreadMessages -> channel "unread-abc" (receiver_id filter)
-  MobileNavigation  -> useUnreadMessages -> channel "unread-def" (receiver_id filter)
-  Result: Only ONE channel receives events (Supabase bug #1524)
-
-After (fixed):
-  NavbarNavigation  -> useUnreadMessages -> shares channel "unread-singleton"
-  MobileNavigation  -> useUnreadMessages -> shares channel "unread-singleton"
-  Result: ONE channel, always receives events
+```
+if (loading) return;                         // ← OK, waits
+if (!isAuthenticated() || !currentUser) {     // ← BUG HERE
+    navigate("/auth");                        // redirects away!
+}
 ```
 
-### Part 2: Polling Fallback for Messages Page
-
-Even with the singleton fix, Realtime can occasionally drop events (network hiccups, server restarts). Add a **3-second polling interval** in Messages.tsx as a guaranteed fallback:
-
-- Only polls when there is an active chat open
-- Only polls when the browser tab is visible (uses `document.hidden`)
-- Compares message count to avoid unnecessary re-renders
-- Cleans up on unmount or when chat changes
-
-This is the same approach used by Facebook Messenger, WhatsApp Web, and Telegram Web -- they all use WebSocket for instant delivery with polling as a safety net.
-
-### Part 3: Auto-Scroll in MessageList
-
-Currently, `MessageList` has no auto-scroll. When new messages arrive (via realtime or polling), the user might not see them if scrolled up. Add:
-
-- `useRef` for the scroll container
-- `useEffect` that scrolls to bottom when `messages.length` changes
-- Only auto-scrolls if user is already near the bottom (within 100px)
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `src/hooks/useUnreadMessages.ts` | Singleton pattern: module-level channel shared across all hook instances |
-| `src/pages/Messages.tsx` | Add 3-second polling fallback with visibility check; add error handling to reloadActiveChat |
-| `src/components/messages/MessageList.tsx` | Add auto-scroll to bottom on new messages |
-
-## Technical Details
-
-### useUnreadMessages.ts -- Singleton Pattern
-
-```text
-Module-level variables:
-  let sharedChannel = null
-  let sharedUserId = null
-  let subscriberCount = 0
-
-On mount (subscriberCount goes from 0 to 1):
-  Create channel, subscribe to receiver_id filter
-  Store in sharedChannel
-
-On unmount (subscriberCount goes from 1 to 0):
-  Remove channel
-  Reset sharedChannel
-
-On mount (subscriberCount > 1):
-  Skip channel creation, reuse existing
+The render guard on line 132 correctly handles the case where session exists but `appUser` hasn't loaded yet:
+```tsx
+if (isAuthenticated() && !currentUser) {
+    return <div>Завантаження даних користувача...</div>;
+}
 ```
 
-### Messages.tsx -- Polling
+**But** the `useEffect` runs AFTER render and does NOT have this same guard. When `loading` becomes `false` but `appUser` is still `null` (brief window), the effect fires, sees `!currentUser` is true, and **redirects to `/auth`**. This redirect happens before React re-renders with the updated `appUser`.
 
-```text
-useEffect (depends on activeChat):
-  if no active chat -> skip
-  interval = setInterval(3000):
-    if document.hidden -> skip (tab not visible)
-    call reloadActiveChat()
-  return cleanup -> clearInterval
-```
+Additionally, `isAuthenticated` (a function reference) and `currentUser` (an object) in the dependency array cause the effect to re-fire on every auth state change, compounding the race.
 
-### MessageList.tsx -- Auto-Scroll
+### Issue 2: No Error Boundary for Lazy-Loaded Routes
 
-```text
-scrollRef on the outer div
-useEffect([messages.length]):
-  if scrollRef at bottom (within 100px) -> scrollIntoView
-```
+All page components are lazy-loaded via `React.lazy()` with a single `Suspense` wrapper. If any component throws during render (e.g., from the auth race condition above), React unmounts the entire tree with **no fallback** -- resulting in a blank white page. A page reload works because the auth state is fully resolved before the component mounts.
 
-## Expected Results
+### Issue 3: Messages Page Redundant Auth Check
 
-- Messages appear instantly (via realtime) or within 3 seconds (via polling) -- guaranteed
-- Badge updates reliably (single subscription, no conflicts)
-- Chat auto-scrolls to show new messages
-- No performance impact (polling pauses when tab is hidden)
-- Comments and likes also benefit from the reduced channel conflicts
+`Messages.tsx` calls `supabase.auth.getSession()` directly instead of using `useAuth()` context. This creates a second, independent auth check that can race with the context. If `getSession()` returns slower than expected during SPA navigation, `isLoading` stays `true` indefinitely, or the page redirects to `/auth`.
+
+---
+
+### Plan
+
+#### 1. Fix Admin.tsx useEffect race condition
+- Add an early return when `isAuthenticated() && !currentUser` (appUser still loading) -- matching the render guard
+- Remove `currentUser` and `isAuthenticated` from the useEffect dependency array (they shouldn't trigger data reloading, only `loading` and `tabName` should)
+- Keep auth checks only in the render path, not in effects
+
+#### 2. Add React Error Boundary
+- Create a simple `ErrorBoundary` component in `src/components/ui/ErrorBoundary.tsx`
+- Wrap the `Suspense` in `App.tsx` with this boundary so lazy-load or render failures show a fallback UI with a retry button instead of a blank page
+
+#### 3. Fix Messages.tsx auth flow
+- Replace the direct `supabase.auth.getSession()` call with `useAuth()` context data
+- Use `user` from context (already available) instead of making a separate async call
+- This eliminates the race condition and makes the page render immediately with the existing auth state
+
+#### 4. Files to modify
+- `src/pages/Admin.tsx` -- fix useEffect deps and add appUser loading guard
+- `src/pages/Messages.tsx` -- use useAuth() instead of direct getSession()
+- `src/components/ui/ErrorBoundary.tsx` -- new file
+- `src/App.tsx` -- wrap Suspense with ErrorBoundary
 
