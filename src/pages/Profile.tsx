@@ -463,10 +463,15 @@ export default function Profile() {
               </div>
             </TabsContent>
           </Tabs>
+
+          {/* Files section for mobile/tablet (visible below tabs) */}
+          <div className="lg:hidden mt-6">
+            <RightSidebar userId={user.id} />
+          </div>
           </main>
         </div>
 
-        {/* Right Sidebar */}
+        {/* Right Sidebar - desktop only */}
         <div className="hidden lg:block lg:col-span-3 h-full overflow-y-auto overscroll-contain scrollbar-hide py-4 md:py-6">
           <RightSidebar userId={user.id} />
         </div>
