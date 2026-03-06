@@ -16,6 +16,7 @@ export function NotificationSettings() {
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [debugError, setDebugError] = useState<string | null>(null);
 
   useEffect(() => {
     const supported = isPushSupported();
@@ -38,6 +39,7 @@ export function NotificationSettings() {
 
   async function handleToggle(enabled: boolean) {
     setLoading(true);
+    setDebugError(null);
     try {
       if (enabled) {
         const perm = await requestNotificationPermission();
@@ -47,12 +49,18 @@ export function NotificationSettings() {
           setLoading(false);
           return;
         }
-        const sub = await subscribeToPush();
-        if (sub) {
-          setIsSubscribed(true);
-          toast.success('Push сповіщення увімкнено');
-        } else {
-          toast.error('Не вдалося підписатися на сповіщення');
+        try {
+          const sub = await subscribeToPush();
+          if (sub) {
+            setIsSubscribed(true);
+            toast.success('Push сповіщення увімкнено');
+          } else {
+            toast.error('Не вдалося підписатися на сповіщення');
+          }
+        } catch (err: any) {
+          const msg = err?.message || String(err);
+          setDebugError(msg);
+          toast.error(`Помилка підписки: ${msg}`);
         }
       } else {
         const success = await unsubscribeFromPush();
@@ -61,8 +69,10 @@ export function NotificationSettings() {
           toast.success('Push сповіщення вимкнено');
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Push] Toggle error:', err);
+      const msg = err?.message || String(err);
+      setDebugError(msg);
       toast.error('Помилка при зміні налаштувань сповіщень');
     } finally {
       setLoading(false);
@@ -108,6 +118,13 @@ export function NotificationSettings() {
           <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-sm text-destructive">
             <BellOff className="h-4 w-4 shrink-0" />
             <p>Сповіщення заблоковані у налаштуваннях браузера. Розблокуйте їх у налаштуваннях сайту.</p>
+          </div>
+        )}
+
+        {debugError && (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-sm text-destructive font-mono break-all">
+            <BellOff className="h-4 w-4 shrink-0" />
+            <p>Debug: {debugError}</p>
           </div>
         )}
 
