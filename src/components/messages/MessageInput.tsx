@@ -164,7 +164,7 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
         <Button 
           variant="ghost" 
           size="icon"
-          className="h-9 w-9"
+          className="h-9 w-9 flex-shrink-0"
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
         >
@@ -178,6 +178,13 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
           onChange={handleFileSelect}
         />
 
+        {/* Емодзі — на мобільних зліва біля скрепки, на десктопі справа біля кнопки */}
+        {isMobile && (
+          <div className="flex-shrink-0">
+            <EmojiPicker onSelectEmoji={handleEmojiSelect} />
+          </div>
+        )}
+
         <Textarea
           placeholder="Напишіть повідомлення..."
           className="flex-1 min-h-[40px] max-h-[200px] md:min-h-[40px] md:max-h-[40px] resize-none"
@@ -189,11 +196,11 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
           disabled={isUploading}
         />
 
-        {/* Емодзі */}
-        <EmojiPicker onSelectEmoji={handleEmojiSelect} />
+        {/* Емодзі — десктоп */}
+        {!isMobile && <EmojiPicker onSelectEmoji={handleEmojiSelect} />}
 
         <Button 
-          className="bg-gradient-purple rounded-full" 
+          className="bg-gradient-purple rounded-full flex-shrink-0" 
           size="icon"
           onClick={handleSendMessage}
           disabled={isUploading || (!messageText.trim() && !selectedFile)}
