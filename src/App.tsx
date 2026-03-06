@@ -12,6 +12,7 @@ import { SiteSettingsProvider } from "./context/SiteSettingsContext";
 import { useDataSync } from "./hooks/useDataSync";
 import { FaviconUpdater } from "./components/layout/FaviconUpdater";
 import { MobileNavigation } from "./components/layout/MobileNavigation";
+import { InstallPrompt } from "./components/pwa/InstallPrompt";
 import Index from "./pages/Index";
 
 // Lazy-loaded pages for code splitting
