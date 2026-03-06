@@ -160,16 +160,35 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
       )}
       
       <div className="flex items-center gap-2">
-        {/* Кнопка вкладення */}
-        <Button 
-          variant="ghost" 
-          size="icon"
-          className="h-9 w-9 flex-shrink-0"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-        >
-          <Paperclip className="h-5 w-5 text-muted-foreground" />
-        </Button>
+        {/* Мобільна версія: емодзі зверху, скрепка знизу — вертикально */}
+        {isMobile && (
+          <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+            <EmojiPicker onSelectEmoji={handleEmojiSelect} />
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+            >
+              <Paperclip className="h-5 w-5 text-muted-foreground" />
+            </Button>
+          </div>
+        )}
+
+        {/* Десктоп: скрепка зліва */}
+        {!isMobile && (
+          <Button 
+            variant="ghost" 
+            size="icon"
+            className="h-9 w-9 flex-shrink-0"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+          >
+            <Paperclip className="h-5 w-5 text-muted-foreground" />
+          </Button>
+        )}
+
         <input
           ref={fileInputRef}
           type="file"
@@ -177,13 +196,6 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
           className="hidden"
           onChange={handleFileSelect}
         />
-
-        {/* Емодзі — на мобільних зліва біля скрепки, на десктопі справа біля кнопки */}
-        {isMobile && (
-          <div className="flex-shrink-0">
-            <EmojiPicker onSelectEmoji={handleEmojiSelect} />
-          </div>
-        )}
 
         <Textarea
           placeholder="Напишіть повідомлення..."
