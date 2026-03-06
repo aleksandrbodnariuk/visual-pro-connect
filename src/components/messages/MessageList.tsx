@@ -145,8 +145,8 @@ export function MessageList({
 
   return (
     <>
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 flex flex-col justify-end min-h-0">
-        <div className="space-y-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 min-h-0">
+        <div className="space-y-4 flex flex-col justify-end" style={{ minHeight: '100%' }}>
           {messages.length > 0 ? (
             messages.map((message) => (
               <div

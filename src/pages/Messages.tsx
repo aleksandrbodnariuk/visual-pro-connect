@@ -32,6 +32,15 @@ export default function Messages() {
     currentUserRef.current = currentUser;
   }, [currentUser]);
 
+  // Reset active chat when navigating to this page
+  useEffect(() => {
+    const receiverId = localStorage.getItem("currentChatReceiverId");
+    if (!receiverId) {
+      setActiveChat(null);
+      setMessages([]);
+    }
+  }, []);
+
   // Initialize messages using auth context (no separate getSession)
   useEffect(() => {
     if (authLoading) return;
