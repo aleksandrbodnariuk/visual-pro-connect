@@ -34,15 +34,17 @@ export async function getVapidPublicKey(): Promise<string> {
 
   try {
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-    const res = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/send-push-notification`,
-      { method: 'GET' }
-    );
+    const url = `https://${projectId}.supabase.co/functions/v1/send-push-notification`;
+    console.log('[Push] Fetching VAPID key from:', url);
+    const res = await fetch(url, { method: 'GET' });
+    console.log('[Push] VAPID response status:', res.status);
     const data = await res.json();
+    console.log('[Push] VAPID response data:', data);
     if (data.vapidPublicKey) {
       cachedVapidKey = data.vapidPublicKey;
       return data.vapidPublicKey;
     }
+    console.warn('[Push] No vapidPublicKey in response');
   } catch (err) {
     console.error('[Push] Failed to fetch VAPID key:', err);
   }
@@ -55,31 +57,43 @@ export async function getVapidPublicKey(): Promise<string> {
  */
 export async function subscribeToPush(vapidPublicKey?: string): Promise<PushSubscription | null> {
   try {
+    console.log('[Push] subscribeToPush started');
+    console.log('[Push] Notification.permission:', Notification.permission);
+    
     const key = vapidPublicKey || await getVapidPublicKey();
+    console.log('[Push] VAPID key obtained:', key ? `${key.substring(0, 20)}...` : 'EMPTY');
     if (!key) {
-      console.error('[Push] No VAPID public key available');
-      return null;
+      throw new Error('VAPID public key is empty — Edge Function may not have VAPID_PUBLIC_KEY secret configured');
     }
 
+    console.log('[Push] Waiting for serviceWorker.ready...');
     const registration = await navigator.serviceWorker.ready;
+    console.log('[Push] SW ready, scope:', registration.scope, 'active:', !!registration.active);
 
     // Check existing subscription
     const existing = await registration.pushManager.getSubscription();
+    console.log('[Push] Existing subscription:', existing ? 'yes' : 'no');
     if (existing) {
       await saveSubscription(existing);
       return existing;
     }
 
+    const appServerKey = urlBase64ToUint8Array(key);
+    console.log('[Push] applicationServerKey length:', appServerKey.length);
+
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(key).buffer as ArrayBuffer,
+      applicationServerKey: appServerKey.buffer as ArrayBuffer,
     });
 
+    console.log('[Push] Subscription created:', subscription.endpoint);
     await saveSubscription(subscription);
     return subscription;
-  } catch (err) {
+  } catch (err: any) {
     console.error("[Push] Subscribe failed:", err);
-    return null;
+    console.error("[Push] Error name:", err?.name, "message:", err?.message);
+    // Re-throw so callers can access the actual error message
+    throw err;
   }
 }
 
