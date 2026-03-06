@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useDynamicCategories, getIconComponent } from '@/hooks/useDynamicCategories';
 import { toast } from 'sonner';
 import { Check } from 'lucide-react';
+import { NotificationSettings } from '@/components/settings/NotificationSettings';
 
 export default function Settings() {
   const { language } = useLanguage();
@@ -199,15 +200,7 @@ export default function Settings() {
             </TabsContent>
             
             <TabsContent value="notifications">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Налаштування сповіщень</CardTitle>
-                  <CardDescription>Керуйте сповіщеннями, які ви отримуєте</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p>Налаштування сповіщень будуть доступні найближчим часом.</p>
-                </CardContent>
-              </Card>
+              <NotificationSettings />
             </TabsContent>
             
             <TabsContent value="privacy">
