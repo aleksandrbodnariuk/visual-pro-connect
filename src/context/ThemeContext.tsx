@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 
 interface ThemeProviderProps {
-  children: React.ReactNode;
+  children: import('react').ReactNode;
 }
 
 // Inner component to sync theme with Supabase after mount
