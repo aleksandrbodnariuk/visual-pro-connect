@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { updateAppBadge } from "@/lib/badgeApi";
@@ -16,12 +16,37 @@ let initialFetchPromise: Promise<number> | null = null;
 let cachedCount: number | null = null;
 let cachedForUserId: string | null = null;
 
-// Track notification count separately for combined badge
-let lastNotificationCount = 0;
+// Reconnection state
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+const RECONNECT_DELAY = 3000;
+
+// Polling state
+let pollInterval: ReturnType<typeof setInterval> | null = null;
+const POLL_INTERVAL = 30_000; // 30 seconds
+
+function startPolling(uid: string) {
+  stopPolling();
+  pollInterval = setInterval(() => {
+    if (document.visibilityState !== 'visible') return;
+    console.log('[Unread] Polling fallback triggered');
+    cachedCount = null;
+    initialFetchPromise = null;
+    listeners.forEach(fn => fn(uid));
+  }, POLL_INTERVAL);
+}
+
+function stopPolling() {
+  if (pollInterval) {
+    clearInterval(pollInterval);
+    pollInterval = null;
+  }
+}
 
 function createSharedChannel(uid: string) {
   if (sharedChannel) return;
   sharedUserId = uid;
+
+  console.log('[Unread] Creating singleton Realtime channel for', uid);
 
   sharedChannel = supabase
     .channel('unread-messages-singleton')
@@ -34,18 +59,45 @@ function createSharedChannel(uid: string) {
         filter: `receiver_id=eq.${uid}`,
       },
       () => {
-        // Invalidate cache on new message
+        console.log('[Unread] Realtime event received — refreshing count');
         cachedCount = null;
         initialFetchPromise = null;
         listeners.forEach(fn => fn(uid));
         window.dispatchEvent(new CustomEvent('new-message-received'));
       }
     )
-    .subscribe();
+    .subscribe((status, err) => {
+      console.log('[Unread] Channel status:', status, err || '');
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn('[Unread] Channel error/timeout — scheduling reconnect');
+        scheduleReconnect(uid);
+      }
+    });
+
+  // Start polling as a safety net
+  startPolling(uid);
+}
+
+function scheduleReconnect(uid: string) {
+  if (reconnectTimer) return; // already scheduled
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    console.log('[Unread] Attempting reconnect...');
+    destroySharedChannel();
+    if (subscriberCount > 0) {
+      createSharedChannel(uid);
+    }
+  }, RECONNECT_DELAY);
 }
 
 function destroySharedChannel() {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  stopPolling();
   if (sharedChannel) {
+    console.log('[Unread] Destroying singleton channel');
     supabase.removeChannel(sharedChannel);
     sharedChannel = null;
     sharedUserId = null;
@@ -58,7 +110,12 @@ async function fetchUnreadFromDb(uid: string): Promise<number> {
     .select('*', { count: 'exact', head: true })
     .eq('receiver_id', uid)
     .eq('read', false);
-  return (!error && count !== null) ? count : 0;
+  
+  if (error) {
+    console.warn('[Unread] Failed to fetch unread count:', error.message);
+    return 0;
+  }
+  return count ?? 0;
 }
 
 async function fetchUnreadNotifications(uid: string): Promise<number> {
@@ -73,10 +130,10 @@ async function fetchUnreadNotifications(uid: string): Promise<number> {
 async function updateBadgeWithTotalCount(uid: string, messageCount: number) {
   try {
     const notifCount = await fetchUnreadNotifications(uid);
-    lastNotificationCount = notifCount;
-    await updateAppBadge(messageCount + notifCount);
+    const total = messageCount + notifCount;
+    console.log('[Unread] Badge update — msgs:', messageCount, 'notifs:', notifCount, 'total:', total);
+    await updateAppBadge(total);
   } catch {
-    // Just update with message count if notifications fail
     await updateAppBadge(messageCount);
   }
 }
@@ -91,7 +148,6 @@ export function useUnreadMessages() {
     cachedCount = count;
     cachedForUserId = uid;
     setUnreadCount(count);
-    // Update app badge with combined count
     updateBadgeWithTotalCount(uid, count);
   }, []);
 
@@ -99,13 +155,11 @@ export function useUnreadMessages() {
   useEffect(() => {
     if (!userId) return;
 
-    // If cached for this user, use immediately
     if (cachedCount !== null && cachedForUserId === userId) {
       setUnreadCount(cachedCount);
       return;
     }
 
-    // Deduplicate: only one in-flight request at a time
     if (!initialFetchPromise || cachedForUserId !== userId) {
       initialFetchPromise = fetchUnreadFromDb(userId);
       cachedForUserId = userId;
@@ -138,6 +192,30 @@ export function useUnreadMessages() {
         destroySharedChannel();
       }
     };
+  }, [userId, fetchUnreadCount]);
+
+  // Reconnect channel when app becomes visible
+  useEffect(() => {
+    if (!userId) return;
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && subscriberCount > 0) {
+        // Check if channel is still healthy
+        const state = sharedChannel?.state;
+        if (!sharedChannel || (state !== 'joined' && state !== 'joining')) {
+          console.log('[Unread] App visible — channel state:', state, '— reconnecting');
+          destroySharedChannel();
+          createSharedChannel(userId);
+        }
+        // Also refresh count on visibility
+        cachedCount = null;
+        initialFetchPromise = null;
+        fetchUnreadCount(userId);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [userId, fetchUnreadCount]);
 
   // Listen for messages-read events
