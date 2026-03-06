@@ -23,8 +23,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { isUserOnline } from "@/lib/onlineStatus";
 
-export function FriendsList({ userId }: { userId?: string }) {
-  const { friends, refreshFriendRequests, removeFriend, blockUser } = useFriendRequests();
+export function FriendsList({ userId, isCurrentUser = true }: { userId?: string; isCurrentUser?: boolean }) {
+  const { friends: myFriends, refreshFriendRequests, removeFriend, blockUser } = useFriendRequests();
+  const [otherUserFriends, setOtherUserFriends] = useState<Array<{ id: string; full_name: string | null; avatar_url: string | null }>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [blockTarget, setBlockTarget] = useState<{ id: string; name: string } | null>(null);
@@ -35,7 +36,14 @@ export function FriendsList({ userId }: { userId?: string }) {
       setIsLoading(true);
       const timeout = setTimeout(() => setIsLoading(false), 15000);
       try {
-        await refreshFriendRequests();
+        if (isCurrentUser) {
+          await refreshFriendRequests();
+        } else if (userId) {
+          const { data, error } = await supabase.rpc('get_user_friends', { _user_id: userId });
+          if (data && !error) {
+            setOtherUserFriends(data as Array<{ id: string; full_name: string | null; avatar_url: string | null }>);
+          }
+        }
       } catch (error) {
         console.error("Error loading friends:", error);
       } finally {
@@ -44,15 +52,17 @@ export function FriendsList({ userId }: { userId?: string }) {
       }
     };
     loadFriendData();
-  }, [userId, refreshFriendRequests]);
+  }, [userId, isCurrentUser, refreshFriendRequests]);
 
-  // Fetch last_seen for all friends via RPC (bypasses RLS)
+  const friendsList = isCurrentUser
+    ? myFriends.filter(f => f !== null)
+    : otherUserFriends;
+
   useEffect(() => {
-    const validFriends = friends.filter(f => f !== null);
-    if (validFriends.length === 0) return;
+    if (friendsList.length === 0) return;
 
     const fetchLastSeen = async () => {
-      const ids = validFriends.map(f => f!.id);
+      const ids = friendsList.map(f => f!.id);
       const { data } = await supabase.rpc('get_users_last_seen', { _ids: ids });
       if (data) {
         const map = new Map<string, string | null>();
@@ -66,9 +76,7 @@ export function FriendsList({ userId }: { userId?: string }) {
     fetchLastSeen();
     const interval = setInterval(fetchLastSeen, 30000);
     return () => clearInterval(interval);
-  }, [friends]);
-
-  const friendsList = friends.filter(friend => friend !== null);
+  }, [friendsList]);
 
   const getInitials = (name: string | null): string => {
     if (!name) return 'К';
@@ -107,6 +115,72 @@ export function FriendsList({ userId }: { userId?: string }) {
     );
   }
 
+  const renderFriendCard = (friend: any) => {
+    const online = isUserOnline(lastSeenMap.get(friend!.id) ?? null);
+    
+    const cardContent = (
+      <Link
+        to={`/profile/${friend?.id}`}
+        className="group"
+      >
+        <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
+          {friend?.avatar_url ? (
+            <img
+              src={friend.avatar_url}
+              alt={friend.full_name || 'Друг'}
+              loading="lazy"
+              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
+            />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center text-xl sm:text-2xl md:text-3xl font-medium text-muted-foreground">
+              {getInitials(friend?.full_name)}
+            </div>
+          )}
+          {online && (
+            <span className="absolute bottom-2 right-2 block h-4 w-4 rounded-full bg-green-500 ring-2 ring-background" />
+          )}
+        </div>
+        <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-medium truncate text-center">
+          {friend?.full_name || 'Користувач'}
+        </p>
+      </Link>
+    );
+
+    if (!isCurrentUser) {
+      return <div key={friend?.id}>{cardContent}</div>;
+    }
+
+    return (
+      <ContextMenu key={friend?.id}>
+        <ContextMenuTrigger asChild>
+          {cardContent}
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={(e) => {
+              e.preventDefault();
+              setDeleteTarget({ id: friend!.id, name: friend?.full_name || 'Користувач' });
+            }}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Видалити з друзів
+          </ContextMenuItem>
+          <ContextMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={(e) => {
+              e.preventDefault();
+              setBlockTarget({ id: friend!.id, name: friend?.full_name || 'Користувач' });
+            }}
+          >
+            <Ban className="mr-2 h-4 w-4" />
+            Заблокувати
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+    );
+  };
+
   return (
     <>
       <Card>
@@ -116,7 +190,7 @@ export function FriendsList({ userId }: { userId?: string }) {
               <h3 className="font-semibold text-lg">Друзі</h3>
               <p className="text-sm text-muted-foreground">{friendsList.length} друзів</p>
             </div>
-            {friendsList.length > 9 && (
+            {friendsList.length > 9 && isCurrentUser && (
               <Button variant="link" asChild className="text-primary">
                 <Link to="/friends">Переглянути всіх друзів</Link>
               </Button>
@@ -125,62 +199,7 @@ export function FriendsList({ userId }: { userId?: string }) {
 
           {friendsList.length > 0 ? (
             <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-3 gap-2 sm:gap-3">
-              {displayedFriends.map((friend) => {
-                const online = isUserOnline(lastSeenMap.get(friend!.id) ?? null);
-                return (
-                  <ContextMenu key={friend?.id}>
-                    <ContextMenuTrigger asChild>
-                      <Link
-                        to={`/profile/${friend?.id}`}
-                        className="group"
-                      >
-                        <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
-                          {friend?.avatar_url ? (
-                            <img
-                              src={friend.avatar_url}
-                              alt={friend.full_name || 'Друг'}
-                              loading="lazy"
-                              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
-                            />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center text-xl sm:text-2xl md:text-3xl font-medium text-muted-foreground">
-                              {getInitials(friend?.full_name)}
-                            </div>
-                          )}
-                          {online && (
-                            <span className="absolute bottom-2 right-2 block h-4 w-4 rounded-full bg-green-500 ring-2 ring-background" />
-                          )}
-                        </div>
-                        <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-medium truncate text-center">
-                          {friend?.full_name || 'Користувач'}
-                        </p>
-                      </Link>
-                    </ContextMenuTrigger>
-                    <ContextMenuContent>
-                      <ContextMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setDeleteTarget({ id: friend!.id, name: friend?.full_name || 'Користувач' });
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Видалити з друзів
-                      </ContextMenuItem>
-                      <ContextMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setBlockTarget({ id: friend!.id, name: friend?.full_name || 'Користувач' });
-                        }}
-                      >
-                        <Ban className="mr-2 h-4 w-4" />
-                        Заблокувати
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
-                );
-              })}
+              {displayedFriends.map(renderFriendCard)}
             </div>
           ) : (
             <p className="text-muted-foreground text-center py-6 sm:py-8">Поки що немає друзів</p>

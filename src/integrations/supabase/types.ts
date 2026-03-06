@@ -947,6 +947,14 @@ export type Database = {
           website: string
         }[]
       }
+      get_user_friends: {
+        Args: { _user_id: string }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          id: string
+        }[]
+      }
       get_user_roles_array: { Args: { user_id: string }; Returns: string[] }
       get_users_for_admin: {
         Args: never
