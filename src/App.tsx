@@ -11,6 +11,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { SiteSettingsProvider } from "./context/SiteSettingsContext";
 import { useDataSync } from "./hooks/useDataSync";
 import { usePushAutoSubscribe } from "./hooks/usePushSubscription";
+import { useBadgeClear } from "./hooks/useBadgeClear";
 import { FaviconUpdater } from "./components/layout/FaviconUpdater";
 import { MobileNavigation } from "./components/layout/MobileNavigation";
 import { InstallPrompt } from "./components/pwa/InstallPrompt";
