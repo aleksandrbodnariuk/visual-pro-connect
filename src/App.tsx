@@ -60,8 +60,6 @@ const AppContent = () => {
   usePushAutoSubscribe();
   // Clear app badge when user opens/focuses the app
   useBadgeClear();
-  // Self-hosted analytics tracking
-  useAnalyticsTracker();
   
   return (
     <BrowserRouter>
