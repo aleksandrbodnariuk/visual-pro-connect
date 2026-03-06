@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { uploadToStorage } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
+import { compressImageAsFile, validateImageSize, OUTPUT_FORMAT, OUTPUT_EXTENSION } from "@/lib/imageCompression";
 
 // Validation schema for post content
 const postSchema = z.object({
@@ -18,6 +19,9 @@ const postSchema = z.object({
     .max(10000, "Текст публікації не може перевищувати 10000 символів"),
   category: z.string().max(50).optional().nullable()
 });
+
+const HEIC_TYPES = ['image/heic', 'image/heif'];
+
 interface CreatePublicationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -42,15 +46,30 @@ export function CreatePublicationModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // HEIC check
+    if (HEIC_TYPES.includes(file.type) || file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+      toast.error('Цей формат зображення не підтримується. Будь ласка, використайте JPEG або PNG.');
+      return;
+    }
+
     if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
       toast.error('Підтримуються лише зображення та відео');
       return;
     }
 
-    const maxSize = 50 * 1024 * 1024; // 50MB
-    if (file.size > maxSize) {
-      toast.error('Розмір файлу не повинен перевищувати 50MB');
-      return;
+    // Validate size for images
+    if (file.type.startsWith('image/')) {
+      const sizeCheck = validateImageSize(file, 'post');
+      if (!sizeCheck.valid) {
+        toast.error(sizeCheck.message);
+        return;
+      }
+    } else {
+      const maxSize = 50 * 1024 * 1024; // 50MB for video
+      if (file.size > maxSize) {
+        toast.error('Розмір файлу не повинен перевищувати 50MB');
+        return;
+      }
     }
 
     setSelectedFile(file);
@@ -77,12 +96,27 @@ export function CreatePublicationModal({
       
       // Завантажуємо медіа файл якщо він є
       if (selectedFile) {
-        const fileExtension = selectedFile.name.split('.').pop() || 'jpg';
+        let fileToUpload = selectedFile;
+        let contentType = selectedFile.type;
+
+        // Compress images (skip GIFs to preserve animation)
+        if (selectedFile.type.startsWith('image/') && selectedFile.type !== 'image/gif') {
+          toast.loading("Стискання зображення...", { id: "compress-pub" });
+          try {
+            fileToUpload = await compressImageAsFile(selectedFile, 'post');
+            contentType = OUTPUT_FORMAT;
+            console.log(`[CreatePublicationModal] Стиснуто: ${selectedFile.size} → ${fileToUpload.size} байт`);
+          } catch (err) {
+            console.error('Помилка компресії, використовуємо оригінал:', err);
+          }
+          toast.dismiss("compress-pub");
+        }
+
+        const fileExtension = contentType === OUTPUT_FORMAT ? 'webp' : (selectedFile.name.split('.').pop() || 'jpg');
         const uniqueFileName = `post-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExtension}`;
-        const filePath = `posts/${uniqueFileName}`;
         
         console.log('Завантаження файлу:', uniqueFileName);
-        mediaUrl = await uploadToStorage('posts', filePath, selectedFile, selectedFile.type);
+        mediaUrl = await uploadToStorage('posts', uniqueFileName, fileToUpload, contentType);
         console.log('Файл завантажено:', mediaUrl);
       }
 

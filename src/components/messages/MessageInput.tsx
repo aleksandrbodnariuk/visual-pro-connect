@@ -6,6 +6,9 @@ import { EmojiPicker } from "./EmojiPicker";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { compressImageAsFile, validateImageSize, OUTPUT_FORMAT, OUTPUT_EXTENSION } from "@/lib/imageCompression";
+
+const HEIC_TYPES = ['image/heic', 'image/heif'];
 
 interface MessageInputProps {
   onSendMessage: (text: string, attachmentUrl?: string, attachmentType?: string) => void;
@@ -22,6 +25,12 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // HEIC check
+    if (HEIC_TYPES.includes(file.type) || file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+      toast.error('Цей формат зображення не підтримується. Будь ласка, використайте JPEG або PNG.');
+      return;
+    }
 
     // Перевірка розміру (макс 5MB)
     if (file.size > 5 * 1024 * 1024) {
@@ -55,13 +64,30 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
 
   const uploadFile = async (file: File): Promise<string | null> => {
     try {
-      const fileExt = file.name.split('.').pop();
+      let fileToUpload = file;
+      let contentType = file.type;
+
+      // Compress images (skip GIFs to preserve animation)
+      if (file.type.startsWith('image/') && file.type !== 'image/gif') {
+        try {
+          fileToUpload = await compressImageAsFile(file, 'post');
+          contentType = OUTPUT_FORMAT;
+          console.log(`[MessageInput] Стиснуто: ${file.size} → ${fileToUpload.size} байт`);
+        } catch (err) {
+          console.error('Помилка компресії, використовуємо оригінал:', err);
+        }
+      }
+
+      const fileExt = contentType === OUTPUT_FORMAT ? 'webp' : (file.name.split('.').pop() || 'jpg');
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `attachments/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('message-attachments')
-        .upload(filePath, file);
+        .upload(filePath, fileToUpload, {
+          contentType,
+          cacheControl: '86400'
+        });
 
       if (uploadError) throw uploadError;
 
