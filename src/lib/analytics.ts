@@ -1,14 +1,19 @@
 /**
  * Self-hosted analytics tracker.
  * - Non-blocking (sendBeacon / fetch keepalive)
- * - Deduplication (same path within 15s ignored)
+ * - Deduplication (same path within 30s ignored)
  * - Anonymous visitor_id (localStorage UUID)
  * - Session management (30 min inactivity = new session)
+ * - Sends to Supabase Edge Function (NOT /api/*)
  */
 
-const DEDUP_INTERVAL = 15_000; // 15 seconds
+const DEDUP_INTERVAL = 30_000; // 30 seconds
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
-const COLLECT_URL = `https://cxdkaxjeibqdmpvozirz.supabase.co/functions/v1/collect-analytics`;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://cxdkaxjeibqdmpvozirz.supabase.co';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN4ZGtheGplaWJxZG1wdm96aXJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ4MzUxMzcsImV4cCI6MjA2MDQxMTEzN30.mjqEyiJX59YLQpjb-_N4qS_3byUY_zpgS2g6X5xqM2U';
+const COLLECT_URL = `${SUPABASE_URL}/functions/v1/collect-analytics`;
+
+const isDev = import.meta.env.DEV;
 
 let lastPath = '';
 let lastTime = 0;
@@ -61,13 +66,34 @@ function flush() {
   const batch = eventQueue.splice(0, 20);
   const payload = JSON.stringify(batch);
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+  };
+
   if (navigator.sendBeacon) {
-    navigator.sendBeacon(COLLECT_URL, payload);
+    // sendBeacon doesn't support custom headers, use fetch with keepalive instead
+    fetch(COLLECT_URL, {
+      method: 'POST',
+      body: payload,
+      headers,
+      keepalive: true,
+    }).then(async (res) => {
+      if (isDev) {
+        try {
+          const data = await res.json();
+          console.log('[Analytics] collect response:', data);
+        } catch { /* ignore */ }
+      }
+    }).catch((err) => {
+      if (isDev) console.warn('[Analytics] collect error:', err);
+    });
   } else {
     fetch(COLLECT_URL, {
       method: 'POST',
       body: payload,
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       keepalive: true,
     }).catch(() => {});
   }
@@ -85,7 +111,7 @@ export function trackPageView(path?: string) {
   const currentPath = path || window.location.pathname;
   const now = Date.now();
 
-  // Deduplication
+  // Deduplication - 30s
   if (currentPath === lastPath && now - lastTime < DEDUP_INTERVAL) {
     return;
   }
@@ -106,6 +132,10 @@ export function trackPageView(path?: string) {
     occurred_at: new Date().toISOString(),
     ...utm,
   });
+
+  if (isDev) {
+    console.log('[Analytics] tracked page_view:', currentPath);
+  }
 
   scheduleFlush();
 }
