@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           city: string | null
           country: string | null
+          country_code: string | null
           device_type: string | null
           event_type: string
           id: string
@@ -36,6 +37,7 @@ export type Database = {
         Insert: {
           city?: string | null
           country?: string | null
+          country_code?: string | null
           device_type?: string | null
           event_type?: string
           id?: string
@@ -54,6 +56,7 @@ export type Database = {
         Update: {
           city?: string | null
           country?: string | null
+          country_code?: string | null
           device_type?: string | null
           event_type?: string
           id?: string
