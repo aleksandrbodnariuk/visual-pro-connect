@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,42 +6,109 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart3, Globe, Eye, Users, Activity, Link2, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCountryNameUk, getFlagEmoji } from "@/lib/countryNames";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar,
 } from "recharts";
 
-type Period = 'today' | '7d' | '30d' | 'month' | 'year' | 'custom';
+type Period = 'today' | 'yesterday' | '7d' | '30d' | 'month' | 'year' | 'custom';
 
+/** Compute UTC start/end for a period using Europe/Kyiv timezone */
 function getDateRange(period: Period, customStart?: string, customEnd?: string) {
-  const now = new Date();
-  let start: Date;
-  let end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1); // end of today
+  // Get current date/time in Kyiv timezone
+  const kyivNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Kyiv' }));
+  const kyivYear = kyivNow.getFullYear();
+  const kyivMonth = kyivNow.getMonth();
+  const kyivDate = kyivNow.getDate();
+
+  // Helper: create a Date in Kyiv timezone and convert to UTC ISO string
+  function kyivDateToUtc(y: number, m: number, d: number): string {
+    // Create a date string in Kyiv time, parse with timezone info
+    const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}T00:00:00`;
+    // Use Intl to get offset
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Europe/Kyiv',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false,
+    });
+    // Simple approach: create date at midnight Kyiv = subtract Kyiv offset from UTC
+    // Kyiv is UTC+2 (winter) or UTC+3 (summer)
+    const testDate = new Date(dateStr + '+02:00');
+    const kyivStr = testDate.toLocaleString('en-US', { timeZone: 'Europe/Kyiv' });
+    const kyivParsed = new Date(kyivStr);
+    // Check if midnight Kyiv aligns
+    if (kyivParsed.getHours() === 0) {
+      return testDate.toISOString();
+    }
+    // Try +03:00
+    const testDate3 = new Date(dateStr + '+03:00');
+    return testDate3.toISOString();
+  }
+
+  let startUtc: string;
+  let endUtc: string;
 
   switch (period) {
     case 'today':
-      start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      startUtc = kyivDateToUtc(kyivYear, kyivMonth, kyivDate);
+      endUtc = kyivDateToUtc(kyivYear, kyivMonth, kyivDate + 1);
       break;
-    case '7d':
-      start = new Date(now.getTime() - 7 * 86400000);
+    case 'yesterday':
+      startUtc = kyivDateToUtc(kyivYear, kyivMonth, kyivDate - 1);
+      endUtc = kyivDateToUtc(kyivYear, kyivMonth, kyivDate);
       break;
-    case '30d':
-      start = new Date(now.getTime() - 30 * 86400000);
+    case '7d': {
+      const d = new Date(kyivYear, kyivMonth, kyivDate - 6);
+      startUtc = kyivDateToUtc(d.getFullYear(), d.getMonth(), d.getDate());
+      endUtc = kyivDateToUtc(kyivYear, kyivMonth, kyivDate + 1);
       break;
+    }
+    case '30d': {
+      const d = new Date(kyivYear, kyivMonth, kyivDate - 29);
+      startUtc = kyivDateToUtc(d.getFullYear(), d.getMonth(), d.getDate());
+      endUtc = kyivDateToUtc(kyivYear, kyivMonth, kyivDate + 1);
+      break;
+    }
     case 'month':
-      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      startUtc = kyivDateToUtc(kyivYear, kyivMonth, 1);
+      endUtc = kyivDateToUtc(kyivYear, kyivMonth, kyivDate + 1);
       break;
     case 'year':
-      start = new Date(now.getFullYear(), 0, 1);
+      startUtc = kyivDateToUtc(kyivYear, 0, 1);
+      endUtc = kyivDateToUtc(kyivYear, kyivMonth, kyivDate + 1);
       break;
     case 'custom':
-      start = customStart ? new Date(customStart) : new Date(now.getTime() - 30 * 86400000);
-      end = customEnd ? new Date(new Date(customEnd).getTime() + 86400000) : end;
+      if (customStart) {
+        const cs = new Date(customStart);
+        startUtc = kyivDateToUtc(cs.getFullYear(), cs.getMonth(), cs.getDate());
+      } else {
+        const d = new Date(kyivYear, kyivMonth, kyivDate - 29);
+        startUtc = kyivDateToUtc(d.getFullYear(), d.getMonth(), d.getDate());
+      }
+      if (customEnd) {
+        const ce = new Date(customEnd);
+        endUtc = kyivDateToUtc(ce.getFullYear(), ce.getMonth(), ce.getDate() + 1);
+      } else {
+        endUtc = kyivDateToUtc(kyivYear, kyivMonth, kyivDate + 1);
+      }
       break;
     default:
-      start = new Date(now.getTime() - 30 * 86400000);
+      startUtc = kyivDateToUtc(kyivYear, kyivMonth, kyivDate - 29);
+      endUtc = kyivDateToUtc(kyivYear, kyivMonth, kyivDate + 1);
   }
-  return { start: start.toISOString(), end: end.toISOString() };
+
+  return { start: startUtc, end: endUtc };
+}
+
+interface GeoRow {
+  country_code: string | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+  views: number;
+  visitors: number;
 }
 
 interface AnalyticsData {
@@ -50,7 +117,7 @@ interface AnalyticsData {
   total_sessions: number;
   daily_stats: { date: string; views: number; visitors: number; sessions: number }[];
   top_pages: { path: string; views: number; visitors: number }[];
-  top_countries: { country: string; region: string; city: string; views: number; visitors: number }[];
+  top_countries: GeoRow[];
   top_sources: { source: string; utm_source: string; utm_medium: string; utm_campaign: string; views: number; visitors: number }[];
 }
 
@@ -104,12 +171,20 @@ export function AnalyticsTab() {
 
   const periodButtons: { value: Period; label: string }[] = [
     { value: 'today', label: 'Сьогодні' },
+    { value: 'yesterday', label: 'Вчора' },
     { value: '7d', label: '7 днів' },
     { value: '30d', label: '30 днів' },
     { value: 'month', label: 'Місяць' },
     { value: 'year', label: 'Рік' },
     { value: 'custom', label: 'Довільний' },
   ];
+
+  // Prepare geo chart data with Ukrainian names
+  const geoChartData = (data?.top_countries || []).slice(0, 10).map((c) => ({
+    name: `${getFlagEmoji(c.country_code)} ${getCountryNameUk(c.country_code)}`,
+    views: c.views,
+    visitors: c.visitors,
+  }));
 
   return (
     <div className="space-y-4">
@@ -131,37 +206,15 @@ export function AnalyticsTab() {
           </div>
           {period === 'custom' && (
             <div className="flex flex-wrap gap-2 mt-3">
-              <Input
-                type="date"
-                value={customStart}
-                onChange={(e) => setCustomStart(e.target.value)}
-                className="w-40"
-              />
-              <Input
-                type="date"
-                value={customEnd}
-                onChange={(e) => setCustomEnd(e.target.value)}
-                className="w-40"
-              />
+              <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="w-40" />
+              <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="w-40" />
               <Button size="sm" onClick={loadData}>Застосувати</Button>
             </div>
           )}
           <div className="flex flex-wrap gap-2 mt-3">
-            <Input
-              placeholder="Фільтр за шляхом..."
-              value={pathFilter}
-              onChange={(e) => setPathFilter(e.target.value)}
-              className="w-48"
-            />
-            <Input
-              placeholder="Фільтр за країною..."
-              value={countryFilter}
-              onChange={(e) => setCountryFilter(e.target.value)}
-              className="w-48"
-            />
-            <Button size="sm" variant="outline" onClick={loadData}>
-              Фільтрувати
-            </Button>
+            <Input placeholder="Фільтр за шляхом..." value={pathFilter} onChange={(e) => setPathFilter(e.target.value)} className="w-48" />
+            <Input placeholder="Фільтр за країною (ISO)..." value={countryFilter} onChange={(e) => setCountryFilter(e.target.value)} className="w-48" />
+            <Button size="sm" variant="outline" onClick={loadData}>Фільтрувати</Button>
           </div>
         </CardContent>
       </Card>
@@ -176,9 +229,7 @@ export function AnalyticsTab() {
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 rounded-full bg-primary/10">
-                  <Eye className="h-5 w-5 text-primary" />
-                </div>
+                <div className="p-2 rounded-full bg-primary/10"><Eye className="h-5 w-5 text-primary" /></div>
                 <div>
                   <p className="text-xs text-muted-foreground">Перегляди</p>
                   <p className="text-2xl font-bold">{data.total_pageviews.toLocaleString()}</p>
@@ -187,9 +238,7 @@ export function AnalyticsTab() {
             </Card>
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 rounded-full bg-accent">
-                  <Users className="h-5 w-5 text-accent-foreground" />
-                </div>
+                <div className="p-2 rounded-full bg-accent"><Users className="h-5 w-5 text-accent-foreground" /></div>
                 <div>
                   <p className="text-xs text-muted-foreground">Унікальні відвідувачі</p>
                   <p className="text-2xl font-bold">{data.unique_visitors.toLocaleString()}</p>
@@ -198,9 +247,7 @@ export function AnalyticsTab() {
             </Card>
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 rounded-full bg-secondary">
-                  <Activity className="h-5 w-5 text-secondary-foreground" />
-                </div>
+                <div className="p-2 rounded-full bg-secondary"><Activity className="h-5 w-5 text-secondary-foreground" /></div>
                 <div>
                   <p className="text-xs text-muted-foreground">Сесії</p>
                   <p className="text-2xl font-bold">{data.total_sessions.toLocaleString()}</p>
@@ -221,9 +268,7 @@ export function AnalyticsTab() {
             {/* Overview Chart */}
             <TabsContent value="overview">
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Перегляди по днях</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-base">Перегляди по днях</CardTitle></CardHeader>
                 <CardContent>
                   {data.daily_stats.length === 0 ? (
                     <p className="text-sm text-muted-foreground py-8 text-center">Немає даних за цей період</p>
@@ -247,9 +292,7 @@ export function AnalyticsTab() {
             {/* Pages */}
             <TabsContent value="pages">
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Топ сторінок</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-base">Топ сторінок</CardTitle></CardHeader>
                 <CardContent className="p-0">
                   <Table>
                     <TableHeader>
@@ -278,16 +321,14 @@ export function AnalyticsTab() {
             {/* Geo */}
             <TabsContent value="geo">
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Географія відвідувачів</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-base">Географія відвідувачів</CardTitle></CardHeader>
                 <CardContent>
-                  {data.top_countries.length > 0 && (
+                  {geoChartData.length > 0 && (
                     <div className="mb-4">
                       <ResponsiveContainer width="100%" height={250}>
-                        <BarChart data={data.top_countries.slice(0, 10)}>
+                        <BarChart data={geoChartData}>
                           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                          <XAxis dataKey="country" tick={{ fontSize: 10 }} />
+                          <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                           <YAxis tick={{ fontSize: 11 }} />
                           <Tooltip />
                           <Bar dataKey="views" name="Перегляди" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
@@ -298,7 +339,9 @@ export function AnalyticsTab() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Прапор</TableHead>
                         <TableHead>Країна</TableHead>
+                        <TableHead>ISO</TableHead>
                         <TableHead>Регіон</TableHead>
                         <TableHead>Місто</TableHead>
                         <TableHead className="text-right">Перегляди</TableHead>
@@ -306,11 +349,13 @@ export function AnalyticsTab() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data.top_countries.length === 0 ? (
-                        <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Немає даних</TableCell></TableRow>
+                      {(data.top_countries || []).length === 0 ? (
+                        <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Немає даних</TableCell></TableRow>
                       ) : data.top_countries.map((c, i) => (
                         <TableRow key={i}>
-                          <TableCell>{c.country || '—'}</TableCell>
+                          <TableCell className="text-lg">{getFlagEmoji(c.country_code)}</TableCell>
+                          <TableCell>{getCountryNameUk(c.country_code)}</TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">{c.country_code || '—'}</TableCell>
                           <TableCell>{c.region || '—'}</TableCell>
                           <TableCell>{c.city || '—'}</TableCell>
                           <TableCell className="text-right">{c.views}</TableCell>
@@ -326,9 +371,7 @@ export function AnalyticsTab() {
             {/* Sources */}
             <TabsContent value="sources">
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Джерела трафіку</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-base">Джерела трафіку</CardTitle></CardHeader>
                 <CardContent className="p-0">
                   <Table>
                     <TableHeader>
