@@ -378,7 +378,7 @@ export function StockExchangeTab() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left p-2">Співвласник</th>
+                    <th className="text-left p-2">Акціонер</th>
                     <th className="text-left p-2">Кількість</th>
                     <th className="text-right p-2">Орієнтовна вартість (USD)</th>
                     <th className="text-left p-2">Дата</th>
