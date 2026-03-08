@@ -519,82 +519,84 @@ export function UsersTab() {
         </div>
 
         {/* Desktop Table - hidden on mobile */}
-        <div className="hidden md:block space-y-4">
-          <div className="grid grid-cols-10 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
-            <div>ID</div>
-            <div>Email</div>
-            <div>Ім'я</div>
-            <div>Телефон</div>
-            <div>Роль</div>
-            <div>Титул</div>
-            <div>Акціонер</div>
-            <div>Фахівець</div>
-            <div>Останній візит</div>
-            <div>Дії</div>
-          </div>
+        <div className="hidden md:block overflow-x-auto">
+          <div className="min-w-[1200px] space-y-4">
+            <div className="grid grid-cols-10 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
+              <div>ID</div>
+              <div>Email</div>
+              <div>Ім'я</div>
+              <div>Телефон</div>
+              <div>Роль</div>
+              <div>Титул</div>
+              <div>Акціонер</div>
+              <div>Фахівець</div>
+              <div>Останній візит</div>
+              <div>Дії</div>
+            </div>
 
-          {filteredUsers.map((user) => (
-            <div key={user.id} className="grid grid-cols-10 gap-4 items-center py-2 border-b">
-              <div className="text-xs font-mono flex items-center gap-1">
-                <span className="truncate max-w-[120px]" title={user.id}>
-                  {user.id}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                  onClick={() => {
-                    navigator.clipboard.writeText(user.id);
-                    toast.success("ID скопійовано");
-                  }}
-                >
-                  <Copy className="h-3 w-3" />
-                </Button>
-              </div>
-              <div className="text-sm flex items-center gap-1">
-                <span className="truncate max-w-[140px]" title={user.email || 'Не вказано'}>
-                  {user.email || 'Не вказано'}
-                </span>
-                {user.email && (
+            {filteredUsers.map((user) => (
+              <div key={user.id} className="grid grid-cols-10 gap-4 items-center py-2 border-b">
+                <div className="text-xs font-mono flex items-center gap-1 min-w-0">
+                  <span className="truncate max-w-[120px]" title={user.id}>
+                    {user.id}
+                  </span>
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-6 w-6 p-0 shrink-0"
                     onClick={() => {
-                      navigator.clipboard.writeText(user.email);
-                      toast.success("Email скопійовано");
+                      navigator.clipboard.writeText(user.id);
+                      toast.success("ID скопійовано");
                     }}
                   >
                     <Copy className="h-3 w-3" />
                   </Button>
-                )}
+                </div>
+                <div className="text-sm flex items-center gap-1 min-w-0">
+                  <span className="truncate" title={user.email || 'Не вказано'}>
+                    {user.email || 'Не вказано'}
+                  </span>
+                  {user.email && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 shrink-0"
+                      onClick={() => {
+                        navigator.clipboard.writeText(user.email);
+                        toast.success("Email скопійовано");
+                      }}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+                <div className="min-w-0 truncate">{user.full_name || 'Не вказано'}</div>
+                <div className="min-w-0 truncate">{isValidPhoneNumber(user.phone_number) ? user.phone_number : 'Не вказано'}</div>
+                <UserRole user={user} userRoles={userRoles[user.id]} onRoleChange={changeUserRole} />
+                <UserTitle user={user} onTitleChange={changeUserTitle} />
+                <ShareholderToggle user={user} onToggleShareholder={toggleShareholderStatus} />
+                <SpecialistToggle 
+                  user={{ ...user, is_specialist: isSpecialist(user.id) }} 
+                  onToggleSpecialist={toggleSpecialistStatus} 
+                />
+                <div className="text-xs text-muted-foreground flex items-center gap-1 min-w-0" title={user.last_seen ? new Date(user.last_seen).toLocaleString('uk-UA') : 'Ніколи'}>
+                  <Clock className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{formatLastSeen(user.last_seen)}</span>
+                </div>
+                <UserActions 
+                  user={user} 
+                  onDeleteUser={openDeleteDialog}
+                  onToggleBlock={toggleBlockUser}
+                />
               </div>
-              <div>{user.full_name || 'Не вказано'}</div>
-              <div>{isValidPhoneNumber(user.phone_number) ? user.phone_number : 'Не вказано'}</div>
-              <UserRole user={user} userRoles={userRoles[user.id]} onRoleChange={changeUserRole} />
-              <UserTitle user={user} onTitleChange={changeUserTitle} />
-              <ShareholderToggle user={user} onToggleShareholder={toggleShareholderStatus} />
-              <SpecialistToggle 
-                user={{ ...user, is_specialist: isSpecialist(user.id) }} 
-                onToggleSpecialist={toggleSpecialistStatus} 
-              />
-              <div className="text-xs text-muted-foreground flex items-center gap-1" title={user.last_seen ? new Date(user.last_seen).toLocaleString('uk-UA') : 'Ніколи'}>
-                <Clock className="h-3 w-3 shrink-0" />
-                <span>{formatLastSeen(user.last_seen)}</span>
-              </div>
-              <UserActions 
-                user={user} 
-                onDeleteUser={openDeleteDialog}
-                onToggleBlock={toggleBlockUser}
-              />
-            </div>
-          ))}
+            ))}
 
-          {filteredUsers.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              Користувачів не знайдено
-            </div>
-          )}
+            {filteredUsers.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                Користувачів не знайдено
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Mobile Cards - shown only on mobile */}
