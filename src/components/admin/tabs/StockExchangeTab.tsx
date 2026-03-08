@@ -519,7 +519,7 @@ export function StockExchangeTab() {
                     <p>{selectedTransaction.quantity}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium">Орієнт. вартість за частку</h3>
+                    <h3 className="text-sm font-medium">Орієнт. вартість за акцію</h3>
                     <p>{selectedTransaction.price_per_share.toFixed(2)} USD</p>
                   </div>
                   <div>
