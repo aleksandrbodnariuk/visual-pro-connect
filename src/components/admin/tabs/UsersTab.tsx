@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/components/admin/users/UserRole";
-import { UserTitle } from "@/components/admin/users/UserTitle";
+
 import { ShareholderToggle } from "@/components/admin/users/ShareholderToggle";
 import { SpecialistToggle } from "@/components/admin/users/SpecialistToggle";
 import { UserActions } from "@/components/admin/users/UserActions";
