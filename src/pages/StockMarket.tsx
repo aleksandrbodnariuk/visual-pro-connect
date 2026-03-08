@@ -692,7 +692,7 @@ export default function StockMarket() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Деталі заявки</DialogTitle>
-            <DialogDescription>Інформація про заявку на передачу частки</DialogDescription>
+            <DialogDescription>Інформація про заявку на передачу акцій</DialogDescription>
           </DialogHeader>
           {selectedTransaction && (
             <div className="space-y-4">
