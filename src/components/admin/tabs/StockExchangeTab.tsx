@@ -366,7 +366,7 @@ export function StockExchangeTab() {
       <Card>
         <CardHeader>
           <CardTitle>Активні пропозиції</CardTitle>
-          <CardDescription>Пропозиції на передачу часток між співвласниками</CardDescription>
+          <CardDescription>Пропозиції на передачу акцій між акціонерами</CardDescription>
         </CardHeader>
         <CardContent>
           {loadingData ? (
