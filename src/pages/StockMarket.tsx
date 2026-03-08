@@ -498,7 +498,7 @@ export default function StockMarket() {
                         <thead>
                           <tr className="border-b">
                             <th className="text-left p-2">Дата</th>
-                            <th className="text-left p-2">Кількість часток</th>
+                            <th className="text-left p-2">Кількість акцій</th>
                             <th className="text-left p-2">Орієнт. вартість за частку</th>
                             <th className="text-left p-2">Орієнт. загальна вартість</th>
                             <th className="text-left p-2">Статус</th>
