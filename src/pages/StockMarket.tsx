@@ -525,9 +525,9 @@ export default function StockMarket() {
                     <div className="text-center py-8">
                       <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
                       <h3 className="text-lg font-medium mb-2">У вас немає пропозицій</h3>
-                      <p className="text-muted-foreground mb-3">Ви можете опублікувати намір передати частку</p>
+                      <p className="text-muted-foreground mb-3">Ви можете опублікувати намір передати акції</p>
                       <Button onClick={openSellSharesDialog}>
-                        <TrendingUp className="h-4 w-4 mr-2" /> Передати частку
+                        <TrendingUp className="h-4 w-4 mr-2" /> Передати акції
                       </Button>
                     </div>
                   )}
