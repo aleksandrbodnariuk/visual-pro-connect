@@ -608,9 +608,9 @@ export default function StockMarket() {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b">
-                          <th className="text-left p-2">Співвласник</th>
-                          <th className="text-left p-2">Кількість часток</th>
-                          <th className="text-left p-2">Частка</th>
+                          <th className="text-left p-2">Акціонер</th>
+                          <th className="text-left p-2">Кількість акцій</th>
+                          <th className="text-left p-2">Відсоток</th>
                           <th className="text-left p-2">Титул</th>
                         </tr>
                       </thead>
