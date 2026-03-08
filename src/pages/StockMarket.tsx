@@ -376,7 +376,7 @@ export default function StockMarket() {
               <p className="text-muted-foreground">Перегляд та управління вашими акціями в компанії</p>
             </div>
             <Button onClick={openSellSharesDialog}>
-              <TrendingUp className="h-4 w-4 mr-2" /> Передати частку
+              <TrendingUp className="h-4 w-4 mr-2" /> Передати акції
             </Button>
           </div>
 
