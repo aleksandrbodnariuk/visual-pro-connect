@@ -161,7 +161,7 @@ export function StockExchangeTab() {
   const updateStockPriceHandler = async () => {
     const price = parseFloat(stockPrice);
     if (!stockPrice || isNaN(price) || price <= 0) {
-      toast.error("Введіть коректну орієнтовну вартість частки");
+      toast.error("Введіть коректну орієнтовну вартість акції");
       return;
     }
     const success = await updateSharePrice(price);
