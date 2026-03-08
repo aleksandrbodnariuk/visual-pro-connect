@@ -177,7 +177,7 @@ export function StockExchangeTab() {
     }
     const count = parseInt(selectedSharesCount);
     if (!selectedSharesCount || isNaN(count) || count <= 0) {
-      toast.error("Введіть коректну кількість часток");
+      toast.error("Введіть коректну кількість акцій");
       return;
     }
 
