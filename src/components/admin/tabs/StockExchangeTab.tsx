@@ -187,7 +187,7 @@ export function StockExchangeTab() {
       return;
     }
     if (count > (seller.shares || 0)) {
-      toast.error(`У співвласника лише ${seller.shares || 0} часток`);
+      toast.error(`У акціонера лише ${seller.shares || 0} акцій`);
       return;
     }
 
