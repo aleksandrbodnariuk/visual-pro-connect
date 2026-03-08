@@ -478,7 +478,7 @@ export default function StockMarket() {
                     <div className="text-center py-8">
                       <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
                       <h3 className="text-lg font-medium mb-2">Немає активних пропозицій</h3>
-                      <p className="text-muted-foreground">Наразі ніхто не пропонує передачу часток</p>
+                      <p className="text-muted-foreground">Наразі ніхто не пропонує передачу акцій</p>
                     </div>
                   )}
                 </CardContent>
