@@ -633,10 +633,6 @@ export function UsersTab() {
                     <span className="text-muted-foreground">Роль:</span>
                     <UserRole user={user} userRoles={userRoles[user.id]} onRoleChange={changeUserRole} />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">Титул:</span>
-                    <UserTitle user={user} onTitleChange={changeUserTitle} />
-                  </div>
                 </div>
                 
                 <div className="flex flex-wrap gap-4">
