@@ -8,7 +8,7 @@ import { StockExchangeTab } from "./tabs/StockExchangeTab";
 import { PostsTab } from "./tabs/PostsTab";
 import { SettingsTab } from "./tabs/SettingsTab";
 import { CategoriesTab } from "./tabs/CategoriesTab";
-import { PortfolioManagementTab } from "./tabs/PortfolioManagementTab";
+
 import { AnalyticsTab } from "./tabs/AnalyticsTab";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
