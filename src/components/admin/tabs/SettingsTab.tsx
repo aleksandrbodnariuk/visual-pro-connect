@@ -59,7 +59,7 @@ export function SettingsTab() {
         allowRegistration: settings.allowRegistration,
         enableNotifications: settings.enableNotifications,
         maintenanceMode: settings.maintenanceMode,
-        stockPrice: localStorage.getItem("stockPrice") || "1000"
+        stockPrice: "managed in company_settings table"
       }
     };
     
