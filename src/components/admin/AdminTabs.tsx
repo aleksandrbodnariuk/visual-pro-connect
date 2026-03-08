@@ -51,6 +51,10 @@ export function AdminTabs() {
         <ShareholdersTab />
       </TabsContent>
       
+      <TabsContent value="specialists">
+        <SpecialistsTab />
+      </TabsContent>
+      
       <TabsContent value="orders">
         <AdminOrdersTab />
       </TabsContent>
