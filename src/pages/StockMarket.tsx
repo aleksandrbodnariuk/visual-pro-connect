@@ -650,8 +650,8 @@ export default function StockMarket() {
       <Dialog open={openBuyDialog} onOpenChange={setOpenBuyDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Заявка на отримання частки</DialogTitle>
-            <DialogDescription>Подайте заявку на отримання частки. Передача відбудеться після офлайн-домовленості та підтвердження адміністратором.</DialogDescription>
+            <DialogTitle>Заявка на отримання акцій</DialogTitle>
+            <DialogDescription>Подайте заявку на отримання акцій. Передача відбудеться після офлайн-домовленості та підтвердження адміністратором.</DialogDescription>
           </DialogHeader>
           {selectedOffer && (
             <div className="space-y-4 py-4">
