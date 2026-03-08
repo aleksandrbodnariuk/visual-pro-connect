@@ -109,6 +109,9 @@ export function ShareholdersTab() {
       const updatedShareholders = calculatePercentages(shareholders, totalShares);
       setShareholders(updatedShareholders);
       toast.success(`Загальну кількість акцій встановлено: ${totalShares}`);
+    } else {
+      // Revert to DB value
+      setTotalShares(dbTotalShares);
     }
   };
 
