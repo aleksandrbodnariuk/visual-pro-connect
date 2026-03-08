@@ -394,7 +394,7 @@ export default function StockMarket() {
             <Card>
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Ваші частки</p>
+                  <p className="text-sm font-medium text-muted-foreground">Ваші акції</p>
                   <h3 className="text-2xl font-bold mt-1">{myShares}</h3>
                 </div>
                 <div className="p-3 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
