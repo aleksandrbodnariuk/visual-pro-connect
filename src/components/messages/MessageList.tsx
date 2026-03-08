@@ -17,6 +17,7 @@ interface Message {
   editedAt?: string;
   attachmentUrl?: string;
   attachmentType?: string;
+  read?: boolean;
 }
 
 interface ReactionData {
@@ -30,6 +31,7 @@ interface MessageListProps {
   emptyStateMessage?: ReactNode;
   onEditMessage?: (messageId: string, newText: string) => void;
   onDeleteMessage?: (messageId: string) => void;
+  recipientAvatarUrl?: string;
 }
 
 export function MessageList({ 
