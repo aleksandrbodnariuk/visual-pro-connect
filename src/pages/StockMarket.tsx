@@ -600,8 +600,8 @@ export default function StockMarket() {
             <TabsContent value="shareholders">
               <Card>
                 <CardHeader>
-                  <CardTitle>Список співвласників</CardTitle>
-                  <CardDescription>Перегляд інформації про всіх співвласників компанії</CardDescription>
+                  <CardTitle>Список акціонерів</CardTitle>
+                  <CardDescription>Перегляд інформації про всіх акціонерів компанії</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
