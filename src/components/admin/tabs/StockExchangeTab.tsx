@@ -208,7 +208,7 @@ export function StockExchangeTab() {
 
     setSelectedShareholderId("");
     setSelectedSharesCount("1");
-    toast.success("Пропозицію на передачу частки створено");
+    toast.success("Пропозицію на передачу акцій створено");
     await loadData();
   };
 
