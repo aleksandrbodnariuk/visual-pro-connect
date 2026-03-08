@@ -232,7 +232,7 @@ export default function StockMarket() {
 
     if (txError) {
       console.error("Error creating transaction:", txError);
-      toast.error("Не вдалося створити заявку на отримання частки");
+      toast.error("Не вдалося створити заявку на отримання акцій");
       return;
     }
 
