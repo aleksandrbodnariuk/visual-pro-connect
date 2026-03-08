@@ -741,8 +741,8 @@ export default function StockMarket() {
       <Dialog open={openSellDialog} onOpenChange={setOpenSellDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Пропозиція передачі частки</DialogTitle>
-            <DialogDescription>Опублікуйте намір передати частку. Фактична передача відбудеться після офлайн-домовленості та підтвердження адміністратором.</DialogDescription>
+            <DialogTitle>Пропозиція передачі акцій</DialogTitle>
+            <DialogDescription>Опублікуйте намір передати акції. Фактична передача відбудеться після офлайн-домовленості та підтвердження адміністратором.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
