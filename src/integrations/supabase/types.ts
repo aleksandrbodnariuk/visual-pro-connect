@@ -273,30 +273,43 @@ export type Database = {
       }
       market: {
         Row: {
+          buyer_id: string | null
           created_at: string | null
           id: string
           price_per_share: number
           quantity: number
           seller_id: string | null
           status: string | null
+          updated_at: string | null
         }
         Insert: {
+          buyer_id?: string | null
           created_at?: string | null
           id?: string
           price_per_share: number
           quantity: number
           seller_id?: string | null
           status?: string | null
+          updated_at?: string | null
         }
         Update: {
+          buyer_id?: string | null
           created_at?: string | null
           id?: string
           price_per_share?: number
           quantity?: number
           seller_id?: string | null
           status?: string | null
+          updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "market_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "market_seller_id_fkey"
             columns: ["seller_id"]
@@ -752,30 +765,39 @@ export type Database = {
           buyer_id: string | null
           created_at: string | null
           id: string
+          price_per_share: number | null
           quantity: number
           seller_id: string | null
           share_id: string | null
+          status: string
           total_price: number
+          updated_at: string | null
         }
         Insert: {
           approved_by_admin?: boolean | null
           buyer_id?: string | null
           created_at?: string | null
           id?: string
+          price_per_share?: number | null
           quantity: number
           seller_id?: string | null
           share_id?: string | null
+          status?: string
           total_price: number
+          updated_at?: string | null
         }
         Update: {
           approved_by_admin?: boolean | null
           buyer_id?: string | null
           created_at?: string | null
           id?: string
+          price_per_share?: number | null
           quantity?: number
           seller_id?: string | null
           share_id?: string | null
+          status?: string
           total_price?: number
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -958,6 +980,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_share_transaction: {
+        Args: { _transaction_id: string }
+        Returns: undefined
+      }
       can_access_user_public_data: {
         Args: { target_user_id: string }
         Returns: boolean
@@ -1024,6 +1050,7 @@ export type Database = {
           website: string
         }[]
       }
+      get_issued_shares_count: { Args: never; Returns: number }
       get_minimal_public_profiles: {
         Args: never
         Returns: {
@@ -1192,6 +1219,10 @@ export type Database = {
       }
       is_user_admin: { Args: { _user_id: string }; Returns: boolean }
       record_visit: { Args: never; Returns: undefined }
+      reject_share_transaction: {
+        Args: { _transaction_id: string }
+        Returns: undefined
+      }
       search_users_public: {
         Args: { search_term: string }
         Returns: {
