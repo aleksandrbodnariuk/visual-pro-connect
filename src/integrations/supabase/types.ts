@@ -276,6 +276,7 @@ export type Database = {
           buyer_id: string | null
           created_at: string | null
           id: string
+          notes: string | null
           price_per_share: number
           quantity: number
           seller_id: string | null
@@ -286,6 +287,7 @@ export type Database = {
           buyer_id?: string | null
           created_at?: string | null
           id?: string
+          notes?: string | null
           price_per_share: number
           quantity: number
           seller_id?: string | null
@@ -296,6 +298,7 @@ export type Database = {
           buyer_id?: string | null
           created_at?: string | null
           id?: string
+          notes?: string | null
           price_per_share?: number
           quantity?: number
           seller_id?: string | null
