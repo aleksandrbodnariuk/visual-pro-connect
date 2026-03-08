@@ -12,7 +12,6 @@ import { useAuth } from "@/context/AuthContext";
 export default function Admin() {
   const [users, setUsers] = useState<any[]>([]);
   const [shareholders, setShareholders] = useState<any[]>([]);
-  const [orders, setOrders] = useState<any[]>([]);
   const [stockPrice, setStockPrice] = useState("1000");
   
   const navigate = useNavigate();

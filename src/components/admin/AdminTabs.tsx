@@ -2,13 +2,11 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsersTab } from "./tabs/UsersTab";
 import { ShareholdersTab } from "./tabs/ShareholdersTab";
-import { OrdersTab } from "./tabs/OrdersTab";
-import { ArchivedOrdersTab } from "./tabs/ArchivedOrdersTab";
+import { AdminOrdersTab } from "./tabs/AdminOrdersTab";
 import { StockExchangeTab } from "./tabs/StockExchangeTab";
 import { PostsTab } from "./tabs/PostsTab";
 import { SettingsTab } from "./tabs/SettingsTab";
 import { CategoriesTab } from "./tabs/CategoriesTab";
-
 import { AnalyticsTab } from "./tabs/AnalyticsTab";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -18,7 +16,6 @@ export function AdminTabs() {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("users");
   
-  // Витягуємо активну вкладку з URL якщо вона є
   useEffect(() => {
     const tabFromUrl = location.pathname.split('/').pop();
     if (tabFromUrl && tabFromUrl !== "admin") {
@@ -26,10 +23,8 @@ export function AdminTabs() {
     }
   }, [location]);
   
-  // Обробник зміни вкладки
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    // Оновлюємо URL для збереження стану між перезавантаженнями
     navigate(`/admin/${value}`, { replace: true });
   };
 
@@ -38,9 +33,7 @@ export function AdminTabs() {
       <TabsList className="mb-4 flex overflow-x-auto gap-1 w-full justify-start pb-2">
         <TabsTrigger value="users">Користувачі</TabsTrigger>
         <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
-        
         <TabsTrigger value="orders">Замовлення</TabsTrigger>
-        <TabsTrigger value="archived-orders">Архів замовлень</TabsTrigger>
         <TabsTrigger value="stock-exchange">Ринок акцій</TabsTrigger>
         <TabsTrigger value="posts">Публікації</TabsTrigger>
         <TabsTrigger value="categories">Категорії</TabsTrigger>
@@ -57,11 +50,7 @@ export function AdminTabs() {
       </TabsContent>
       
       <TabsContent value="orders">
-        <OrdersTab />
-      </TabsContent>
-      
-      <TabsContent value="archived-orders">
-        <ArchivedOrdersTab />
+        <AdminOrdersTab />
       </TabsContent>
       
       <TabsContent value="stock-exchange">
