@@ -84,7 +84,12 @@ export function useCompanySettings() {
 
     if (error) {
       console.error('Error updating total shares:', error);
-      toast.error('Не вдалося оновити загальну кількість акцій');
+      const msg = error.message || '';
+      if (msg.includes('Не можна зменшити')) {
+        toast.error('Не можна зменшити загальну кількість акцій нижче вже виданих');
+      } else {
+        toast.error('Не вдалося оновити загальну кількість акцій');
+      }
       return false;
     }
 
