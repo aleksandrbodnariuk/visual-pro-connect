@@ -47,8 +47,7 @@ export function useVisitTracker() {
       }
     };
 
-    // Record visit (for stats)
-    Promise.resolve(supabase.rpc('record_visit')).catch(() => {});
+    // Visit recording removed — analytics now handled by collect-analytics Edge Function
 
     // Start heartbeat to keep last_seen fresh
     startHeartbeat();
