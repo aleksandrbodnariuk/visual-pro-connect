@@ -4,53 +4,40 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { useLanguage } from '@/context/LanguageContext';
+import { useCompanySettings } from '@/hooks/useCompanySettings';
 
 export interface SharePriceControlProps {
   className?: string;
 }
 
 export function SharePriceControl({ className }: SharePriceControlProps) {
-  const [currentPrice, setCurrentPrice] = useState<string>('');
+  const { sharePriceUsd, loading, updateSharePrice } = useCompanySettings();
   const [newPrice, setNewPrice] = useState<string>('');
-  const { language } = useLanguage();
   
   useEffect(() => {
-    // Завантажуємо поточну ціну з localStorage
-    const price = localStorage.getItem('sharePrice') || '1000';
-    setCurrentPrice(price);
-    setNewPrice(price);
-  }, []);
+    if (!loading) {
+      setNewPrice(sharePriceUsd.toString());
+    }
+  }, [sharePriceUsd, loading]);
   
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (/^\d*$/.test(value)) { // Перевіряємо, що введено лише цифри
+    if (/^\d*\.?\d*$/.test(value)) {
       setNewPrice(value);
     }
   };
   
-  const saveNewPrice = () => {
-    if (!newPrice || parseInt(newPrice) <= 0) {
+  const saveNewPrice = async () => {
+    const price = parseFloat(newPrice);
+    if (!newPrice || isNaN(price) || price <= 0) {
       toast.error('Будь ласка, введіть дійсну ціну акції');
       return;
     }
     
-    // Зберігаємо нову ціну в localStorage
-    localStorage.setItem('sharePrice', newPrice);
-    setCurrentPrice(newPrice);
-    
-    // Оновлюємо ціни на всі акції
-    const shares = JSON.parse(localStorage.getItem('shares') || '[]');
-    const updatedShares = shares.map((share: any) => {
-      if (!share.soldTo) { // Якщо акція не продана
-        return { ...share, price: parseInt(newPrice) };
-      }
-      return share;
-    });
-    
-    localStorage.setItem('shares', JSON.stringify(updatedShares));
-    
-    toast.success(`Ціну акції успішно змінено на ${newPrice} грн`);
+    const success = await updateSharePrice(price);
+    if (success) {
+      toast.success(`Ціну акції успішно змінено на ${price} USD`);
+    }
   };
   
   return (
@@ -62,12 +49,12 @@ export function SharePriceControl({ className }: SharePriceControlProps) {
         <div className="space-y-4">
           <div>
             <p className="text-sm text-muted-foreground mb-2">Поточна ціна акції:</p>
-            <div className="text-xl font-bold">{currentPrice} грн</div>
+            <div className="text-xl font-bold">{sharePriceUsd} USD</div>
           </div>
           
           <div className="space-y-2">
             <label htmlFor="new-price" className="text-sm font-medium">
-              Нова ціна акції (грн)
+              Нова ціна акції (USD)
             </label>
             <div className="flex gap-2">
               <Input
@@ -76,8 +63,9 @@ export function SharePriceControl({ className }: SharePriceControlProps) {
                 value={newPrice}
                 onChange={handlePriceChange}
                 placeholder="Введіть нову ціну"
+                disabled={loading}
               />
-              <Button onClick={saveNewPrice}>Зберегти</Button>
+              <Button onClick={saveNewPrice} disabled={loading}>Зберегти</Button>
             </div>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { Crown, PiggyBank, DollarSign } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useCompanySettings } from "@/hooks/useCompanySettings";
 
 interface ShareholderSectionProps {
   user: {
@@ -18,6 +19,7 @@ interface ShareholderSectionProps {
 }
 
 export function ShareholderSection({ user }: ShareholderSectionProps) {
+  const { totalShares, sharePriceUsd, loading: settingsLoading } = useCompanySettings();
   const [shareholderData, setShareholderData] = useState({
     shares: user?.shares || 0,
     percentage: user?.percentage || 0,
@@ -27,12 +29,9 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
   
   useEffect(() => {
     const loadShareholderData = async () => {
-      if (!user?.id || !user?.isShareHolder) return;
+      if (!user?.id || !user?.isShareHolder || settingsLoading) return;
       
       try {
-        console.log("Завантажую дані акціонера з ID:", user.id);
-        
-        // First check for data in the shares table
         const { data: sharesData, error: sharesError } = await supabase
           .from('shares')
           .select('*')
@@ -43,63 +42,33 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
           console.error("Помилка при отриманні даних акцій:", sharesError);
         }
         
-        // Get the total number of shares for percentage calculation
-        const totalSharesStr = localStorage.getItem("totalShares") || "1000";
-        const totalShares = parseInt(totalSharesStr) || 1000;
-        
         let shares = user.shares || 0;
         let percentage = user.percentage || 0;
         
-        // If we have data in Supabase, use it
         if (sharesData) {
-          console.log("Знайдено дані акцій в Supabase:", sharesData);
           shares = sharesData.quantity;
           percentage = totalShares > 0 ? (shares / totalShares) * 100 : 0;
-        } 
-        // If no data in Supabase but we have data in user, create a record
-        else if (user.shares && user.shares > 0) {
-          console.log("Створюємо запис акцій для користувача з існуючих даних");
+        } else if (user.shares && user.shares > 0) {
           const { error: insertError } = await supabase
             .from('shares')
-            .insert({
-              user_id: user.id,
-              quantity: user.shares
-            });
-            
+            .insert({ user_id: user.id, quantity: user.shares });
           if (insertError) {
             console.error("Помилка при створенні запису акцій:", insertError);
           }
-        } 
-        // If no data anywhere but user is a shareholder, create default shares
-        else if (user.isShareHolder) {
-          console.log("Створюємо запис акцій за замовчуванням (10 акцій)");
+        } else if (user.isShareHolder) {
           shares = 10;
           percentage = totalShares > 0 ? (shares / totalShares) * 100 : 0;
           
           const { error: insertError } = await supabase
             .from('shares')
-            .insert({
-              user_id: user.id,
-              quantity: shares
-            });
-            
+            .insert({ user_id: user.id, quantity: shares });
           if (insertError) {
             console.error("Помилка при створенні запису акцій:", insertError);
-          } else {
-            // Update local user data
-            const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
-            if (currentUser.id === user.id) {
-              currentUser.shares = shares;
-              currentUser.percentage = percentage;
-              localStorage.setItem("currentUser", JSON.stringify(currentUser));
-            }
           }
         }
         
-        // Determine title based on percentage
         const title = determineShareholderTitle(percentage);
         
-        // Update component state
         setShareholderData({
           shares,
           percentage,
@@ -113,9 +82,8 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
     };
     
     loadShareholderData();
-  }, [user]);
+  }, [user, totalShares, settingsLoading]);
 
-  // Determine shareholder title based on percentage
   const determineShareholderTitle = (percentage: number): string => {
     if (percentage === 100) return "Імператор";
     if (percentage >= 76) return "Герцог";
@@ -125,13 +93,10 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
     if (percentage >= 11) return "Барон";
     if (percentage >= 6) return "Магнат";
     if (percentage >= 1) return "Акціонер";
-    
     return "Акціонер";
   };
 
-  // Determine badge variant based on title
   const getBadgeVariant = () => {
-    // Use only valid variants for Badge
     switch(shareholderData.title) {
       case "Імператор": return "destructive" as const;
       case "Герцог": return "secondary" as const;
@@ -144,7 +109,6 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
     }
   };
 
-  // If user is not a shareholder, don't display anything
   if (!user?.isShareHolder) {
     return null;
   }
@@ -195,7 +159,7 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Прибуток</p>
-                  <h3 className="text-2xl font-bold mt-1">{shareholderData.profit.toFixed(2)} грн</h3>
+                  <h3 className="text-2xl font-bold mt-1">{shareholderData.profit.toFixed(2)} USD</h3>
                 </div>
                 <div className="p-3 rounded-full bg-green-100 text-green-700">
                   <DollarSign className="h-6 w-6" />
@@ -209,7 +173,7 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
           <h3 className="font-semibold mb-2">Інформація про ринок акцій</h3>
           <p className="text-sm text-muted-foreground mb-2">
             Як акціонер компанії, ви маєте доступ до ринку акцій, де можете купувати та продавати акції.
-            Поточна рекомендована ціна акції: {localStorage.getItem("stockPrice") || "1000"} грн.
+            Поточна ціна акції: {sharePriceUsd} USD.
           </p>
           <p className="text-sm text-muted-foreground">
             Прибуток з кожного замовлення розподіляється між акціонерами відповідно до відсотка акцій.

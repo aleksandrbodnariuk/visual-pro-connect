@@ -8,62 +8,41 @@ import { PenLine, Save } from "lucide-react";
 import { toast } from "sonner";
 import { SHAREHOLDER_TITLES } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
-
-const TITLE_PERCENTAGES = [
-  { min: 0, max: 5, title: "Акціонер" },
-  { min: 6, max: 10, title: "Магнат" },
-  { min: 11, max: 20, title: "Барон" },
-  { min: 21, max: 35, title: "Граф" },
-  { min: 36, max: 50, title: "Маркіз" },
-  { min: 51, max: 75, title: "Лорд" },
-  { min: 76, max: 99, title: "Герцог" },
-  { min: 100, max: 100, title: "Імператор" }
-];
+import { useCompanySettings } from "@/hooks/useCompanySettings";
 
 export function ShareholdersTab() {
-  const [totalShares, setTotalShares] = useState<number>(() => {
-    return parseInt(localStorage.getItem("totalShares") || "1000");
-  });
-  
+  const { totalShares: dbTotalShares, loading: settingsLoading, updateTotalShares } = useCompanySettings();
+  const [totalShares, setTotalShares] = useState<number>(1000);
   const [shareholders, setShareholders] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Sync local state with DB value
+  useEffect(() => {
+    if (!settingsLoading) {
+      setTotalShares(dbTotalShares);
+    }
+  }, [dbTotalShares, settingsLoading]);
 
   useEffect(() => {
     const fetchShareholders = async () => {
       setLoading(true);
       
       try {
-        // Отримуємо користувачів з Supabase через безпечну RPC функцію
         const { data: allUsers, error: usersError } = await supabase
           .rpc('get_users_for_admin');
         
         if (usersError) {
           console.error("Error fetching shareholders:", usersError);
-          // Fallback на локальне сховище
-          const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-          const localShareholders = storedUsers.filter((user: any) => 
-            user.isShareHolder || user.is_shareholder || user.role === "shareholder"
-          );
-          
-          const formattedShareholders = localShareholders.map((sh: any) => ({
-            ...sh,
-            shares: sh.shares || 10,
-            title: sh.title || "Магнат",
-            profit: sh.profit || 0
-          }));
-          
-          setShareholders(formattedShareholders);
+          setShareholders([]);
           setLoading(false);
           return;
         }
         
         const supabaseShareholders = allUsers?.filter(user => user.is_shareholder === true) || [];
           
-        // Отримуємо дані про акції кожного акціонера
         const shareholdersWithShares = [];
         
         for (const user of (supabaseShareholders || [])) {
-          // Шукаємо відповідний запис в таблиці shares
           const { data: sharesData, error: sharesError } = await supabase
             .from('shares')
             .select('*')
@@ -74,22 +53,17 @@ export function ShareholdersTab() {
             console.error(`Error fetching shares for ${user.id}:`, sharesError);
           }
           
-          // Парсимо ім'я та прізвище з full_name
           const nameParts = user.full_name ? user.full_name.split(' ') : ['', ''];
           
-          // Визначаємо кількість акцій
           const shares = sharesData && sharesData.length > 0 
             ? sharesData[0].quantity 
             : 10;
             
-          // Визначаємо відсоток
           const percentage = totalShares > 0 ? ((shares / totalShares) * 100) : 0;
           const percentageFormatted = percentage.toFixed(2);
           
-          // Використовуємо титул з бази даних, якщо він є
           const title = user.title || "Акціонер";
           
-          // Додаємо користувача до списку
           shareholdersWithShares.push({
             id: user.id,
             firstName: nameParts[0] || '',
@@ -99,7 +73,7 @@ export function ShareholdersTab() {
             shares,
             percentage: percentageFormatted,
             title: title,
-            profit: 0, // Прибуток поки 0
+            profit: 0,
             isShareHolder: true
           });
         }
@@ -116,22 +90,12 @@ export function ShareholdersTab() {
     fetchShareholders();
   }, [totalShares]);
 
-  // Recalculate percentages only (не змінюємо титули автоматично)
-  const recalculatePercentagesOnly = () => {
-    if (totalShares <= 0 || shareholders.length === 0) return;
-    
-    const updatedShareholders = shareholders.map(sh => {
-      const percentage = ((sh.shares / totalShares) * 100);
+  const calculatePercentages = (shareholders: any[], total: number) => {
+    return shareholders.map(sh => {
+      const percentage = total > 0 ? ((sh.shares / total) * 100) : 0;
       const percentageFormatted = percentage.toFixed(2);
-      
-      // Титул НЕ змінюємо автоматично - залишаємо з бази даних
-      return { 
-        ...sh, 
-        percentage: percentageFormatted
-      };
+      return { ...sh, percentage: percentageFormatted };
     });
-    
-    setShareholders(updatedShareholders);
   };
   
   const saveTotalShares = async () => {
@@ -140,31 +104,16 @@ export function ShareholdersTab() {
       return;
     }
     
-    localStorage.setItem("totalShares", totalShares.toString());
-    
-    // Recalculate all percentages
-    const updatedShareholders = calculatePercentages(shareholders, totalShares);
-    setShareholders(updatedShareholders);
-    
-    toast.success(`Загальну кількість акцій встановлено: ${totalShares}`);
-  };
-
-  const calculatePercentages = (shareholders: any[], total: number) => {
-    return shareholders.map(sh => {
-      const percentage = total > 0 ? ((sh.shares / total) * 100) : 0;
-      const percentageFormatted = percentage.toFixed(2);
-      
-      // Титул НЕ змінюємо автоматично - залишаємо з бази даних
-      return { 
-        ...sh, 
-        percentage: percentageFormatted
-      };
-    });
+    const success = await updateTotalShares(totalShares);
+    if (success) {
+      const updatedShareholders = calculatePercentages(shareholders, totalShares);
+      setShareholders(updatedShareholders);
+      toast.success(`Загальну кількість акцій встановлено: ${totalShares}`);
+    }
   };
 
   const changeShareholderTitle = async (userId: string, newTitle: string) => {
     try {
-      // Оновлюємо локальний стан
       const updatedShareholders = shareholders.map(sh => {
         if (sh.id === userId) {
           return { ...sh, title: newTitle };
@@ -174,18 +123,6 @@ export function ShareholdersTab() {
       
       setShareholders(updatedShareholders);
       
-      // Оновлюємо дані в локальному сховищі
-      const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-      const updatedUsers = storedUsers.map((user: any) => {
-        if (user.id === userId) {
-          return { ...user, title: newTitle };
-        }
-        return user;
-      });
-      
-      localStorage.setItem("users", JSON.stringify(updatedUsers));
-      
-      // Оновлюємо колонку title в таблиці users
       const { error } = await supabase
         .from('users')
         .update({ title: newTitle })
@@ -211,7 +148,6 @@ export function ShareholdersTab() {
     }
 
     try {
-      // Оновлюємо локальний стан
       const updatedShareholders = shareholders.map(sh => {
         if (sh.id === userId) {
           return { ...sh, shares: sharesCount };
@@ -221,19 +157,6 @@ export function ShareholdersTab() {
       
       setShareholders(updatedShareholders);
       
-      // Оновлюємо дані в локальному сховищі
-      const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-      const updatedUsers = storedUsers.map((user: any) => {
-        if (user.id === userId) {
-          return { ...user, shares: sharesCount };
-        }
-        return user;
-      });
-      
-      localStorage.setItem("users", JSON.stringify(updatedUsers));
-      
-      // Пробуємо оновити запис в таблиці shares в Supabase
-      // Спочатку перевіряємо, чи існує запис
       const { data: existingShares, error: checkError } = await supabase
         .from('shares')
         .select('id')
@@ -243,7 +166,6 @@ export function ShareholdersTab() {
         console.error(`Error checking shares for ${userId}:`, checkError);
       }
       
-      // Якщо запис існує, оновлюємо його
       if (existingShares && existingShares.length > 0) {
         const { error: updateError } = await supabase
           .from('shares')
@@ -253,9 +175,7 @@ export function ShareholdersTab() {
         if (updateError) {
           console.error(`Error updating shares for ${userId}:`, updateError);
         }
-      } 
-      // Якщо запису немає, створюємо новий
-      else {
+      } else {
         const { error: insertError } = await supabase
           .from('shares')
           .insert({ user_id: userId, quantity: sharesCount });
@@ -289,9 +209,10 @@ export function ShareholdersTab() {
                 placeholder="1000" 
                 value={totalShares}
                 onChange={(e) => setTotalShares(parseInt(e.target.value) || 0)}
+                disabled={settingsLoading}
               />
             </div>
-            <Button onClick={saveTotalShares}>
+            <Button onClick={saveTotalShares} disabled={settingsLoading}>
               <Save className="mr-2 h-4 w-4" /> Зберегти
             </Button>
           </div>
@@ -310,7 +231,7 @@ export function ShareholdersTab() {
             </div>
           ) : (
             <>
-              {/* Desktop Table - hidden on mobile */}
+              {/* Desktop Table */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -394,7 +315,7 @@ export function ShareholdersTab() {
                 </table>
               </div>
 
-              {/* Mobile Cards - shown only on mobile */}
+              {/* Mobile Cards */}
               <div className="md:hidden space-y-4">
                 {shareholders.length > 0 ? (
                   shareholders.map((shareholder) => (
@@ -422,11 +343,11 @@ export function ShareholdersTab() {
                         </div>
                         
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Акції:</span>
+                          <span className="text-sm text-muted-foreground">Кількість акцій:</span>
                           <div className="flex gap-1 items-center">
                             <Input
                               type="number"
-                              className="w-16 h-8"
+                              className="w-20"
                               min="1"
                               value={shareholder.shares || 10}
                               onChange={(e) => updateSharesCount(shareholder.id, parseInt(e.target.value))}
@@ -434,7 +355,6 @@ export function ShareholdersTab() {
                             <Button 
                               variant="outline" 
                               size="sm" 
-                              className="h-8 w-8 p-0"
                               onClick={() => updateSharesCount(shareholder.id, (shareholder.shares || 10) + 1)}
                             >
                               +
@@ -442,7 +362,6 @@ export function ShareholdersTab() {
                             <Button 
                               variant="outline" 
                               size="sm" 
-                              className="h-8 w-8 p-0"
                               onClick={() => updateSharesCount(
                                 shareholder.id, 
                                 Math.max(1, (shareholder.shares || 10) - 1)
@@ -454,14 +373,14 @@ export function ShareholdersTab() {
                           </div>
                         </div>
                         
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Частка:</span>
-                          <span>{shareholder.percentage}%</span>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Частка:</span>
+                          <span className="text-sm font-medium">{shareholder.percentage}%</span>
                         </div>
                         
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Прибуток:</span>
-                          <span>{shareholder.profit?.toFixed(2) || "0.00"} грн</span>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Прибуток:</span>
+                          <span className="text-sm font-medium">{shareholder.profit?.toFixed(2) || "0.00"} грн</span>
                         </div>
                         
                         <Button variant="outline" size="sm" className="w-full">
