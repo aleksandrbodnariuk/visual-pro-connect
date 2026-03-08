@@ -431,7 +431,7 @@ export default function StockMarket() {
               <TabsTrigger value="market">Пропозиції</TabsTrigger>
               <TabsTrigger value="my-offers">Мої пропозиції</TabsTrigger>
               <TabsTrigger value="transactions">Мої заявки</TabsTrigger>
-              <TabsTrigger value="shareholders">Співвласники</TabsTrigger>
+              <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
             </TabsList>
             
             <TabsContent value="market">
