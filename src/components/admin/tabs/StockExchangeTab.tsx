@@ -172,7 +172,7 @@ export function StockExchangeTab() {
 
   const handleCreateProposal = async () => {
     if (!selectedShareholderId) {
-      toast.error("Виберіть співвласника");
+      toast.error("Виберіть акціонера");
       return;
     }
     const count = parseInt(selectedSharesCount);
