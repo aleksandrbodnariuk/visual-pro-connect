@@ -61,8 +61,7 @@ export default function Admin() {
     
     loadUsersData();
     
-    const storedOrders = JSON.parse(localStorage.getItem("orders") || "[]");
-    setOrders(storedOrders);
+    
     
     const storedStockPrice = localStorage.getItem("stockPrice");
     if (storedStockPrice) {
