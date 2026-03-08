@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/components/admin/users/UserRole";
-import { UserTitle } from "@/components/admin/users/UserTitle";
+
 import { ShareholderToggle } from "@/components/admin/users/ShareholderToggle";
 import { SpecialistToggle } from "@/components/admin/users/SpecialistToggle";
 import { UserActions } from "@/components/admin/users/UserActions";
@@ -300,36 +300,6 @@ export function UsersTab() {
     }
   };
 
-  const changeUserTitle = async (userId: string, newTitle: string) => {
-    try {
-      // Спочатку зберігаємо в Supabase
-      const { error } = await supabase
-        .from('users')
-        .update({ title: newTitle })
-        .eq('id', userId);
-
-      if (error) {
-        console.error("Помилка оновлення титулу в Supabase:", error);
-        toast.error("Не вдалося зберегти титул");
-        return; // Не оновлюємо локальний стан при помилці
-      }
-
-      // Оновлюємо локальний стан тільки після успішного збереження
-      const updatedUsers = users.map(user => 
-        user.id === userId 
-          ? { ...user, title: newTitle }
-          : user
-      );
-      
-      setUsers(updatedUsers);
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
-      
-      toast.success(`Титул змінено на "${newTitle}"`);
-    } catch (error) {
-      console.error("Помилка зміни титулу:", error);
-      toast.error("Помилка зміни титулу");
-    }
-  };
 
   const changeUserRole = async (userId: string, newRole: string) => {
     try {
@@ -521,13 +491,12 @@ export function UsersTab() {
         {/* Desktop Table - hidden on mobile */}
         <div className="hidden md:block overflow-x-auto">
           <div className="min-w-[1200px] space-y-4">
-            <div className="grid grid-cols-10 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
+            <div className="grid grid-cols-9 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
               <div>ID</div>
               <div>Email</div>
               <div>Ім'я</div>
               <div>Телефон</div>
               <div>Роль</div>
-              <div>Титул</div>
               <div>Акціонер</div>
               <div>Фахівець</div>
               <div>Останній візит</div>
@@ -535,7 +504,7 @@ export function UsersTab() {
             </div>
 
             {filteredUsers.map((user) => (
-              <div key={user.id} className="grid grid-cols-10 gap-4 items-center py-2 border-b">
+              <div key={user.id} className="grid grid-cols-9 gap-4 items-center py-2 border-b">
                 <div className="text-xs font-mono flex items-center gap-1 min-w-0">
                   <span className="truncate max-w-[120px]" title={user.id}>
                     {user.id}
@@ -573,7 +542,6 @@ export function UsersTab() {
                 <div className="min-w-0 truncate">{user.full_name || 'Не вказано'}</div>
                 <div className="min-w-0 truncate">{isValidPhoneNumber(user.phone_number) ? user.phone_number : 'Не вказано'}</div>
                 <UserRole user={user} userRoles={userRoles[user.id]} onRoleChange={changeUserRole} />
-                <UserTitle user={user} onTitleChange={changeUserTitle} />
                 <ShareholderToggle user={user} onToggleShareholder={toggleShareholderStatus} />
                 <SpecialistToggle 
                   user={{ ...user, is_specialist: isSpecialist(user.id) }} 
@@ -634,10 +602,6 @@ export function UsersTab() {
                   <div className="flex items-center gap-2">
                     <span className="text-muted-foreground">Роль:</span>
                     <UserRole user={user} userRoles={userRoles[user.id]} onRoleChange={changeUserRole} />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">Титул:</span>
-                    <UserTitle user={user} onTitleChange={changeUserTitle} />
                   </div>
                 </div>
                 
