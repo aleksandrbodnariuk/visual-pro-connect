@@ -38,7 +38,8 @@ export function MessageList({
   messages, 
   emptyStateMessage,
   onEditMessage,
-  onDeleteMessage 
+  onDeleteMessage,
+  recipientAvatarUrl
 }: MessageListProps) {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [reactions, setReactions] = useState<Record<string, ReactionData[]>>({});
