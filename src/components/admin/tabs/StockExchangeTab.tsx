@@ -183,7 +183,7 @@ export function StockExchangeTab() {
 
     const seller = shareholders.find(sh => sh.id === selectedShareholderId);
     if (!seller) {
-      toast.error("Співвласника не знайдено");
+      toast.error("Акціонера не знайдено");
       return;
     }
     if (count > (seller.shares || 0)) {
