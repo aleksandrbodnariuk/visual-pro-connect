@@ -151,13 +151,12 @@ export function MessageList({
             messages.map((message) => (
               <div
                 key={message.id}
-                className={`flex items-center gap-1 ${message.isSender ? "justify-end" : "justify-start"}`}
+                className={`group flex items-center gap-1 ${message.isSender ? "justify-end" : "justify-start"}`}
               >
                 {/* Actions before message (for sender's messages) */}
                 {message.isSender && (
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                       style={{ opacity: undefined }}>
-                    <div className="group/actions flex items-center gap-0.5">
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <div className="flex items-center gap-0.5">
                       {onEditMessage && onDeleteMessage && (
                         <MessageActions
                           messageId={message.id}
