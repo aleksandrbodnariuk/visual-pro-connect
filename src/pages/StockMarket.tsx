@@ -354,7 +354,7 @@ export default function StockMarket() {
     return <div className="container py-16 text-center">Перенаправлення на сторінку авторизації...</div>;
   }
   if (!currentUser.isShareHolder) {
-    return <div className="container py-16 text-center">Доступ заборонено: потрібен статус співвласника</div>;
+    return <div className="container py-16 text-center">Доступ заборонено: потрібен статус акціонера</div>;
   }
 
   const myOffers = listings.filter(item => item.seller_id === currentUser.id);
