@@ -17,6 +17,7 @@ interface Message {
   editedAt?: string;
   attachmentUrl?: string;
   attachmentType?: string;
+  read?: boolean;
 }
 
 interface ReactionData {
@@ -30,13 +31,15 @@ interface MessageListProps {
   emptyStateMessage?: ReactNode;
   onEditMessage?: (messageId: string, newText: string) => void;
   onDeleteMessage?: (messageId: string) => void;
+  recipientAvatarUrl?: string;
 }
 
 export function MessageList({ 
   messages, 
   emptyStateMessage,
   onEditMessage,
-  onDeleteMessage 
+  onDeleteMessage,
+  recipientAvatarUrl
 }: MessageListProps) {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [reactions, setReactions] = useState<Record<string, ReactionData[]>>({});
@@ -143,79 +146,99 @@ export function MessageList({
     bottomRef.current?.scrollIntoView();
   }, []);
 
+  // Find the last sender message that was read — show avatar there
+  const lastReadSenderMsgId = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].isSender && messages[i].read) return messages[i].id;
+    }
+    return null;
+  })();
+
   return (
     <>
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 min-h-0">
         <div className="space-y-4 flex flex-col justify-end" style={{ minHeight: '100%' }}>
           {messages.length > 0 ? (
             messages.map((message) => (
-              <div
-                key={message.id}
-                className={`group flex items-center gap-1 ${message.isSender ? "justify-end" : "justify-start"}`}
-              >
-                {/* Actions before message (for sender's messages) */}
-                {message.isSender && (
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                    <div className="flex items-center gap-0.5">
-                      {onEditMessage && onDeleteMessage && (
-                        <MessageActions
-                          messageId={message.id}
-                          messageText={message.text}
-                          onEdit={onEditMessage}
-                          onDelete={onDeleteMessage}
+              <div key={message.id}>
+                <div
+                  className={`group flex items-center gap-1 ${message.isSender ? "justify-end" : "justify-start"}`}
+                >
+                  {/* Actions before message (for sender's messages) */}
+                  {message.isSender && (
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <div className="flex items-center gap-0.5">
+                        {onEditMessage && onDeleteMessage && (
+                          <MessageActions
+                            messageId={message.id}
+                            messageText={message.text}
+                            onEdit={onEditMessage}
+                            onDelete={onDeleteMessage}
+                          />
+                        )}
+                        <MessageReactionPicker
+                          onSelect={(emoji) => handleReaction(message.id, emoji)}
+                          existingReaction={getOwnReaction(message.id)}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="relative max-w-[80%]">
+                    <div
+                      className={`rounded-2xl px-4 py-2 ${
+                        message.isSender
+                          ? "bg-gradient-purple text-white"
+                          : "bg-muted"
+                      }`}
+                    >
+                      {message.attachmentUrl && message.attachmentType === 'image' && (
+                        <img 
+                          src={message.attachmentUrl} 
+                          alt="Вкладення" 
+                          loading="lazy"
+                          className="max-w-[200px] rounded-lg cursor-pointer mb-2 hover:opacity-90 transition-opacity"
+                          onClick={() => setZoomedImage(message.attachmentUrl!)}
                         />
                       )}
+                      
+                      {message.text && <p className="text-sm">{message.text}</p>}
+                      
+                      <div className={`mt-1 flex items-center gap-1 text-xs ${
+                        message.isSender ? "justify-end text-white/70" : "text-muted-foreground"
+                      }`}>
+                        {message.isEdited && (
+                          <span className="italic">(редаговано)</span>
+                        )}
+                        <span>{message.timestamp}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Reactions display */}
+                    <MessageReactions
+                      reactions={reactions[message.id] || []}
+                      onToggle={(emoji) => handleReaction(message.id, emoji)}
+                    />
+                  </div>
+
+                  {/* Actions after message (for received messages) */}
+                  {!message.isSender && (
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                       <MessageReactionPicker
                         onSelect={(emoji) => handleReaction(message.id, emoji)}
                         existingReaction={getOwnReaction(message.id)}
                       />
                     </div>
-                  </div>
-                )}
-
-                <div className="relative max-w-[80%]">
-                  <div
-                    className={`rounded-2xl px-4 py-2 ${
-                      message.isSender
-                        ? "bg-gradient-purple text-white"
-                        : "bg-muted"
-                    }`}
-                  >
-                    {message.attachmentUrl && message.attachmentType === 'image' && (
-                      <img 
-                        src={message.attachmentUrl} 
-                        alt="Вкладення" 
-                        loading="lazy"
-                        className="max-w-[200px] rounded-lg cursor-pointer mb-2 hover:opacity-90 transition-opacity"
-                        onClick={() => setZoomedImage(message.attachmentUrl!)}
-                      />
-                    )}
-                    
-                    {message.text && <p className="text-sm">{message.text}</p>}
-                    
-                    <div className={`mt-1 flex items-center gap-1 text-xs ${
-                      message.isSender ? "justify-end text-white/70" : "text-muted-foreground"
-                    }`}>
-                      {message.isEdited && (
-                        <span className="italic">(редаговано)</span>
-                      )}
-                      <span>{message.timestamp}</span>
-                    </div>
-                  </div>
-                  
-                  {/* Reactions display */}
-                  <MessageReactions
-                    reactions={reactions[message.id] || []}
-                    onToggle={(emoji) => handleReaction(message.id, emoji)}
-                  />
+                  )}
                 </div>
 
-                {/* Actions after message (for received messages) */}
-                {!message.isSender && (
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                    <MessageReactionPicker
-                      onSelect={(emoji) => handleReaction(message.id, emoji)}
-                      existingReaction={getOwnReaction(message.id)}
+                {/* Read receipt avatar — shown under the last read sender message */}
+                {message.id === lastReadSenderMsgId && recipientAvatarUrl && (
+                  <div className="flex justify-end mt-0.5 pr-1">
+                    <img
+                      src={recipientAvatarUrl}
+                      alt="Прочитано"
+                      className="w-4 h-4 rounded-full object-cover"
                     />
                   </div>
                 )}

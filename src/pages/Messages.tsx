@@ -189,7 +189,8 @@ export default function Messages() {
         isEdited: msg.is_edited || false,
         editedAt: msg.edited_at ? new Date(msg.edited_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
         attachmentUrl: msg.attachment_url || undefined,
-        attachmentType: msg.attachment_type || undefined
+        attachmentType: msg.attachment_type || undefined,
+        read: msg.read ?? false
       }));
       setMessages(updatedMessages);
     }
@@ -348,6 +349,7 @@ export default function Messages() {
                     emptyStateMessage={`Початок розмови з ${activeChat.user.name}`}
                     onEditMessage={handleEditMessage}
                     onDeleteMessage={handleDeleteMessage}
+                    recipientAvatarUrl={activeChat.user.avatarUrl}
                   />
                   
                   <MessageInput onSendMessage={handleSendMessage} />
