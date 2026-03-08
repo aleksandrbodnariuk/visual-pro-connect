@@ -761,7 +761,7 @@ export default function StockMarket() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="share-price">Орієнтовна вартість за одну частку (USD):</label>
+              <label className="text-sm font-medium" htmlFor="share-price">Орієнтовна вартість за одну акцію (USD):</label>
               <Input
                 id="share-price"
                 type="number"
