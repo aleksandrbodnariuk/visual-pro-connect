@@ -151,25 +151,29 @@ export function MessageList({
             messages.map((message) => (
               <div
                 key={message.id}
-                className={`flex ${message.isSender ? "justify-end" : "justify-start"}`}
+                className={`group flex items-center gap-1 ${message.isSender ? "justify-end" : "justify-start"}`}
               >
-                <div className={`relative group max-w-[80%]`}>
-                  {/* Reaction picker - appears above message */}
-                  <div className={`absolute -top-8 z-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 ${message.isSender ? "right-0" : "left-0"}`}>
-                    <MessageReactionPicker
-                      onSelect={(emoji) => handleReaction(message.id, emoji)}
-                      existingReaction={getOwnReaction(message.id)}
-                    />
-                    {message.isSender && onEditMessage && onDeleteMessage && (
-                      <MessageActions
-                        messageId={message.id}
-                        messageText={message.text}
-                        onEdit={onEditMessage}
-                        onDelete={onDeleteMessage}
+                {/* Actions before message (for sender's messages) */}
+                {message.isSender && (
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <div className="flex items-center gap-0.5">
+                      {onEditMessage && onDeleteMessage && (
+                        <MessageActions
+                          messageId={message.id}
+                          messageText={message.text}
+                          onEdit={onEditMessage}
+                          onDelete={onDeleteMessage}
+                        />
+                      )}
+                      <MessageReactionPicker
+                        onSelect={(emoji) => handleReaction(message.id, emoji)}
+                        existingReaction={getOwnReaction(message.id)}
                       />
-                    )}
+                    </div>
                   </div>
+                )}
 
+                <div className="relative max-w-[80%]">
                   <div
                     className={`rounded-2xl px-4 py-2 ${
                       message.isSender
@@ -205,6 +209,16 @@ export function MessageList({
                     onToggle={(emoji) => handleReaction(message.id, emoji)}
                   />
                 </div>
+
+                {/* Actions after message (for received messages) */}
+                {!message.isSender && (
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <MessageReactionPicker
+                      onSelect={(emoji) => handleReaction(message.id, emoji)}
+                      existingReaction={getOwnReaction(message.id)}
+                    />
+                  </div>
+                )}
               </div>
             ))
           ) : (
