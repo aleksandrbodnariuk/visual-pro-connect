@@ -324,8 +324,8 @@ export function StockExchangeTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Створити пропозицію передачі частки</CardTitle>
-          <CardDescription>Опублікуйте намір співвласника передати частку</CardDescription>
+          <CardTitle>Створити пропозицію передачі акцій</CardTitle>
+          <CardDescription>Опублікуйте намір акціонера передати акції</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
