@@ -300,36 +300,6 @@ export function UsersTab() {
     }
   };
 
-  const changeUserTitle = async (userId: string, newTitle: string) => {
-    try {
-      // Спочатку зберігаємо в Supabase
-      const { error } = await supabase
-        .from('users')
-        .update({ title: newTitle })
-        .eq('id', userId);
-
-      if (error) {
-        console.error("Помилка оновлення титулу в Supabase:", error);
-        toast.error("Не вдалося зберегти титул");
-        return; // Не оновлюємо локальний стан при помилці
-      }
-
-      // Оновлюємо локальний стан тільки після успішного збереження
-      const updatedUsers = users.map(user => 
-        user.id === userId 
-          ? { ...user, title: newTitle }
-          : user
-      );
-      
-      setUsers(updatedUsers);
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
-      
-      toast.success(`Титул змінено на "${newTitle}"`);
-    } catch (error) {
-      console.error("Помилка зміни титулу:", error);
-      toast.error("Помилка зміни титулу");
-    }
-  };
 
   const changeUserRole = async (userId: string, newRole: string) => {
     try {
