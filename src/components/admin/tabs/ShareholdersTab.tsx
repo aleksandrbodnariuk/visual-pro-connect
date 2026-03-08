@@ -143,18 +143,21 @@ export function ShareholdersTab() {
 
   const updateSharesCount = async (userId: string, sharesCount: number) => {
     if (isNaN(sharesCount) || sharesCount < 0) {
-      toast.error("Кількість акцій повинна бути додатнім числом");
+      toast.error("Кількість акцій не може бути від'ємною");
       return;
     }
 
+    // Save previous state for rollback
+    const previousShareholders = [...shareholders];
+
     try {
+      // Optimistic update
       const updatedShareholders = shareholders.map(sh => {
         if (sh.id === userId) {
           return { ...sh, shares: sharesCount };
         }
         return sh;
       });
-      
       setShareholders(updatedShareholders);
       
       const { data: existingShares, error: checkError } = await supabase
@@ -164,30 +167,45 @@ export function ShareholdersTab() {
         
       if (checkError) {
         console.error(`Error checking shares for ${userId}:`, checkError);
+        setShareholders(previousShareholders);
+        toast.error("Помилка при перевірці акцій");
+        return;
       }
       
+      let dbError: any = null;
+      
       if (existingShares && existingShares.length > 0) {
-        const { error: updateError } = await supabase
+        const { error } = await supabase
           .from('shares')
           .update({ quantity: sharesCount })
           .eq('user_id', userId);
-          
-        if (updateError) {
-          console.error(`Error updating shares for ${userId}:`, updateError);
-        }
+        dbError = error;
       } else {
-        const { error: insertError } = await supabase
+        const { error } = await supabase
           .from('shares')
           .insert({ user_id: userId, quantity: sharesCount });
-          
-        if (insertError) {
-          console.error(`Error inserting shares for ${userId}:`, insertError);
+        dbError = error;
+      }
+      
+      if (dbError) {
+        console.error(`Error saving shares for ${userId}:`, dbError);
+        setShareholders(previousShareholders);
+        
+        const msg = dbError.message || '';
+        if (msg.includes('Неможливо видати більше акцій')) {
+          toast.error("Неможливо видати більше акцій, ніж визначено в компанії");
+        } else if (msg.includes("від'ємною")) {
+          toast.error("Кількість акцій не може бути від'ємною");
+        } else {
+          toast.error("Помилка при оновленні кількості акцій");
         }
+        return;
       }
       
       toast.success("Кількість акцій оновлено");
     } catch (error) {
       console.error("Error updating shares count:", error);
+      setShareholders(previousShareholders);
       toast.error("Помилка при оновленні кількості акцій");
     }
   };
