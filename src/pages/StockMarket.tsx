@@ -325,7 +325,7 @@ export default function StockMarket() {
     }
 
     setOpenSellDialog(false);
-    toast.success("Пропозицію на передачу частки опубліковано");
+    toast.success("Пропозицію на передачу акцій опубліковано");
     await loadMarketData();
   };
 
