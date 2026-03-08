@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,21 +10,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, CheckSquare, MessageCircle, XSquare } from "lucide-react";
 import { toast } from "sonner";
+import { useCompanySettings } from "@/hooks/useCompanySettings";
+import { supabase } from "@/integrations/supabase/client";
 
 export function StockExchangeTab() {
-  const [stockPrice, setStockPrice] = useState(() => {
-    return localStorage.getItem("stockPrice") || "1000";
-  });
+  const { sharePriceUsd, loading: settingsLoading, updateSharePrice } = useCompanySettings();
+  const [stockPrice, setStockPrice] = useState<string>("");
   
-  const [shareholders, setShareholders] = useState<any[]>(() => {
-    const storedData = localStorage.getItem("users");
-    if (!storedData) return [];
-    
-    const users = JSON.parse(storedData);
-    return users.filter((user: any) => 
-      user.isShareHolder || user.role === "shareholder"
-    );
-  });
+  const [shareholders, setShareholders] = useState<any[]>([]);
   
   const [stockExchangeItems, setStockExchangeItems] = useState<any[]>(() => {
     return JSON.parse(localStorage.getItem("stockExchange") || "[]");
@@ -40,20 +33,59 @@ export function StockExchangeTab() {
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [newMessage, setNewMessage] = useState("");
 
-  const updateStockPrice = () => {
-    if (!stockPrice || isNaN(parseFloat(stockPrice)) || parseFloat(stockPrice) <= 0) {
+  // Sync price from DB
+  useEffect(() => {
+    if (!settingsLoading) {
+      setStockPrice(sharePriceUsd.toString());
+    }
+  }, [sharePriceUsd, settingsLoading]);
+
+  // Fetch shareholders from Supabase
+  useEffect(() => {
+    const fetchShareholders = async () => {
+      const { data: allUsers, error } = await supabase.rpc('get_users_for_admin');
+      if (error) {
+        console.error("Error fetching users for stock exchange:", error);
+        return;
+      }
+      const sh = (allUsers || [])
+        .filter((u: any) => u.is_shareholder)
+        .map((u: any) => {
+          const parts = u.full_name ? u.full_name.split(' ') : ['', ''];
+          return {
+            id: u.id,
+            firstName: parts[0] || '',
+            lastName: parts.slice(1).join(' ') || '',
+            shares: 0, // will be enriched below
+          };
+        });
+      
+      // Fetch shares for each
+      for (const s of sh) {
+        const { data } = await supabase
+          .from('shares')
+          .select('quantity')
+          .eq('user_id', s.id)
+          .limit(1);
+        s.shares = data && data.length > 0 ? data[0].quantity : 10;
+      }
+      
+      setShareholders(sh);
+    };
+    fetchShareholders();
+  }, []);
+
+  const updateStockPriceHandler = async () => {
+    const price = parseFloat(stockPrice);
+    if (!stockPrice || isNaN(price) || price <= 0) {
       toast.error("Введіть коректну ціну акції");
       return;
     }
     
-    localStorage.setItem("stockPrice", stockPrice);
-    
-    // Оповіщаємо про зміну ціни
-    window.dispatchEvent(new CustomEvent('stock-price-updated', { 
-      detail: { price: stockPrice } 
-    }));
-    
-    toast.success(`Ціну акції оновлено: ${stockPrice} грн`);
+    const success = await updateSharePrice(price);
+    if (success) {
+      toast.success(`Ціну акції оновлено: ${price} USD`);
+    }
   };
 
   const handleSellShares = () => {
@@ -78,13 +110,15 @@ export function StockExchangeTab() {
       return;
     }
 
+    const price = parseFloat(stockPrice) || sharePriceUsd;
+
     const newStockExchangeItem = {
       id: Date.now().toString(),
       sellerId: seller.id,
       sellerName: `${seller.firstName} ${seller.lastName}`,
       sharesCount: parseInt(selectedSharesCount),
-      pricePerShare: parseFloat(stockPrice),
-      initialPrice: parseFloat(stockPrice),
+      pricePerShare: price,
+      initialPrice: price,
       status: "Активна",
       date: new Date().toISOString(),
       isAuction: false
@@ -109,6 +143,7 @@ export function StockExchangeTab() {
     const transaction = sharesTransactions.find(t => t.id === transactionId);
     if (!transaction) return;
 
+    // NOTE: market/transactions logic still uses localStorage — will be migrated in a later phase
     const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
     const seller = storedUsers.find((user: any) => user.id === transaction.sellerId);
     const buyer = storedUsers.find((user: any) => user.id === transaction.buyerId);
@@ -118,13 +153,7 @@ export function StockExchangeTab() {
       return;
     }
 
-    // Update seller shares
-    const updatedSeller = { 
-      ...seller, 
-      shares: (seller.shares || 0) - transaction.sharesCount 
-    };
-
-    // Update buyer shares
+    const updatedSeller = { ...seller, shares: (seller.shares || 0) - transaction.sharesCount };
     const updatedBuyer = { 
       ...buyer, 
       shares: (buyer.shares || 0) + transaction.sharesCount,
@@ -132,7 +161,6 @@ export function StockExchangeTab() {
       role: buyer.role === "admin" || buyer.role === "admin-founder" ? buyer.role : "shareholder"
     };
 
-    // Update users
     const updatedUsers = storedUsers.map((user: any) => {
       if (user.id === seller.id) return updatedSeller;
       if (user.id === buyer.id) return updatedBuyer;
@@ -140,11 +168,7 @@ export function StockExchangeTab() {
     });
 
     localStorage.setItem("users", JSON.stringify(updatedUsers));
-    setShareholders(updatedUsers.filter((user: any) => 
-      user.isShareHolder || user.role === "shareholder"
-    ));
 
-    // Update transaction status
     const updatedTransactions = sharesTransactions.map(t => {
       if (t.id === transactionId) {
         return { ...t, status: "Завершено", adminApproved: true };
@@ -154,7 +178,6 @@ export function StockExchangeTab() {
     setSharesTransactions(updatedTransactions);
     localStorage.setItem("sharesTransactions", JSON.stringify(updatedTransactions));
 
-    // Remove item from stock exchange
     const updatedStockExchangeItems = stockExchangeItems.filter(
       item => item.id !== transaction.listingId
     );
@@ -169,7 +192,6 @@ export function StockExchangeTab() {
     const transaction = sharesTransactions.find(t => t.id === transactionId);
     if (!transaction) return;
 
-    // Update transaction status
     const updatedTransactions = sharesTransactions.map(t => {
       if (t.id === transactionId) {
         return { ...t, status: "Відхилено" };
@@ -179,7 +201,6 @@ export function StockExchangeTab() {
     setSharesTransactions(updatedTransactions);
     localStorage.setItem("sharesTransactions", JSON.stringify(updatedTransactions));
 
-    // Return item to active in stock exchange
     const updatedStockExchangeItems = stockExchangeItems.map(item => {
       if (item.id === transaction.listingId) {
         return { ...item, status: "Активна" };
@@ -196,13 +217,10 @@ export function StockExchangeTab() {
   const sendMessage = () => {
     if (!newMessage.trim() || !selectedTransaction) return;
     
-    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
-    const senderName = `${currentUser.firstName || ""} ${currentUser.lastName || ""} (Адміністратор)`;
-    
     const message = {
       id: Date.now().toString(),
-      sender: senderName,
-      senderId: currentUser.id || "admin",
+      sender: "Адміністратор",
+      senderId: "admin",
       text: newMessage,
       date: new Date().toISOString()
     };
@@ -225,7 +243,6 @@ export function StockExchangeTab() {
     toast.success("Повідомлення відправлено");
   };
 
-  // Filter active transactions for display
   const pendingTransactions = sharesTransactions.filter(t => 
     t.status === "Очікує підтвердження" || t.status === "В процесі"
   );
@@ -235,21 +252,22 @@ export function StockExchangeTab() {
       <Card>
         <CardHeader>
           <CardTitle>Ціна акцій</CardTitle>
-          <CardDescription>Встановіть поточну ціну акцій</CardDescription>
+          <CardDescription>Встановіть поточну ціну акцій (USD)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 items-end">
             <div className="flex-1">
-              <Label htmlFor="stock-price">Ціна акції (грн)</Label>
+              <Label htmlFor="stock-price">Ціна акції (USD)</Label>
               <Input 
                 id="stock-price" 
                 type="number" 
-                placeholder="1000" 
+                placeholder="10" 
                 value={stockPrice}
                 onChange={(e) => setStockPrice(e.target.value)}
+                disabled={settingsLoading}
               />
             </div>
-            <Button onClick={updateStockPrice}>Оновити ціну</Button>
+            <Button onClick={updateStockPriceHandler} disabled={settingsLoading}>Оновити ціну</Button>
           </div>
         </CardContent>
       </Card>
@@ -303,7 +321,7 @@ export function StockExchangeTab() {
           <CardDescription>Транзакції, які очікують на обробку</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Desktop Table - hidden on mobile */}
+          {/* Desktop Table */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -313,7 +331,7 @@ export function StockExchangeTab() {
                   <th className="text-left p-2">Продавець</th>
                   <th className="text-left p-2">Покупець</th>
                   <th className="text-left p-2">Кількість</th>
-                  <th className="text-right p-2">Ціна (грн)</th>
+                  <th className="text-right p-2">Ціна (USD)</th>
                   <th className="text-left p-2">Статус</th>
                   <th className="text-left p-2">Дії</th>
                 </tr>
@@ -355,7 +373,7 @@ export function StockExchangeTab() {
             </table>
           </div>
 
-          {/* Mobile Cards - shown only on mobile */}
+          {/* Mobile Cards */}
           <div className="md:hidden space-y-4">
             {pendingTransactions.length > 0 ? (
               pendingTransactions.map((transaction) => (
@@ -388,7 +406,7 @@ export function StockExchangeTab() {
                     </div>
                     
                     <div className="flex justify-between items-center pt-2">
-                      <span className="font-semibold">{transaction.totalAmount?.toFixed(2)} грн</span>
+                      <span className="font-semibold">{transaction.totalAmount?.toFixed(2)} USD</span>
                       <Button variant="outline" size="sm" onClick={() => openTransaction(transaction)}>
                         <MessageCircle className="h-4 w-4 mr-1" /> Деталі
                       </Button>
@@ -435,51 +453,57 @@ export function StockExchangeTab() {
                   </div>
                   <div>
                     <h3 className="text-sm font-medium">Ціна за акцію</h3>
-                    <p>{selectedTransaction.pricePerShare?.toFixed(2)} грн</p>
+                    <p>{selectedTransaction.pricePerShare?.toFixed(2)} USD</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium">Загальна сума</h3>
-                    <p>{selectedTransaction.totalAmount?.toFixed(2)} грн</p>
+                    <p>{selectedTransaction.totalAmount?.toFixed(2)} USD</p>
                   </div>
                 </div>
-                
+
                 <div>
                   <h3 className="text-sm font-medium mb-2">Повідомлення</h3>
-                  <div className="bg-muted p-4 rounded-md h-40 overflow-y-auto mb-4">
-                    {selectedTransaction.messages && selectedTransaction.messages.length > 0 ? (
+                  <div className="border rounded-md p-4 max-h-48 overflow-y-auto space-y-2">
+                    {selectedTransaction.messages?.length > 0 ? (
                       selectedTransaction.messages.map((msg: any) => (
-                        <div key={msg.id} className="mb-3">
-                          <p className="text-xs font-medium">{msg.sender} • {new Date(msg.date).toLocaleString()}</p>
-                          <p className="text-sm">{msg.text}</p>
+                        <div key={msg.id} className="text-sm">
+                          <span className="font-medium">{msg.sender}: </span>
+                          <span>{msg.text}</span>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {new Date(msg.date).toLocaleString()}
+                          </span>
                         </div>
                       ))
                     ) : (
-                      <p className="text-muted-foreground text-sm">Немає повідомлень</p>
+                      <p className="text-sm text-muted-foreground">Немає повідомлень</p>
                     )}
                   </div>
-                  
-                  <div className="flex gap-2 items-end">
-                    <div className="flex-1">
-                      <Textarea 
-                        placeholder="Напишіть повідомлення..." 
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                      />
-                    </div>
-                    <Button onClick={sendMessage}>Відправити</Button>
+                  <div className="flex gap-2 mt-2">
+                    <Input 
+                      placeholder="Введіть повідомлення..."
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                    />
+                    <Button onClick={sendMessage}>
+                      <MessageCircle className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </div>
 
-              <DialogFooter>
-                <div className="flex justify-between w-full">
-                  <Button variant="destructive" onClick={() => rejectTransaction(selectedTransaction.id)}>
-                    <XSquare className="mr-2 h-4 w-4" /> Відхилити
-                  </Button>
-                  <Button onClick={() => approveTransaction(selectedTransaction.id)}>
-                    <CheckSquare className="mr-2 h-4 w-4" /> Затвердити
-                  </Button>
-                </div>
+              <DialogFooter className="gap-2">
+                <Button 
+                  variant="destructive" 
+                  onClick={() => rejectTransaction(selectedTransaction.id)}
+                >
+                  <XSquare className="h-4 w-4 mr-1" /> Відхилити
+                </Button>
+                <Button 
+                  onClick={() => approveTransaction(selectedTransaction.id)}
+                >
+                  <CheckSquare className="h-4 w-4 mr-1" /> Схвалити
+                </Button>
               </DialogFooter>
             </>
           )}

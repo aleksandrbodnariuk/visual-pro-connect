@@ -205,6 +205,30 @@ export type Database = {
           },
         ]
       }
+      company_settings: {
+        Row: {
+          id: string
+          share_price_usd: number
+          total_shares: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          share_price_usd?: number
+          total_shares?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          share_price_usd?: number
+          total_shares?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       friend_requests: {
         Row: {
           created_at: string | null

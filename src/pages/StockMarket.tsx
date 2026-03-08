@@ -21,12 +21,12 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSupabaseAuth } from "@/hooks/auth/useSupabaseAuth";
+import { useCompanySettings } from "@/hooks/useCompanySettings";
 
 export default function StockMarket() {
   const [stockExchangeItems, setStockExchangeItems] = useState<any[]>([]);
   const [sharesTransactions, setSharesTransactions] = useState<any[]>([]);
   const [shareholders, setShareholders] = useState<any[]>([]);
-  const [stockPrice, setStockPrice] = useState(0);
   const [selectedOffer, setSelectedOffer] = useState<any>(null);
   const [buyAmount, setBuyAmount] = useState("1");
   const [openBuyDialog, setOpenBuyDialog] = useState(false);
@@ -40,9 +40,12 @@ export default function StockMarket() {
   const navigate = useNavigate();
   const { getCurrentUser, isAuthenticated, loading } = useSupabaseAuth();
   const currentUser = getCurrentUser();
+  const { sharePriceUsd, loading: settingsLoading } = useCompanySettings();
+  
+  // Use DB price as the stock price
+  const stockPrice = sharePriceUsd;
   
   useEffect(() => {
-    // Проверяем аутентификацию через Supabase
     console.log('📈 Stock Market: checking auth...', { 
       loading, 
       isAuthenticated: isAuthenticated(), 
@@ -62,9 +65,7 @@ export default function StockMarket() {
     }
     
     if (!currentUser.isShareHolder) {
-      console.log('❌ Stock Market access denied: no shareholder status', {
-        isShareHolder: currentUser.isShareHolder
-      });
+      console.log('❌ Stock Market access denied: no shareholder status');
       toast.error("Доступ заборонено: Необхідний статус акціонера");
       navigate("/");
       return;
@@ -72,9 +73,7 @@ export default function StockMarket() {
     
     console.log('✅ Stock Market access granted');
     
-    const storedPrice = localStorage.getItem("stockPrice");
-    setStockPrice(storedPrice ? parseFloat(storedPrice) : 1000);
-    
+    // Stock exchange items and transactions still use localStorage (will be migrated later)
     const storedExchange = localStorage.getItem("stockExchange");
     if (storedExchange) {
       setStockExchangeItems(JSON.parse(storedExchange));
@@ -92,8 +91,8 @@ export default function StockMarket() {
       setShareholders(shareholdersData);
     }
     
-    setSharePrice(storedPrice || "1000");
-  }, [navigate, loading, isAuthenticated, currentUser]);
+    setSharePrice(sharePriceUsd.toString());
+  }, [navigate, loading, isAuthenticated, currentUser, sharePriceUsd]);
   
   const handleBuyOffer = (offer: any) => {
     if (offer.sellerId === currentUser.id) {

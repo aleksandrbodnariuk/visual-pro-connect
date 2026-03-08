@@ -63,12 +63,8 @@ export default function Admin() {
     
     
     
-    const storedStockPrice = localStorage.getItem("stockPrice");
-    if (storedStockPrice) {
-      setStockPrice(storedStockPrice);
-    } else {
-      localStorage.setItem("stockPrice", stockPrice);
-    }
+    // Stock price is now managed via company_settings table in Supabase
+    // No longer reading from localStorage
 
     const handleShareholderUpdate = () => loadUsersData();
     const handleStockPriceUpdate = (event: CustomEvent) => setStockPrice(event.detail.price);
