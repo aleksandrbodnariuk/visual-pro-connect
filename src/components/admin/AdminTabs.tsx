@@ -8,7 +8,7 @@ import { StockExchangeTab } from "./tabs/StockExchangeTab";
 import { PostsTab } from "./tabs/PostsTab";
 import { SettingsTab } from "./tabs/SettingsTab";
 import { CategoriesTab } from "./tabs/CategoriesTab";
-import { PortfolioManagementTab } from "./tabs/PortfolioManagementTab";
+
 import { AnalyticsTab } from "./tabs/AnalyticsTab";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -38,7 +38,7 @@ export function AdminTabs() {
       <TabsList className="mb-4 flex overflow-x-auto gap-1 w-full justify-start pb-2">
         <TabsTrigger value="users">Користувачі</TabsTrigger>
         <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
-        <TabsTrigger value="portfolio">Портфоліо</TabsTrigger>
+        
         <TabsTrigger value="orders">Замовлення</TabsTrigger>
         <TabsTrigger value="archived-orders">Архів замовлень</TabsTrigger>
         <TabsTrigger value="stock-exchange">Ринок акцій</TabsTrigger>
@@ -54,10 +54,6 @@ export function AdminTabs() {
       
       <TabsContent value="shareholders">
         <ShareholdersTab />
-      </TabsContent>
-      
-      <TabsContent value="portfolio">
-        <PortfolioManagementTab />
       </TabsContent>
       
       <TabsContent value="orders">
