@@ -237,7 +237,7 @@ export function StockExchangeTab() {
       await loadData();
     } catch (err) {
       console.error("Approve error:", err);
-      toast.error("Не вдалося підтвердити передачу частки");
+      toast.error("Не вдалося підтвердити передачу акцій");
     }
   };
 
