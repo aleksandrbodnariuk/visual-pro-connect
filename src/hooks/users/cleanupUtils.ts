@@ -10,21 +10,8 @@ export function removeUserFromRelatedData(userId: string): void {
   const updatedPortfolio = portfolio.filter((item: any) => item.userId !== userId && item.user_id !== userId);
   localStorage.setItem("portfolio", JSON.stringify(updatedPortfolio));
   
-  // Remove user from shares data
-  const shares = JSON.parse(localStorage.getItem("shares") || "[]");
-  const updatedShares = shares.filter((share: any) => share.userId !== userId && share.user_id !== userId);
-  localStorage.setItem("shares", JSON.stringify(updatedShares));
-  
-  // Remove user from other relevant storage
-  const stockExchange = JSON.parse(localStorage.getItem("stockExchange") || "[]");
-  const updatedStockExchange = stockExchange.filter((item: any) => item.sellerId !== userId && item.seller_id !== userId);
-  localStorage.setItem("stockExchange", JSON.stringify(updatedStockExchange));
-  
-  const transactions = JSON.parse(localStorage.getItem("sharesTransactions") || "[]");
-  const updatedTransactions = transactions.filter(
-    (t: any) => (t.sellerId !== userId && t.buyerId !== userId) && (t.seller_id !== userId && t.buyer_id !== userId)
-  );
-  localStorage.setItem("sharesTransactions", JSON.stringify(updatedTransactions));
+  // Shares, stock exchange and transactions are now managed in Supabase
+  // No localStorage cleanup needed for these
   
   // Видаляємо повідомлення та запити в друзі
   const friendRequests = JSON.parse(localStorage.getItem("friendRequests") || "[]");
