@@ -232,7 +232,7 @@ export function StockExchangeTab() {
         }
         return;
       }
-      toast.success("Передачу частки підтверджено");
+      toast.success("Передачу акцій підтверджено");
       setOpenTransactionDialog(false);
       await loadData();
     } catch (err) {
