@@ -161,33 +161,33 @@ export function StockExchangeTab() {
   const updateStockPriceHandler = async () => {
     const price = parseFloat(stockPrice);
     if (!stockPrice || isNaN(price) || price <= 0) {
-      toast.error("Введіть коректну орієнтовну вартість частки");
+      toast.error("Введіть коректну орієнтовну вартість акції");
       return;
     }
     const success = await updateSharePrice(price);
     if (success) {
-      toast.success(`Орієнтовну вартість частки оновлено: ${price} USD`);
+      toast.success(`Орієнтовну вартість акції оновлено: ${price} USD`);
     }
   };
 
   const handleCreateProposal = async () => {
     if (!selectedShareholderId) {
-      toast.error("Виберіть співвласника");
+      toast.error("Виберіть акціонера");
       return;
     }
     const count = parseInt(selectedSharesCount);
     if (!selectedSharesCount || isNaN(count) || count <= 0) {
-      toast.error("Введіть коректну кількість часток");
+      toast.error("Введіть коректну кількість акцій");
       return;
     }
 
     const seller = shareholders.find(sh => sh.id === selectedShareholderId);
     if (!seller) {
-      toast.error("Співвласника не знайдено");
+      toast.error("Акціонера не знайдено");
       return;
     }
     if (count > (seller.shares || 0)) {
-      toast.error(`У співвласника лише ${seller.shares || 0} часток`);
+      toast.error(`У акціонера лише ${seller.shares || 0} акцій`);
       return;
     }
 
@@ -208,7 +208,7 @@ export function StockExchangeTab() {
 
     setSelectedShareholderId("");
     setSelectedSharesCount("1");
-    toast.success("Пропозицію на передачу частки створено");
+    toast.success("Пропозицію на передачу акцій створено");
     await loadData();
   };
 
@@ -228,16 +228,16 @@ export function StockExchangeTab() {
         } else if (msg.includes('вже змінено')) {
           toast.error("Заявку вже змінено іншим користувачем");
         } else {
-          toast.error("Не вдалося підтвердити передачу частки");
+          toast.error("Не вдалося підтвердити передачу акцій");
         }
         return;
       }
-      toast.success("Передачу частки підтверджено");
+      toast.success("Передачу акцій підтверджено");
       setOpenTransactionDialog(false);
       await loadData();
     } catch (err) {
       console.error("Approve error:", err);
-      toast.error("Не вдалося підтвердити передачу частки");
+      toast.error("Не вдалося підтвердити передачу акцій");
     }
   };
 
@@ -293,21 +293,21 @@ export function StockExchangeTab() {
         <CardContent className="p-4 flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
           <div className="text-sm text-blue-800 dark:text-blue-300">
-            <p className="font-medium mb-1">Система обліку часток</p>
-            <p>Цей модуль призначений для обліку внутрішніх часток компанії. Передача часток відбувається за реальною офлайн-домовленістю сторін. Адміністратор лише підтверджує факт передачі в системі.</p>
+            <p className="font-medium mb-1">Система обліку акцій</p>
+            <p>Цей модуль призначений для обліку внутрішніх акцій компанії. Передача акцій відбувається за реальною офлайн-домовленістю сторін. Адміністратор лише підтверджує факт передачі в системі.</p>
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Орієнтовна вартість частки</CardTitle>
-          <CardDescription>Довідкова орієнтовна вартість однієї частки (USD)</CardDescription>
+          <CardTitle>Орієнтовна вартість акції</CardTitle>
+          <CardDescription>Довідкова орієнтовна вартість однієї акції (USD)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 items-end">
             <div className="flex-1">
-              <Label htmlFor="stock-price">Вартість частки (USD)</Label>
+              <Label htmlFor="stock-price">Вартість акції (USD)</Label>
               <Input
                 id="stock-price"
                 type="number"
@@ -324,29 +324,29 @@ export function StockExchangeTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Створити пропозицію передачі частки</CardTitle>
-          <CardDescription>Опублікуйте намір співвласника передати частку</CardDescription>
+          <CardTitle>Створити пропозицію передачі акцій</CardTitle>
+          <CardDescription>Опублікуйте намір акціонера передати акції</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="shareholder">Співвласник</Label>
+                <Label htmlFor="shareholder">Акціонер</Label>
                 <Select value={selectedShareholderId} onValueChange={setSelectedShareholderId}>
                   <SelectTrigger id="shareholder">
-                    <SelectValue placeholder="Виберіть співвласника" />
+                    <SelectValue placeholder="Виберіть акціонера" />
                   </SelectTrigger>
                   <SelectContent>
                     {shareholders.map((sh) => (
                       <SelectItem key={sh.id} value={sh.id}>
-                        {sh.firstName} {sh.lastName} ({sh.shares || 0} часток)
+                        {sh.firstName} {sh.lastName} ({sh.shares || 0} акцій)
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label htmlFor="shares-count">Кількість часток</Label>
+                <Label htmlFor="shares-count">Кількість акцій</Label>
                 <Input
                   id="shares-count"
                   type="number"
@@ -366,7 +366,7 @@ export function StockExchangeTab() {
       <Card>
         <CardHeader>
           <CardTitle>Активні пропозиції</CardTitle>
-          <CardDescription>Пропозиції на передачу часток між співвласниками</CardDescription>
+          <CardDescription>Пропозиції на передачу акцій між акціонерами</CardDescription>
         </CardHeader>
         <CardContent>
           {loadingData ? (
@@ -378,7 +378,7 @@ export function StockExchangeTab() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left p-2">Співвласник</th>
+                    <th className="text-left p-2">Акціонер</th>
                     <th className="text-left p-2">Кількість</th>
                     <th className="text-right p-2">Орієнтовна вартість (USD)</th>
                     <th className="text-left p-2">Дата</th>
@@ -407,7 +407,7 @@ export function StockExchangeTab() {
       {/* Pending Transactions */}
       <Card>
         <CardHeader>
-          <CardTitle>Заявки на передачу часток</CardTitle>
+          <CardTitle>Заявки на передачу акцій</CardTitle>
           <CardDescription>Заявки, які очікують підтвердження адміністратором після офлайн-домовленості</CardDescription>
         </CardHeader>
         <CardContent>
@@ -474,7 +474,7 @@ export function StockExchangeTab() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Кількість:</span>
-                      <span>{tx.quantity} часток</span>
+                      <span>{tx.quantity} акцій</span>
                     </div>
                     <div className="flex justify-between items-center pt-2">
                       <span className="font-semibold">{tx.total_price.toFixed(2)} USD</span>
@@ -498,7 +498,7 @@ export function StockExchangeTab() {
           {selectedTransaction && (
             <>
               <DialogHeader>
-                <DialogTitle>Деталі заявки на передачу частки</DialogTitle>
+                <DialogTitle>Деталі заявки на передачу акцій</DialogTitle>
                 <DialogDescription>ID: {selectedTransaction.id.substring(0, 8)}...</DialogDescription>
               </DialogHeader>
 
@@ -515,11 +515,11 @@ export function StockExchangeTab() {
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <h3 className="text-sm font-medium">Кількість часток</h3>
+                    <h3 className="text-sm font-medium">Кількість акцій</h3>
                     <p>{selectedTransaction.quantity}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium">Орієнт. вартість за частку</h3>
+                    <h3 className="text-sm font-medium">Орієнт. вартість за акцію</h3>
                     <p>{selectedTransaction.price_per_share.toFixed(2)} USD</p>
                   </div>
                   <div>
@@ -533,8 +533,8 @@ export function StockExchangeTab() {
                 </div>
                 <div className="border-t pt-3">
                   <p className="text-sm text-muted-foreground">
-                    Підтвердження означає, що реальна офлайн-передача частки вже відбулась. 
-                    Після підтвердження частки будуть перерозподілені в системі.
+                    Підтвердження означає, що реальна офлайн-передача акцій вже відбулась. 
+                    Після підтвердження акції будуть перерозподілені в системі.
                   </p>
                 </div>
               </div>

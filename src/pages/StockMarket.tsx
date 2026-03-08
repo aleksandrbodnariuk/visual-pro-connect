@@ -173,7 +173,7 @@ export default function StockMarket() {
           avatarUrl: p.avatar_url,
           shares,
           percentage: pct,
-          title: p.title || 'Співвласник',
+          title: p.title || 'Акціонер',
         });
       }
       setShareholders(shList);
@@ -192,7 +192,7 @@ export default function StockMarket() {
       return;
     }
     if (!currentUser.isShareHolder) {
-      toast.error("Доступ заборонено: Необхідний статус співвласника");
+      toast.error("Доступ заборонено: необхідний статус акціонера");
       navigate("/");
       return;
     }
@@ -232,7 +232,7 @@ export default function StockMarket() {
 
     if (txError) {
       console.error("Error creating transaction:", txError);
-      toast.error("Не вдалося створити заявку на отримання частки");
+      toast.error("Не вдалося створити заявку на отримання акцій");
       return;
     }
 
@@ -247,7 +247,7 @@ export default function StockMarket() {
     }
 
     setOpenBuyDialog(false);
-    toast.success("Заявку на отримання частки подано. Очікуйте підтвердження адміністратором після офлайн-домовленості.");
+    toast.success("Заявку на отримання акцій подано. Очікуйте підтвердження адміністратором після офлайн-домовленості.");
     await loadMarketData();
   };
 
@@ -325,7 +325,7 @@ export default function StockMarket() {
     }
 
     setOpenSellDialog(false);
-    toast.success("Пропозицію на передачу частки опубліковано");
+    toast.success("Пропозицію на передачу акцій опубліковано");
     await loadMarketData();
   };
 
@@ -354,7 +354,7 @@ export default function StockMarket() {
     return <div className="container py-16 text-center">Перенаправлення на сторінку авторизації...</div>;
   }
   if (!currentUser.isShareHolder) {
-    return <div className="container py-16 text-center">Доступ заборонено: потрібен статус співвласника</div>;
+    return <div className="container py-16 text-center">Доступ заборонено: потрібен статус акціонера</div>;
   }
 
   const myOffers = listings.filter(item => item.seller_id === currentUser.id);
@@ -372,11 +372,11 @@ export default function StockMarket() {
         <main className="col-span-12 lg:col-span-9">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h1 className="text-3xl font-bold">Облік часток</h1>
-              <p className="text-muted-foreground">Перегляд та управління вашою часткою в компанії</p>
+              <h1 className="text-3xl font-bold">Ринок акцій</h1>
+              <p className="text-muted-foreground">Перегляд та управління вашими акціями в компанії</p>
             </div>
             <Button onClick={openSellSharesDialog}>
-              <TrendingUp className="h-4 w-4 mr-2" /> Передати частку
+              <TrendingUp className="h-4 w-4 mr-2" /> Передати акції
             </Button>
           </div>
 
@@ -385,7 +385,7 @@ export default function StockMarket() {
             <CardContent className="p-4 flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
               <p className="text-sm text-blue-800 dark:text-blue-300">
-                Передача часток відбувається за реальною офлайн-домовленістю сторін. Тут ви можете опублікувати намір передати частку або подати заявку на отримання. Адміністратор підтверджує факт передачі після реальної домовленості.
+                Передача акцій відбувається за реальною офлайн-домовленістю сторін. Тут ви можете опублікувати намір передати акції або подати заявку на отримання. Адміністратор підтверджує факт передачі після реальної домовленості.
               </p>
             </CardContent>
           </Card>
@@ -394,7 +394,7 @@ export default function StockMarket() {
             <Card>
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Ваші частки</p>
+                  <p className="text-sm font-medium text-muted-foreground">Ваші акції</p>
                   <h3 className="text-2xl font-bold mt-1">{myShares}</h3>
                 </div>
                 <div className="p-3 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
@@ -405,7 +405,7 @@ export default function StockMarket() {
             <Card>
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Ваша частка</p>
+                  <p className="text-sm font-medium text-muted-foreground">Ваш відсоток</p>
                   <h3 className="text-2xl font-bold mt-1">{myPercentage}%</h3>
                 </div>
                 <div className="p-3 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
@@ -431,14 +431,14 @@ export default function StockMarket() {
               <TabsTrigger value="market">Пропозиції</TabsTrigger>
               <TabsTrigger value="my-offers">Мої пропозиції</TabsTrigger>
               <TabsTrigger value="transactions">Мої заявки</TabsTrigger>
-              <TabsTrigger value="shareholders">Співвласники</TabsTrigger>
+              <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
             </TabsList>
             
             <TabsContent value="market">
               <Card>
                 <CardHeader>
-                  <CardTitle>Пропозиції на передачу часток</CardTitle>
-                  <CardDescription>Перегляньте та подайте заявку на отримання частки</CardDescription>
+                  <CardTitle>Пропозиції на передачу акцій</CardTitle>
+                  <CardDescription>Перегляньте та подайте заявку на отримання акцій</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {loadingData ? (
@@ -450,9 +450,9 @@ export default function StockMarket() {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b">
-                            <th className="text-left p-2">Співвласник</th>
-                            <th className="text-left p-2">Кількість часток</th>
-                            <th className="text-left p-2">Орієнт. вартість за частку</th>
+                            <th className="text-left p-2">Акціонер</th>
+                            <th className="text-left p-2">Кількість акцій</th>
+                            <th className="text-left p-2">Орієнт. вартість за акцію</th>
                             <th className="text-left p-2">Орієнт. загальна вартість</th>
                             <th className="text-left p-2"></th>
                           </tr>
@@ -478,7 +478,7 @@ export default function StockMarket() {
                     <div className="text-center py-8">
                       <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
                       <h3 className="text-lg font-medium mb-2">Немає активних пропозицій</h3>
-                      <p className="text-muted-foreground">Наразі ніхто не пропонує передачу часток</p>
+                      <p className="text-muted-foreground">Наразі ніхто не пропонує передачу акцій</p>
                     </div>
                   )}
                 </CardContent>
@@ -489,7 +489,7 @@ export default function StockMarket() {
               <Card>
                 <CardHeader>
                   <CardTitle>Мої пропозиції на передачу</CardTitle>
-                  <CardDescription>Перегляньте статус ваших пропозицій передачі частки</CardDescription>
+                  <CardDescription>Перегляньте статус ваших пропозицій передачі акцій</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {myOffers.length > 0 ? (
@@ -498,8 +498,8 @@ export default function StockMarket() {
                         <thead>
                           <tr className="border-b">
                             <th className="text-left p-2">Дата</th>
-                            <th className="text-left p-2">Кількість часток</th>
-                            <th className="text-left p-2">Орієнт. вартість за частку</th>
+                            <th className="text-left p-2">Кількість акцій</th>
+                            <th className="text-left p-2">Орієнт. вартість за акцію</th>
                             <th className="text-left p-2">Орієнт. загальна вартість</th>
                             <th className="text-left p-2">Статус</th>
                           </tr>
@@ -525,9 +525,9 @@ export default function StockMarket() {
                     <div className="text-center py-8">
                       <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
                       <h3 className="text-lg font-medium mb-2">У вас немає пропозицій</h3>
-                      <p className="text-muted-foreground mb-3">Ви можете опублікувати намір передати частку</p>
+                      <p className="text-muted-foreground mb-3">Ви можете опублікувати намір передати акції</p>
                       <Button onClick={openSellSharesDialog}>
-                        <TrendingUp className="h-4 w-4 mr-2" /> Передати частку
+                        <TrendingUp className="h-4 w-4 mr-2" /> Передати акції
                       </Button>
                     </div>
                   )}
@@ -539,7 +539,7 @@ export default function StockMarket() {
               <Card>
                 <CardHeader>
                   <CardTitle>Мої заявки</CardTitle>
-                  <CardDescription>Історія та статус ваших заявок на передачу часток</CardDescription>
+                  <CardDescription>Історія та статус ваших заявок на передачу акцій</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {myTransactions.length > 0 ? (
@@ -590,7 +590,7 @@ export default function StockMarket() {
                     <div className="text-center py-8">
                       <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
                       <h3 className="text-lg font-medium mb-2">У вас ще немає заявок</h3>
-                      <p className="text-muted-foreground">Історія ваших заявок з'явиться тут після подачі або отримання заявки на передачу частки</p>
+                      <p className="text-muted-foreground">Історія ваших заявок з'явиться тут після подачі або отримання заявки на передачу акцій</p>
                     </div>
                   )}
                 </CardContent>
@@ -600,17 +600,17 @@ export default function StockMarket() {
             <TabsContent value="shareholders">
               <Card>
                 <CardHeader>
-                  <CardTitle>Список співвласників</CardTitle>
-                  <CardDescription>Перегляд інформації про всіх співвласників компанії</CardDescription>
+                  <CardTitle>Список акціонерів</CardTitle>
+                  <CardDescription>Перегляд інформації про всіх акціонерів компанії</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
                         <tr className="border-b">
-                          <th className="text-left p-2">Співвласник</th>
-                          <th className="text-left p-2">Кількість часток</th>
-                          <th className="text-left p-2">Частка</th>
+                          <th className="text-left p-2">Акціонер</th>
+                          <th className="text-left p-2">Кількість акцій</th>
+                          <th className="text-left p-2">Відсоток</th>
                           <th className="text-left p-2">Титул</th>
                         </tr>
                       </thead>
@@ -650,18 +650,18 @@ export default function StockMarket() {
       <Dialog open={openBuyDialog} onOpenChange={setOpenBuyDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Заявка на отримання частки</DialogTitle>
-            <DialogDescription>Подайте заявку на отримання частки. Передача відбудеться після офлайн-домовленості та підтвердження адміністратором.</DialogDescription>
+            <DialogTitle>Заявка на отримання акцій</DialogTitle>
+            <DialogDescription>Подайте заявку на отримання акцій. Передача відбудеться після офлайн-домовленості та підтвердження адміністратором.</DialogDescription>
           </DialogHeader>
           {selectedOffer && (
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <p><span className="font-medium">Від кого:</span> {selectedOffer.seller_name}</p>
-                <p><span className="font-medium">Доступно часток:</span> {selectedOffer.quantity}</p>
-                <p><span className="font-medium">Орієнт. вартість за частку:</span> {selectedOffer.price_per_share.toFixed(2)} USD</p>
+                <p><span className="font-medium">Доступно акцій:</span> {selectedOffer.quantity}</p>
+                <p><span className="font-medium">Орієнт. вартість за акцію:</span> {selectedOffer.price_per_share.toFixed(2)} USD</p>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="buy-amount">Кількість часток:</label>
+                <label className="text-sm font-medium" htmlFor="buy-amount">Кількість акцій:</label>
                 <Input
                   id="buy-amount"
                   type="number"
@@ -692,7 +692,7 @@ export default function StockMarket() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Деталі заявки</DialogTitle>
-            <DialogDescription>Інформація про заявку на передачу частки</DialogDescription>
+            <DialogDescription>Інформація про заявку на передачу акцій</DialogDescription>
           </DialogHeader>
           {selectedTransaction && (
             <div className="space-y-4">
@@ -708,7 +708,7 @@ export default function StockMarket() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium">Кількість часток:</p>
+                  <p className="text-sm font-medium">Кількість акцій:</p>
                   <p>{selectedTransaction.quantity}</p>
                 </div>
                 <div>
@@ -741,16 +741,16 @@ export default function StockMarket() {
       <Dialog open={openSellDialog} onOpenChange={setOpenSellDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Пропозиція передачі частки</DialogTitle>
-            <DialogDescription>Опублікуйте намір передати частку. Фактична передача відбудеться після офлайн-домовленості та підтвердження адміністратором.</DialogDescription>
+            <DialogTitle>Пропозиція передачі акцій</DialogTitle>
+            <DialogDescription>Опублікуйте намір передати акції. Фактична передача відбудеться після офлайн-домовленості та підтвердження адміністратором.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <p><span className="font-medium">Ваш поточний баланс часток:</span> {myShares}</p>
-              <p><span className="font-medium">Орієнтовна вартість за частку:</span> {stockPrice.toFixed(2)} USD</p>
+              <p><span className="font-medium">Ваш поточний баланс акцій:</span> {myShares}</p>
+              <p><span className="font-medium">Орієнтовна вартість за акцію:</span> {stockPrice.toFixed(2)} USD</p>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="shares-count">Кількість часток для передачі:</label>
+              <label className="text-sm font-medium" htmlFor="shares-count">Кількість акцій для передачі:</label>
               <Input
                 id="shares-count"
                 type="number"
@@ -761,7 +761,7 @@ export default function StockMarket() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="share-price">Орієнтовна вартість за одну частку (USD):</label>
+              <label className="text-sm font-medium" htmlFor="share-price">Орієнтовна вартість за одну акцію (USD):</label>
               <Input
                 id="share-price"
                 type="number"

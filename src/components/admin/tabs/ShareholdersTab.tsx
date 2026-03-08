@@ -248,7 +248,7 @@ export function ShareholdersTab() {
                       <th className="text-left p-2">Акціонер</th>
                       <th className="text-left p-2">Титул</th>
                       <th className="text-left p-2">Кількість акцій</th>
-                      <th className="text-left p-2">Частка (%)</th>
+                      <th className="text-left p-2">Відсоток (%)</th>
                       <th className="text-left p-2">Прибуток (USD)</th>
                       <th className="text-left p-2">Дії</th>
                     </tr>
@@ -352,7 +352,7 @@ export function ShareholdersTab() {
                           </div>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Частка:</span>
+                          <span className="text-sm text-muted-foreground">Відсоток:</span>
                           <span className="text-sm font-medium">{shareholder.percentage}%</span>
                         </div>
                         <div className="flex justify-between">
