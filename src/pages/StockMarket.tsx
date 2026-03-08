@@ -372,8 +372,8 @@ export default function StockMarket() {
         <main className="col-span-12 lg:col-span-9">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h1 className="text-3xl font-bold">Облік часток</h1>
-              <p className="text-muted-foreground">Перегляд та управління вашою часткою в компанії</p>
+              <h1 className="text-3xl font-bold">Ринок акцій</h1>
+              <p className="text-muted-foreground">Перегляд та управління вашими акціями в компанії</p>
             </div>
             <Button onClick={openSellSharesDialog}>
               <TrendingUp className="h-4 w-4 mr-2" /> Передати частку
