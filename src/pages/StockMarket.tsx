@@ -437,8 +437,8 @@ export default function StockMarket() {
             <TabsContent value="market">
               <Card>
                 <CardHeader>
-                  <CardTitle>Пропозиції на передачу часток</CardTitle>
-                  <CardDescription>Перегляньте та подайте заявку на отримання частки</CardDescription>
+                  <CardTitle>Пропозиції на передачу акцій</CardTitle>
+                  <CardDescription>Перегляньте та подайте заявку на отримання акцій</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {loadingData ? (
