@@ -228,7 +228,7 @@ export function StockExchangeTab() {
         } else if (msg.includes('вже змінено')) {
           toast.error("Заявку вже змінено іншим користувачем");
         } else {
-          toast.error("Не вдалося підтвердити передачу частки");
+          toast.error("Не вдалося підтвердити передачу акцій");
         }
         return;
       }
