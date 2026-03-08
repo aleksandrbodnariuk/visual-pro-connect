@@ -590,7 +590,7 @@ export default function StockMarket() {
                     <div className="text-center py-8">
                       <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
                       <h3 className="text-lg font-medium mb-2">У вас ще немає заявок</h3>
-                      <p className="text-muted-foreground">Історія ваших заявок з'явиться тут після подачі або отримання заявки на передачу частки</p>
+                      <p className="text-muted-foreground">Історія ваших заявок з'явиться тут після подачі або отримання заявки на передачу акцій</p>
                     </div>
                   )}
                 </CardContent>
