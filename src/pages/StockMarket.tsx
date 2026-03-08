@@ -657,8 +657,8 @@ export default function StockMarket() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <p><span className="font-medium">Від кого:</span> {selectedOffer.seller_name}</p>
-                <p><span className="font-medium">Доступно часток:</span> {selectedOffer.quantity}</p>
-                <p><span className="font-medium">Орієнт. вартість за частку:</span> {selectedOffer.price_per_share.toFixed(2)} USD</p>
+                <p><span className="font-medium">Доступно акцій:</span> {selectedOffer.quantity}</p>
+                <p><span className="font-medium">Орієнт. вартість за акцію:</span> {selectedOffer.price_per_share.toFixed(2)} USD</p>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="buy-amount">Кількість часток:</label>
