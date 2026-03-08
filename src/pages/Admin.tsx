@@ -118,7 +118,6 @@ export default function Admin() {
         <AdminStats 
           users={users.length}
           shareholders={shareholders.length}
-          orders={orders.length}
           stockPrice={stockPrice}
         />
         
