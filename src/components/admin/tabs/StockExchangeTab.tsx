@@ -515,7 +515,7 @@ export function StockExchangeTab() {
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <h3 className="text-sm font-medium">Кількість часток</h3>
+                    <h3 className="text-sm font-medium">Кількість акцій</h3>
                     <p>{selectedTransaction.quantity}</p>
                   </div>
                   <div>
