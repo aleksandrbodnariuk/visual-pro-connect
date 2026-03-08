@@ -301,8 +301,8 @@ export function StockExchangeTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Орієнтовна вартість частки</CardTitle>
-          <CardDescription>Довідкова орієнтовна вартість однієї частки (USD)</CardDescription>
+          <CardTitle>Орієнтовна вартість акції</CardTitle>
+          <CardDescription>Довідкова орієнтовна вартість однієї акції (USD)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 items-end">
