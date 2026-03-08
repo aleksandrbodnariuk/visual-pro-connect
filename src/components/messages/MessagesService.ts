@@ -147,7 +147,8 @@ export class MessagesService {
               isEdited: msg.is_edited || false,
               editedAt: msg.edited_at ? new Date(msg.edited_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
               attachmentUrl: msg.attachment_url || undefined,
-              attachmentType: msg.attachment_type || undefined
+              attachmentType: msg.attachment_type || undefined,
+              read: msg.read ?? false
             })),
             lastMessage: {
               text: lastMessage.content,
