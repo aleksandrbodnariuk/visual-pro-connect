@@ -339,7 +339,7 @@ export function StockExchangeTab() {
                   <SelectContent>
                     {shareholders.map((sh) => (
                       <SelectItem key={sh.id} value={sh.id}>
-                        {sh.firstName} {sh.lastName} ({sh.shares || 0} часток)
+                        {sh.firstName} {sh.lastName} ({sh.shares || 0} акцій)
                       </SelectItem>
                     ))}
                   </SelectContent>
