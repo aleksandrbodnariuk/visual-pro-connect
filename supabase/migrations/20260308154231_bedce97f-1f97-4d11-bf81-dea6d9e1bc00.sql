@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS specialist_order_participants_order_specialist_unique ON public.specialist_order_participants (order_id, specialist_id);

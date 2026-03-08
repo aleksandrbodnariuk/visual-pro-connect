@@ -113,8 +113,9 @@ export function AdminOrdersTab() {
   const addParticipant = useCallback(async (orderId: string, specialistId: string, role: string) => {
     const { error } = await (supabase as any)
       .from('specialist_order_participants')
-      .upsert({ order_id: orderId, specialist_id: specialistId, role }, { onConflict: 'order_id,specialist_id', ignoreDuplicates: true });
+      .upsert({ order_id: orderId, specialist_id: specialistId, role }, { onConflict: 'order_id,specialist_id' });
     if (error) { toast.error(error.message); return false; }
+    toast.success('Фахівця додано');
     return true;
   }, []);
 
