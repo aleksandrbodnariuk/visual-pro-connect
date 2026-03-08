@@ -86,12 +86,12 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
 
   const determineShareholderTitle = (percentage: number): string => {
     if (percentage === 100) return "Імператор";
-    if (percentage >= 76) return "Герцог";
-    if (percentage >= 51) return "Лорд";
-    if (percentage >= 36) return "Маркіз";
-    if (percentage >= 21) return "Граф";
-    if (percentage >= 11) return "Барон";
-    if (percentage >= 6) return "Магнат";
+    if (percentage >= 50) return "Герцог";
+    if (percentage >= 40) return "Лорд";
+    if (percentage >= 30) return "Маркіз";
+    if (percentage >= 20) return "Граф";
+    if (percentage >= 10) return "Барон";
+    if (percentage >= 5) return "Магнат";
     if (percentage >= 1) return "Акціонер";
     return "Акціонер";
   };
