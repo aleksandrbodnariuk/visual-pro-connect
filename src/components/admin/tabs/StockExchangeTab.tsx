@@ -346,7 +346,7 @@ export function StockExchangeTab() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="shares-count">Кількість часток</Label>
+                <Label htmlFor="shares-count">Кількість акцій</Label>
                 <Input
                   id="shares-count"
                   type="number"
