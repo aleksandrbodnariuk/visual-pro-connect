@@ -214,6 +214,17 @@ export function MessageList({
                       </div>
                     </div>
                     
+                    {/* Read receipt avatar */}
+                    {message.id === lastReadSenderMsgId && recipientAvatarUrl && (
+                      <div className="flex justify-end mt-0.5 pr-1">
+                        <img
+                          src={recipientAvatarUrl}
+                          alt="Прочитано"
+                          className="w-4 h-4 rounded-full object-cover"
+                        />
+                      </div>
+                    )}
+
                     {/* Reactions display */}
                     <MessageReactions
                       reactions={reactions[message.id] || []}
@@ -231,17 +242,6 @@ export function MessageList({
                     </div>
                   )}
                 </div>
-
-                {/* Read receipt avatar — shown under the last read sender message */}
-                {message.id === lastReadSenderMsgId && recipientAvatarUrl && (
-                  <div className="flex justify-end mt-0.5 pr-1">
-                    <img
-                      src={recipientAvatarUrl}
-                      alt="Прочитано"
-                      className="w-4 h-4 rounded-full object-cover"
-                    />
-                  </div>
-                )}
               </div>
             ))
           ) : (
