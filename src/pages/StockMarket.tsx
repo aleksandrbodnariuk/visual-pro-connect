@@ -750,7 +750,7 @@ export default function StockMarket() {
               <p><span className="font-medium">Орієнтовна вартість за акцію:</span> {stockPrice.toFixed(2)} USD</p>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="shares-count">Кількість часток для передачі:</label>
+              <label className="text-sm font-medium" htmlFor="shares-count">Кількість акцій для передачі:</label>
               <Input
                 id="shares-count"
                 type="number"
