@@ -36,7 +36,7 @@ export function AdminTabs() {
         <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
         <TabsTrigger value="specialists">Фахівці</TabsTrigger>
         <TabsTrigger value="orders">Замовлення</TabsTrigger>
-        <TabsTrigger value="stock-exchange">Ринок акцій</TabsTrigger>
+        <TabsTrigger value="stock-exchange">Облік часток</TabsTrigger>
         <TabsTrigger value="posts">Публікації</TabsTrigger>
         <TabsTrigger value="categories">Категорії</TabsTrigger>
         <TabsTrigger value="settings">Налаштування</TabsTrigger>

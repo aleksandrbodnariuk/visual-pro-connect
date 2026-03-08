@@ -52,8 +52,8 @@ export function SettingsTab() {
       orders: JSON.parse(localStorage.getItem("orders") || "[]"),
       archivedOrders: JSON.parse(localStorage.getItem("archivedOrders") || "[]"),
       posts: JSON.parse(localStorage.getItem("posts") || "[]"),
-      stockExchange: JSON.parse(localStorage.getItem("stockExchange") || "[]"),
-      sharesTransactions: JSON.parse(localStorage.getItem("sharesTransactions") || "[]"),
+      stockExchange: "managed in market table",
+      sharesTransactions: "managed in transactions table",
       settings: {
         siteName: settings.siteName,
         allowRegistration: settings.allowRegistration,
