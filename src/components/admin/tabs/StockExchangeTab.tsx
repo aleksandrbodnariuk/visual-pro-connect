@@ -307,7 +307,7 @@ export function StockExchangeTab() {
         <CardContent>
           <div className="flex gap-4 items-end">
             <div className="flex-1">
-              <Label htmlFor="stock-price">Вартість частки (USD)</Label>
+              <Label htmlFor="stock-price">Вартість акції (USD)</Label>
               <Input
                 id="stock-price"
                 type="number"
