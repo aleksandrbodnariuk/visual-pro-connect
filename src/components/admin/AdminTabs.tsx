@@ -2,6 +2,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsersTab } from "./tabs/UsersTab";
 import { ShareholdersTab } from "./tabs/ShareholdersTab";
+import { SpecialistsTab } from "./tabs/SpecialistsTab";
 import { AdminOrdersTab } from "./tabs/AdminOrdersTab";
 import { StockExchangeTab } from "./tabs/StockExchangeTab";
 import { PostsTab } from "./tabs/PostsTab";
@@ -33,6 +34,7 @@ export function AdminTabs() {
       <TabsList className="mb-4 flex overflow-x-auto gap-1 w-full justify-start pb-2">
         <TabsTrigger value="users">Користувачі</TabsTrigger>
         <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
+        <TabsTrigger value="specialists">Фахівці</TabsTrigger>
         <TabsTrigger value="orders">Замовлення</TabsTrigger>
         <TabsTrigger value="stock-exchange">Ринок акцій</TabsTrigger>
         <TabsTrigger value="posts">Публікації</TabsTrigger>
@@ -47,6 +49,10 @@ export function AdminTabs() {
       
       <TabsContent value="shareholders">
         <ShareholdersTab />
+      </TabsContent>
+      
+      <TabsContent value="specialists">
+        <SpecialistsTab />
       </TabsContent>
       
       <TabsContent value="orders">
