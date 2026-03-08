@@ -746,8 +746,8 @@ export default function StockMarket() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <p><span className="font-medium">Ваш поточний баланс часток:</span> {myShares}</p>
-              <p><span className="font-medium">Орієнтовна вартість за частку:</span> {stockPrice.toFixed(2)} USD</p>
+              <p><span className="font-medium">Ваш поточний баланс акцій:</span> {myShares}</p>
+              <p><span className="font-medium">Орієнтовна вартість за акцію:</span> {stockPrice.toFixed(2)} USD</p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="shares-count">Кількість часток для передачі:</label>
