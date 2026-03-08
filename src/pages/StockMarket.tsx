@@ -539,7 +539,7 @@ export default function StockMarket() {
               <Card>
                 <CardHeader>
                   <CardTitle>Мої заявки</CardTitle>
-                  <CardDescription>Історія та статус ваших заявок на передачу часток</CardDescription>
+                  <CardDescription>Історія та статус ваших заявок на передачу акцій</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {myTransactions.length > 0 ? (
