@@ -173,7 +173,7 @@ export function MessageList({
                   </div>
                 )}
 
-                <div className="relative group max-w-[80%]">
+                <div className="relative max-w-[80%]">
                   <div
                     className={`rounded-2xl px-4 py-2 ${
                       message.isSender
