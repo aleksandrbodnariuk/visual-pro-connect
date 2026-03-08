@@ -474,7 +474,7 @@ export function StockExchangeTab() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Кількість:</span>
-                      <span>{tx.quantity} часток</span>
+                      <span>{tx.quantity} акцій</span>
                     </div>
                     <div className="flex justify-between items-center pt-2">
                       <span className="font-semibold">{tx.total_price.toFixed(2)} USD</span>
