@@ -38,7 +38,7 @@ export function AdminTabs() {
       <TabsList className="mb-4 flex overflow-x-auto gap-1 w-full justify-start pb-2">
         <TabsTrigger value="users">Користувачі</TabsTrigger>
         <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
-        <TabsTrigger value="portfolio">Портфоліо</TabsTrigger>
+        
         <TabsTrigger value="orders">Замовлення</TabsTrigger>
         <TabsTrigger value="archived-orders">Архів замовлень</TabsTrigger>
         <TabsTrigger value="stock-exchange">Ринок акцій</TabsTrigger>
