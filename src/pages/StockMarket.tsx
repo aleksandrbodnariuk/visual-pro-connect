@@ -450,9 +450,9 @@ export default function StockMarket() {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b">
-                            <th className="text-left p-2">Співвласник</th>
-                            <th className="text-left p-2">Кількість часток</th>
-                            <th className="text-left p-2">Орієнт. вартість за частку</th>
+                            <th className="text-left p-2">Акціонер</th>
+                            <th className="text-left p-2">Кількість акцій</th>
+                            <th className="text-left p-2">Орієнт. вартість за акцію</th>
                             <th className="text-left p-2">Орієнт. загальна вартість</th>
                             <th className="text-left p-2"></th>
                           </tr>
