@@ -126,7 +126,7 @@ export function useSpecialistOrders(statusFilter: OrderStatus) {
       .from('specialist_order_participants')
       .upsert(
         { order_id: orderId, specialist_id: specialistId, role },
-        { onConflict: 'order_id,specialist_id', ignoreDuplicates: true }
+        { onConflict: 'order_id,specialist_id' }
       );
 
     if (error) {

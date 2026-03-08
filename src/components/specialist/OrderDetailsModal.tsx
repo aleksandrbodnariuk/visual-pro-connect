@@ -287,7 +287,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                     <Check className="h-3.5 w-3.5 mr-1" /> Підтвердити
                   </Button>
                 )}
-                {order.status === 'confirmed' && (
+                {(order.status === 'confirmed' || order.status === 'archived') && (
                   <Button size="sm" variant="outline" onClick={handleReject}>
                     <X className="h-3.5 w-3.5 mr-1" /> Повернути
                   </Button>
