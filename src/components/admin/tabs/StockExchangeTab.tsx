@@ -334,7 +334,7 @@ export function StockExchangeTab() {
                 <Label htmlFor="shareholder">Акціонер</Label>
                 <Select value={selectedShareholderId} onValueChange={setSelectedShareholderId}>
                   <SelectTrigger id="shareholder">
-                    <SelectValue placeholder="Виберіть співвласника" />
+                    <SelectValue placeholder="Виберіть акціонера" />
                   </SelectTrigger>
                   <SelectContent>
                     {shareholders.map((sh) => (
