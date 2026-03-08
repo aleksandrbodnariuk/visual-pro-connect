@@ -498,7 +498,7 @@ export function StockExchangeTab() {
           {selectedTransaction && (
             <>
               <DialogHeader>
-                <DialogTitle>Деталі заявки на передачу частки</DialogTitle>
+                <DialogTitle>Деталі заявки на передачу акцій</DialogTitle>
                 <DialogDescription>ID: {selectedTransaction.id.substring(0, 8)}...</DialogDescription>
               </DialogHeader>
 
