@@ -173,7 +173,7 @@ export default function StockMarket() {
           avatarUrl: p.avatar_url,
           shares,
           percentage: pct,
-          title: p.title || 'Співвласник',
+          title: p.title || 'Акціонер',
         });
       }
       setShareholders(shList);
