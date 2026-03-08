@@ -1,79 +1,156 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpRight, CheckSquare, MessageCircle, XSquare } from "lucide-react";
+import { CheckSquare, MessageCircle, XSquare } from "lucide-react";
 import { toast } from "sonner";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { supabase } from "@/integrations/supabase/client";
 
+interface MarketListing {
+  id: string;
+  seller_id: string;
+  seller_name: string;
+  quantity: number;
+  price_per_share: number;
+  status: string;
+  created_at: string;
+}
+
+interface Transaction {
+  id: string;
+  share_id: string | null;
+  seller_id: string;
+  seller_name: string;
+  buyer_id: string;
+  buyer_name: string;
+  quantity: number;
+  price_per_share: number;
+  total_price: number;
+  status: string;
+  approved_by_admin: boolean;
+  created_at: string;
+}
+
 export function StockExchangeTab() {
   const { sharePriceUsd, loading: settingsLoading, updateSharePrice } = useCompanySettings();
   const [stockPrice, setStockPrice] = useState<string>("");
-  
   const [shareholders, setShareholders] = useState<any[]>([]);
-  
-  const [stockExchangeItems, setStockExchangeItems] = useState<any[]>(() => {
-    return JSON.parse(localStorage.getItem("stockExchange") || "[]");
-  });
-  
-  const [sharesTransactions, setSharesTransactions] = useState<any[]>(() => {
-    return JSON.parse(localStorage.getItem("sharesTransactions") || "[]");
-  });
-  
+  const [listings, setListings] = useState<MarketListing[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedShareholderId, setSelectedShareholderId] = useState("");
   const [selectedSharesCount, setSelectedSharesCount] = useState("1");
   const [openTransactionDialog, setOpenTransactionDialog] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
-  const [newMessage, setNewMessage] = useState("");
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [loadingData, setLoadingData] = useState(true);
 
-  // Sync price from DB
   useEffect(() => {
     if (!settingsLoading) {
       setStockPrice(sharePriceUsd.toString());
     }
   }, [sharePriceUsd, settingsLoading]);
 
-  // Fetch shareholders from Supabase
-  useEffect(() => {
-    const fetchShareholders = async () => {
-      const { data: allUsers, error } = await supabase.rpc('get_users_for_admin');
-      if (error) {
-        console.error("Error fetching users for stock exchange:", error);
-        return;
+  const loadData = useCallback(async () => {
+    setLoadingData(true);
+    try {
+      // Fetch shareholders
+      const { data: allUsers, error: usersError } = await supabase.rpc('get_users_for_admin');
+      if (usersError) {
+        console.error("Error fetching users:", usersError);
+      } else {
+        const sh = (allUsers || [])
+          .filter((u: any) => u.is_shareholder)
+          .map((u: any) => {
+            const parts = u.full_name ? u.full_name.split(' ') : ['', ''];
+            return { id: u.id, firstName: parts[0] || '', lastName: parts.slice(1).join(' ') || '', shares: 0 };
+          });
+        
+        for (const s of sh) {
+          const { data } = await supabase.from('shares').select('quantity').eq('user_id', s.id).limit(1);
+          s.shares = data && data.length > 0 ? data[0].quantity : 0;
+        }
+        setShareholders(sh);
       }
-      const sh = (allUsers || [])
-        .filter((u: any) => u.is_shareholder)
-        .map((u: any) => {
-          const parts = u.full_name ? u.full_name.split(' ') : ['', ''];
-          return {
-            id: u.id,
-            firstName: parts[0] || '',
-            lastName: parts.slice(1).join(' ') || '',
-            shares: 0, // will be enriched below
-          };
+
+      // Fetch market listings with seller names
+      const { data: marketData, error: marketError } = await supabase
+        .from('market')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (marketError) {
+        console.error("Error fetching market:", marketError);
+      } else {
+        const listingsWithNames: MarketListing[] = [];
+        for (const m of (marketData || [])) {
+          const { data: userData } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: [m.seller_id] });
+          const sellerName = userData?.[0]?.full_name || 'Невідомий';
+          listingsWithNames.push({
+            id: m.id,
+            seller_id: m.seller_id,
+            seller_name: sellerName,
+            quantity: m.quantity,
+            price_per_share: Number(m.price_per_share),
+            status: m.status || 'active',
+            created_at: m.created_at,
+          });
+        }
+        setListings(listingsWithNames);
+      }
+
+      // Fetch pending transactions
+      const { data: txData, error: txError } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (txError) {
+        console.error("Error fetching transactions:", txError);
+      } else {
+        const txWithNames: Transaction[] = [];
+        const userIds = new Set<string>();
+        (txData || []).forEach((t: any) => {
+          if (t.seller_id) userIds.add(t.seller_id);
+          if (t.buyer_id) userIds.add(t.buyer_id);
         });
-      
-      // Fetch shares for each
-      for (const s of sh) {
-        const { data } = await supabase
-          .from('shares')
-          .select('quantity')
-          .eq('user_id', s.id)
-          .limit(1);
-        s.shares = data && data.length > 0 ? data[0].quantity : 10;
+        
+        let namesMap: Record<string, string> = {};
+        if (userIds.size > 0) {
+          const { data: profiles } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: Array.from(userIds) });
+          (profiles || []).forEach((p: any) => { namesMap[p.id] = p.full_name || 'Невідомий'; });
+        }
+
+        for (const t of (txData || [])) {
+          txWithNames.push({
+            id: t.id,
+            share_id: t.share_id,
+            seller_id: t.seller_id,
+            seller_name: namesMap[t.seller_id] || 'Невідомий',
+            buyer_id: t.buyer_id,
+            buyer_name: namesMap[t.buyer_id] || 'Невідомий',
+            quantity: t.quantity,
+            price_per_share: Number(t.price_per_share) || 0,
+            total_price: Number(t.total_price),
+            status: t.status || 'pending',
+            approved_by_admin: t.approved_by_admin || false,
+            created_at: t.created_at,
+          });
+        }
+        setTransactions(txWithNames);
       }
-      
-      setShareholders(sh);
-    };
-    fetchShareholders();
+    } catch (error) {
+      console.error("Error loading stock exchange data:", error);
+    } finally {
+      setLoadingData(false);
+    }
   }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const updateStockPriceHandler = async () => {
     const price = parseFloat(stockPrice);
@@ -81,20 +158,19 @@ export function StockExchangeTab() {
       toast.error("Введіть коректну ціну акції");
       return;
     }
-    
     const success = await updateSharePrice(price);
     if (success) {
       toast.success(`Ціну акції оновлено: ${price} USD`);
     }
   };
 
-  const handleSellShares = () => {
+  const handleSellShares = async () => {
     if (!selectedShareholderId) {
       toast.error("Виберіть акціонера");
       return;
     }
-
-    if (!selectedSharesCount || isNaN(parseInt(selectedSharesCount)) || parseInt(selectedSharesCount) <= 0) {
+    const count = parseInt(selectedSharesCount);
+    if (!selectedSharesCount || isNaN(count) || count <= 0) {
       toast.error("Введіть коректну кількість акцій");
       return;
     }
@@ -104,148 +180,92 @@ export function StockExchangeTab() {
       toast.error("Акціонера не знайдено");
       return;
     }
-
-    if (parseInt(selectedSharesCount) > (seller.shares || 0)) {
+    if (count > (seller.shares || 0)) {
       toast.error(`У акціонера лише ${seller.shares || 0} акцій`);
       return;
     }
 
     const price = parseFloat(stockPrice) || sharePriceUsd;
 
-    const newStockExchangeItem = {
-      id: Date.now().toString(),
-      sellerId: seller.id,
-      sellerName: `${seller.firstName} ${seller.lastName}`,
-      sharesCount: parseInt(selectedSharesCount),
-      pricePerShare: price,
-      initialPrice: price,
-      status: "Активна",
-      date: new Date().toISOString(),
-      isAuction: false
-    };
+    const { error } = await supabase.from('market').insert({
+      seller_id: seller.id,
+      quantity: count,
+      price_per_share: price,
+      status: 'active',
+    });
 
-    const updatedStockExchangeItems = [...stockExchangeItems, newStockExchangeItem];
-    setStockExchangeItems(updatedStockExchangeItems);
-    localStorage.setItem("stockExchange", JSON.stringify(updatedStockExchangeItems));
+    if (error) {
+      console.error("Error creating listing:", error);
+      toast.error("Не вдалося створити пропозицію");
+      return;
+    }
 
     setSelectedShareholderId("");
     setSelectedSharesCount("1");
-
     toast.success("Акції виставлено на продаж");
+    await loadData();
   };
 
-  const openTransaction = (transaction: any) => {
+  const openTransaction = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setOpenTransactionDialog(true);
   };
 
-  const approveTransaction = (transactionId: string) => {
-    const transaction = sharesTransactions.find(t => t.id === transactionId);
-    if (!transaction) return;
-
-    // NOTE: market/transactions logic still uses localStorage — will be migrated in a later phase
-    const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-    const seller = storedUsers.find((user: any) => user.id === transaction.sellerId);
-    const buyer = storedUsers.find((user: any) => user.id === transaction.buyerId);
-
-    if (!seller || !buyer) {
-      toast.error("Користувача не знайдено");
-      return;
+  const approveTransaction = async (transactionId: string) => {
+    try {
+      const { error } = await supabase.rpc('approve_share_transaction', { _transaction_id: transactionId });
+      if (error) {
+        console.error("Error approving transaction:", error);
+        const msg = error.message || '';
+        if (msg.includes('Недостатньо акцій')) {
+          toast.error("Недостатньо акцій у продавця для завершення угоди");
+        } else if (msg.includes('вже змінено')) {
+          toast.error("Транзакцію вже змінено іншим користувачем");
+        } else {
+          toast.error("Не вдалося завершити угоду");
+        }
+        return;
+      }
+      toast.success("Транзакцію успішно завершено");
+      setOpenTransactionDialog(false);
+      await loadData();
+    } catch (err) {
+      console.error("Approve error:", err);
+      toast.error("Не вдалося завершити угоду");
     }
-
-    const updatedSeller = { ...seller, shares: (seller.shares || 0) - transaction.sharesCount };
-    const updatedBuyer = { 
-      ...buyer, 
-      shares: (buyer.shares || 0) + transaction.sharesCount,
-      isShareHolder: true,
-      role: buyer.role === "admin" || buyer.role === "admin-founder" ? buyer.role : "shareholder"
-    };
-
-    const updatedUsers = storedUsers.map((user: any) => {
-      if (user.id === seller.id) return updatedSeller;
-      if (user.id === buyer.id) return updatedBuyer;
-      return user;
-    });
-
-    localStorage.setItem("users", JSON.stringify(updatedUsers));
-
-    const updatedTransactions = sharesTransactions.map(t => {
-      if (t.id === transactionId) {
-        return { ...t, status: "Завершено", adminApproved: true };
-      }
-      return t;
-    });
-    setSharesTransactions(updatedTransactions);
-    localStorage.setItem("sharesTransactions", JSON.stringify(updatedTransactions));
-
-    const updatedStockExchangeItems = stockExchangeItems.filter(
-      item => item.id !== transaction.listingId
-    );
-    setStockExchangeItems(updatedStockExchangeItems);
-    localStorage.setItem("stockExchange", JSON.stringify(updatedStockExchangeItems));
-
-    toast.success("Транзакцію успішно завершено");
-    setOpenTransactionDialog(false);
   };
 
-  const rejectTransaction = (transactionId: string) => {
-    const transaction = sharesTransactions.find(t => t.id === transactionId);
-    if (!transaction) return;
-
-    const updatedTransactions = sharesTransactions.map(t => {
-      if (t.id === transactionId) {
-        return { ...t, status: "Відхилено" };
+  const rejectTransaction = async (transactionId: string) => {
+    try {
+      const { error } = await supabase.rpc('reject_share_transaction', { _transaction_id: transactionId });
+      if (error) {
+        console.error("Error rejecting transaction:", error);
+        toast.error("Не вдалося відхилити транзакцію");
+        return;
       }
-      return t;
-    });
-    setSharesTransactions(updatedTransactions);
-    localStorage.setItem("sharesTransactions", JSON.stringify(updatedTransactions));
-
-    const updatedStockExchangeItems = stockExchangeItems.map(item => {
-      if (item.id === transaction.listingId) {
-        return { ...item, status: "Активна" };
-      }
-      return item;
-    });
-    setStockExchangeItems(updatedStockExchangeItems);
-    localStorage.setItem("stockExchange", JSON.stringify(updatedStockExchangeItems));
-
-    toast.success("Транзакцію відхилено");
-    setOpenTransactionDialog(false);
+      toast.success("Транзакцію відхилено");
+      setOpenTransactionDialog(false);
+      await loadData();
+    } catch (err) {
+      console.error("Reject error:", err);
+      toast.error("Не вдалося відхилити транзакцію");
+    }
   };
 
-  const sendMessage = () => {
-    if (!newMessage.trim() || !selectedTransaction) return;
-    
-    const message = {
-      id: Date.now().toString(),
-      sender: "Адміністратор",
-      senderId: "admin",
-      text: newMessage,
-      date: new Date().toISOString()
-    };
-    
-    const updatedTransaction = {
-      ...selectedTransaction,
-      messages: selectedTransaction.messages ? [...selectedTransaction.messages, message] : [message]
-    };
-    
-    const updatedTransactions = sharesTransactions.map(t => 
-      t.id === selectedTransaction.id ? updatedTransaction : t
-    );
-    
-    setSharesTransactions(updatedTransactions);
-    localStorage.setItem("sharesTransactions", JSON.stringify(updatedTransactions));
-    
-    setSelectedTransaction(updatedTransaction);
-    setNewMessage("");
-    
-    toast.success("Повідомлення відправлено");
-  };
+  const pendingTransactions = transactions.filter(t => t.status === 'pending');
+  const activeListings = listings.filter(l => l.status === 'active');
 
-  const pendingTransactions = sharesTransactions.filter(t => 
-    t.status === "Очікує підтвердження" || t.status === "В процесі"
-  );
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case 'active': return 'Активна';
+      case 'pending': return 'Очікує підтвердження';
+      case 'sold': return 'Продано';
+      case 'cancelled': return 'Скасовано';
+      case 'completed': return 'Завершено';
+      case 'rejected': return 'Відхилено';
+      default: return status;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -258,10 +278,10 @@ export function StockExchangeTab() {
           <div className="flex gap-4 items-end">
             <div className="flex-1">
               <Label htmlFor="stock-price">Ціна акції (USD)</Label>
-              <Input 
-                id="stock-price" 
-                type="number" 
-                placeholder="10" 
+              <Input
+                id="stock-price"
+                type="number"
+                placeholder="10"
                 value={stockPrice}
                 onChange={(e) => setStockPrice(e.target.value)}
                 disabled={settingsLoading}
@@ -271,7 +291,7 @@ export function StockExchangeTab() {
           </div>
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Виставити акції на продаж</CardTitle>
@@ -282,10 +302,7 @@ export function StockExchangeTab() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="shareholder">Акціонер</Label>
-                <Select 
-                  value={selectedShareholderId} 
-                  onValueChange={setSelectedShareholderId}
-                >
+                <Select value={selectedShareholderId} onValueChange={setSelectedShareholderId}>
                   <SelectTrigger id="shareholder">
                     <SelectValue placeholder="Виберіть акціонера" />
                   </SelectTrigger>
@@ -300,11 +317,11 @@ export function StockExchangeTab() {
               </div>
               <div>
                 <Label htmlFor="shares-count">Кількість акцій</Label>
-                <Input 
-                  id="shares-count" 
-                  type="number" 
-                  placeholder="1" 
-                  min="1" 
+                <Input
+                  id="shares-count"
+                  type="number"
+                  placeholder="1"
+                  min="1"
                   value={selectedSharesCount}
                   onChange={(e) => setSelectedSharesCount(e.target.value)}
                 />
@@ -314,57 +331,91 @@ export function StockExchangeTab() {
           </div>
         </CardContent>
       </Card>
-      
+
+      {/* Active Listings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Активні лоти</CardTitle>
+          <CardDescription>Пропозиції на ринку акцій</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingData ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : activeListings.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Продавець</th>
+                    <th className="text-left p-2">Кількість</th>
+                    <th className="text-right p-2">Ціна (USD)</th>
+                    <th className="text-left p-2">Дата</th>
+                    <th className="text-left p-2">Статус</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeListings.map((listing) => (
+                    <tr key={listing.id} className="border-b hover:bg-muted/50">
+                      <td className="p-2">{listing.seller_name}</td>
+                      <td className="p-2">{listing.quantity}</td>
+                      <td className="p-2 text-right">{listing.price_per_share.toFixed(2)}</td>
+                      <td className="p-2">{new Date(listing.created_at).toLocaleDateString()}</td>
+                      <td className="p-2"><Badge variant="secondary">{statusLabel(listing.status)}</Badge></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">Немає активних лотів</div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pending Transactions */}
       <Card>
         <CardHeader>
           <CardTitle>Активні угоди</CardTitle>
           <CardDescription>Транзакції, які очікують на обробку</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Desktop Table */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-2">ID</th>
                   <th className="text-left p-2">Дата</th>
                   <th className="text-left p-2">Продавець</th>
                   <th className="text-left p-2">Покупець</th>
                   <th className="text-left p-2">Кількість</th>
-                  <th className="text-right p-2">Ціна (USD)</th>
+                  <th className="text-right p-2">Сума (USD)</th>
                   <th className="text-left p-2">Статус</th>
                   <th className="text-left p-2">Дії</th>
                 </tr>
               </thead>
               <tbody>
                 {pendingTransactions.length > 0 ? (
-                  pendingTransactions.map((transaction) => (
-                    <tr key={transaction.id} className="border-b hover:bg-muted/50">
-                      <td className="p-2">{transaction.id.substring(0, 8)}...</td>
-                      <td className="p-2">{new Date(transaction.date).toLocaleDateString()}</td>
-                      <td className="p-2">{transaction.sellerName}</td>
-                      <td className="p-2">{transaction.buyerName}</td>
-                      <td className="p-2">{transaction.sharesCount}</td>
-                      <td className="p-2 text-right">{transaction.totalAmount?.toFixed(2)}</td>
+                  pendingTransactions.map((tx) => (
+                    <tr key={tx.id} className="border-b hover:bg-muted/50">
+                      <td className="p-2">{new Date(tx.created_at).toLocaleDateString()}</td>
+                      <td className="p-2">{tx.seller_name}</td>
+                      <td className="p-2">{tx.buyer_name}</td>
+                      <td className="p-2">{tx.quantity}</td>
+                      <td className="p-2 text-right">{tx.total_price.toFixed(2)}</td>
                       <td className="p-2">
-                        <Badge 
-                          variant={transaction.status === "Очікує підтвердження" ? "outline" : "secondary"}
-                        >
-                          {transaction.status}
-                        </Badge>
+                        <Badge variant="outline">{statusLabel(tx.status)}</Badge>
                       </td>
                       <td className="p-2">
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => openTransaction(transaction)}>
-                            <MessageCircle className="h-4 w-4 mr-1" /> Деталі
-                          </Button>
-                        </div>
+                        <Button variant="outline" size="sm" onClick={() => openTransaction(tx)}>
+                          <MessageCircle className="h-4 w-4 mr-1" /> Деталі
+                        </Button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={8} className="p-2 text-center text-muted-foreground">
+                    <td colSpan={7} className="p-2 text-center text-muted-foreground">
                       Немає активних угод
                     </td>
                   </tr>
@@ -376,38 +427,28 @@ export function StockExchangeTab() {
           {/* Mobile Cards */}
           <div className="md:hidden space-y-4">
             {pendingTransactions.length > 0 ? (
-              pendingTransactions.map((transaction) => (
-                <Card key={transaction.id} className="p-4">
+              pendingTransactions.map((tx) => (
+                <Card key={tx.id} className="p-4">
                   <div className="space-y-2">
                     <div className="flex justify-between items-start">
-                      <p className="text-xs text-muted-foreground">ID: {transaction.id.substring(0, 8)}...</p>
-                      <Badge 
-                        variant={transaction.status === "Очікує підтвердження" ? "outline" : "secondary"}
-                      >
-                        {transaction.status}
-                      </Badge>
+                      <p className="text-xs text-muted-foreground">{new Date(tx.created_at).toLocaleDateString()}</p>
+                      <Badge variant="outline">{statusLabel(tx.status)}</Badge>
                     </div>
-                    
-                    <p className="text-sm">{new Date(transaction.date).toLocaleDateString()}</p>
-                    
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Продавець:</span>
-                      <span>{transaction.sellerName}</span>
+                      <span>{tx.seller_name}</span>
                     </div>
-                    
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Покупець:</span>
-                      <span>{transaction.buyerName}</span>
+                      <span>{tx.buyer_name}</span>
                     </div>
-                    
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Кількість:</span>
-                      <span>{transaction.sharesCount} акцій</span>
+                      <span>{tx.quantity} акцій</span>
                     </div>
-                    
                     <div className="flex justify-between items-center pt-2">
-                      <span className="font-semibold">{transaction.totalAmount?.toFixed(2)} USD</span>
-                      <Button variant="outline" size="sm" onClick={() => openTransaction(transaction)}>
+                      <span className="font-semibold">{tx.total_price.toFixed(2)} USD</span>
+                      <Button variant="outline" size="sm" onClick={() => openTransaction(tx)}>
                         <MessageCircle className="h-4 w-4 mr-1" /> Деталі
                       </Button>
                     </div>
@@ -415,93 +456,58 @@ export function StockExchangeTab() {
                 </Card>
               ))
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                Немає активних угод
-              </div>
+              <div className="text-center py-8 text-muted-foreground">Немає активних угод</div>
             )}
           </div>
         </CardContent>
       </Card>
 
+      {/* Transaction Details Dialog */}
       <Dialog open={openTransactionDialog} onOpenChange={setOpenTransactionDialog}>
         <DialogContent className="max-w-2xl">
           {selectedTransaction && (
             <>
               <DialogHeader>
                 <DialogTitle>Деталі транзакції</DialogTitle>
-                <DialogDescription>
-                  ID: {selectedTransaction.id}
-                </DialogDescription>
+                <DialogDescription>ID: {selectedTransaction.id.substring(0, 8)}...</DialogDescription>
               </DialogHeader>
 
               <div className="grid gap-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h3 className="text-sm font-medium">Продавець</h3>
-                    <p>{selectedTransaction.sellerName}</p>
+                    <p>{selectedTransaction.seller_name}</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium">Покупець</h3>
-                    <p>{selectedTransaction.buyerName}</p>
+                    <p>{selectedTransaction.buyer_name}</p>
                   </div>
                 </div>
-                
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <h3 className="text-sm font-medium">Кількість акцій</h3>
-                    <p>{selectedTransaction.sharesCount}</p>
+                    <p>{selectedTransaction.quantity}</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium">Ціна за акцію</h3>
-                    <p>{selectedTransaction.pricePerShare?.toFixed(2)} USD</p>
+                    <p>{selectedTransaction.price_per_share.toFixed(2)} USD</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium">Загальна сума</h3>
-                    <p>{selectedTransaction.totalAmount?.toFixed(2)} USD</p>
+                    <p>{selectedTransaction.total_price.toFixed(2)} USD</p>
                   </div>
                 </div>
-
                 <div>
-                  <h3 className="text-sm font-medium mb-2">Повідомлення</h3>
-                  <div className="border rounded-md p-4 max-h-48 overflow-y-auto space-y-2">
-                    {selectedTransaction.messages?.length > 0 ? (
-                      selectedTransaction.messages.map((msg: any) => (
-                        <div key={msg.id} className="text-sm">
-                          <span className="font-medium">{msg.sender}: </span>
-                          <span>{msg.text}</span>
-                          <span className="text-xs text-muted-foreground ml-2">
-                            {new Date(msg.date).toLocaleString()}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Немає повідомлень</p>
-                    )}
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    <Input 
-                      placeholder="Введіть повідомлення..."
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                    />
-                    <Button onClick={sendMessage}>
-                      <MessageCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <h3 className="text-sm font-medium">Статус</h3>
+                  <Badge variant="outline">{statusLabel(selectedTransaction.status)}</Badge>
                 </div>
               </div>
 
               <DialogFooter className="gap-2">
-                <Button 
-                  variant="destructive" 
-                  onClick={() => rejectTransaction(selectedTransaction.id)}
-                >
+                <Button variant="destructive" onClick={() => rejectTransaction(selectedTransaction.id)}>
                   <XSquare className="h-4 w-4 mr-1" /> Відхилити
                 </Button>
-                <Button 
-                  onClick={() => approveTransaction(selectedTransaction.id)}
-                >
+                <Button onClick={() => approveTransaction(selectedTransaction.id)}>
                   <CheckSquare className="h-4 w-4 mr-1" /> Схвалити
                 </Button>
               </DialogFooter>

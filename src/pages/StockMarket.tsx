@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -12,7 +12,6 @@ import {
   TrendingDown, 
   DollarSign, 
   ShoppingBag, 
-  MessageSquare, 
   PieChart 
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,285 +21,347 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSupabaseAuth } from "@/hooks/auth/useSupabaseAuth";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
+import { supabase } from "@/integrations/supabase/client";
+
+interface MarketListing {
+  id: string;
+  seller_id: string;
+  seller_name: string;
+  seller_avatar?: string;
+  quantity: number;
+  price_per_share: number;
+  status: string;
+  created_at: string;
+}
+
+interface Transaction {
+  id: string;
+  share_id: string | null;
+  seller_id: string;
+  seller_name: string;
+  buyer_id: string;
+  buyer_name: string;
+  quantity: number;
+  price_per_share: number;
+  total_price: number;
+  status: string;
+  created_at: string;
+}
+
+interface ShareholderInfo {
+  id: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl?: string;
+  shares: number;
+  percentage: string;
+  title: string;
+}
 
 export default function StockMarket() {
-  const [stockExchangeItems, setStockExchangeItems] = useState<any[]>([]);
-  const [sharesTransactions, setSharesTransactions] = useState<any[]>([]);
-  const [shareholders, setShareholders] = useState<any[]>([]);
-  const [selectedOffer, setSelectedOffer] = useState<any>(null);
+  const [listings, setListings] = useState<MarketListing[]>([]);
+  const [myTransactions, setMyTransactions] = useState<Transaction[]>([]);
+  const [shareholders, setShareholders] = useState<ShareholderInfo[]>([]);
+  const [selectedOffer, setSelectedOffer] = useState<MarketListing | null>(null);
   const [buyAmount, setBuyAmount] = useState("1");
   const [openBuyDialog, setOpenBuyDialog] = useState(false);
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
-  const [newMessage, setNewMessage] = useState("");
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [sharesCount, setSharesCount] = useState("1");
   const [sharePrice, setSharePrice] = useState("");
   const [openSellDialog, setOpenSellDialog] = useState(false);
+  const [myShares, setMyShares] = useState(0);
+  const [loadingData, setLoadingData] = useState(true);
   
   const navigate = useNavigate();
   const { getCurrentUser, isAuthenticated, loading } = useSupabaseAuth();
   const currentUser = getCurrentUser();
-  const { sharePriceUsd, loading: settingsLoading } = useCompanySettings();
+  const { sharePriceUsd, totalShares, loading: settingsLoading } = useCompanySettings();
   
-  // Use DB price as the stock price
   const stockPrice = sharePriceUsd;
+
+  const loadMarketData = useCallback(async () => {
+    if (!currentUser?.id) return;
+    setLoadingData(true);
+    
+    try {
+      // Load user's own shares
+      const { data: sharesData } = await supabase
+        .from('shares')
+        .select('quantity')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+      setMyShares(sharesData?.quantity || 0);
+
+      // Load active market listings
+      const { data: marketData } = await supabase
+        .from('market')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+
+      const sellerIds = new Set<string>();
+      (marketData || []).forEach((m: any) => { if (m.seller_id) sellerIds.add(m.seller_id); });
+
+      let namesMap: Record<string, { name: string; avatar?: string }> = {};
+      if (sellerIds.size > 0) {
+        const { data: profiles } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: Array.from(sellerIds) });
+        (profiles || []).forEach((p: any) => { 
+          namesMap[p.id] = { name: p.full_name || 'Невідомий', avatar: p.avatar_url }; 
+        });
+      }
+
+      const formattedListings: MarketListing[] = (marketData || []).map((m: any) => ({
+        id: m.id,
+        seller_id: m.seller_id,
+        seller_name: namesMap[m.seller_id]?.name || 'Невідомий',
+        seller_avatar: namesMap[m.seller_id]?.avatar,
+        quantity: m.quantity,
+        price_per_share: Number(m.price_per_share),
+        status: m.status,
+        created_at: m.created_at,
+      }));
+      setListings(formattedListings);
+
+      // Load my transactions
+      const { data: txData } = await supabase
+        .from('transactions')
+        .select('*')
+        .or(`seller_id.eq.${currentUser.id},buyer_id.eq.${currentUser.id}`)
+        .order('created_at', { ascending: false });
+
+      const txUserIds = new Set<string>();
+      (txData || []).forEach((t: any) => {
+        if (t.seller_id) txUserIds.add(t.seller_id);
+        if (t.buyer_id) txUserIds.add(t.buyer_id);
+      });
+
+      let txNamesMap: Record<string, string> = {};
+      if (txUserIds.size > 0) {
+        const { data: profiles } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: Array.from(txUserIds) });
+        (profiles || []).forEach((p: any) => { txNamesMap[p.id] = p.full_name || 'Невідомий'; });
+      }
+
+      const formattedTx: Transaction[] = (txData || []).map((t: any) => ({
+        id: t.id,
+        share_id: t.share_id,
+        seller_id: t.seller_id,
+        seller_name: txNamesMap[t.seller_id] || 'Невідомий',
+        buyer_id: t.buyer_id,
+        buyer_name: txNamesMap[t.buyer_id] || 'Невідомий',
+        quantity: t.quantity,
+        price_per_share: Number(t.price_per_share) || 0,
+        total_price: Number(t.total_price),
+        status: t.status || 'pending',
+        created_at: t.created_at,
+      }));
+      setMyTransactions(formattedTx);
+
+      // Load shareholders list
+      const { data: allProfiles } = await supabase.rpc('get_safe_public_profiles');
+      const shareholderProfiles = (allProfiles || []).filter((p: any) => p.is_shareholder);
+      
+      const shList: ShareholderInfo[] = [];
+      for (const p of shareholderProfiles) {
+        const { data: shData } = await supabase.from('shares').select('quantity').eq('user_id', p.id).maybeSingle();
+        const shares = shData?.quantity || 0;
+        const pct = totalShares > 0 ? ((shares / totalShares) * 100).toFixed(2) : '0.00';
+        const parts = (p.full_name || '').split(' ');
+        shList.push({
+          id: p.id,
+          firstName: parts[0] || '',
+          lastName: parts.slice(1).join(' ') || '',
+          avatarUrl: p.avatar_url,
+          shares,
+          percentage: pct,
+          title: p.title || 'Акціонер',
+        });
+      }
+      setShareholders(shList);
+    } catch (error) {
+      console.error("Error loading market data:", error);
+    } finally {
+      setLoadingData(false);
+    }
+  }, [currentUser?.id, totalShares]);
   
   useEffect(() => {
-    console.log('📈 Stock Market: checking auth...', { 
-      loading, 
-      isAuthenticated: isAuthenticated(), 
-      currentUser: currentUser ? {
-        id: currentUser.id,
-        isShareHolder: currentUser.isShareHolder
-      } : null
-    });
-    
     if (loading) return;
-    
     if (!isAuthenticated() || !currentUser) {
-      console.log('❌ Stock Market access denied: no auth');
       toast.error("Доступ заборонено: Необхідно увійти в систему");
       navigate("/auth");
       return;
     }
-    
     if (!currentUser.isShareHolder) {
-      console.log('❌ Stock Market access denied: no shareholder status');
       toast.error("Доступ заборонено: Необхідний статус акціонера");
       navigate("/");
       return;
     }
-    
-    console.log('✅ Stock Market access granted');
-    
-    // Stock exchange items and transactions still use localStorage (will be migrated later)
-    const storedExchange = localStorage.getItem("stockExchange");
-    if (storedExchange) {
-      setStockExchangeItems(JSON.parse(storedExchange));
-    }
-    
-    const storedTransactions = localStorage.getItem("sharesTransactions");
-    if (storedTransactions) {
-      setSharesTransactions(JSON.parse(storedTransactions));
-    }
-    
-    const storedUsers = localStorage.getItem("users");
-    if (storedUsers) {
-      const users = JSON.parse(storedUsers);
-      const shareholdersData = users.filter((u: any) => u.isShareHolder);
-      setShareholders(shareholdersData);
-    }
-    
     setSharePrice(sharePriceUsd.toString());
-  }, [navigate, loading, isAuthenticated, currentUser, sharePriceUsd]);
-  
-  const handleBuyOffer = (offer: any) => {
-    if (offer.sellerId === currentUser.id) {
+    loadMarketData();
+  }, [navigate, loading, isAuthenticated, currentUser, sharePriceUsd, loadMarketData]);
+
+  const handleBuyOffer = (offer: MarketListing) => {
+    if (offer.seller_id === currentUser?.id) {
       toast.error("Ви не можете купити власні акції");
       return;
     }
-    
     setSelectedOffer(offer);
     setBuyAmount("1");
     setOpenBuyDialog(true);
   };
-  
-  const confirmBuy = () => {
-    if (!selectedOffer) return;
-    
+
+  const confirmBuy = async () => {
+    if (!selectedOffer || !currentUser) return;
     const amount = parseInt(buyAmount);
-    if (isNaN(amount) || amount <= 0 || amount > selectedOffer.sharesCount) {
-      toast.error(`Введіть коректну кількість акцій (1-${selectedOffer.sharesCount})`);
+    if (isNaN(amount) || amount <= 0 || amount > selectedOffer.quantity) {
+      toast.error(`Введіть коректну кількість акцій (1-${selectedOffer.quantity})`);
       return;
     }
-    
-    const totalPrice = amount * selectedOffer.pricePerShare;
-    
-    const newTransaction = {
-      id: Date.now().toString(),
-      listingId: selectedOffer.id,
-      sellerId: selectedOffer.sellerId,
-      sellerName: selectedOffer.sellerName,
-      buyerId: currentUser.id,
-      buyerName: `${currentUser.firstName} ${currentUser.lastName}`,
-      sharesCount: amount,
-      pricePerShare: selectedOffer.pricePerShare,
-      totalAmount: totalPrice,
-      status: "Очікує підтвердження",
-      date: new Date().toISOString(),
-      messages: [],
-      sellerConfirmed: false,
-      buyerConfirmed: true,
-      adminApproved: false
-    };
-    
-    const updatedTransactions = [...sharesTransactions, newTransaction];
-    setSharesTransactions(updatedTransactions);
-    localStorage.setItem("sharesTransactions", JSON.stringify(updatedTransactions));
-    
-    const updatedStockExchangeItems = stockExchangeItems.map(item => {
-      if (item.id === selectedOffer.id) {
-        return { ...item, status: "В процесі продажу" };
-      }
-      return item;
+
+    const totalPrice = amount * selectedOffer.price_per_share;
+
+    // Create transaction
+    const { error: txError } = await supabase.from('transactions').insert({
+      share_id: selectedOffer.id,
+      seller_id: selectedOffer.seller_id,
+      buyer_id: currentUser.id,
+      quantity: amount,
+      price_per_share: selectedOffer.price_per_share,
+      total_price: totalPrice,
+      status: 'pending',
     });
-    
-    setStockExchangeItems(updatedStockExchangeItems);
-    localStorage.setItem("stockExchange", JSON.stringify(updatedStockExchangeItems));
-    
+
+    if (txError) {
+      console.error("Error creating transaction:", txError);
+      toast.error("Не вдалося створити запит на купівлю");
+      return;
+    }
+
+    // Update listing status to pending
+    const { error: marketError } = await supabase
+      .from('market')
+      .update({ status: 'pending', buyer_id: currentUser.id, updated_at: new Date().toISOString() })
+      .eq('id', selectedOffer.id);
+
+    if (marketError) {
+      console.error("Error updating listing:", marketError);
+    }
+
     setOpenBuyDialog(false);
     toast.success("Запит на купівлю акцій відправлено");
+    await loadMarketData();
   };
-  
-  const openTransactionDetails = (transaction: any) => {
+
+  const openTransactionDetails = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setOpenDetailsDialog(true);
   };
-  
-  const sendMessage = () => {
-    if (!newMessage.trim() || !selectedTransaction) return;
-    
-    const message = {
-      id: Date.now().toString(),
-      sender: `${currentUser.firstName} ${currentUser.lastName}`,
-      senderId: currentUser.id,
-      text: newMessage,
-      date: new Date().toISOString()
-    };
-    
-    const updatedTransaction = {
-      ...selectedTransaction,
-      messages: selectedTransaction.messages ? [...selectedTransaction.messages, message] : [message]
-    };
-    
-    const updatedTransactions = sharesTransactions.map(t => 
-      t.id === selectedTransaction.id ? updatedTransaction : t
-    );
-    
-    setSharesTransactions(updatedTransactions);
-    localStorage.setItem("sharesTransactions", JSON.stringify(updatedTransactions));
-    
-    setSelectedTransaction(updatedTransaction);
-    setNewMessage("");
-    toast.success("Повідомлення надіслано");
-  };
-  
-  const confirmTransaction = () => {
+
+  const cancelTransaction = async () => {
     if (!selectedTransaction) return;
     
-    const updatedTransaction = {
-      ...selectedTransaction,
-      sellerConfirmed: selectedTransaction.sellerId === currentUser.id,
-      buyerConfirmed: selectedTransaction.buyerId === currentUser.id,
-      status: "Очікує схвалення адміністратора"
-    };
-    
-    const updatedTransactions = sharesTransactions.map(t => 
-      t.id === selectedTransaction.id ? updatedTransaction : t
-    );
-    
-    setSharesTransactions(updatedTransactions);
-    localStorage.setItem("sharesTransactions", JSON.stringify(updatedTransactions));
-    
-    setSelectedTransaction(updatedTransaction);
-    toast.success("Транзакцію підтверджено");
-  };
-  
-  const cancelTransaction = () => {
-    if (!selectedTransaction) return;
-    
-    const updatedTransactions = sharesTransactions.map(t => {
-      if (t.id === selectedTransaction.id) {
-        return { ...t, status: "Скасовано" };
-      }
-      return t;
-    });
-    
-    setSharesTransactions(updatedTransactions);
-    localStorage.setItem("sharesTransactions", JSON.stringify(updatedTransactions));
-    
-    const updatedStockExchangeItems = stockExchangeItems.map(item => {
-      if (item.id === selectedTransaction.listingId) {
-        return { ...item, status: "Активна" };
-      }
-      return item;
-    });
-    
-    setStockExchangeItems(updatedStockExchangeItems);
-    localStorage.setItem("stockExchange", JSON.stringify(updatedStockExchangeItems));
-    
+    // Only pending transactions can be cancelled by participants
+    if (selectedTransaction.status !== 'pending') {
+      toast.error("Цю транзакцію не можна скасувати");
+      return;
+    }
+
+    // Re-activate the listing
+    if (selectedTransaction.share_id) {
+      await supabase
+        .from('market')
+        .update({ status: 'active', buyer_id: null, updated_at: new Date().toISOString() })
+        .eq('id', selectedTransaction.share_id);
+    }
+
+    // Delete the pending transaction (buyer can cancel their own)
+    // We use the admin RPC approach or direct delete if buyer
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', selectedTransaction.id)
+      .eq('buyer_id', currentUser?.id || '');
+
+    if (error) {
+      console.error("Error cancelling:", error);
+      toast.error("Не вдалося скасувати транзакцію");
+      return;
+    }
+
     setOpenDetailsDialog(false);
     toast.success("Транзакцію скасовано");
+    await loadMarketData();
   };
-  
+
   const openSellSharesDialog = () => {
     setSharesCount("1");
     setSharePrice(stockPrice.toString());
     setOpenSellDialog(true);
   };
-  
-  const sellShares = () => {
+
+  const sellShares = async () => {
+    if (!currentUser) return;
     const amount = parseInt(sharesCount);
     if (isNaN(amount) || amount <= 0) {
       toast.error("Введіть коректну кількість акцій");
       return;
     }
-    
-    if (!currentUser.shares || amount > currentUser.shares) {
-      toast.error(`У вас недостатньо акцій. Ваш баланс: ${currentUser.shares || 0}`);
+    if (amount > myShares) {
+      toast.error(`У вас недостатньо акцій. Ваш баланс: ${myShares}`);
       return;
     }
-    
     const price = parseFloat(sharePrice);
     if (isNaN(price) || price <= 0) {
       toast.error("Введіть коректну ціну акції");
       return;
     }
-    
-    const newListing = {
-      id: Date.now().toString(),
-      sellerId: currentUser.id,
-      sellerName: `${currentUser.firstName} ${currentUser.lastName}`,
-      sharesCount: amount,
-      pricePerShare: price,
-      initialPrice: price,
-      status: "Активна",
-      date: new Date().toISOString(),
-      isAuction: false
-    };
-    
-    const updatedStockExchangeItems = [...stockExchangeItems, newListing];
-    setStockExchangeItems(updatedStockExchangeItems);
-    localStorage.setItem("stockExchange", JSON.stringify(updatedStockExchangeItems));
-    
+
+    const { error } = await supabase.from('market').insert({
+      seller_id: currentUser.id,
+      quantity: amount,
+      price_per_share: price,
+      status: 'active',
+    });
+
+    if (error) {
+      console.error("Error creating sell listing:", error);
+      toast.error("Не вдалося виставити акції на продаж");
+      return;
+    }
+
     setOpenSellDialog(false);
     toast.success("Акції виставлено на продаж");
+    await loadMarketData();
   };
-  
-  if (loading) {
+
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case 'active': return 'Активна';
+      case 'pending': return 'Очікує підтвердження';
+      case 'sold': return 'Продано';
+      case 'completed': return 'Завершено';
+      case 'rejected': return 'Відхилено';
+      case 'cancelled': return 'Скасовано';
+      default: return status;
+    }
+  };
+
+  if (loading || settingsLoading) {
     return <div className="container py-16 text-center">Завантаження...</div>;
   }
-
-  // Show loading while user data is being fetched
   if (isAuthenticated() && !currentUser) {
     return <div className="container py-16 text-center">Завантаження даних користувача...</div>;
   }
-
   if (!isAuthenticated() || !currentUser) {
     return <div className="container py-16 text-center">Перенаправлення на сторінку авторизації...</div>;
   }
-
   if (!currentUser.isShareHolder) {
     return <div className="container py-16 text-center">Доступ заборонено: потрібен статус акціонера</div>;
   }
 
-  const myOffers = stockExchangeItems.filter(item => item.sellerId === currentUser.id);
-  const myTransactions = sharesTransactions.filter(t => 
-    t.sellerId === currentUser.id || t.buyerId === currentUser.id
-  );
-  const activeListings = stockExchangeItems.filter(item => 
-    item.status === "Активна" && item.sellerId !== currentUser.id
-  );
+  const myOffers = listings.filter(item => item.seller_id === currentUser.id);
+  const activeListings = listings.filter(item => item.status === 'active' && item.seller_id !== currentUser.id);
 
   return (
     <div className="min-h-screen bg-background">
@@ -326,31 +387,29 @@ export default function StockMarket() {
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Ваші акції</p>
-                  <h3 className="text-2xl font-bold mt-1">{currentUser.shares || 0}</h3>
+                  <h3 className="text-2xl font-bold mt-1">{myShares}</h3>
                 </div>
                 <div className="p-3 rounded-full bg-blue-100 text-blue-700">
                   <PieChart className="h-6 w-6" />
                 </div>
               </CardContent>
             </Card>
-            
             <Card>
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Ціна акції</p>
-                  <h3 className="text-2xl font-bold mt-1">{stockPrice.toFixed(2)} грн</h3>
+                  <h3 className="text-2xl font-bold mt-1">{stockPrice.toFixed(2)} USD</h3>
                 </div>
                 <div className="p-3 rounded-full bg-green-100 text-green-700">
                   <DollarSign className="h-6 w-6" />
                 </div>
               </CardContent>
             </Card>
-            
             <Card>
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Ваш прибуток</p>
-                  <h3 className="text-2xl font-bold mt-1">{currentUser.profit?.toFixed(2) || "0.00"} грн</h3>
+                  <p className="text-sm font-medium text-muted-foreground">Вартість портфеля</p>
+                  <h3 className="text-2xl font-bold mt-1">{(myShares * stockPrice).toFixed(2)} USD</h3>
                 </div>
                 <div className="p-3 rounded-full bg-amber-100 text-amber-700">
                   <BarChart3 className="h-6 w-6" />
@@ -371,12 +430,14 @@ export default function StockMarket() {
               <Card>
                 <CardHeader>
                   <CardTitle>Доступні пропозиції акцій</CardTitle>
-                  <CardDescription>
-                    Перегляньте та придбайте акції у інших акціонерів
-                  </CardDescription>
+                  <CardDescription>Перегляньте та придбайте акції у інших акціонерів</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {activeListings.length > 0 ? (
+                  {loadingData ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : activeListings.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full">
                         <thead>
@@ -392,30 +453,27 @@ export default function StockMarket() {
                         <tbody>
                           {activeListings.map((item) => (
                             <tr key={item.id} className="border-b hover:bg-muted/50">
-                              <td className="p-2">{item.sellerName}</td>
-                              <td className="p-2">{item.sharesCount}</td>
-                              <td className="p-2">{item.pricePerShare.toFixed(2)} грн</td>
-                              <td className="p-2">{(item.sharesCount * item.pricePerShare).toFixed(2)} грн</td>
+                              <td className="p-2">{item.seller_name}</td>
+                              <td className="p-2">{item.quantity}</td>
+                              <td className="p-2">{item.price_per_share.toFixed(2)} USD</td>
+                              <td className="p-2">{(item.quantity * item.price_per_share).toFixed(2)} USD</td>
                               <td className="p-2">
-                                {item.pricePerShare > stockPrice ? (
+                                {item.price_per_share > stockPrice ? (
                                   <span className="flex items-center text-red-500">
                                     <TrendingUp className="h-4 w-4 mr-1" /> 
-                                    {(((item.pricePerShare - stockPrice) / stockPrice) * 100).toFixed(1)}%
+                                    {(((item.price_per_share - stockPrice) / stockPrice) * 100).toFixed(1)}%
                                   </span>
-                                ) : item.pricePerShare < stockPrice ? (
+                                ) : item.price_per_share < stockPrice ? (
                                   <span className="flex items-center text-green-500">
                                     <TrendingDown className="h-4 w-4 mr-1" /> 
-                                    {(((stockPrice - item.pricePerShare) / stockPrice) * 100).toFixed(1)}%
+                                    {(((stockPrice - item.price_per_share) / stockPrice) * 100).toFixed(1)}%
                                   </span>
                                 ) : (
                                   <span className="text-muted-foreground">0%</span>
                                 )}
                               </td>
                               <td className="p-2">
-                                <Button 
-                                  size="sm" 
-                                  onClick={() => handleBuyOffer(item)}
-                                >
+                                <Button size="sm" onClick={() => handleBuyOffer(item)}>
                                   <ShoppingBag className="h-4 w-4 mr-1" /> Купити
                                 </Button>
                               </td>
@@ -428,9 +486,7 @@ export default function StockMarket() {
                     <div className="text-center py-8">
                       <ShoppingBag className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
                       <h3 className="text-lg font-medium mb-2">Немає доступних пропозицій</h3>
-                      <p className="text-muted-foreground">
-                        Наразі немає акцій, виставлених на продаж іншими акціонерами
-                      </p>
+                      <p className="text-muted-foreground">Наразі немає акцій, виставлених на продаж іншими акціонерами</p>
                     </div>
                   )}
                 </CardContent>
@@ -441,9 +497,7 @@ export default function StockMarket() {
               <Card>
                 <CardHeader>
                   <CardTitle>Мої пропозиції на продаж</CardTitle>
-                  <CardDescription>
-                    Перегляньте статус своїх акцій, виставлених на продаж
-                  </CardDescription>
+                  <CardDescription>Перегляньте статус своїх акцій, виставлених на продаж</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {myOffers.length > 0 ? (
@@ -461,16 +515,13 @@ export default function StockMarket() {
                         <tbody>
                           {myOffers.map((item) => (
                             <tr key={item.id} className="border-b hover:bg-muted/50">
-                              <td className="p-2">{new Date(item.date).toLocaleDateString()}</td>
-                              <td className="p-2">{item.sharesCount}</td>
-                              <td className="p-2">{item.pricePerShare.toFixed(2)} грн</td>
-                              <td className="p-2">{(item.sharesCount * item.pricePerShare).toFixed(2)} грн</td>
+                              <td className="p-2">{new Date(item.created_at).toLocaleDateString()}</td>
+                              <td className="p-2">{item.quantity}</td>
+                              <td className="p-2">{item.price_per_share.toFixed(2)} USD</td>
+                              <td className="p-2">{(item.quantity * item.price_per_share).toFixed(2)} USD</td>
                               <td className="p-2">
-                                <Badge variant={
-                                  item.status === "Активна" ? "secondary" : 
-                                  item.status === "В процесі продажу" ? "outline" : "default"
-                                }>
-                                  {item.status}
+                                <Badge variant={item.status === 'active' ? "secondary" : "outline"}>
+                                  {statusLabel(item.status)}
                                 </Badge>
                               </td>
                             </tr>
@@ -482,9 +533,7 @@ export default function StockMarket() {
                     <div className="text-center py-8">
                       <DollarSign className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
                       <h3 className="text-lg font-medium mb-2">У вас немає активних пропозицій</h3>
-                      <p className="text-muted-foreground mb-3">
-                        Ви можете виставити свої акції на продаж, натиснувши кнопку "Продати акції"
-                      </p>
+                      <p className="text-muted-foreground mb-3">Ви можете виставити свої акції на продаж</p>
                       <Button onClick={openSellSharesDialog}>
                         <TrendingUp className="h-4 w-4 mr-2" /> Продати акції
                       </Button>
@@ -498,9 +547,7 @@ export default function StockMarket() {
               <Card>
                 <CardHeader>
                   <CardTitle>Мої транзакції</CardTitle>
-                  <CardDescription>
-                    Історія та статус ваших транзакцій купівлі-продажу акцій
-                  </CardDescription>
+                  <CardDescription>Історія та статус ваших транзакцій купівлі-продажу акцій</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {myTransactions.length > 0 ? (
@@ -518,34 +565,27 @@ export default function StockMarket() {
                           </tr>
                         </thead>
                         <tbody>
-                          {myTransactions.map((transaction) => (
-                            <tr key={transaction.id} className="border-b hover:bg-muted/50">
-                              <td className="p-2">{new Date(transaction.date).toLocaleDateString()}</td>
+                          {myTransactions.map((tx) => (
+                            <tr key={tx.id} className="border-b hover:bg-muted/50">
+                              <td className="p-2">{new Date(tx.created_at).toLocaleDateString()}</td>
                               <td className="p-2">
-                                {transaction.sellerId === currentUser.id ? "Продаж" : "Купівля"}
+                                {tx.seller_id === currentUser.id ? "Продаж" : "Купівля"}
                               </td>
                               <td className="p-2">
-                                {transaction.sellerId === currentUser.id 
-                                  ? transaction.buyerName 
-                                  : transaction.sellerName}
+                                {tx.seller_id === currentUser.id ? tx.buyer_name : tx.seller_name}
                               </td>
-                              <td className="p-2">{transaction.sharesCount}</td>
-                              <td className="p-2">{transaction.totalAmount.toFixed(2)} грн</td>
+                              <td className="p-2">{tx.quantity}</td>
+                              <td className="p-2">{tx.total_price.toFixed(2)} USD</td>
                               <td className="p-2">
                                 <Badge variant={
-                                  transaction.status === "Завершено" ? "secondary" : 
-                                  transaction.status === "Відхилено" || transaction.status === "Скасовано" 
-                                    ? "destructive" : "outline"
+                                  tx.status === 'completed' ? "secondary" : 
+                                  tx.status === 'rejected' ? "destructive" : "outline"
                                 }>
-                                  {transaction.status}
+                                  {statusLabel(tx.status)}
                                 </Badge>
                               </td>
                               <td className="p-2">
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => openTransactionDetails(transaction)}
-                                >
+                                <Button size="sm" variant="outline" onClick={() => openTransactionDetails(tx)}>
                                   Деталі
                                 </Button>
                               </td>
@@ -558,9 +598,7 @@ export default function StockMarket() {
                     <div className="text-center py-8">
                       <DollarSign className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
                       <h3 className="text-lg font-medium mb-2">У вас ще немає транзакцій</h3>
-                      <p className="text-muted-foreground">
-                        Історія ваших транзакцій з'явиться тут після купівлі або продажу акцій
-                      </p>
+                      <p className="text-muted-foreground">Історія ваших транзакцій з'явиться тут після купівлі або продажу акцій</p>
                     </div>
                   )}
                 </CardContent>
@@ -571,9 +609,7 @@ export default function StockMarket() {
               <Card>
                 <CardHeader>
                   <CardTitle>Список акціонерів</CardTitle>
-                  <CardDescription>
-                    Перегляд інформації про всіх акціонерів компанії
-                  </CardDescription>
+                  <CardDescription>Перегляд інформації про всіх акціонерів компанії</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
@@ -587,25 +623,25 @@ export default function StockMarket() {
                         </tr>
                       </thead>
                       <tbody>
-                        {shareholders.map((shareholder) => (
-                          <tr key={shareholder.id} className="border-b hover:bg-muted/50">
+                        {shareholders.map((sh) => (
+                          <tr key={sh.id} className="border-b hover:bg-muted/50">
                             <td className="p-2">
                               <div className="flex items-center gap-2">
                                 <Avatar className="h-8 w-8">
-                                  <AvatarImage src={shareholder.avatarUrl} alt={`${shareholder.firstName} ${shareholder.lastName}`} />
-                                  <AvatarFallback>{shareholder.firstName?.[0]}{shareholder.lastName?.[0]}</AvatarFallback>
+                                  <AvatarImage src={sh.avatarUrl} alt={`${sh.firstName} ${sh.lastName}`} />
+                                  <AvatarFallback>{sh.firstName?.[0]}{sh.lastName?.[0]}</AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  {shareholder.firstName} {shareholder.lastName}
-                                  {shareholder.id === currentUser.id && (
+                                  {sh.firstName} {sh.lastName}
+                                  {sh.id === currentUser.id && (
                                     <span className="text-xs text-muted-foreground ml-1">(Ви)</span>
                                   )}
                                 </div>
                               </div>
                             </td>
-                            <td className="p-2">{shareholder.shares || 0}</td>
-                            <td className="p-2">{shareholder.percentage || 0}%</td>
-                            <td className="p-2">{shareholder.title || "Магнат"}</td>
+                            <td className="p-2">{sh.shares}</td>
+                            <td className="p-2">{sh.percentage}%</td>
+                            <td className="p-2">{sh.title}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -618,178 +654,122 @@ export default function StockMarket() {
         </main>
       </div>
       
+      {/* Buy Dialog */}
       <Dialog open={openBuyDialog} onOpenChange={setOpenBuyDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Купівля акцій</DialogTitle>
-            <DialogDescription>
-              Введіть кількість акцій, яку бажаєте придбати
-            </DialogDescription>
+            <DialogDescription>Введіть кількість акцій, яку бажаєте придбати</DialogDescription>
           </DialogHeader>
           {selectedOffer && (
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <p><span className="font-medium">Продавець:</span> {selectedOffer.sellerName}</p>
-                <p><span className="font-medium">Доступно акцій:</span> {selectedOffer.sharesCount}</p>
-                <p><span className="font-medium">Ціна за акцію:</span> {selectedOffer.pricePerShare.toFixed(2)} грн</p>
+                <p><span className="font-medium">Продавець:</span> {selectedOffer.seller_name}</p>
+                <p><span className="font-medium">Доступно акцій:</span> {selectedOffer.quantity}</p>
+                <p><span className="font-medium">Ціна за акцію:</span> {selectedOffer.price_per_share.toFixed(2)} USD</p>
               </div>
-              
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="buy-amount">
-                  Кількість акцій для купівлі:
-                </label>
+                <label className="text-sm font-medium" htmlFor="buy-amount">Кількість акцій для купівлі:</label>
                 <Input
                   id="buy-amount"
                   type="number"
                   min="1"
-                  max={selectedOffer.sharesCount}
+                  max={selectedOffer.quantity}
                   value={buyAmount}
                   onChange={(e) => setBuyAmount(e.target.value)}
                 />
               </div>
-              
               <div className="border-t pt-4">
                 <p className="font-medium">Сумарна вартість:</p>
                 <p className="text-2xl font-bold">
-                  {(parseInt(buyAmount) * selectedOffer.pricePerShare || 0).toFixed(2)} грн
+                  {(parseInt(buyAmount) * selectedOffer.price_per_share || 0).toFixed(2)} USD
                 </p>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenBuyDialog(false)}>
-              Скасувати
-            </Button>
-            <Button onClick={confirmBuy}>
-              Купити акції
-            </Button>
+            <Button variant="outline" onClick={() => setOpenBuyDialog(false)}>Скасувати</Button>
+            <Button onClick={confirmBuy}>Купити акції</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
+      {/* Transaction Details Dialog */}
       <Dialog open={openDetailsDialog} onOpenChange={setOpenDetailsDialog}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Деталі транзакції</DialogTitle>
-            <DialogDescription>
-              Інформація про транзакцію та комунікація з контрагентом
-            </DialogDescription>
+            <DialogDescription>Інформація про транзакцію</DialogDescription>
           </DialogHeader>
           {selectedTransaction && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium">Продавець:</p>
-                  <p>{selectedTransaction.sellerName}</p>
+                  <p>{selectedTransaction.seller_name}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium">Покупець:</p>
-                  <p>{selectedTransaction.buyerName}</p>
+                  <p>{selectedTransaction.buyer_name}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium">Кількість акцій:</p>
-                  <p>{selectedTransaction.sharesCount}</p>
+                  <p>{selectedTransaction.quantity}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium">Ціна за акцію:</p>
-                  <p>{selectedTransaction.pricePerShare.toFixed(2)} грн</p>
+                  <p>{selectedTransaction.price_per_share.toFixed(2)} USD</p>
                 </div>
               </div>
               <div>
                 <p className="text-sm font-medium">Загальна сума:</p>
-                <p className="text-lg font-bold">{selectedTransaction.totalAmount.toFixed(2)} грн</p>
+                <p className="text-lg font-bold">{selectedTransaction.total_price.toFixed(2)} USD</p>
               </div>
               <div className="flex items-center gap-4">
                 <div>
                   <p className="text-sm font-medium">Статус:</p>
-                  <Badge variant="secondary">{selectedTransaction.status}</Badge>
+                  <Badge variant="secondary">{statusLabel(selectedTransaction.status)}</Badge>
                 </div>
-                <div className="ml-auto flex items-center gap-2">
-                  {(selectedTransaction.sellerId === currentUser.id && !selectedTransaction.sellerConfirmed ||
-                    selectedTransaction.buyerId === currentUser.id && !selectedTransaction.buyerConfirmed) && 
-                    selectedTransaction.status === "Очікує підтвердження" && (
-                    <Button size="sm" onClick={confirmTransaction}>
-                      Підтвердити
-                    </Button>
-                  )}
-                  {selectedTransaction.status === "Очікує підтвердження" && (
+                {selectedTransaction.status === 'pending' && selectedTransaction.buyer_id === currentUser.id && (
+                  <div className="ml-auto">
                     <Button size="sm" variant="destructive" onClick={cancelTransaction}>
                       Скасувати
                     </Button>
-                  )}
-                </div>
-              </div>
-              
-              <div className="border rounded-md p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium">Повідомлення:</p>
-                </div>
-                <div className="max-h-[150px] overflow-y-auto border p-2 rounded-md bg-muted/50 mb-3">
-                  {selectedTransaction.messages && selectedTransaction.messages.length > 0 ? (
-                    selectedTransaction.messages.map((msg: any, i: number) => (
-                      <div key={i} className="mb-2">
-                        <p className="text-sm font-medium">{msg.sender}:</p>
-                        <p className="text-sm">{msg.text}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(msg.date).toLocaleString()}
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Немає повідомлень</p>
-                  )}
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Input 
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Введіть повідомлення..."
-                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                  />
-                  <Button size="sm" onClick={sendMessage}>
-                    <MessageSquare className="h-4 w-4 mr-1" /> Надіслати
-                  </Button>
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
       
+      {/* Sell Dialog */}
       <Dialog open={openSellDialog} onOpenChange={setOpenSellDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Продаж акцій</DialogTitle>
-            <DialogDescription>
-              Введіть дані для виставлення акцій на продаж
-            </DialogDescription>
+            <DialogDescription>Введіть дані для виставлення акцій на продаж</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <p><span className="font-medium">Поточний баланс акцій:</span> {currentUser.shares || 0}</p>
-              <p><span className="font-medium">Рекомендована ціна за акцію:</span> {stockPrice.toFixed(2)} грн</p>
+              <p><span className="font-medium">Поточний баланс акцій:</span> {myShares}</p>
+              <p><span className="font-medium">Рекомендована ціна за акцію:</span> {stockPrice.toFixed(2)} USD</p>
             </div>
-            
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="shares-count">
-                Кількість акцій для продажу:
-              </label>
+              <label className="text-sm font-medium" htmlFor="shares-count">Кількість акцій для продажу:</label>
               <Input
                 id="shares-count"
                 type="number"
                 min="1"
-                max={currentUser.shares || 0}
+                max={myShares}
                 value={sharesCount}
                 onChange={(e) => setSharesCount(e.target.value)}
               />
             </div>
-            
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="share-price">
-                Ціна за одну акцію (грн):
-              </label>
+              <label className="text-sm font-medium" htmlFor="share-price">Ціна за одну акцію (USD):</label>
               <Input
                 id="share-price"
                 type="number"
@@ -798,21 +778,16 @@ export default function StockMarket() {
                 onChange={(e) => setSharePrice(e.target.value)}
               />
             </div>
-            
             <div className="border-t pt-4">
               <p className="font-medium">Сумарна вартість:</p>
               <p className="text-2xl font-bold">
-                {(parseInt(sharesCount) * parseFloat(sharePrice) || 0).toFixed(2)} грн
+                {(parseInt(sharesCount) * parseFloat(sharePrice) || 0).toFixed(2)} USD
               </p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenSellDialog(false)}>
-              Скасувати
-            </Button>
-            <Button onClick={sellShares}>
-              Виставити на продаж
-            </Button>
+            <Button variant="outline" onClick={() => setOpenSellDialog(false)}>Скасувати</Button>
+            <Button onClick={sellShares}>Виставити на продаж</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
