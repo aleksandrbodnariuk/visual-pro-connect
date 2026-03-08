@@ -2,6 +2,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsersTab } from "./tabs/UsersTab";
 import { ShareholdersTab } from "./tabs/ShareholdersTab";
+import { SpecialistsTab } from "./tabs/SpecialistsTab";
 import { AdminOrdersTab } from "./tabs/AdminOrdersTab";
 import { StockExchangeTab } from "./tabs/StockExchangeTab";
 import { PostsTab } from "./tabs/PostsTab";
