@@ -349,6 +349,7 @@ export default function Messages() {
                     emptyStateMessage={`Початок розмови з ${activeChat.user.name}`}
                     onEditMessage={handleEditMessage}
                     onDeleteMessage={handleDeleteMessage}
+                    recipientAvatarUrl={activeChat.user.avatarUrl}
                   />
                   
                   <MessageInput onSendMessage={handleSendMessage} />
