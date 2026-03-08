@@ -407,7 +407,7 @@ export function StockExchangeTab() {
       {/* Pending Transactions */}
       <Card>
         <CardHeader>
-          <CardTitle>Заявки на передачу часток</CardTitle>
+          <CardTitle>Заявки на передачу акцій</CardTitle>
           <CardDescription>Заявки, які очікують підтвердження адміністратором після офлайн-домовленості</CardDescription>
         </CardHeader>
         <CardContent>
