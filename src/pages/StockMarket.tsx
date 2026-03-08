@@ -192,7 +192,7 @@ export default function StockMarket() {
       return;
     }
     if (!currentUser.isShareHolder) {
-      toast.error("Доступ заборонено: Необхідний статус співвласника");
+      toast.error("Доступ заборонено: необхідний статус акціонера");
       navigate("/");
       return;
     }
