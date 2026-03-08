@@ -405,7 +405,7 @@ export default function StockMarket() {
             <Card>
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Ваша частка</p>
+                  <p className="text-sm font-medium text-muted-foreground">Ваш відсоток</p>
                   <h3 className="text-2xl font-bold mt-1">{myPercentage}%</h3>
                 </div>
                 <div className="p-3 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
