@@ -166,7 +166,7 @@ export function StockExchangeTab() {
     }
     const success = await updateSharePrice(price);
     if (success) {
-      toast.success(`Орієнтовну вартість частки оновлено: ${price} USD`);
+      toast.success(`Орієнтовну вартість акції оновлено: ${price} USD`);
     }
   };
 
