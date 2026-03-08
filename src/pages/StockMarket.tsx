@@ -661,7 +661,7 @@ export default function StockMarket() {
                 <p><span className="font-medium">Орієнт. вартість за акцію:</span> {selectedOffer.price_per_share.toFixed(2)} USD</p>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="buy-amount">Кількість часток:</label>
+                <label className="text-sm font-medium" htmlFor="buy-amount">Кількість акцій:</label>
                 <Input
                   id="buy-amount"
                   type="number"
