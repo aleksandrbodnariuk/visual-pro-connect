@@ -20,6 +20,7 @@ export interface Message {
   editedAt?: string;
   attachmentUrl?: string;
   attachmentType?: string;
+  read?: boolean;
 }
 
 export interface ChatItem {
