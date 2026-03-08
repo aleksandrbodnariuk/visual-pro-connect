@@ -11,6 +11,7 @@ export const USER_STATUSES = [
 ];
 
 export const SHAREHOLDER_TITLES = [
+  "Акціонер",
   "Магнат",
   "Барон",
   "Граф",

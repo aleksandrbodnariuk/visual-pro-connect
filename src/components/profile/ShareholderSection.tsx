@@ -172,37 +172,37 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
         <div className="border rounded-md p-4">
           <h3 className="font-semibold mb-2">Інформація про ринок акцій</h3>
           <p className="text-sm text-muted-foreground mb-2">
-            Як акціонер компанії, ви маєте доступ до ринку акцій, де можете купувати та продавати акції.
-            Поточна ціна акції: {sharePriceUsd} USD.
+            Як акціонер компанії, ви маєте доступ до ринку акцій, де можете передавати та отримувати акції.
+            Поточна орієнтовна вартість акції: {sharePriceUsd} USD.
           </p>
           <p className="text-sm text-muted-foreground">
             Прибуток з кожного замовлення розподіляється між акціонерами відповідно до відсотка акцій.
-            45% від суми кожного замовлення розподіляється між акціонерами.
+            20% чистого прибутку розподіляється на всі акції пропорційно.
           </p>
           
           <div className="mt-4 border-t pt-4">
             <h4 className="font-medium mb-2">Система титулів</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
               <div className="bg-muted p-2 rounded">
-                <span className="font-semibold">1-5%:</span> Акціонер
+                <span className="font-semibold">1–4%:</span> Акціонер
               </div>
               <div className="bg-muted p-2 rounded">
-                <span className="font-semibold">6-10%:</span> Магнат
+                <span className="font-semibold">5–9%:</span> Магнат
               </div>
               <div className="bg-muted p-2 rounded">
-                <span className="font-semibold">11-20%:</span> Барон
+                <span className="font-semibold">10–19%:</span> Барон
               </div>
               <div className="bg-muted p-2 rounded">
-                <span className="font-semibold">21-35%:</span> Граф
+                <span className="font-semibold">20–29%:</span> Граф
               </div>
               <div className="bg-muted p-2 rounded">
-                <span className="font-semibold">36-50%:</span> Маркіз
+                <span className="font-semibold">30–39%:</span> Маркіз
               </div>
               <div className="bg-muted p-2 rounded">
-                <span className="font-semibold">51-75%:</span> Лорд
+                <span className="font-semibold">40–49%:</span> Лорд
               </div>
               <div className="bg-muted p-2 rounded">
-                <span className="font-semibold">76-99%:</span> Герцог
+                <span className="font-semibold">50–99%:</span> Герцог
               </div>
               <div className="bg-muted p-2 rounded">
                 <span className="font-semibold">100%:</span> Імператор

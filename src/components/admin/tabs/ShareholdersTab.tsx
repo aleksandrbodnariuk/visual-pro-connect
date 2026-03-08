@@ -352,7 +352,7 @@ export function ShareholdersTab() {
                           </div>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Частка:</span>
+                          <span className="text-sm text-muted-foreground">Відсоток:</span>
                           <span className="text-sm font-medium">{shareholder.percentage}%</span>
                         </div>
                         <div className="flex justify-between">

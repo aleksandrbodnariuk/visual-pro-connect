@@ -76,7 +76,7 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
           isActive("/stock-market") ? "text-foreground" : "text-foreground/60"
         }`}
       >
-        Біржа
+        Ринок акцій
       </Link>
       {(isSpecialist || isAdmin) && (
         <Link
