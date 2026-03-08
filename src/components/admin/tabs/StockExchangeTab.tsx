@@ -293,8 +293,8 @@ export function StockExchangeTab() {
         <CardContent className="p-4 flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
           <div className="text-sm text-blue-800 dark:text-blue-300">
-            <p className="font-medium mb-1">Система обліку часток</p>
-            <p>Цей модуль призначений для обліку внутрішніх часток компанії. Передача часток відбувається за реальною офлайн-домовленістю сторін. Адміністратор лише підтверджує факт передачі в системі.</p>
+            <p className="font-medium mb-1">Система обліку акцій</p>
+            <p>Цей модуль призначений для обліку внутрішніх акцій компанії. Передача акцій відбувається за реальною офлайн-домовленістю сторін. Адміністратор лише підтверджує факт передачі в системі.</p>
           </div>
         </CardContent>
       </Card>
