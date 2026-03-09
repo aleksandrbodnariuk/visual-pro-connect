@@ -112,6 +112,21 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
     if (success) setEditing(false);
   };
 
+  const handleSaveFinancials = async () => {
+    const success = await onUpdate(order.id, {
+      order_amount: orderAmount ? Number(orderAmount) : null,
+      order_expenses: orderExpenses ? Number(orderExpenses) : null,
+      financial_notes: financialNotes.trim() || null,
+      financials_updated_at: new Date().toISOString(),
+    });
+    if (success) setEditingFinancials(false);
+  };
+
+  // Чистий прибуток — read-only, через централізований модуль
+  const netProfit = (order.order_amount != null || order.order_expenses != null)
+    ? calcNetProfit(order.order_amount ?? 0, order.order_expenses ?? 0)
+    : null;
+
   const handleConfirm = () => onUpdate(order.id, { status: 'confirmed' });
   const handleReject = () => onUpdate(order.id, { status: 'pending' });
   const handleArchive = () => onUpdate(order.id, { status: 'archived' });
