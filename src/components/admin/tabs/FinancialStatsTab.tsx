@@ -590,11 +590,53 @@ export function FinancialStatsTab() {
             <Download className="h-4 w-4 mr-1" />
             Експорт CSV
           </Button>
+          <Button
+            size="sm"
+            variant="default"
+            disabled={!stats || filteredOrders.length === 0}
+            onClick={() => setSaveDialogOpen(true)}
+          >
+            <Save className="h-4 w-4 mr-1" />
+            Зберегти розрахунок
+          </Button>
           <Badge variant="outline" className="text-xs text-muted-foreground">
             Read-only · не є бухгалтерією
           </Badge>
         </div>
       </div>
+
+      {/* Save Snapshot Dialog */}
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Зберегти знімок розрахунку</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Період: <strong>{getPeriodLabel(period, customFrom, customTo)}</strong><br />
+              Замовлень: <strong>{filteredOrders.length}</strong><br />
+              Чистий прибуток: <strong>{stats ? fmt(stats.totalNet) : "—"}</strong>
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="snapshot-notes">Примітка (опційно)</Label>
+              <Textarea
+                id="snapshot-notes"
+                placeholder="Напр. Розрахунок за березень 2026"
+                value={snapshotNotes}
+                onChange={(e) => setSnapshotNotes(e.target.value)}
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>Скасувати</Button>
+            <Button onClick={saveSnapshot} disabled={isSaving}>
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+              Зберегти
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ─── Period Filters ─── */}
       <div className="space-y-3">
