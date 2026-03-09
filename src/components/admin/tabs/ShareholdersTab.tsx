@@ -148,6 +148,8 @@ export function ShareholdersTab() {
     const newIssued = shareholders.reduce((sum, sh) => sum + (sh.id === userId ? sharesCount : sh.shares), 0);
     setIssuedShares(newIssued);
     toast.success("Кількість акцій оновлено");
+    // Refresh to get updated title from DB trigger
+    setTimeout(() => fetchShareholders(), 500);
   };
 
   const availableShares = Math.max(0, dbTotalShares - issuedShares);
