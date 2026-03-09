@@ -31,6 +31,7 @@ const Notifications = lazy(() => import("./pages/Notifications"));
 const Friends = lazy(() => import("./pages/Friends"));
 const Admin = lazy(() => import("./pages/Admin"));
 const StockMarket = lazy(() => import("./pages/StockMarket"));
+const ShareholderPanel = lazy(() => import("./pages/ShareholderPanel"));
 const Post = lazy(() => import("./pages/Post"));
 const MyFiles = lazy(() => import("./pages/MyFiles"));
 const SpecialistPanel = lazy(() => import("./pages/SpecialistPanel"));
@@ -83,6 +84,7 @@ const AppContent = () => {
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/:tabName" element={<Admin />} />
             <Route path="/stock-market" element={<StockMarket />} />
+            <Route path="/shareholder-panel" element={<ShareholderPanel />} />
             <Route path="/post/:postId" element={<Post />} />
             <Route path="/my-files" element={<MyFiles />} />
             <Route path="/my-files/:type" element={<MyFiles />} />

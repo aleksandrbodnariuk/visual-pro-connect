@@ -1,18 +1,24 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Crown, DollarSign, Users } from "lucide-react";
+import { useCompanySettings } from "@/hooks/useCompanySettings";
 
 interface AdminStatsProps {
   users: number;
   shareholders: number;
-  stockPrice: string;
 }
 
-export function AdminStats({ users, shareholders, stockPrice }: AdminStatsProps) {
+export function AdminStats({ users, shareholders }: AdminStatsProps) {
+  const { sharePriceUsd, loading } = useCompanySettings();
+
   const stats = [
     { title: "Користувачі", value: users.toString(), icon: Users, color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
     { title: "Акціонери", value: shareholders.toString(), icon: Crown, color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
-    { title: "Ціна акції", value: `${stockPrice} грн`, icon: DollarSign, color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
+    { 
+      title: "Ціна акції", 
+      value: loading ? "..." : `${sharePriceUsd} USD`, 
+      icon: DollarSign, 
+      color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" 
+    },
   ];
 
   return (

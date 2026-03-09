@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Users, Plus, MessageSquare, Menu, User, Bell, Search, Settings, LogOut, Camera, Video, Music, Mic, Sparkles, UtensilsCrossed, Car, Flower2, UserPlus, FolderOpen, Image, Briefcase } from "lucide-react";
+import { Home, Users, Plus, MessageSquare, Menu, User, Bell, Search, Settings, LogOut, Camera, Video, Music, Mic, Sparkles, UtensilsCrossed, Car, Flower2, UserPlus, FolderOpen, Image, Briefcase, Crown, TrendingUp } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -32,15 +32,18 @@ export function MobileNavigation() {
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [isSpecialist, setIsSpecialist] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isShareholder, setIsShareholder] = useState(false);
 
   useEffect(() => {
-    if (!currentUser?.id) { setIsSpecialist(false); setIsAdmin(false); return; }
+    if (!currentUser?.id) { setIsSpecialist(false); setIsAdmin(false); setIsShareholder(false); return; }
     Promise.all([
       supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'specialist' as any }),
       supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'admin' as any }),
-    ]).then(([specRes, adminRes]) => {
+      supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'shareholder' as any }),
+    ]).then(([specRes, adminRes, shareholderRes]) => {
       setIsSpecialist(specRes.data === true);
       setIsAdmin(adminRes.data === true || currentUser.founder_admin === true);
+      setIsShareholder(shareholderRes.data === true || currentUser.founder_admin === true);
     });
   }, [currentUser?.id]);
 
@@ -161,6 +164,29 @@ export function MobileNavigation() {
                         >
                           <Briefcase className="h-5 w-5" />
                           <span>Кабінет фахівця</span>
+                        </Link>
+                      )}
+                      {/* Панель акціонера */}
+                      {isShareholder && (
+                        <Link
+                          to="/shareholder-panel"
+                          onClick={() => setIsMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <Crown className="h-5 w-5" />
+                          <span>Панель акціонера</span>
+                        </Link>
+                      )}
+
+                      {/* Ринок акцій */}
+                      {isShareholder && (
+                        <Link
+                          to="/stock-market"
+                          onClick={() => setIsMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <TrendingUp className="h-5 w-5" />
+                          <span>Ринок акцій</span>
                         </Link>
                       )}
                       

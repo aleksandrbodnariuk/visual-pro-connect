@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Search, Bell, MessageSquare, User, Settings, Users } from 'lucide-react';
+import { Home, Search, Bell, MessageSquare, User, Settings, Users, Crown, TrendingUp } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 import { useAuthState } from "@/hooks/auth/useAuthState";
 import { toast } from "sonner";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useDynamicCategories, getIconComponent } from "@/hooks/useDynamicCategories";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SidebarProps {
   className?: string;
@@ -24,6 +25,13 @@ export function Sidebar({ className }: SidebarProps) {
   const { categories } = useDynamicCategories();
   
   const currentUser = getCurrentUser();
+  const [isShareholder, setIsShareholder] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser?.id) { setIsShareholder(false); return; }
+    supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'shareholder' as any })
+      .then(({ data }) => setIsShareholder(data === true || currentUser.founder_admin === true));
+  }, [currentUser?.id]);
 
   const handleNavigate = (path: string) => {
     try {
@@ -85,6 +93,16 @@ export function Sidebar({ className }: SidebarProps) {
           <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/settings')} data-active={location.pathname === "/settings"}>
             <Settings className="mr-2 h-4 w-4" /> {t.settings}
           </Button>
+          {isShareholder && (
+            <>
+              <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/shareholder-panel')} data-active={location.pathname === "/shareholder-panel"}>
+                <Crown className="mr-2 h-4 w-4" /> Панель акціонера
+              </Button>
+              <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/stock-market')} data-active={location.pathname === "/stock-market"}>
+                <TrendingUp className="mr-2 h-4 w-4" /> Ринок акцій
+              </Button>
+            </>
+          )}
         </nav>
       </div>
 

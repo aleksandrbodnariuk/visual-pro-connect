@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { SharePriceControl } from "@/components/admin/SharePriceControl";
+import { calcFullProfitDistribution, type ShareholderInput } from "@/lib/shareholderCalculations";
 
 const TITLES = ["Акціонер", "Магнат", "Барон", "Граф", "Маркіз", "Лорд", "Герцог", "Імператор"] as const;
 
@@ -25,6 +26,7 @@ export function ShareholdersTab() {
   const [issuedShares, setIssuedShares] = useState<number>(0);
   const [shareholders, setShareholders] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [confirmedOrders, setConfirmedOrders] = useState<any[]>([]);
 
   // Sync input with DB value once loaded
   useEffect(() => {
@@ -65,13 +67,16 @@ export function ShareholdersTab() {
           shares,
           percentage: percentage.toFixed(2),
           title: user.title || "Акціонер",
-          profit: 0,
           isShareHolder: true,
         });
       }
 
       setShareholders(shareholdersWithShares);
       setIssuedShares(totalIssued);
+
+      // Fetch confirmed orders for profit calculation
+      const { data: ordersData } = await supabase.rpc('get_confirmed_orders_for_forecast');
+      setConfirmedOrders(ordersData || []);
     } catch (error) {
       console.error("Error fetching shareholders data:", error);
       toast.error("Помилка при отриманні даних акціонерів");
@@ -157,6 +162,45 @@ export function ShareholdersTab() {
   const availableShares = Math.max(0, dbTotalShares - issuedShares);
   // System is in setup state if total shares is 0 (not yet configured by admin)
   const systemNotConfigured = !settingsLoading && dbTotalShares <= 0;
+
+  // Calculate profit forecasts for all shareholders based on confirmed orders
+  const profitForecasts = useMemo(() => {
+    if (dbTotalShares <= 0 || shareholders.length === 0 || confirmedOrders.length === 0) {
+      return {};
+    }
+
+    const shareholderInputs: ShareholderInput[] = shareholders.map(sh => ({
+      userId: sh.id,
+      shares: sh.shares,
+    }));
+
+    // Sum up forecasts from all confirmed orders
+    const totals: Record<string, number> = {};
+    
+    for (const order of confirmedOrders) {
+      const dist = calcFullProfitDistribution(
+        Number(order.order_amount),
+        Number(order.order_expenses),
+        shareholderInputs,
+        dbTotalShares
+      );
+      
+      for (const sh of dist.shareholders) {
+        totals[sh.userId] = (totals[sh.userId] || 0) + sh.totalIncome;
+      }
+    }
+    
+    return totals;
+  }, [shareholders, confirmedOrders, dbTotalShares]);
+
+  const getProfitDisplay = (userId: string, shares: number) => {
+    if (dbTotalShares <= 0) return "—";
+    if (shares <= 0) return "Акції не призначено";
+    if (confirmedOrders.length === 0) return "Немає замовлень";
+    const profit = profitForecasts[userId];
+    if (profit === undefined || profit === 0) return "0.00 ₴";
+    return `${profit.toFixed(2)} ₴`;
+  };
 
   return (
     <div className="space-y-6">
@@ -341,7 +385,9 @@ export function ShareholdersTab() {
                             <span className="text-muted-foreground text-sm italic">Не розраховано</span>
                           )}
                         </td>
-                        <td className="p-2 text-muted-foreground text-sm italic">Після замовлень</td>
+                        <td className="p-2 text-sm">
+                          {getProfitDisplay(shareholder.id, shareholder.shares)}
+                        </td>
                         <td className="p-2">
                           <Button variant="outline" size="sm">
                             <PenLine className="h-4 w-4 mr-1" /> Деталі
@@ -405,7 +451,9 @@ export function ShareholdersTab() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Прибуток:</span>
-                        <span className="text-sm text-muted-foreground italic">Після замовлень</span>
+                        <span className="text-sm font-medium">
+                          {getProfitDisplay(shareholder.id, shareholder.shares)}
+                        </span>
                       </div>
                       <Button variant="outline" size="sm" className="w-full">
                         <PenLine className="h-4 w-4 mr-1" /> Деталі
