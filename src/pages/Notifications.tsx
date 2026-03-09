@@ -263,7 +263,11 @@ export default function Notifications() {
               notifications.map((notification) => (
                 <Card 
                   key={notification.id} 
-                  className={`transition-colors ${!notification.is_read ? "border-l-4 border-l-primary" : ""}`}
+                  className={`transition-colors cursor-pointer hover:bg-accent/50 ${!notification.is_read ? "border-l-4 border-l-primary" : ""}`}
+                  onClick={() => {
+                    if (!notification.is_read) markAsRead(notification.id);
+                    if (notification.link) navigate(notification.link);
+                  }}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
@@ -278,11 +282,20 @@ export default function Notifications() {
                               {new Date(notification.created_at || notification.date).toLocaleDateString()}
                             </span>
                             <div className="flex space-x-2">
+                              {notification.link && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={(e) => { e.stopPropagation(); navigate(notification.link); }}
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                              )}
                               {!notification.is_read && (
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
-                                  onClick={() => markAsRead(notification.id)}
+                                  onClick={(e) => { e.stopPropagation(); markAsRead(notification.id); }}
                                 >
                                   Прочитано
                                 </Button>
@@ -291,7 +304,7 @@ export default function Notifications() {
                                 variant="ghost" 
                                 size="sm"
                                 className="text-destructive hover:text-destructive"
-                                onClick={() => deleteNotification(notification.id)}
+                                onClick={(e) => { e.stopPropagation(); deleteNotification(notification.id); }}
                               >
                                 <Trash className="h-4 w-4" />
                               </Button>
