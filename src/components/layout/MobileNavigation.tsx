@@ -192,6 +192,9 @@ export function MobileNavigation() {
                       
                       <Separator className="my-4" />
                       
+                      {/* Мої файли */}
+                      <p className="text-sm font-medium text-muted-foreground px-3 mb-2">Мої файли</p>
+                      
                       <Link
                         to="/my-files/photos"
                         onClick={() => setIsMenuOpen(false)}
