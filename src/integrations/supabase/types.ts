@@ -1230,6 +1230,10 @@ export type Database = {
           title: string
         }[]
       }
+      get_title_by_share_percent: {
+        Args: { _percent: number }
+        Returns: string
+      }
       get_user_by_phone: {
         Args: { _phone_number: string }
         Returns: {
@@ -1359,6 +1363,7 @@ export type Database = {
         Args: { _access: string; _user_id: string }
         Returns: undefined
       }
+      sync_user_title: { Args: { _user_id: string }; Returns: undefined }
       user_exists_by_phone: {
         Args: { _phone_number: string }
         Returns: boolean
