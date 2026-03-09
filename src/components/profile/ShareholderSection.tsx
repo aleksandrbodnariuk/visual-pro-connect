@@ -1,11 +1,11 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Crown, PiggyBank, DollarSign } from "lucide-react";
+import { Crown, PiggyBank, DollarSign, Settings } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
+import { getTitleByPercent } from "@/lib/shareholderRules";
 
 interface ShareholderSectionProps {
   user: {
@@ -20,98 +20,62 @@ interface ShareholderSectionProps {
 
 export function ShareholderSection({ user }: ShareholderSectionProps) {
   const { totalShares, sharePriceUsd, loading: settingsLoading } = useCompanySettings();
-  const [shareholderData, setShareholderData] = useState({
-    shares: user?.shares || 0,
-    percentage: user?.percentage || 0,
-    profit: user?.profit || 0,
-    title: user?.title || "Акціонер"
-  });
-  
+  const [shares, setShares] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const loadShareholderData = async () => {
       if (!user?.id || !user?.isShareHolder || settingsLoading) return;
-      
+
+      setLoading(true);
       try {
-        const { data: sharesData, error: sharesError } = await supabase
+        const { data: sharesData, error } = await supabase
           .from('shares')
-          .select('*')
+          .select('quantity')
           .eq('user_id', user.id)
           .maybeSingle();
-          
-        if (sharesError && sharesError.code !== 'PGRST116') {
-          console.error("Помилка при отриманні даних акцій:", sharesError);
+
+        if (error && error.code !== 'PGRST116') {
+          console.error("Помилка при отриманні даних акцій:", error);
         }
-        
-        let shares = user.shares || 0;
-        let percentage = user.percentage || 0;
-        
-        if (sharesData) {
-          shares = sharesData.quantity;
-          percentage = totalShares > 0 ? (shares / totalShares) * 100 : 0;
-        } else if (user.shares && user.shares > 0) {
-          const { error: insertError } = await supabase
-            .from('shares')
-            .insert({ user_id: user.id, quantity: user.shares });
-          if (insertError) {
-            console.error("Помилка при створенні запису акцій:", insertError);
-          }
-        } else if (user.isShareHolder) {
-          shares = 10;
-          percentage = totalShares > 0 ? (shares / totalShares) * 100 : 0;
-          
-          const { error: insertError } = await supabase
-            .from('shares')
-            .insert({ user_id: user.id, quantity: shares });
-          if (insertError) {
-            console.error("Помилка при створенні запису акцій:", insertError);
-          }
-        }
-        
-        const title = determineShareholderTitle(percentage);
-        
-        setShareholderData({
-          shares,
-          percentage,
-          profit: user.profit || 0,
-          title: user.title || title
-        });
-      } catch (error) {
-        console.error("Помилка при завантаженні даних акціонера:", error);
-        toast.error("Не вдалося завантажити дані акціонера");
+
+        // ВАЖЛИВО: не автоматично створюємо запис — лише читаємо реальні дані
+        setShares(sharesData?.quantity ?? 0);
+      } catch (err) {
+        console.error("Помилка при завантаженні даних акціонера:", err);
+      } finally {
+        setLoading(false);
       }
     };
-    
-    loadShareholderData();
-  }, [user, totalShares, settingsLoading]);
 
-  const determineShareholderTitle = (percentage: number): string => {
-    if (percentage === 100) return "Імператор";
-    if (percentage >= 50) return "Герцог";
-    if (percentage >= 40) return "Лорд";
-    if (percentage >= 30) return "Маркіз";
-    if (percentage >= 20) return "Граф";
-    if (percentage >= 10) return "Барон";
-    if (percentage >= 5) return "Магнат";
-    if (percentage >= 1) return "Акціонер";
-    return "Акціонер";
-  };
+    loadShareholderData();
+  }, [user?.id, user?.isShareHolder, settingsLoading]);
+
+  if (!user?.isShareHolder) return null;
+
+  const percentage = totalShares > 0 && shares > 0
+    ? (shares / totalShares) * 100
+    : 0;
+  const titleObj = getTitleByPercent(percentage);
+  const titleName = titleObj?.title ?? null;
 
   const getBadgeVariant = () => {
-    switch(shareholderData.title) {
+    switch (titleName) {
       case "Імператор": return "destructive" as const;
-      case "Герцог": return "secondary" as const;
-      case "Лорд": return "default" as const;
+      case "Герцог":
+      case "Лорд":
       case "Маркіз": return "secondary" as const;
-      case "Граф": return "default" as const;
-      case "Барон": return "secondary" as const;
-      case "Магнат": return "outline" as const;
+      case "Граф":
+      case "Барон": return "default" as const;
+      case "Магнат":
+      case "Акціонер": return "outline" as const;
       default: return "outline" as const;
     }
   };
 
-  if (!user?.isShareHolder) {
-    return null;
-  }
+  // ─── Empty state: system not yet configured ──────────────────────────────
+  const systemNotConfigured = !settingsLoading && totalShares <= 0;
+  const noSharesYet = !loading && !settingsLoading && totalShares > 0 && shares === 0;
 
   return (
     <Card>
@@ -120,93 +84,137 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
           <Crown className="h-5 w-5 text-amber-500" />
           Інформація акціонера
         </CardTitle>
-        <Badge variant={getBadgeVariant()} className="text-lg px-3 py-1">
-          {shareholderData.title}
-        </Badge>
+        {titleName ? (
+          <Badge variant={getBadgeVariant()} className="text-lg px-3 py-1">
+            {titleName}
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="text-sm px-3 py-1 text-muted-foreground">
+            Титул не визначено
+          </Badge>
+        )}
       </CardHeader>
+
       <CardContent className="space-y-6">
+        {/* ─── Setup state: total shares not set ─── */}
+        {systemNotConfigured && (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20 p-4">
+            <Settings className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                Загальну кількість акцій ще не задано
+              </p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                Адміністратор має налаштувати систему акцій у адмін-панелі. Після цього відсоток та розрахунки стануть доступні.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ─── No shares yet ─── */}
+        {noSharesYet && (
+          <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20 p-4">
+            <PiggyBank className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                Акції ще не призначено
+              </p>
+              <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
+                Адміністратор призначить вам кількість акцій. Після цього тут з'являться дані та ваш титул.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Stats cards ─── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Кількість акцій</p>
-                  <h3 className="text-2xl font-bold mt-1">{shareholderData.shares}</h3>
+                  {loading || settingsLoading ? (
+                    <div className="h-8 w-16 bg-muted animate-pulse rounded mt-1" />
+                  ) : (
+                    <h3 className="text-2xl font-bold mt-1">{shares}</h3>
+                  )}
                 </div>
-                <div className="p-3 rounded-full bg-blue-100 text-blue-700">
+                <div className="p-3 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
                   <PiggyBank className="h-6 w-6" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Відсоток акцій</p>
-                  <h3 className="text-2xl font-bold mt-1">{shareholderData.percentage.toFixed(2)}%</h3>
+                  {loading || settingsLoading ? (
+                    <div className="h-8 w-20 bg-muted animate-pulse rounded mt-1" />
+                  ) : systemNotConfigured ? (
+                    <p className="text-sm text-muted-foreground mt-1">Не розраховано</p>
+                  ) : (
+                    <h3 className="text-2xl font-bold mt-1">{percentage.toFixed(2)}%</h3>
+                  )}
                 </div>
-                <div className="p-3 rounded-full bg-amber-100 text-amber-700">
+                <div className="p-3 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                   <Crown className="h-6 w-6" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Прибуток</p>
-                  <h3 className="text-2xl font-bold mt-1">{shareholderData.profit.toFixed(2)} USD</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Після першого замовлення</p>
                 </div>
-                <div className="p-3 rounded-full bg-green-100 text-green-700">
+                <div className="p-3 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                   <DollarSign className="h-6 w-6" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
-        
+
+        {/* ─── Info block ─── */}
         <div className="border rounded-md p-4">
           <h3 className="font-semibold mb-2">Інформація про ринок акцій</h3>
           <p className="text-sm text-muted-foreground mb-2">
             Як акціонер компанії, ви маєте доступ до ринку акцій, де можете передавати та отримувати акції.
-            Поточна орієнтовна вартість акції: {sharePriceUsd} USD.
+            {sharePriceUsd > 0
+              ? ` Поточна орієнтовна вартість акції: ${sharePriceUsd} USD.`
+              : ' Орієнтовну ціну акції ще не встановлено.'}
           </p>
           <p className="text-sm text-muted-foreground">
             Прибуток з кожного замовлення розподіляється між акціонерами відповідно до відсотка акцій.
             20% чистого прибутку розподіляється на всі акції пропорційно.
           </p>
-          
+
           <div className="mt-4 border-t pt-4">
             <h4 className="font-medium mb-2">Система титулів</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-              <div className="bg-muted p-2 rounded">
-                <span className="font-semibold">1–4%:</span> Акціонер
-              </div>
-              <div className="bg-muted p-2 rounded">
-                <span className="font-semibold">5–9%:</span> Магнат
-              </div>
-              <div className="bg-muted p-2 rounded">
-                <span className="font-semibold">10–19%:</span> Барон
-              </div>
-              <div className="bg-muted p-2 rounded">
-                <span className="font-semibold">20–29%:</span> Граф
-              </div>
-              <div className="bg-muted p-2 rounded">
-                <span className="font-semibold">30–39%:</span> Маркіз
-              </div>
-              <div className="bg-muted p-2 rounded">
-                <span className="font-semibold">40–49%:</span> Лорд
-              </div>
-              <div className="bg-muted p-2 rounded">
-                <span className="font-semibold">50–99%:</span> Герцог
-              </div>
-              <div className="bg-muted p-2 rounded">
-                <span className="font-semibold">100%:</span> Імператор
-              </div>
+              {[
+                { range: '1–4%',   title: 'Акціонер' },
+                { range: '5–9%',   title: 'Магнат'   },
+                { range: '10–19%', title: 'Барон'    },
+                { range: '20–29%', title: 'Граф'     },
+                { range: '30–39%', title: 'Маркіз'   },
+                { range: '40–49%', title: 'Лорд'     },
+                { range: '50–99%', title: 'Герцог'   },
+                { range: '100%',   title: 'Імператор'},
+              ].map(({ range, title }) => (
+                <div
+                  key={title}
+                  className={`bg-muted p-2 rounded ${titleName === title ? 'ring-2 ring-primary font-bold' : ''}`}
+                >
+                  <span className="font-semibold">{range}:</span> {title}
+                </div>
+              ))}
             </div>
           </div>
         </div>
