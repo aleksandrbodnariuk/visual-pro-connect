@@ -61,24 +61,42 @@ function StockMarketAccessManager() {
       const { data: allUsers } = await supabase.rpc('get_users_for_admin');
       if (!allUsers) return;
 
+      const userIds = allUsers.map((u: any) => u.id);
+
+      // Batch: fetch all roles and shares in parallel instead of N+1
+      const [rolesResults, sharesResults] = await Promise.all([
+        supabase.from('user_roles').select('user_id, role').in('user_id', userIds),
+        supabase.from('shares').select('user_id, quantity').in('user_id', userIds),
+      ]);
+
+      // Build maps
+      const rolesByUserId: Record<string, string[]> = {};
+      (rolesResults.data || []).forEach((r: any) => {
+        if (!rolesByUserId[r.user_id]) rolesByUserId[r.user_id] = [];
+        rolesByUserId[r.user_id].push(r.role);
+      });
+
+      const sharesByUserId: Record<string, number> = {};
+      (sharesResults.data || []).forEach((s: any) => {
+        sharesByUserId[s.user_id] = s.quantity || 0;
+      });
+
       const result: AccessUser[] = [];
       for (const u of allUsers) {
-        const { data: roles } = await supabase.rpc('get_user_roles_array', { user_id: u.id });
-        const rolesArr: string[] = roles || [];
-        const { data: sharesData } = await supabase.from('shares').select('quantity').eq('user_id', u.id).maybeSingle();
+        const rolesArr = rolesByUserId[u.id] || [];
+
+        // Skip founders/admins from this list (they always have access)
+        if (rolesArr.includes('founder') || rolesArr.includes('admin')) continue;
 
         let accessRole: 'none' | 'candidate' | 'shareholder' = 'none';
         if (rolesArr.includes('shareholder')) accessRole = 'shareholder';
         else if (rolesArr.includes('candidate')) accessRole = 'candidate';
 
-        // Skip founders/admins from this list (they always have access)
-        if (rolesArr.includes('founder') || rolesArr.includes('admin')) continue;
-
         result.push({
           id: u.id,
           full_name: u.full_name || 'Без імені',
           avatar_url: u.avatar_url || undefined,
-          shares: sharesData?.quantity || 0,
+          shares: sharesByUserId[u.id] || 0,
           accessRole,
         });
       }
@@ -251,17 +269,25 @@ export function StockExchangeTab() {
       if (usersError) {
         console.error("Error fetching users:", usersError);
       } else {
-        const sh = (allUsers || [])
-          .filter((u: any) => u.is_shareholder)
-          .map((u: any) => {
-            const parts = u.full_name ? u.full_name.split(' ') : ['', ''];
-            return { id: u.id, firstName: parts[0] || '', lastName: parts.slice(1).join(' ') || '', shares: 0 };
+        const shUsers = (allUsers || []).filter((u: any) => u.is_shareholder);
+        const shIds = shUsers.map((u: any) => u.id);
+
+        // Batch: single query for all shareholder shares
+        const sharesByUserId: Record<string, number> = {};
+        if (shIds.length > 0) {
+          const { data: allSharesData } = await supabase
+            .from('shares')
+            .select('user_id, quantity')
+            .in('user_id', shIds);
+          (allSharesData || []).forEach((s: any) => {
+            sharesByUserId[s.user_id] = s.quantity || 0;
           });
-        
-        for (const s of sh) {
-          const { data } = await supabase.from('shares').select('quantity').eq('user_id', s.id).limit(1);
-          s.shares = data && data.length > 0 ? data[0].quantity : 0;
         }
+
+        const sh = shUsers.map((u: any) => {
+          const parts = u.full_name ? u.full_name.split(' ') : ['', ''];
+          return { id: u.id, firstName: parts[0] || '', lastName: parts.slice(1).join(' ') || '', shares: sharesByUserId[u.id] || 0 };
+        });
         setShareholders(sh);
       }
 
