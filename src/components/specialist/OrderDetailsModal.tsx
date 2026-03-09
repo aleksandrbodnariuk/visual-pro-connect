@@ -9,13 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon, Check, X, Archive, UserPlus, Trash2 } from 'lucide-react';
+import { CalendarIcon, Check, X, Archive, UserPlus, Trash2, TrendingUp } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { SpecialistOrder, OrderParticipant, OrderType, ORDER_TYPE_LABELS, ORDER_TYPE_COLORS, STATUS_LABELS } from './types';
 import { supabase } from '@/integrations/supabase/client';
 import { Separator } from '@/components/ui/separator';
+import { calcNetProfit } from '@/lib/shareholderCalculations';
 
 interface SpecialistInfo {
   id: string;

@@ -14,6 +14,11 @@ export interface SpecialistOrder {
   created_by: string;
   created_at: string;
   updated_at: string;
+  // Фінансові поля (додані на етапі фінансової основи)
+  order_amount: number | null;
+  order_expenses: number | null;
+  financial_notes: string | null;
+  financials_updated_at: string | null;
 }
 
 export interface OrderParticipant {
