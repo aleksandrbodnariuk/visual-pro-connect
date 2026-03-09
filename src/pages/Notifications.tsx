@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { Bell, Calendar, Info, CheckCircle, AlertTriangle, Trash } from "lucide-react";
+import { Bell, Calendar, Info, CheckCircle, AlertTriangle, Trash, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -594,7 +594,7 @@ export default function StockMarket() {
           </div>
 
           {/* Tabs */}
-          <Tabs defaultValue="market" className="w-full space-y-4">
+          <Tabs defaultValue={initialTab} className="w-full space-y-4">
             <TabsList className="flex-wrap h-auto gap-1">
               <TabsTrigger value="market">Пропозиції</TabsTrigger>
               {isShareholder && <TabsTrigger value="my-offers">Мої пропозиції</TabsTrigger>}
