@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Trash2, Archive } from "lucide-react";
 import { toast } from "sonner";
+import { calcNetProfit } from "@/lib/shareholderCalculations";
 
 export function OrdersTab() {
   const [orders, setOrders] = useState<any[]>(() => {
