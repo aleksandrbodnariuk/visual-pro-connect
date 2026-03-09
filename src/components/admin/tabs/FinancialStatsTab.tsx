@@ -237,7 +237,7 @@ export function FinancialStatsTab() {
 
   // ─── Aggregated calculations ────────────────────────────────────────────────
   const stats = useMemo(() => {
-    if (orders.length === 0) return null;
+    if (filteredOrders.length === 0) return null;
 
     let totalAmount = 0;
     let totalExpenses = 0;
