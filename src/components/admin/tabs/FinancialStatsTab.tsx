@@ -462,11 +462,11 @@ export function FinancialStatsTab() {
 
   // ─── Save Snapshot ───────────────────────────────────────────────────────────
   const saveSnapshot = useCallback(async () => {
-    if (!stats || filteredOrders.length === 0) return;
+    if (!stats || filteredOrders.length === 0 || periodError) return;
     setIsSaving(true);
     try {
-      const { sharePriceUsd } = { sharePriceUsd: 0 }; // read from settings via context
       const periodLabel = getPeriodLabel(period, customFrom, customTo);
+      const createdBy = (await supabase.auth.getSession()).data.session?.user?.id ?? null;
 
       const payload = {
         summary: {
@@ -511,6 +511,7 @@ export function FinancialStatsTab() {
       };
 
       const { error } = await supabase.from("calculation_snapshots").insert({
+        created_by: createdBy,
         period_type: period,
         period_label: periodLabel,
         custom_from: customFrom ? format(customFrom, "yyyy-MM-dd") : null,
@@ -523,6 +524,8 @@ export function FinancialStatsTab() {
         shareholders_pool_20: stats.totalSharesPool,
         title_bonus_pool_17_5: stats.totalTitlePool,
         admin_fund_12_5: stats.totalAdminFund,
+        share_price_usd_snapshot: sharePriceUsd,
+        total_shares_snapshot: totalShares,
         notes: snapshotNotes.trim() || null,
         snapshot_payload: payload,
       });
@@ -538,7 +541,20 @@ export function FinancialStatsTab() {
     } finally {
       setIsSaving(false);
     }
-  }, [stats, filteredOrders, period, customFrom, customTo, specialistEarnings, shareholderStats, snapshotNotes]);
+  }, [
+    stats,
+    filteredOrders,
+    periodError,
+    period,
+    customFrom,
+    customTo,
+    specialistEarnings,
+    shareholderStats,
+    snapshotNotes,
+    sharePriceUsd,
+    totalShares,
+  ]);
+
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   const isLoading = loading || settingsLoading;
