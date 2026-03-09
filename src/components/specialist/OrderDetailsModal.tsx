@@ -9,13 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon, Check, X, Archive, UserPlus, Trash2 } from 'lucide-react';
+import { CalendarIcon, Check, X, Archive, UserPlus, Trash2, TrendingUp } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { SpecialistOrder, OrderParticipant, OrderType, ORDER_TYPE_LABELS, ORDER_TYPE_COLORS, STATUS_LABELS } from './types';
 import { supabase } from '@/integrations/supabase/client';
 import { Separator } from '@/components/ui/separator';
+import { calcNetProfit } from '@/lib/shareholderCalculations';
 
 interface SpecialistInfo {
   id: string;
@@ -36,12 +37,17 @@ interface Props {
 
 export function OrderDetailsModal({ order, participants, open, onOpenChange, onUpdate, onAddParticipant, onRemoveParticipant, isAdmin }: Props) {
   const [editing, setEditing] = useState(false);
+  const [editingFinancials, setEditingFinancials] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [orderType, setOrderType] = useState<OrderType>('photo');
   const [date, setDate] = useState<Date | undefined>();
   const [price, setPrice] = useState('');
   const [notes, setNotes] = useState('');
+  // Фінансові поля
+  const [orderAmount, setOrderAmount] = useState('');
+  const [orderExpenses, setOrderExpenses] = useState('');
+  const [financialNotes, setFinancialNotes] = useState('');
   const [specialists, setSpecialists] = useState<SpecialistInfo[]>([]);
   const [participantInfos, setParticipantInfos] = useState<Record<string, SpecialistInfo>>({});
   const [addSpecId, setAddSpecId] = useState('');
@@ -55,7 +61,11 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
       setDate(parseISO(order.order_date));
       setPrice(order.price != null ? String(order.price) : '');
       setNotes(order.notes || '');
+      setOrderAmount(order.order_amount != null ? String(order.order_amount) : '');
+      setOrderExpenses(order.order_expenses != null ? String(order.order_expenses) : '');
+      setFinancialNotes(order.financial_notes || '');
       setEditing(false);
+      setEditingFinancials(false);
     }
   }, [order]);
 
@@ -101,6 +111,21 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
     });
     if (success) setEditing(false);
   };
+
+  const handleSaveFinancials = async () => {
+    const success = await onUpdate(order.id, {
+      order_amount: orderAmount ? Number(orderAmount) : null,
+      order_expenses: orderExpenses ? Number(orderExpenses) : null,
+      financial_notes: financialNotes.trim() || null,
+      financials_updated_at: new Date().toISOString(),
+    });
+    if (success) setEditingFinancials(false);
+  };
+
+  // Чистий прибуток — read-only, через централізований модуль
+  const netProfit = (order.order_amount != null || order.order_expenses != null)
+    ? calcNetProfit(order.order_amount ?? 0, order.order_expenses ?? 0)
+    : null;
 
   const handleConfirm = () => onUpdate(order.id, { status: 'confirmed' });
   const handleReject = () => onUpdate(order.id, { status: 'pending' });
@@ -273,6 +298,103 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
               </div>
             )}
           </div>
+
+          {/* ── Фінанси замовлення (тільки адміністратор) ── */}
+          {isAdmin && (
+            <>
+              <Separator />
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium flex items-center gap-1.5">
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                    Фінанси замовлення
+                  </h4>
+                  {!editingFinancials && (
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setEditingFinancials(true)}>
+                      Редагувати
+                    </Button>
+                  )}
+                </div>
+
+                {editingFinancials ? (
+                  <div className="space-y-3 rounded-lg border p-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Сума замовлення (₴)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={orderAmount}
+                          onChange={e => setOrderAmount(e.target.value)}
+                          placeholder="0"
+                          className="h-8 text-sm mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Витрати (₴)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={orderExpenses}
+                          onChange={e => setOrderExpenses(e.target.value)}
+                          placeholder="0"
+                          className="h-8 text-sm mt-1"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Примітка до фінансів</Label>
+                      <Textarea
+                        value={financialNotes}
+                        onChange={e => setFinancialNotes(e.target.value)}
+                        rows={2}
+                        placeholder="Коментар до витрат або доходів..."
+                        className="text-sm mt-1"
+                      />
+                    </div>
+                    {/* Попередній чистий прибуток під час редагування */}
+                    {(orderAmount || orderExpenses) && (
+                      <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm">
+                        <span className="text-muted-foreground">Чистий прибуток:</span>
+                        <span className="font-semibold text-primary">
+                          {calcNetProfit(orderAmount ? Number(orderAmount) : 0, orderExpenses ? Number(orderExpenses) : 0).toFixed(2)} ₴
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleSaveFinancials} className="flex-1">Зберегти фінанси</Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingFinancials(false)}>Скасувати</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border p-3 space-y-2 text-sm">
+                    {netProfit !== null ? (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Сума замовлення:</span>
+                          <span>{(order.order_amount ?? 0).toFixed(2)} ₴</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Витрати:</span>
+                          <span>{(order.order_expenses ?? 0).toFixed(2)} ₴</span>
+                        </div>
+                        <Separator />
+                        <div className="flex justify-between font-semibold">
+                          <span>Чистий прибуток:</span>
+                          <span className="text-primary">{netProfit.toFixed(2)} ₴</span>
+                        </div>
+                        {order.financial_notes && (
+                          <p className="text-xs text-muted-foreground pt-1">{order.financial_notes}</p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground text-xs">Фінансові дані не введені</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Admin actions */}
           {isAdmin && !editing && (
