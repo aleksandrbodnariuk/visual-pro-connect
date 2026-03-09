@@ -387,10 +387,67 @@ export function FinancialStatsTab() {
         </Badge>
       </div>
 
+      {/* ─── Period Filters ─── */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {([
+            ["all", "Усі"],
+            ["month", "Цей місяць"],
+            ["year", "Цей рік"],
+            ["last30", "Останні 30 днів"],
+            ["custom", "Власний період"],
+          ] as [PeriodType, string][]).map(([key, label]) => (
+            <Button
+              key={key}
+              size="sm"
+              variant={period === key ? "default" : "outline"}
+              onClick={() => setPeriod(key)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+
+        {period === "custom" && (
+          <div className="flex flex-wrap items-center gap-3">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("w-[160px] justify-start text-left font-normal", !customFrom && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {customFrom ? format(customFrom, "dd.MM.yyyy") : "Від"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={customFrom} onSelect={setCustomFrom} initialFocus className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+            <span className="text-muted-foreground text-sm">—</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("w-[160px] justify-start text-left font-normal", !customTo && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {customTo ? format(customTo, "dd.MM.yyyy") : "До"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={customTo} onSelect={setCustomTo} initialFocus className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
+
+        {periodError && <InfoAlert message={periodError} />}
+      </div>
+
+      {/* ─── No results for period ─── */}
+      {!periodError && filteredOrders.length === 0 && orders.length > 0 && (
+        <InfoAlert message="За вибраний період підтверджених замовлень не знайдено" />
+      )}
+
       {/* ─── Summary Cards ─── */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard label="Підтверджених замовлень" value={String(orders.length)} />
+          <StatCard label="Підтверджених замовлень" value={String(filteredOrders.length)} />
           <StatCard label="Сума замовлень" value={fmt(stats.totalAmount)} />
           <StatCard label="Витрати" value={fmt(stats.totalExpenses)} />
           <StatCard label="Чистий прибуток" value={fmt(stats.totalNet)} highlight />
