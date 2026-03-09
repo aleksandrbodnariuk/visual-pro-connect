@@ -92,6 +92,10 @@ export function AdminTabs() {
       <TabsContent value="history">
         <CalculationHistoryTab />
       </TabsContent>
+
+      <TabsContent value="assets">
+        <AssetValuationTab />
+      </TabsContent>
     </Tabs>
   );
 }
