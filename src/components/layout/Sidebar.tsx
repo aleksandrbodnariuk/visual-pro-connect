@@ -26,11 +26,17 @@ export function Sidebar({ className }: SidebarProps) {
   
   const currentUser = getCurrentUser();
   const [isShareholder, setIsShareholder] = useState(false);
+  const [hasStockAccess, setHasStockAccess] = useState(false);
 
   useEffect(() => {
-    if (!currentUser?.id) { setIsShareholder(false); return; }
-    supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'shareholder' as any })
-      .then(({ data }) => setIsShareholder(data === true || currentUser.founder_admin === true));
+    if (!currentUser?.id) { setIsShareholder(false); setHasStockAccess(false); return; }
+    Promise.all([
+      supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'shareholder' as any }),
+      supabase.rpc('has_stock_market_access', { _user_id: currentUser.id }),
+    ]).then(([shRes, stockRes]) => {
+      setIsShareholder(shRes.data === true || currentUser.founder_admin === true);
+      setHasStockAccess(stockRes.data === true || currentUser.founder_admin === true);
+    });
   }, [currentUser?.id]);
 
   const handleNavigate = (path: string) => {
@@ -94,14 +100,14 @@ export function Sidebar({ className }: SidebarProps) {
             <Settings className="mr-2 h-4 w-4" /> {t.settings}
           </Button>
           {isShareholder && (
-            <>
-              <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/shareholder-panel')} data-active={location.pathname === "/shareholder-panel"}>
-                <Crown className="mr-2 h-4 w-4" /> Панель акціонера
-              </Button>
-              <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/stock-market')} data-active={location.pathname === "/stock-market"}>
-                <TrendingUp className="mr-2 h-4 w-4" /> Ринок акцій
-              </Button>
-            </>
+            <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/shareholder-panel')} data-active={location.pathname === "/shareholder-panel"}>
+              <Crown className="mr-2 h-4 w-4" /> Панель акціонера
+            </Button>
+          )}
+          {hasStockAccess && (
+            <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/stock-market')} data-active={location.pathname === "/stock-market"}>
+              <TrendingUp className="mr-2 h-4 w-4" /> Ринок акцій
+            </Button>
           )}
         </nav>
       </div>

@@ -140,6 +140,7 @@ export default function StockMarket() {
   const [transferLogs, setTransferLogs] = useState<TransferLog[]>([]);
   const [shareholders, setShareholders] = useState<ShareholderInfo[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
 
   // Dialogs
   const [openBuyDialog, setOpenBuyDialog] = useState(false);
@@ -312,16 +313,29 @@ export default function StockMarket() {
     }
   }, [currentUser?.id, totalShares, isAdmin]);
 
+  // Check access to stock market
   useEffect(() => {
-    if (loading) return;
-    if (!isAuthenticated() || !currentUser) {
+    if (loading || !currentUser?.id) return;
+    if (!isAuthenticated()) {
       toast.error("Необхідно увійти в систему");
       navigate("/auth");
       return;
     }
-    // Any authenticated user can access /stock-market
-    loadMarketData();
-  }, [navigate, loading, isAuthenticated, currentUser, loadMarketData]);
+    // Admin/founder always has access
+    if (isAdmin) {
+      setHasAccess(true);
+      return;
+    }
+    // Check via RPC
+    supabase.rpc('has_stock_market_access', { _user_id: currentUser.id })
+      .then(({ data }) => setHasAccess(data === true));
+  }, [loading, currentUser?.id, isAdmin]);
+
+  useEffect(() => {
+    if (hasAccess === true && currentUser?.id) {
+      loadMarketData();
+    }
+  }, [hasAccess, currentUser?.id, loadMarketData]);
 
   /* ── actions ── */
 
@@ -482,11 +496,26 @@ export default function StockMarket() {
   const myPercentage = totalShares > 0 ? ((myShares / totalShares) * 100).toFixed(2) : "0.00";
 
   /* ── loading / guards ── */
-  if (loading || settingsLoading) {
+  if (loading || settingsLoading || hasAccess === null) {
     return <div className="container py-16 text-center">Завантаження...</div>;
   }
   if (!isAuthenticated() || !currentUser) {
     return <div className="container py-16 text-center">Перенаправлення...</div>;
+  }
+  if (!hasAccess) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container py-16 text-center space-y-4">
+          <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground" />
+          <h2 className="text-xl font-semibold">Доступ обмежено</h2>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            Доступ до ринку акцій мають лише кандидати в акціонери, акціонери та адміністратор.
+          </p>
+          <Button variant="outline" onClick={() => navigate("/")}>На головну</Button>
+        </div>
+      </div>
+    );
   }
 
   return (

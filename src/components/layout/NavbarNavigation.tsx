@@ -14,11 +14,17 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
   const { unreadCount } = useUnreadMessages();
   const { user } = useAuth();
   const [isSpecialist, setIsSpecialist] = useState(false);
+  const [hasStockAccess, setHasStockAccess] = useState(false);
 
   useEffect(() => {
-    if (!user) { setIsSpecialist(false); return; }
-    supabase.rpc('has_role', { _user_id: user.id, _role: 'specialist' as any })
-      .then(({ data }) => setIsSpecialist(data === true));
+    if (!user) { setIsSpecialist(false); setHasStockAccess(false); return; }
+    Promise.all([
+      supabase.rpc('has_role', { _user_id: user.id, _role: 'specialist' as any }),
+      supabase.rpc('has_stock_market_access', { _user_id: user.id }),
+    ]).then(([specRes, stockRes]) => {
+      setIsSpecialist(specRes.data === true);
+      setHasStockAccess(stockRes.data === true);
+    });
   }, [user]);
 
   const isActive = (path: string) => {
@@ -70,14 +76,16 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
           </span>
         )}
       </Link>
-      <Link
-        to="/stock-market"
-        className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
-          isActive("/stock-market") ? "text-foreground" : "text-foreground/60"
-        }`}
-      >
-        Ринок акцій
-      </Link>
+      {(hasStockAccess || isAdmin) && (
+        <Link
+          to="/stock-market"
+          className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
+            isActive("/stock-market") ? "text-foreground" : "text-foreground/60"
+          }`}
+        >
+          Ринок акцій
+        </Link>
+      )}
       {(isSpecialist || isAdmin) && (
         <Link
           to="/panel-fahivtsya"

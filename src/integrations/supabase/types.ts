@@ -1304,6 +1304,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_stock_market_access: { Args: { _user_id: string }; Returns: boolean }
       is_admin: { Args: { user_id: string }; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
       is_order_creator: {
@@ -1380,6 +1381,7 @@ export type Database = {
         | "user"
         | "specialist"
         | "moderator"
+        | "candidate"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1514,6 +1516,7 @@ export const Constants = {
         "user",
         "specialist",
         "moderator",
+        "candidate",
       ],
     },
   },
