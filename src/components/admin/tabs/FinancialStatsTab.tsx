@@ -256,7 +256,7 @@ export function FinancialStatsTab() {
       adminFund: number;
     }> = [];
 
-    for (const order of orders) {
+    for (const order of filteredOrders) {
       const net = calcNetProfit(order.order_amount, order.order_expenses);
       const pools = calcProfitPools(net);
       totalAmount += order.order_amount;
