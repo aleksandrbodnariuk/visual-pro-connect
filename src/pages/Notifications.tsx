@@ -15,6 +15,7 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user: authUser } = useAuth();
+  const navigate = useNavigate();
 
   const fetchNotifications = async () => {
     setIsLoading(true);
