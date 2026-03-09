@@ -155,7 +155,8 @@ export function ShareholdersTab() {
   };
 
   const availableShares = dbTotalShares - issuedShares;
-  const systemNotConfigured = !settingsLoading && !settings?.id;
+  // system is unconfigured if settings haven't been saved yet (empty id) OR total shares is 0
+  const systemNotConfigured = !settingsLoading && (dbTotalShares <= 0 || !settings?.id);
 
   return (
     <div className="space-y-6">
