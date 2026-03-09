@@ -219,7 +219,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                 <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} />
               </div>
               <div className="flex gap-2">
-                <Button onClick={handleSave} className="flex-1">Зберегти</Button>
+                <Button onClick={handleSave} className="flex-1">Зберегти дані замовлення</Button>
                 <Button variant="outline" onClick={() => setEditing(false)}>Скасувати</Button>
               </div>
             </>
