@@ -42,12 +42,18 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
   const [description, setDescription] = useState('');
   const [orderType, setOrderType] = useState<OrderType>('photo');
   const [date, setDate] = useState<Date | undefined>();
-  const [price, setPrice] = useState('');
   const [notes, setNotes] = useState('');
-  // Фінансові поля
+
+  // Фінансові поля — єдине джерело правди
   const [orderAmount, setOrderAmount] = useState('');
   const [orderExpenses, setOrderExpenses] = useState('');
   const [financialNotes, setFinancialNotes] = useState('');
+
+  // Локальний знімок збережених фінансових даних — щоб read-only блок оновлювався одразу після save
+  const [savedAmount, setSavedAmount] = useState<number | null>(null);
+  const [savedExpenses, setSavedExpenses] = useState<number | null>(null);
+  const [savedFinancialNotes, setSavedFinancialNotes] = useState<string | null>(null);
+
   const [specialists, setSpecialists] = useState<SpecialistInfo[]>([]);
   const [participantInfos, setParticipantInfos] = useState<Record<string, SpecialistInfo>>({});
   const [addSpecId, setAddSpecId] = useState('');
@@ -59,11 +65,20 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
       setDescription(order.description || '');
       setOrderType(order.order_type);
       setDate(parseISO(order.order_date));
-      setPrice(order.price != null ? String(order.price) : '');
       setNotes(order.notes || '');
-      setOrderAmount(order.order_amount != null ? String(order.order_amount) : '');
-      setOrderExpenses(order.order_expenses != null ? String(order.order_expenses) : '');
+
+      // Фінансові поля
+      const amt = order.order_amount != null ? String(order.order_amount) : '';
+      const exp = order.order_expenses != null ? String(order.order_expenses) : '';
+      setOrderAmount(amt);
+      setOrderExpenses(exp);
       setFinancialNotes(order.financial_notes || '');
+
+      // Синхронізуємо локальний знімок з props
+      setSavedAmount(order.order_amount ?? null);
+      setSavedExpenses(order.order_expenses ?? null);
+      setSavedFinancialNotes(order.financial_notes ?? null);
+
       setEditing(false);
       setEditingFinancials(false);
     }
@@ -95,7 +110,6 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
   const handleSave = async () => {
     if (!date) return;
 
-    // Also add pending participant if selected
     if (addSpecId) {
       await onAddParticipant(order.id, addSpecId, addSpecRole);
       setAddSpecId('');
@@ -106,25 +120,42 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
       description: description.trim() || null,
       order_type: orderType,
       order_date: format(date, 'yyyy-MM-dd'),
-      price: price ? Number(price) : null,
       notes: notes.trim() || null,
+      // price поле більше не оновлюємо з форми — воно є legacy
     });
     if (success) setEditing(false);
   };
 
   const handleSaveFinancials = async () => {
+    const newAmount = orderAmount ? Number(orderAmount) : null;
+    const newExpenses = orderExpenses ? Number(orderExpenses) : null;
+    const newNotes = financialNotes.trim() || null;
+
     const success = await onUpdate(order.id, {
-      order_amount: orderAmount ? Number(orderAmount) : null,
-      order_expenses: orderExpenses ? Number(orderExpenses) : null,
-      financial_notes: financialNotes.trim() || null,
+      order_amount: newAmount,
+      order_expenses: newExpenses,
+      financial_notes: newNotes,
       financials_updated_at: new Date().toISOString(),
     });
-    if (success) setEditingFinancials(false);
+
+    if (success) {
+      // Одразу оновлюємо локальний знімок — UI відображає правильні значення без повторного відкриття
+      setSavedAmount(newAmount);
+      setSavedExpenses(newExpenses);
+      setSavedFinancialNotes(newNotes);
+      setEditingFinancials(false);
+    }
   };
 
-  // Чистий прибуток — read-only, через централізований модуль
-  const netProfit = (order.order_amount != null || order.order_expenses != null)
-    ? calcNetProfit(order.order_amount ?? 0, order.order_expenses ?? 0)
+  // Чистий прибуток — читаємо з локального знімку (завжди актуальний після save)
+  const hasFinancials = savedAmount !== null || savedExpenses !== null;
+  const netProfit = hasFinancials
+    ? calcNetProfit(savedAmount ?? 0, savedExpenses ?? 0)
+    : null;
+
+  // Попередній прибуток під час редагування — з поточних input-значень
+  const previewNetProfit = (orderAmount || orderExpenses)
+    ? calcNetProfit(orderAmount ? Number(orderAmount) : 0, orderExpenses ? Number(orderExpenses) : 0)
     : null;
 
   const handleConfirm = () => onUpdate(order.id, { status: 'confirmed' });
@@ -184,10 +215,6 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                 </Popover>
               </div>
               <div>
-                <Label>Ціна (₴)</Label>
-                <Input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="0" />
-              </div>
-              <div>
                 <Label>Нотатки</Label>
                 <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} />
               </div>
@@ -211,16 +238,10 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                     {STATUS_LABELS[order.status as keyof typeof STATUS_LABELS]}
                   </Badge>
                 </div>
-                <div>
+                <div className="col-span-2">
                   <span className="text-muted-foreground">Дата:</span>
                   <span className="ml-2 font-medium">{format(parseISO(order.order_date), 'd MMM yyyy', { locale: uk })}</span>
                 </div>
-                {order.price != null && (
-                  <div>
-                    <span className="text-muted-foreground">Ціна:</span>
-                    <span className="ml-2 font-semibold text-primary">{order.price} ₴</span>
-                  </div>
-                )}
               </div>
               {order.description && (
                 <div>
@@ -353,17 +374,23 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                       />
                     </div>
                     {/* Попередній чистий прибуток під час редагування */}
-                    {(orderAmount || orderExpenses) && (
+                    {previewNetProfit !== null && (
                       <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm">
                         <span className="text-muted-foreground">Чистий прибуток:</span>
                         <span className="font-semibold text-primary">
-                          {calcNetProfit(orderAmount ? Number(orderAmount) : 0, orderExpenses ? Number(orderExpenses) : 0).toFixed(2)} ₴
+                          {previewNetProfit.toFixed(2)} ₴
                         </span>
                       </div>
                     )}
                     <div className="flex gap-2">
                       <Button size="sm" onClick={handleSaveFinancials} className="flex-1">Зберегти фінанси</Button>
-                      <Button size="sm" variant="outline" onClick={() => setEditingFinancials(false)}>Скасувати</Button>
+                      <Button size="sm" variant="outline" onClick={() => {
+                        // Скидаємо введені зміни до збереженого знімку
+                        setOrderAmount(savedAmount != null ? String(savedAmount) : '');
+                        setOrderExpenses(savedExpenses != null ? String(savedExpenses) : '');
+                        setFinancialNotes(savedFinancialNotes || '');
+                        setEditingFinancials(false);
+                      }}>Скасувати</Button>
                     </div>
                   </div>
                 ) : (
@@ -372,19 +399,19 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                       <>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Сума замовлення:</span>
-                          <span>{(order.order_amount ?? 0).toFixed(2)} ₴</span>
+                          <span>{(savedAmount ?? 0).toFixed(2)} ₴</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Витрати:</span>
-                          <span>{(order.order_expenses ?? 0).toFixed(2)} ₴</span>
+                          <span>{(savedExpenses ?? 0).toFixed(2)} ₴</span>
                         </div>
                         <Separator />
                         <div className="flex justify-between font-semibold">
                           <span>Чистий прибуток:</span>
                           <span className="text-primary">{netProfit.toFixed(2)} ₴</span>
                         </div>
-                        {order.financial_notes && (
-                          <p className="text-xs text-muted-foreground pt-1">{order.financial_notes}</p>
+                        {savedFinancialNotes && (
+                          <p className="text-xs text-muted-foreground pt-1">{savedFinancialNotes}</p>
                         )}
                       </>
                     ) : (
