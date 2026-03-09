@@ -1066,6 +1066,10 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: boolean
       }
+      cancel_share_transaction: {
+        Args: { _transaction_id: string }
+        Returns: undefined
+      }
       check_admin_access: { Args: never; Returns: boolean }
       create_share_listing: {
         Args: { _note?: string; _quantity: number }
