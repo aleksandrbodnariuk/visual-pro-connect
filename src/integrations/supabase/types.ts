@@ -74,6 +74,77 @@ export type Database = {
         }
         Relationships: []
       }
+      asset_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      asset_items: {
+        Row: {
+          acquired_at: string | null
+          category_id: string
+          condition: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          quantity: number
+          total_price: number | null
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          acquired_at?: string | null
+          category_id: string
+          condition?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          quantity?: number
+          total_price?: number | null
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          acquired_at?: string | null
+          category_id?: string
+          condition?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          quantity?: number
+          total_price?: number | null
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "asset_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bmbg: {
         Row: {
           avatar_url: string | null
