@@ -100,12 +100,15 @@ export function Sidebar({ className }: SidebarProps) {
             <Settings className="mr-2 h-4 w-4" /> {t.settings}
           </Button>
           {isShareholder && (
-            <>
-              <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/shareholder-panel')} data-active={location.pathname === "/shareholder-panel"}>
-                <Crown className="mr-2 h-4 w-4" /> Панель акціонера
-              </Button>
-              <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/stock-market')} data-active={location.pathname === "/stock-market"}>
-                <TrendingUp className="mr-2 h-4 w-4" /> Ринок акцій
+            <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/shareholder-panel')} data-active={location.pathname === "/shareholder-panel"}>
+              <Crown className="mr-2 h-4 w-4" /> Панель акціонера
+            </Button>
+          )}
+          {hasStockAccess && (
+            <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/stock-market')} data-active={location.pathname === "/stock-market"}>
+              <TrendingUp className="mr-2 h-4 w-4" /> Ринок акцій
+            </Button>
+          )}
               </Button>
             </>
           )}
