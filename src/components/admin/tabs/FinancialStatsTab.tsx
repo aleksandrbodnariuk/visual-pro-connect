@@ -319,7 +319,7 @@ export function FinancialStatsTab() {
 
     const totals: Record<string, { baseIncome: number; titleBonus: number; totalIncome: number }> = {};
 
-    for (const order of orders) {
+    for (const order of filteredOrders) {
       const dist = calcFullProfitDistribution(
         order.order_amount,
         order.order_expenses,
