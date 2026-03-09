@@ -609,6 +609,63 @@ export type Database = {
         }
         Relationships: []
       }
+      share_transfer_log: {
+        Row: {
+          confirmed_by: string | null
+          created_at: string
+          from_user_id: string
+          id: string
+          listing_id: string | null
+          note: string | null
+          price_per_share_usd: number
+          shares_qty: number
+          to_user_id: string
+          total_amount_usd: number
+          transaction_id: string | null
+        }
+        Insert: {
+          confirmed_by?: string | null
+          created_at?: string
+          from_user_id: string
+          id?: string
+          listing_id?: string | null
+          note?: string | null
+          price_per_share_usd?: number
+          shares_qty: number
+          to_user_id: string
+          total_amount_usd?: number
+          transaction_id?: string | null
+        }
+        Update: {
+          confirmed_by?: string | null
+          created_at?: string
+          from_user_id?: string
+          id?: string
+          listing_id?: string | null
+          note?: string | null
+          price_per_share_usd?: number
+          shares_qty?: number
+          to_user_id?: string
+          total_amount_usd?: number
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_transfer_log_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "market"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "share_transfer_log_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shares: {
         Row: {
           created_at: string | null
