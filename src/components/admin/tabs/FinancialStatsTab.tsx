@@ -726,7 +726,7 @@ export function FinancialStatsTab() {
                       ))}
                       <TableRow className="bg-muted/50 font-semibold">
                         <TableCell colSpan={4} className="text-xs text-muted-foreground">
-                          Усього ({orders.length} замовлень)
+                          Усього ({filteredOrders.length} замовлень)
                         </TableCell>
                         <TableCell className="text-right">{fmt(stats.totalNet)}</TableCell>
                         <TableCell className="text-right">{fmt(stats.totalSpec)}</TableCell>
