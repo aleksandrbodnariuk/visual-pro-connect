@@ -1028,6 +1028,13 @@ export type Database = {
           website: string
         }[]
       }
+      get_all_shareholders_shares: {
+        Args: never
+        Returns: {
+          quantity: number
+          user_id: string
+        }[]
+      }
       get_analytics_overview: {
         Args: {
           _country_filter?: string
@@ -1043,6 +1050,17 @@ export type Database = {
           total_pageviews: number
           total_sessions: number
           unique_visitors: number
+        }[]
+      }
+      get_confirmed_orders_for_forecast: {
+        Args: never
+        Returns: {
+          id: string
+          order_amount: number
+          order_date: string
+          order_expenses: number
+          status: string
+          title: string
         }[]
       }
       get_detailed_profile: {
