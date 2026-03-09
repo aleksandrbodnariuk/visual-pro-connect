@@ -111,16 +111,7 @@ export function ShareholdersTab() {
     }
   };
 
-  const changeShareholderTitle = async (userId: string, newTitle: string) => {
-    setShareholders(prev => prev.map(sh => sh.id === userId ? { ...sh, title: newTitle } : sh));
-    const { error } = await supabase.from('users').update({ title: newTitle }).eq('id', userId);
-    if (error) {
-      toast.error("Не вдалося зберегти титул");
-      await fetchShareholders();
-      return;
-    }
-    toast.success(`Титул змінено на "${newTitle}"`);
-  };
+  // Title is now auto-calculated by DB trigger on shares change
 
   const updateSharesCount = async (userId: string, sharesCount: number) => {
     if (isNaN(sharesCount) || sharesCount < 0) {
