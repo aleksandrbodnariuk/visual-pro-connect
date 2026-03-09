@@ -451,7 +451,9 @@ export function ShareholdersTab() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Прибуток:</span>
-                        <span className="text-sm text-muted-foreground italic">Після замовлень</span>
+                        <span className="text-sm font-medium">
+                          {getProfitDisplay(shareholder.id, shareholder.shares)}
+                        </span>
                       </div>
                       <Button variant="outline" size="sm" className="w-full">
                         <PenLine className="h-4 w-4 mr-1" /> Деталі
