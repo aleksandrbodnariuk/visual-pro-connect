@@ -424,6 +424,19 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
             </>
           )}
 
+          {/* ── Попередній розрахунок розподілу прибутку (read-only) ── */}
+          {isAdmin && !editing && !editingFinancials && (
+            <>
+              <Separator />
+              <ProfitPreviewBlock
+                orderAmount={savedAmount}
+                orderExpenses={savedExpenses}
+                participants={participants}
+                participantInfos={participantInfos}
+              />
+            </>
+          )}
+
           {/* Admin actions */}
           {isAdmin && !editing && !editingFinancials && (
             <>
