@@ -424,11 +424,11 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
           )}
 
           {/* Admin actions */}
-          {isAdmin && !editing && (
+          {isAdmin && !editing && !editingFinancials && (
             <>
               <Separator />
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                <Button variant="outline" size="sm" onClick={() => { setEditing(true); setEditingFinancials(false); }}>
                   Редагувати
                 </Button>
                 {order.status === 'pending' && (
