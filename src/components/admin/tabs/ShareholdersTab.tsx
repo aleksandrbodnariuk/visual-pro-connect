@@ -163,6 +163,45 @@ export function ShareholdersTab() {
   // System is in setup state if total shares is 0 (not yet configured by admin)
   const systemNotConfigured = !settingsLoading && dbTotalShares <= 0;
 
+  // Calculate profit forecasts for all shareholders based on confirmed orders
+  const profitForecasts = useMemo(() => {
+    if (dbTotalShares <= 0 || shareholders.length === 0 || confirmedOrders.length === 0) {
+      return {};
+    }
+
+    const shareholderInputs: ShareholderInput[] = shareholders.map(sh => ({
+      userId: sh.id,
+      shares: sh.shares,
+    }));
+
+    // Sum up forecasts from all confirmed orders
+    const totals: Record<string, number> = {};
+    
+    for (const order of confirmedOrders) {
+      const dist = calcFullProfitDistribution(
+        Number(order.order_amount),
+        Number(order.order_expenses),
+        shareholderInputs,
+        dbTotalShares
+      );
+      
+      for (const sh of dist.shareholders) {
+        totals[sh.userId] = (totals[sh.userId] || 0) + sh.totalIncome;
+      }
+    }
+    
+    return totals;
+  }, [shareholders, confirmedOrders, dbTotalShares]);
+
+  const getProfitDisplay = (userId: string, shares: number) => {
+    if (dbTotalShares <= 0) return "—";
+    if (shares <= 0) return "Акції не призначено";
+    if (confirmedOrders.length === 0) return "Немає замовлень";
+    const profit = profitForecasts[userId];
+    if (profit === undefined || profit === 0) return "0.00 ₴";
+    return `${profit.toFixed(2)} ₴`;
+  };
+
   return (
     <div className="space-y-6">
       {/* ─── System not configured banner ─── */}
