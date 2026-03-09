@@ -46,19 +46,32 @@ export function ShareholdersTab() {
       }
 
       const supabaseShareholders = allUsers?.filter(u => u.is_shareholder === true) || [];
-      const shareholdersWithShares = [];
+      
+      // BATCH: collect all shareholder user_ids
+      const shareholderIds = supabaseShareholders.map(u => u.id);
+      
+      // BATCH: single query for all shares instead of N+1
+      const sharesByUserId: Record<string, number> = {};
+      if (shareholderIds.length > 0) {
+        const { data: allSharesData } = await supabase
+          .from('shares')
+          .select('user_id, quantity')
+          .in('user_id', shareholderIds);
+        
+        (allSharesData || []).forEach((s: any) => {
+          sharesByUserId[s.user_id] = s.quantity || 0;
+        });
+      }
+      
+      // Build shareholders list using the map (no additional queries)
       let totalIssued = 0;
-
-      for (const user of supabaseShareholders) {
-        const { data: sharesData } = await supabase
-          .from('shares').select('*').eq('user_id', user.id).limit(1);
-
+      const shareholdersWithShares = supabaseShareholders.map(user => {
         const nameParts = user.full_name ? user.full_name.split(' ') : ['', ''];
-        const shares = sharesData && sharesData.length > 0 ? sharesData[0].quantity : 0;
+        const shares = sharesByUserId[user.id] || 0;
         totalIssued += shares;
         const percentage = dbTotalShares > 0 ? ((shares / dbTotalShares) * 100) : 0;
 
-        shareholdersWithShares.push({
+        return {
           id: user.id,
           firstName: nameParts[0] || '',
           lastName: nameParts.slice(1).join(' ') || '',
@@ -68,8 +81,8 @@ export function ShareholdersTab() {
           percentage: percentage.toFixed(2),
           title: user.title || "Акціонер",
           isShareHolder: true,
-        });
-      }
+        };
+      });
 
       setShareholders(shareholdersWithShares);
       setIssuedShares(totalIssued);
