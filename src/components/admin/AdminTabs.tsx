@@ -42,6 +42,7 @@ export function AdminTabs() {
         <TabsTrigger value="categories">Категорії</TabsTrigger>
         <TabsTrigger value="settings">Налаштування</TabsTrigger>
         <TabsTrigger value="analytics">Аналітика</TabsTrigger>
+        <TabsTrigger value="finances">Фінанси</TabsTrigger>
       </TabsList>
       
       <TabsContent value="users">
