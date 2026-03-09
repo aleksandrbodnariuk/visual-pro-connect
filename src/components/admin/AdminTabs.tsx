@@ -80,6 +80,10 @@ export function AdminTabs() {
       <TabsContent value="analytics">
         <AnalyticsTab />
       </TabsContent>
+
+      <TabsContent value="finances">
+        <FinancialStatsTab />
+      </TabsContent>
     </Tabs>
   );
 }
