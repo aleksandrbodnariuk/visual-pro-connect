@@ -220,6 +220,11 @@ export function FinancialStatsTab() {
   const [customFrom, setCustomFrom] = useState<Date | undefined>(undefined);
   const [customTo, setCustomTo] = useState<Date | undefined>(undefined);
 
+  // Save Snapshot dialog state
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [snapshotNotes, setSnapshotNotes] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
   const periodError = useMemo(() => {
     if (period === "custom" && customFrom && customTo && customFrom > customTo) {
       return "Дата «від» не може бути пізніше за дату «до»";
