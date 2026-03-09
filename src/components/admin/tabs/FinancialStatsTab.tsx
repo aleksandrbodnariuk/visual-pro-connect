@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
+import { format, startOfMonth, startOfYear, subDays } from "date-fns";
+import { uk } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { getTitleByPercent } from "@/lib/shareholderRules";
@@ -10,6 +12,9 @@ import {
 } from "@/lib/shareholderCalculations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Table,
   TableBody,
@@ -33,7 +38,13 @@ import {
   Loader2,
   Briefcase,
   Crown,
+  CalendarIcon,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// ─── Period filter types ──────────────────────────────────────────────────────
+
+type PeriodType = "all" | "month" | "year" | "last30" | "custom";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
