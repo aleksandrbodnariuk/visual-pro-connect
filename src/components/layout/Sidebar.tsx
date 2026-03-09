@@ -26,11 +26,17 @@ export function Sidebar({ className }: SidebarProps) {
   
   const currentUser = getCurrentUser();
   const [isShareholder, setIsShareholder] = useState(false);
+  const [hasStockAccess, setHasStockAccess] = useState(false);
 
   useEffect(() => {
-    if (!currentUser?.id) { setIsShareholder(false); return; }
-    supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'shareholder' as any })
-      .then(({ data }) => setIsShareholder(data === true || currentUser.founder_admin === true));
+    if (!currentUser?.id) { setIsShareholder(false); setHasStockAccess(false); return; }
+    Promise.all([
+      supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'shareholder' as any }),
+      supabase.rpc('has_stock_market_access', { _user_id: currentUser.id }),
+    ]).then(([shRes, stockRes]) => {
+      setIsShareholder(shRes.data === true || currentUser.founder_admin === true);
+      setHasStockAccess(stockRes.data === true || currentUser.founder_admin === true);
+    });
   }, [currentUser?.id]);
 
   const handleNavigate = (path: string) => {
