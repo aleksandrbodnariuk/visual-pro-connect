@@ -76,14 +76,16 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
           </span>
         )}
       </Link>
-      <Link
-        to="/stock-market"
-        className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
-          isActive("/stock-market") ? "text-foreground" : "text-foreground/60"
-        }`}
-      >
-        Ринок акцій
-      </Link>
+      {(hasStockAccess || isAdmin) && (
+        <Link
+          to="/stock-market"
+          className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
+            isActive("/stock-market") ? "text-foreground" : "text-foreground/60"
+          }`}
+        >
+          Ринок акцій
+        </Link>
+      )}
       {(isSpecialist || isAdmin) && (
         <Link
           to="/panel-fahivtsya"
