@@ -401,6 +401,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_read: boolean | null
+          link: string | null
           message: string
           user_id: string | null
         }
@@ -408,6 +409,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_read?: boolean | null
+          link?: string | null
           message: string
           user_id?: string | null
         }
@@ -415,6 +417,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_read?: boolean | null
+          link?: string | null
           message?: string
           user_id?: string | null
         }
@@ -1068,6 +1071,10 @@ export type Database = {
         Args: { _note?: string; _quantity: number }
         Returns: string
       }
+      create_stock_notification: {
+        Args: { _link?: string; _message: string; _user_id: string }
+        Returns: undefined
+      }
       ensure_user_profile: {
         Args: never
         Returns: {
@@ -1316,6 +1323,10 @@ export type Database = {
         Returns: boolean
       }
       is_user_admin: { Args: { _user_id: string }; Returns: boolean }
+      notify_admins_stock_event: {
+        Args: { _link?: string; _message: string }
+        Returns: undefined
+      }
       record_visit: { Args: never; Returns: undefined }
       reject_share_transaction: {
         Args: { _transaction_id: string }
