@@ -134,13 +134,19 @@ export function UserMenu({ currentUser }: UserMenuProps) {
             </DropdownMenuItem>
           )}
           
-          {/* Доступ до ринку акцій для акціонерів */}
+          {/* Доступ до панелі акціонера та ринку акцій */}
           {(currentUser.isShareHolder || currentUser.role === "shareholder" || 
             currentUser.status === "Акціонер" || currentUser.phoneNumber === "0507068007") && (
-            <DropdownMenuItem onClick={() => handleNavigate('/stock-market')}>
-              <User className="mr-2 h-4 w-4" />
-              <span>Ринок акцій</span>
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem onClick={() => handleNavigate('/shareholder-panel')}>
+                <Crown className="mr-2 h-4 w-4" />
+                <span>Панель акціонера</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleNavigate('/stock-market')}>
+                <TrendingUp className="mr-2 h-4 w-4" />
+                <span>Ринок акцій</span>
+              </DropdownMenuItem>
+            </>
           )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
