@@ -99,7 +99,6 @@ export default function Admin() {
         <AdminStats 
           users={users.length}
           shareholders={shareholders.length}
-          stockPrice={stockPrice}
         />
         
         <AdminTabs />
