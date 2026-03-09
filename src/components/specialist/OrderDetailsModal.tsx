@@ -17,6 +17,7 @@ import { SpecialistOrder, OrderParticipant, OrderType, ORDER_TYPE_LABELS, ORDER_
 import { supabase } from '@/integrations/supabase/client';
 import { Separator } from '@/components/ui/separator';
 import { calcNetProfit } from '@/lib/shareholderCalculations';
+import { ProfitPreviewBlock } from './ProfitPreviewBlock';
 
 interface SpecialistInfo {
   id: string;
@@ -420,6 +421,19 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                   </div>
                 )}
               </div>
+            </>
+          )}
+
+          {/* ── Попередній розрахунок розподілу прибутку (read-only) ── */}
+          {isAdmin && !editing && !editingFinancials && (
+            <>
+              <Separator />
+              <ProfitPreviewBlock
+                orderAmount={savedAmount}
+                orderExpenses={savedExpenses}
+                participants={participants}
+                participantInfos={participantInfos}
+              />
             </>
           )}
 
