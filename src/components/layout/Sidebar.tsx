@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Search, Bell, MessageSquare, User, Settings, Users } from 'lucide-react';
+import { Home, Search, Bell, MessageSquare, User, Settings, Users, Crown, TrendingUp } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 import { useAuthState } from "@/hooks/auth/useAuthState";
 import { toast } from "sonner";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useDynamicCategories, getIconComponent } from "@/hooks/useDynamicCategories";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SidebarProps {
   className?: string;
