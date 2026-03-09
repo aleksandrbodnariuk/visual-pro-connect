@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -129,6 +129,8 @@ async function fetchNamesMap(ids: string[]): Promise<Record<string, { name: stri
 
 export default function StockMarket() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "market";
   const { getCurrentUser, isAuthenticated, loading } = useSupabaseAuth();
   const currentUser = getCurrentUser();
   const { sharePriceUsd, totalShares, loading: settingsLoading } = useCompanySettings();
@@ -437,6 +439,14 @@ export default function StockMarket() {
       toast.error("Цю заявку не можна скасувати");
       return;
     }
+    // Notify seller about cancellation
+    const sellerName = selectedTransaction.seller_name || "Продавець";
+    await supabase.from("notifications").insert({
+      user_id: selectedTransaction.seller_id,
+      message: `Покупець скасував заявку на ${selectedTransaction.quantity} акцій`,
+      is_read: false,
+      link: "/stock-market?tab=my-offers",
+    });
     // Just delete the transaction, do NOT touch the listing
     const { error } = await supabase
       .from("transactions")
@@ -449,6 +459,7 @@ export default function StockMarket() {
     }
     setOpenDetailsDialog(false);
     toast.success("Заявку скасовано");
+    window.dispatchEvent(new CustomEvent('notifications-updated'));
     await loadMarketData();
   };
 
@@ -592,7 +603,7 @@ export default function StockMarket() {
           </div>
 
           {/* Tabs */}
-          <Tabs defaultValue="market" className="w-full space-y-4">
+          <Tabs defaultValue={initialTab} className="w-full space-y-4">
             <TabsList className="flex-wrap h-auto gap-1">
               <TabsTrigger value="market">Пропозиції</TabsTrigger>
               {isShareholder && <TabsTrigger value="my-offers">Мої пропозиції</TabsTrigger>}
