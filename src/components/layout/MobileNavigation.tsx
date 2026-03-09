@@ -32,6 +32,7 @@ export function MobileNavigation() {
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [isSpecialist, setIsSpecialist] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isShareholder, setIsShareholder] = useState(false);
 
   useEffect(() => {
     if (!currentUser?.id) { setIsSpecialist(false); setIsAdmin(false); return; }
