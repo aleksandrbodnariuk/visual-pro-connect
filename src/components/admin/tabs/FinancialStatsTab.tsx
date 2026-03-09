@@ -82,6 +82,100 @@ function fmt(n: number) {
   return n.toFixed(2) + " ₴";
 }
 
+function getPeriodLabel(period: PeriodType, customFrom?: Date, customTo?: Date): string {
+  switch (period) {
+    case "all": return "Усі";
+    case "month": return "Цей місяць";
+    case "year": return "Цей рік";
+    case "last30": return "Останні 30 днів";
+    case "custom":
+      if (customFrom && customTo)
+        return `${format(customFrom, "dd.MM.yyyy")} — ${format(customTo, "dd.MM.yyyy")}`;
+      return "Власний період";
+  }
+}
+
+function escapeCsv(val: string): string {
+  if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+    return `"${val.replace(/"/g, '""')}"`;
+  }
+  return val;
+}
+
+function buildCsvContent(
+  periodLabel: string,
+  stats: {
+    totalAmount: number; totalExpenses: number; totalNet: number;
+    totalSpec: number; totalSharesPool: number; totalTitlePool: number; totalAdminFund: number;
+    orderRows: Array<{ order: ConfirmedOrder; net: number; spec: number; sharesPool: number; titlePool: number; adminFund: number }>;
+  },
+  filteredCount: number,
+  specialistEarnings: SpecialistEarning[],
+  shareholderStats: ShareholderStat[],
+): string {
+  const lines: string[] = [];
+  const n = (v: number) => v.toFixed(2);
+
+  // Section 1: Summary
+  lines.push("=== ЗВЕДЕНА СТАТИСТИКА ===");
+  lines.push(`Період,${escapeCsv(periodLabel)}`);
+  lines.push(`Підтверджених замовлень,${filteredCount}`);
+  lines.push(`Сума замовлень,${n(stats.totalAmount)}`);
+  lines.push(`Витрати,${n(stats.totalExpenses)}`);
+  lines.push(`Чистий прибуток,${n(stats.totalNet)}`);
+  lines.push(`50% фахівцям,${n(stats.totalSpec)}`);
+  lines.push(`20% на акції,${n(stats.totalSharesPool)}`);
+  lines.push(`17.5% титульні бонуси,${n(stats.totalTitlePool)}`);
+  lines.push(`12.5% адмін-фонд,${n(stats.totalAdminFund)}`);
+  lines.push("");
+
+  // Section 2: Orders
+  lines.push("=== ЗАМОВЛЕННЯ ===");
+  lines.push("Назва,Дата,Сума,Витрати,Чистий прибуток,50% фахівцям,20% акціям,17.5% тит. бонуси,12.5% адмін-фонд");
+  for (const row of stats.orderRows) {
+    lines.push([
+      escapeCsv(row.order.title),
+      new Date(row.order.order_date).toLocaleDateString("uk-UA"),
+      n(row.order.order_amount), n(row.order.order_expenses), n(row.net),
+      n(row.spec), n(row.sharesPool), n(row.titlePool), n(row.adminFund),
+    ].join(","));
+  }
+  lines.push("");
+
+  // Section 3: Specialists
+  lines.push("=== ФАХІВЦІ ===");
+  lines.push("Фахівець,Замовлень,Прогноз доходу");
+  for (const se of specialistEarnings) {
+    lines.push([escapeCsv(se.name), String(se.ordersCount), n(se.totalEarning)].join(","));
+  }
+  lines.push("");
+
+  // Section 4: Shareholders
+  lines.push("=== АКЦІОНЕРИ ===");
+  lines.push("Акціонер,Акцій,%,Титул,Базовий дохід,Титульний бонус,Разом");
+  for (const sh of shareholderStats) {
+    lines.push([
+      escapeCsv(sh.name), String(sh.shares), sh.percent.toFixed(2), escapeCsv(sh.title),
+      n(sh.baseIncome), n(sh.titleBonus), n(sh.totalIncome),
+    ].join(","));
+  }
+
+  return lines.join("\n");
+}
+
+function downloadCsv(content: string, filename: string) {
+  const BOM = "\uFEFF";
+  const blob = new Blob([BOM + content], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function InfoAlert({ message, sub }: { message: string; sub?: string }) {
   return (
     <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20 p-4 text-amber-800 dark:text-amber-300">
