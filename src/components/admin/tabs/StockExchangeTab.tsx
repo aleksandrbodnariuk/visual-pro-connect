@@ -61,24 +61,42 @@ function StockMarketAccessManager() {
       const { data: allUsers } = await supabase.rpc('get_users_for_admin');
       if (!allUsers) return;
 
+      const userIds = allUsers.map((u: any) => u.id);
+
+      // Batch: fetch all roles and shares in parallel instead of N+1
+      const [rolesResults, sharesResults] = await Promise.all([
+        supabase.from('user_roles').select('user_id, role').in('user_id', userIds),
+        supabase.from('shares').select('user_id, quantity').in('user_id', userIds),
+      ]);
+
+      // Build maps
+      const rolesByUserId: Record<string, string[]> = {};
+      (rolesResults.data || []).forEach((r: any) => {
+        if (!rolesByUserId[r.user_id]) rolesByUserId[r.user_id] = [];
+        rolesByUserId[r.user_id].push(r.role);
+      });
+
+      const sharesByUserId: Record<string, number> = {};
+      (sharesResults.data || []).forEach((s: any) => {
+        sharesByUserId[s.user_id] = s.quantity || 0;
+      });
+
       const result: AccessUser[] = [];
       for (const u of allUsers) {
-        const { data: roles } = await supabase.rpc('get_user_roles_array', { user_id: u.id });
-        const rolesArr: string[] = roles || [];
-        const { data: sharesData } = await supabase.from('shares').select('quantity').eq('user_id', u.id).maybeSingle();
+        const rolesArr = rolesByUserId[u.id] || [];
+
+        // Skip founders/admins from this list (they always have access)
+        if (rolesArr.includes('founder') || rolesArr.includes('admin')) continue;
 
         let accessRole: 'none' | 'candidate' | 'shareholder' = 'none';
         if (rolesArr.includes('shareholder')) accessRole = 'shareholder';
         else if (rolesArr.includes('candidate')) accessRole = 'candidate';
 
-        // Skip founders/admins from this list (they always have access)
-        if (rolesArr.includes('founder') || rolesArr.includes('admin')) continue;
-
         result.push({
           id: u.id,
           full_name: u.full_name || 'Без імені',
           avatar_url: u.avatar_url || undefined,
-          shares: sharesData?.quantity || 0,
+          shares: sharesByUserId[u.id] || 0,
           accessRole,
         });
       }
