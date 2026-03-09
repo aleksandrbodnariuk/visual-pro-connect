@@ -313,16 +313,29 @@ export default function StockMarket() {
     }
   }, [currentUser?.id, totalShares, isAdmin]);
 
+  // Check access to stock market
   useEffect(() => {
-    if (loading) return;
-    if (!isAuthenticated() || !currentUser) {
+    if (loading || !currentUser?.id) return;
+    if (!isAuthenticated()) {
       toast.error("Необхідно увійти в систему");
       navigate("/auth");
       return;
     }
-    // Any authenticated user can access /stock-market
-    loadMarketData();
-  }, [navigate, loading, isAuthenticated, currentUser, loadMarketData]);
+    // Admin/founder always has access
+    if (isAdmin) {
+      setHasAccess(true);
+      return;
+    }
+    // Check via RPC
+    supabase.rpc('has_stock_market_access', { _user_id: currentUser.id })
+      .then(({ data }) => setHasAccess(data === true));
+  }, [loading, currentUser?.id, isAdmin]);
+
+  useEffect(() => {
+    if (hasAccess === true && currentUser?.id) {
+      loadMarketData();
+    }
+  }, [hasAccess, currentUser?.id, loadMarketData]);
 
   /* ── actions ── */
 
