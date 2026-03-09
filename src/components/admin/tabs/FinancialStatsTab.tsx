@@ -311,7 +311,7 @@ export function FinancialStatsTab() {
       name: specialistNames[id] || "Невідомий",
       ...data,
     })).sort((a, b) => b.totalEarning - a.totalEarning);
-  }, [stats, orderParticipants, specialistNames, orders]);
+  }, [stats, orderParticipants, specialistNames, filteredOrders]);
 
   // Shareholder stats
   const shareholderStats = useMemo<ShareholderStat[]>(() => {
