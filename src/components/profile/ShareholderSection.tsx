@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { getTitleByPercent } from "@/lib/shareholderRules";
+import { ShareholderProfitForecast } from "./ShareholderProfitForecast";
 
 interface ShareholderSectionProps {
   user: {
