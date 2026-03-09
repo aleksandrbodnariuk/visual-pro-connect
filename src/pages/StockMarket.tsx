@@ -439,22 +439,15 @@ export default function StockMarket() {
       toast.error("Цю заявку не можна скасувати");
       return;
     }
-    // Notify seller about cancellation
-    const sellerName = selectedTransaction.seller_name || "Продавець";
-    await supabase.from("notifications").insert({
-      user_id: selectedTransaction.seller_id,
-      message: `Покупець скасував заявку на ${selectedTransaction.quantity} акцій`,
-      is_read: false,
-      link: "/stock-market?tab=my-offers",
+    const { error } = await supabase.rpc("cancel_share_transaction", {
+      _transaction_id: selectedTransaction.id,
     });
-    // Just delete the transaction, do NOT touch the listing
-    const { error } = await supabase
-      .from("transactions")
-      .delete()
-      .eq("id", selectedTransaction.id)
-      .eq("buyer_id", currentUser?.id || "");
     if (error) {
-      toast.error("Не вдалося скасувати заявку");
+      const msg = error.message || "";
+      if (msg.includes("не знайдено")) toast.error("Заявку не знайдено");
+      else if (msg.includes("pending")) toast.error("Тільки pending-заявку можна скасувати");
+      else if (msg.includes("заборонено")) toast.error("Доступ заборонено");
+      else toast.error("Не вдалося скасувати заявку");
       return;
     }
     setOpenDetailsDialog(false);
