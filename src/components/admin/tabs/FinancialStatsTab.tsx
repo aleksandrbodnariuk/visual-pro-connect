@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { format, startOfMonth, startOfYear, subDays } from "date-fns";
 import { uk } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
