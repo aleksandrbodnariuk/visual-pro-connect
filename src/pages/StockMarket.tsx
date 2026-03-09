@@ -439,6 +439,14 @@ export default function StockMarket() {
       toast.error("Цю заявку не можна скасувати");
       return;
     }
+    // Notify seller about cancellation
+    const sellerName = selectedTransaction.seller_name || "Продавець";
+    await supabase.from("notifications").insert({
+      user_id: selectedTransaction.seller_id,
+      message: `Покупець скасував заявку на ${selectedTransaction.quantity} акцій`,
+      is_read: false,
+      link: "/stock-market?tab=my-offers",
+    });
     // Just delete the transaction, do NOT touch the listing
     const { error } = await supabase
       .from("transactions")
@@ -451,6 +459,7 @@ export default function StockMarket() {
     }
     setOpenDetailsDialog(false);
     toast.success("Заявку скасовано");
+    window.dispatchEvent(new CustomEvent('notifications-updated'));
     await loadMarketData();
   };
 
