@@ -154,9 +154,9 @@ export function ShareholdersTab() {
     toast.success("Кількість акцій оновлено");
   };
 
-  const availableShares = dbTotalShares - issuedShares;
-  // system is unconfigured if settings haven't been saved yet (empty id) OR total shares is 0
-  const systemNotConfigured = !settingsLoading && (dbTotalShares <= 0 || !settings?.id);
+  const availableShares = Math.max(0, dbTotalShares - issuedShares);
+  // System is in setup state if total shares is 0 (not yet configured by admin)
+  const systemNotConfigured = !settingsLoading && dbTotalShares <= 0;
 
   return (
     <div className="space-y-6">
