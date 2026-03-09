@@ -390,19 +390,9 @@ export function ShareholdersTab() {
                       <h3 className="font-semibold">{shareholder.firstName} {shareholder.lastName}</h3>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Титул:</span>
-                        <Select
-                          value={shareholder.title || "Акціонер"}
-                          onValueChange={(value) => changeShareholderTitle(shareholder.id, value)}
-                        >
-                          <SelectTrigger className="w-[130px]">
-                            <SelectValue placeholder="Титул" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TITLES.map((title) => (
-                              <SelectItem key={title} value={title}>{title}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Badge variant="secondary">
+                          {shareholder.title || getTitleName(parseFloat(shareholder.percentage)) || '—'}
+                        </Badge>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Кількість акцій:</span>
