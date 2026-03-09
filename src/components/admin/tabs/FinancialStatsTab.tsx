@@ -460,6 +460,86 @@ export function FinancialStatsTab() {
     }).sort((a, b) => b.totalIncome - a.totalIncome);
   }, [stats, filteredOrders, shareholderInputs, totalShares, shareholderNames]);
 
+  // ─── Save Snapshot ───────────────────────────────────────────────────────────
+  const saveSnapshot = useCallback(async () => {
+    if (!stats || filteredOrders.length === 0) return;
+    setIsSaving(true);
+    try {
+      const { sharePriceUsd } = { sharePriceUsd: 0 }; // read from settings via context
+      const periodLabel = getPeriodLabel(period, customFrom, customTo);
+
+      const payload = {
+        summary: {
+          period: periodLabel,
+          confirmed_orders_count: filteredOrders.length,
+          total_amount: stats.totalAmount,
+          total_expenses: stats.totalExpenses,
+          total_net_profit: stats.totalNet,
+          specialists_pool: stats.totalSpec,
+          shareholders_pool: stats.totalSharesPool,
+          title_bonus_pool: stats.totalTitlePool,
+          admin_fund: stats.totalAdminFund,
+        },
+        orders: stats.orderRows.map((row) => ({
+          id: row.order.id,
+          title: row.order.title,
+          order_date: row.order.order_date,
+          order_amount: row.order.order_amount,
+          order_expenses: row.order.order_expenses,
+          net_profit: row.net,
+          specialists_pool: row.spec,
+          shares_pool: row.sharesPool,
+          title_bonus_pool: row.titlePool,
+          admin_fund: row.adminFund,
+        })),
+        specialists: specialistEarnings.map((se) => ({
+          user_id: se.id,
+          name: se.name,
+          orders_count: se.ordersCount,
+          projected_income: se.totalEarning,
+        })),
+        shareholders: shareholderStats.map((sh) => ({
+          user_id: sh.id,
+          name: sh.name,
+          shares: sh.shares,
+          percent: sh.percent,
+          title: sh.title,
+          base_income: sh.baseIncome,
+          title_bonus: sh.titleBonus,
+          total_income: sh.totalIncome,
+        })),
+      };
+
+      const { error } = await supabase.from("calculation_snapshots").insert({
+        period_type: period,
+        period_label: periodLabel,
+        custom_from: customFrom ? format(customFrom, "yyyy-MM-dd") : null,
+        custom_to: customTo ? format(customTo, "yyyy-MM-dd") : null,
+        confirmed_orders_count: filteredOrders.length,
+        total_amount: stats.totalAmount,
+        total_expenses: stats.totalExpenses,
+        total_net_profit: stats.totalNet,
+        specialists_pool_50: stats.totalSpec,
+        shareholders_pool_20: stats.totalSharesPool,
+        title_bonus_pool_17_5: stats.totalTitlePool,
+        admin_fund_12_5: stats.totalAdminFund,
+        notes: snapshotNotes.trim() || null,
+        snapshot_payload: payload,
+      });
+
+      if (error) {
+        toast.error("Не вдалося зберегти розрахунок");
+        console.error(error);
+        return;
+      }
+      toast.success("Знімок розрахунку збережено");
+      setSaveDialogOpen(false);
+      setSnapshotNotes("");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [stats, filteredOrders, period, customFrom, customTo, specialistEarnings, shareholderStats, snapshotNotes]);
+
   // ─── Render ─────────────────────────────────────────────────────────────────
   const isLoading = loading || settingsLoading;
 
