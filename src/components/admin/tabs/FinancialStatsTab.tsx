@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { format, startOfMonth, startOfYear, subDays } from "date-fns";
 import { uk } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,7 +40,17 @@ import {
   Crown,
   CalendarIcon,
   Download,
+  Save,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -209,6 +219,11 @@ export function FinancialStatsTab() {
   const [period, setPeriod] = useState<PeriodType>("all");
   const [customFrom, setCustomFrom] = useState<Date | undefined>(undefined);
   const [customTo, setCustomTo] = useState<Date | undefined>(undefined);
+
+  // Save Snapshot dialog state
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [snapshotNotes, setSnapshotNotes] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const periodError = useMemo(() => {
     if (period === "custom" && customFrom && customTo && customFrom > customTo) {
@@ -445,6 +460,86 @@ export function FinancialStatsTab() {
     }).sort((a, b) => b.totalIncome - a.totalIncome);
   }, [stats, filteredOrders, shareholderInputs, totalShares, shareholderNames]);
 
+  // ─── Save Snapshot ───────────────────────────────────────────────────────────
+  const saveSnapshot = useCallback(async () => {
+    if (!stats || filteredOrders.length === 0) return;
+    setIsSaving(true);
+    try {
+      const { sharePriceUsd } = { sharePriceUsd: 0 }; // read from settings via context
+      const periodLabel = getPeriodLabel(period, customFrom, customTo);
+
+      const payload = {
+        summary: {
+          period: periodLabel,
+          confirmed_orders_count: filteredOrders.length,
+          total_amount: stats.totalAmount,
+          total_expenses: stats.totalExpenses,
+          total_net_profit: stats.totalNet,
+          specialists_pool: stats.totalSpec,
+          shareholders_pool: stats.totalSharesPool,
+          title_bonus_pool: stats.totalTitlePool,
+          admin_fund: stats.totalAdminFund,
+        },
+        orders: stats.orderRows.map((row) => ({
+          id: row.order.id,
+          title: row.order.title,
+          order_date: row.order.order_date,
+          order_amount: row.order.order_amount,
+          order_expenses: row.order.order_expenses,
+          net_profit: row.net,
+          specialists_pool: row.spec,
+          shares_pool: row.sharesPool,
+          title_bonus_pool: row.titlePool,
+          admin_fund: row.adminFund,
+        })),
+        specialists: specialistEarnings.map((se) => ({
+          user_id: se.id,
+          name: se.name,
+          orders_count: se.ordersCount,
+          projected_income: se.totalEarning,
+        })),
+        shareholders: shareholderStats.map((sh) => ({
+          user_id: sh.id,
+          name: sh.name,
+          shares: sh.shares,
+          percent: sh.percent,
+          title: sh.title,
+          base_income: sh.baseIncome,
+          title_bonus: sh.titleBonus,
+          total_income: sh.totalIncome,
+        })),
+      };
+
+      const { error } = await supabase.from("calculation_snapshots").insert({
+        period_type: period,
+        period_label: periodLabel,
+        custom_from: customFrom ? format(customFrom, "yyyy-MM-dd") : null,
+        custom_to: customTo ? format(customTo, "yyyy-MM-dd") : null,
+        confirmed_orders_count: filteredOrders.length,
+        total_amount: stats.totalAmount,
+        total_expenses: stats.totalExpenses,
+        total_net_profit: stats.totalNet,
+        specialists_pool_50: stats.totalSpec,
+        shareholders_pool_20: stats.totalSharesPool,
+        title_bonus_pool_17_5: stats.totalTitlePool,
+        admin_fund_12_5: stats.totalAdminFund,
+        notes: snapshotNotes.trim() || null,
+        snapshot_payload: payload,
+      });
+
+      if (error) {
+        toast.error("Не вдалося зберегти розрахунок");
+        console.error(error);
+        return;
+      }
+      toast.success("Знімок розрахунку збережено");
+      setSaveDialogOpen(false);
+      setSnapshotNotes("");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [stats, filteredOrders, period, customFrom, customTo, specialistEarnings, shareholderStats, snapshotNotes]);
+
   // ─── Render ─────────────────────────────────────────────────────────────────
   const isLoading = loading || settingsLoading;
 
@@ -495,11 +590,53 @@ export function FinancialStatsTab() {
             <Download className="h-4 w-4 mr-1" />
             Експорт CSV
           </Button>
+          <Button
+            size="sm"
+            variant="default"
+            disabled={!stats || filteredOrders.length === 0}
+            onClick={() => setSaveDialogOpen(true)}
+          >
+            <Save className="h-4 w-4 mr-1" />
+            Зберегти розрахунок
+          </Button>
           <Badge variant="outline" className="text-xs text-muted-foreground">
             Read-only · не є бухгалтерією
           </Badge>
         </div>
       </div>
+
+      {/* Save Snapshot Dialog */}
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Зберегти знімок розрахунку</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Період: <strong>{getPeriodLabel(period, customFrom, customTo)}</strong><br />
+              Замовлень: <strong>{filteredOrders.length}</strong><br />
+              Чистий прибуток: <strong>{stats ? fmt(stats.totalNet) : "—"}</strong>
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="snapshot-notes">Примітка (опційно)</Label>
+              <Textarea
+                id="snapshot-notes"
+                placeholder="Напр. Розрахунок за березень 2026"
+                value={snapshotNotes}
+                onChange={(e) => setSnapshotNotes(e.target.value)}
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>Скасувати</Button>
+            <Button onClick={saveSnapshot} disabled={isSaving}>
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+              Зберегти
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ─── Period Filters ─── */}
       <div className="space-y-3">

@@ -10,6 +10,7 @@ import { SettingsTab } from "./tabs/SettingsTab";
 import { CategoriesTab } from "./tabs/CategoriesTab";
 import { AnalyticsTab } from "./tabs/AnalyticsTab";
 import { FinancialStatsTab } from "./tabs/FinancialStatsTab";
+import { CalculationHistoryTab } from "./tabs/CalculationHistoryTab";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -43,6 +44,7 @@ export function AdminTabs() {
         <TabsTrigger value="settings">Налаштування</TabsTrigger>
         <TabsTrigger value="analytics">Аналітика</TabsTrigger>
         <TabsTrigger value="finances">Фінанси</TabsTrigger>
+        <TabsTrigger value="history">Історія розрахунків</TabsTrigger>
       </TabsList>
       
       <TabsContent value="users">
@@ -83,6 +85,10 @@ export function AdminTabs() {
 
       <TabsContent value="finances">
         <FinancialStatsTab />
+      </TabsContent>
+
+      <TabsContent value="history">
+        <CalculationHistoryTab />
       </TabsContent>
     </Tabs>
   );

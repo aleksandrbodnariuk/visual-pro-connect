@@ -98,6 +98,72 @@ export type Database = {
         }
         Relationships: []
       }
+      calculation_snapshots: {
+        Row: {
+          admin_fund_12_5: number
+          confirmed_orders_count: number
+          created_at: string
+          created_by: string | null
+          custom_from: string | null
+          custom_to: string | null
+          id: string
+          notes: string | null
+          period_label: string
+          period_type: string
+          share_price_usd_snapshot: number | null
+          shareholders_pool_20: number
+          snapshot_payload: Json
+          specialists_pool_50: number
+          title_bonus_pool_17_5: number
+          total_amount: number
+          total_expenses: number
+          total_net_profit: number
+          total_shares_snapshot: number | null
+        }
+        Insert: {
+          admin_fund_12_5?: number
+          confirmed_orders_count: number
+          created_at?: string
+          created_by?: string | null
+          custom_from?: string | null
+          custom_to?: string | null
+          id?: string
+          notes?: string | null
+          period_label: string
+          period_type: string
+          share_price_usd_snapshot?: number | null
+          shareholders_pool_20?: number
+          snapshot_payload?: Json
+          specialists_pool_50?: number
+          title_bonus_pool_17_5?: number
+          total_amount?: number
+          total_expenses?: number
+          total_net_profit?: number
+          total_shares_snapshot?: number | null
+        }
+        Update: {
+          admin_fund_12_5?: number
+          confirmed_orders_count?: number
+          created_at?: string
+          created_by?: string | null
+          custom_from?: string | null
+          custom_to?: string | null
+          id?: string
+          notes?: string | null
+          period_label?: string
+          period_type?: string
+          share_price_usd_snapshot?: number | null
+          shareholders_pool_20?: number
+          snapshot_payload?: Json
+          specialists_pool_50?: number
+          title_bonus_pool_17_5?: number
+          total_amount?: number
+          total_expenses?: number
+          total_net_profit?: number
+          total_shares_snapshot?: number | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string
