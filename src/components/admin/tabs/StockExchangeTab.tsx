@@ -269,17 +269,25 @@ export function StockExchangeTab() {
       if (usersError) {
         console.error("Error fetching users:", usersError);
       } else {
-        const sh = (allUsers || [])
-          .filter((u: any) => u.is_shareholder)
-          .map((u: any) => {
-            const parts = u.full_name ? u.full_name.split(' ') : ['', ''];
-            return { id: u.id, firstName: parts[0] || '', lastName: parts.slice(1).join(' ') || '', shares: 0 };
+        const shUsers = (allUsers || []).filter((u: any) => u.is_shareholder);
+        const shIds = shUsers.map((u: any) => u.id);
+
+        // Batch: single query for all shareholder shares
+        const sharesByUserId: Record<string, number> = {};
+        if (shIds.length > 0) {
+          const { data: allSharesData } = await supabase
+            .from('shares')
+            .select('user_id, quantity')
+            .in('user_id', shIds);
+          (allSharesData || []).forEach((s: any) => {
+            sharesByUserId[s.user_id] = s.quantity || 0;
           });
-        
-        for (const s of sh) {
-          const { data } = await supabase.from('shares').select('quantity').eq('user_id', s.id).limit(1);
-          s.shares = data && data.length > 0 ? data[0].quantity : 0;
         }
+
+        const sh = shUsers.map((u: any) => {
+          const parts = u.full_name ? u.full_name.split(' ') : ['', ''];
+          return { id: u.id, firstName: parts[0] || '', lastName: parts.slice(1).join(' ') || '', shares: sharesByUserId[u.id] || 0 };
+        });
         setShareholders(sh);
       }
 
