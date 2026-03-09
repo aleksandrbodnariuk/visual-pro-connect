@@ -496,11 +496,26 @@ export default function StockMarket() {
   const myPercentage = totalShares > 0 ? ((myShares / totalShares) * 100).toFixed(2) : "0.00";
 
   /* ── loading / guards ── */
-  if (loading || settingsLoading) {
+  if (loading || settingsLoading || hasAccess === null) {
     return <div className="container py-16 text-center">Завантаження...</div>;
   }
   if (!isAuthenticated() || !currentUser) {
     return <div className="container py-16 text-center">Перенаправлення...</div>;
+  }
+  if (!hasAccess) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container py-16 text-center space-y-4">
+          <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground" />
+          <h2 className="text-xl font-semibold">Доступ обмежено</h2>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            Доступ до ринку акцій мають лише кандидати в акціонери, акціонери та адміністратор.
+          </p>
+          <Button variant="outline" onClick={() => navigate("/")}>На головну</Button>
+        </div>
+      </div>
+    );
   }
 
   return (
