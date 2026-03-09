@@ -315,7 +315,7 @@ export function FinancialStatsTab() {
 
   // Shareholder stats
   const shareholderStats = useMemo<ShareholderStat[]>(() => {
-    if (!stats || orders.length === 0 || shareholderInputs.length === 0 || totalShares <= 0) return [];
+    if (!stats || filteredOrders.length === 0 || shareholderInputs.length === 0 || totalShares <= 0) return [];
 
     const totals: Record<string, { baseIncome: number; titleBonus: number; totalIncome: number }> = {};
 
