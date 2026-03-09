@@ -25,6 +25,13 @@ export function Sidebar({ className }: SidebarProps) {
   const { categories } = useDynamicCategories();
   
   const currentUser = getCurrentUser();
+  const [isShareholder, setIsShareholder] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser?.id) { setIsShareholder(false); return; }
+    supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'shareholder' as any })
+      .then(({ data }) => setIsShareholder(data === true || currentUser.founder_admin === true));
+  }, [currentUser?.id]);
 
   const handleNavigate = (path: string) => {
     try {
