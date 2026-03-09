@@ -212,21 +212,31 @@ export function OrdersTab() {
           {/* Mobile Cards - shown only on mobile */}
           <div className="md:hidden space-y-4">
             {orders.length > 0 ? (
-              orders.map((order) => (
+              orders.map((order) => {
+                const net = calcNetProfit(order.amount ?? 0, order.expenses ?? 0);
+                return (
                 <Card key={order.id} className="p-4">
                   <div className="space-y-2">
                     <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-xs text-muted-foreground">ID: {order.id}</p>
-                        <p className="text-sm">{new Date(order.date).toLocaleDateString()}</p>
-                      </div>
+                      <p className="text-sm">{new Date(order.date).toLocaleDateString()}</p>
                       <span className="text-sm font-medium">{order.status}</span>
                     </div>
                     
                     <p className="text-sm">{order.description}</p>
                     
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold">{order.amount.toFixed(2)} грн</span>
+                    <div className="grid grid-cols-3 gap-2 text-sm pt-1">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Сума</p>
+                        <p className="font-medium">{(order.amount ?? 0).toFixed(2)} ₴</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Витрати</p>
+                        <p className="text-muted-foreground">{(order.expenses ?? 0).toFixed(2)} ₴</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Чистий</p>
+                        <p className="font-semibold text-primary">{net.toFixed(2)} ₴</p>
+                      </div>
                     </div>
                     
                     <div className="flex gap-2 pt-2">
@@ -239,7 +249,8 @@ export function OrdersTab() {
                     </div>
                   </div>
                 </Card>
-              ))
+                );
+              })
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 Немає активних замовлень
