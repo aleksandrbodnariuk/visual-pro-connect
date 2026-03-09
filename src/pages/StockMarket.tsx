@@ -285,28 +285,40 @@ export default function StockMarket() {
         setTransferLogs([]);
       }
 
-      // 5. Shareholders
+      // 5. Shareholders — BATCH load shares instead of N+1 queries
       const { data: allProfiles } = await supabase.rpc("get_safe_public_profiles");
       const shProfiles = (allProfiles || []).filter((p: any) => p.is_shareholder);
-      const shList: ShareholderInfo[] = [];
-      for (const p of shProfiles) {
-        const { data: shData } = await supabase
+      
+      // Collect all shareholder user_ids
+      const shareholderIds = shProfiles.map((p: any) => p.id);
+      
+      // Single batch query for all shares
+      const sharesByUserId: Record<string, number> = {};
+      if (shareholderIds.length > 0) {
+        const { data: allSharesData } = await supabase
           .from("shares")
-          .select("quantity")
-          .eq("user_id", p.id)
-          .maybeSingle();
-        const shares = shData?.quantity || 0;
+          .select("user_id, quantity")
+          .in("user_id", shareholderIds);
+        
+        (allSharesData || []).forEach((s: any) => {
+          sharesByUserId[s.user_id] = s.quantity || 0;
+        });
+      }
+      
+      // Build shareholders list using the map (no additional queries)
+      const shList: ShareholderInfo[] = shProfiles.map((p: any) => {
+        const shares = sharesByUserId[p.id] || 0;
         const pct = totalShares > 0 ? (shares / totalShares) * 100 : 0;
         const title = getTitleByPercent(pct);
-        shList.push({
+        return {
           id: p.id,
           name: p.full_name || "Невідомий",
           avatarUrl: p.avatar_url,
           shares,
           percentage: pct.toFixed(2),
           title: title?.title || "",
-        });
-      }
+        };
+      });
       setShareholders(shList);
     } catch (error) {
       console.error("Error loading market data:", error);
