@@ -43,6 +43,7 @@ interface MarketListing {
   seller_name: string;
   seller_avatar?: string;
   quantity: number;
+  remaining_qty: number;
   price_per_share: number;
   status: string;
   created_at: string;
@@ -91,9 +92,9 @@ interface ShareholderInfo {
 const statusLabel = (status: string) => {
   switch (status) {
     case "active": return "Активна";
+    case "partially_filled": return "Частково виконана";
+    case "closed": return "Закрита";
     case "pending": return "Очікує розгляду";
-    case "pending_confirmation": return "Очікує підтвердження";
-    case "awaiting_offline_deal": return "Очікує домовленості";
     case "approved": return "Підтверджено";
     case "completed": return "Завершено";
     case "rejected": return "Відхилено";
@@ -105,7 +106,9 @@ const statusLabel = (status: string) => {
 const statusBadgeVariant = (status: string) => {
   switch (status) {
     case "approved":
-    case "completed": return "secondary" as const;
+    case "completed":
+    case "closed": return "secondary" as const;
+    case "partially_filled": return "outline" as const;
     case "rejected":
     case "cancelled": return "destructive" as const;
     default: return "outline" as const;
@@ -151,13 +154,14 @@ export default function StockMarket() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   const isAdmin = currentUser?.isAdmin || currentUser?.founder_admin;
+  const isShareholder = currentUser?.isShareHolder;
 
-  /* ── reserved shares in my active listings ── */
+  /* ── reserved shares in my active/partially_filled listings ── */
   const reservedShares = useMemo(() => {
     if (!currentUser?.id) return 0;
     return allListings
-      .filter((l) => l.seller_id === currentUser.id && l.status === "active")
-      .reduce((sum, l) => sum + l.quantity, 0);
+      .filter((l) => l.seller_id === currentUser.id && (l.status === "active" || l.status === "partially_filled"))
+      .reduce((sum, l) => sum + l.remaining_qty, 0);
   }, [allListings, currentUser?.id]);
 
   const availableShares = Math.max(0, myShares - reservedShares);
@@ -175,13 +179,13 @@ export default function StockMarket() {
         .maybeSingle();
       setMyShares(sharesData?.quantity || 0);
 
-      // 2. All listings (admin sees all, user sees active + own)
+      // 2. All listings (admin sees all, user sees active/partially_filled + own)
       const listingsQuery = isAdmin
         ? supabase.from("market").select("*").order("created_at", { ascending: false })
         : supabase
             .from("market")
             .select("*")
-            .or(`status.eq.active,seller_id.eq.${currentUser.id}`)
+            .or(`status.in.(active,partially_filled),seller_id.eq.${currentUser.id}`)
             .order("created_at", { ascending: false });
       const { data: marketData } = await listingsQuery;
 
@@ -195,6 +199,7 @@ export default function StockMarket() {
         seller_name: namesMap[m.seller_id]?.name || "Невідомий",
         seller_avatar: namesMap[m.seller_id]?.avatar,
         quantity: m.quantity,
+        remaining_qty: m.remaining_qty ?? m.quantity,
         price_per_share: Number(m.price_per_share),
         status: m.status || "active",
         created_at: m.created_at,
@@ -314,11 +319,7 @@ export default function StockMarket() {
       navigate("/auth");
       return;
     }
-    if (!currentUser.isShareHolder && !currentUser.isAdmin && !currentUser.founder_admin) {
-      toast.error("Доступ заборонено: необхідний статус акціонера");
-      navigate("/");
-      return;
-    }
+    // Any authenticated user can access /stock-market
     loadMarketData();
   }, [navigate, loading, isAuthenticated, currentUser, loadMarketData]);
 
@@ -337,8 +338,8 @@ export default function StockMarket() {
   const confirmTransferRequest = async () => {
     if (!selectedOffer || !currentUser) return;
     const amount = parseInt(buyAmount);
-    if (isNaN(amount) || amount <= 0 || amount > selectedOffer.quantity) {
-      toast.error(`Введіть коректну кількість (1–${selectedOffer.quantity})`);
+    if (isNaN(amount) || amount <= 0 || amount > selectedOffer.remaining_qty) {
+      toast.error(`Введіть коректну кількість (1–${selectedOffer.remaining_qty})`);
       return;
     }
     const totalPrice = amount * selectedOffer.price_per_share;
@@ -356,11 +357,7 @@ export default function StockMarket() {
       toast.error("Не вдалося створити заявку");
       return;
     }
-    await supabase
-      .from("market")
-      .update({ status: "pending_confirmation", buyer_id: currentUser.id, updated_at: new Date().toISOString() })
-      .eq("id", selectedOffer.id);
-
+    // Do NOT change listing status — it stays active until admin approves
     setOpenBuyDialog(false);
     toast.success("Заявку подано. Очікуйте підтвердження адміністратором.");
     await loadMarketData();
@@ -375,20 +372,21 @@ export default function StockMarket() {
     }
     if (amount > availableShares) {
       toast.error(
-        `Доступно для виставлення: ${availableShares} акцій (з ${myShares}, ${reservedShares} зарезервовано в активних пропозиціях)`
+        `Доступно для виставлення: ${availableShares} акцій (з ${myShares}, ${reservedShares} зарезервовано)`
       );
       return;
     }
-    const { error } = await supabase.from("market").insert({
-      seller_id: currentUser.id,
-      quantity: amount,
-      price_per_share: sharePriceUsd,
-      status: "active",
-      notes: sellNote.trim() || null,
+    // Use server-side RPC for overselling protection
+    const { error } = await supabase.rpc("create_share_listing", {
+      _quantity: amount,
+      _note: sellNote.trim() || null,
     });
     if (error) {
       console.error("Error creating listing:", error);
-      toast.error("Не вдалося створити пропозицію");
+      const msg = error.message || "";
+      if (msg.includes("Недостатньо")) toast.error(msg);
+      else if (msg.includes("акціонера")) toast.error("Необхідний статус акціонера");
+      else toast.error("Не вдалося створити пропозицію");
       return;
     }
     setOpenSellDialog(false);
@@ -399,8 +397,9 @@ export default function StockMarket() {
   };
 
   const cancelListing = async (listingId: string) => {
-    const hasPendingTx = myTransactions.some(
-      (t) => t.share_id === listingId && (t.status === "pending" || t.status === "awaiting_offline_deal")
+    // Check for pending transactions on this listing
+    const hasPendingTx = (isAdmin ? allTransactions : myTransactions).some(
+      (t) => t.share_id === listingId && t.status === "pending"
     );
     if (hasPendingTx) {
       toast.error("Неможливо скасувати: є активні заявки на цю пропозицію");
@@ -424,12 +423,7 @@ export default function StockMarket() {
       toast.error("Цю заявку не можна скасувати");
       return;
     }
-    if (selectedTransaction.share_id) {
-      await supabase
-        .from("market")
-        .update({ status: "active", buyer_id: null, updated_at: new Date().toISOString() })
-        .eq("id", selectedTransaction.share_id);
-    }
+    // Just delete the transaction, do NOT touch the listing
     const { error } = await supabase
       .from("transactions")
       .delete()
@@ -451,7 +445,8 @@ export default function StockMarket() {
       if (error) {
         const msg = error.message || "";
         if (msg.includes("Недостатньо")) toast.error("Недостатньо акцій у продавця");
-        else if (msg.includes("вже змінено")) toast.error("Заявку вже змінено");
+        else if (msg.includes("оброблено") || msg.includes("змінено")) toast.error("Заявку вже оброблено");
+        else if (msg.includes("залишилось")) toast.error(msg);
         else toast.error("Не вдалося підтвердити передачу");
         return;
       }
@@ -479,9 +474,11 @@ export default function StockMarket() {
   };
 
   /* ── derived data ── */
-  const activeListings = allListings.filter((l) => l.status === "active" && l.seller_id !== currentUser?.id);
+  const activeListings = allListings.filter(
+    (l) => (l.status === "active" || l.status === "partially_filled") && l.seller_id !== currentUser?.id && l.remaining_qty > 0
+  );
   const myOffers = allListings.filter((l) => l.seller_id === currentUser?.id);
-  const pendingTx = allTransactions.filter((t) => t.status === "pending" || t.status === "awaiting_offline_deal");
+  const pendingTx = allTransactions.filter((t) => t.status === "pending");
   const myPercentage = totalShares > 0 ? ((myShares / totalShares) * 100).toFixed(2) : "0.00";
 
   /* ── loading / guards ── */
@@ -490,9 +487,6 @@ export default function StockMarket() {
   }
   if (!isAuthenticated() || !currentUser) {
     return <div className="container py-16 text-center">Перенаправлення...</div>;
-  }
-  if (!currentUser.isShareHolder && !isAdmin) {
-    return <div className="container py-16 text-center">Доступ заборонено: потрібен статус акціонера</div>;
   }
 
   return (
@@ -510,7 +504,7 @@ export default function StockMarket() {
               <h1 className="text-3xl font-bold">Ринок акцій</h1>
               <p className="text-muted-foreground">Перегляд та управління акціями компанії</p>
             </div>
-            {myShares > 0 && (
+            {isShareholder && myShares > 0 && (
               <Button onClick={() => { setSellSharesCount("1"); setSellNote(""); setOpenSellDialog(true); }}>
                 <TrendingUp className="h-4 w-4 mr-2" /> Створити пропозицію
               </Button>
@@ -547,7 +541,7 @@ export default function StockMarket() {
               <CardContent className="p-4 text-center">
                 <FileText className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
                 <p className="text-xs text-muted-foreground">Активні пропозиції</p>
-                <p className="text-lg font-bold">{activeListings.length + myOffers.filter(o => o.status === 'active').length}</p>
+                <p className="text-lg font-bold">{allListings.filter(l => l.status === 'active' || l.status === 'partially_filled').length}</p>
               </CardContent>
             </Card>
             <Card>
@@ -557,20 +551,22 @@ export default function StockMarket() {
                 <p className="text-lg font-bold">{myShares} ({myPercentage}%)</p>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <HandshakeIcon className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
-                <p className="text-xs text-muted-foreground">Доступно для виставл.</p>
-                <p className="text-lg font-bold">{availableShares}</p>
-              </CardContent>
-            </Card>
+            {isShareholder && (
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <HandshakeIcon className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+                  <p className="text-xs text-muted-foreground">Доступно для виставл.</p>
+                  <p className="text-lg font-bold">{availableShares}</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Tabs */}
           <Tabs defaultValue="market" className="w-full space-y-4">
             <TabsList className="flex-wrap h-auto gap-1">
               <TabsTrigger value="market">Пропозиції</TabsTrigger>
-              <TabsTrigger value="my-offers">Мої пропозиції</TabsTrigger>
+              {isShareholder && <TabsTrigger value="my-offers">Мої пропозиції</TabsTrigger>}
               <TabsTrigger value="transactions">Мої заявки</TabsTrigger>
               {isAdmin && <TabsTrigger value="moderation">Модерація {pendingTx.length > 0 && <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">{pendingTx.length}</Badge>}</TabsTrigger>}
               <TabsTrigger value="history">Історія</TabsTrigger>
@@ -595,10 +591,11 @@ export default function StockMarket() {
                         <thead>
                           <tr className="border-b">
                             <th className="text-left p-2">Акціонер</th>
-                            <th className="text-left p-2">Акцій</th>
+                            <th className="text-left p-2">Доступно</th>
+                            <th className="text-left p-2">Початково</th>
                             <th className="text-right p-2">Ціна / акцію</th>
                             <th className="text-right p-2">Загалом</th>
-                            <th className="text-left p-2">Дата</th>
+                            <th className="text-left p-2">Статус</th>
                             <th className="text-left p-2"></th>
                           </tr>
                         </thead>
@@ -612,10 +609,13 @@ export default function StockMarket() {
                                 </Avatar>
                                 {item.seller_name}
                               </td>
-                              <td className="p-2">{item.quantity}</td>
+                              <td className="p-2 font-medium">{item.remaining_qty}</td>
+                              <td className="p-2 text-muted-foreground">{item.quantity}</td>
                               <td className="p-2 text-right">{item.price_per_share.toFixed(2)} USD</td>
-                              <td className="p-2 text-right">{(item.quantity * item.price_per_share).toFixed(2)} USD</td>
-                              <td className="p-2">{new Date(item.created_at).toLocaleDateString()}</td>
+                              <td className="p-2 text-right">{(item.remaining_qty * item.price_per_share).toFixed(2)} USD</td>
+                              <td className="p-2">
+                                <Badge variant={statusBadgeVariant(item.status)}>{statusLabel(item.status)}</Badge>
+                              </td>
                               <td className="p-2">
                                 <Button size="sm" onClick={() => handleRequestTransfer(item)}>
                                   <HandshakeIcon className="h-4 w-4 mr-1" /> Заявка
@@ -638,66 +638,68 @@ export default function StockMarket() {
             </TabsContent>
 
             {/* ── Мої пропозиції ── */}
-            <TabsContent value="my-offers">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Мої пропозиції</CardTitle>
-                  <CardDescription>Ваші пропозиції на передачу акцій</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {myOffers.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left p-2">Дата</th>
-                            <th className="text-left p-2">Акцій</th>
-                            <th className="text-right p-2">Ціна / акцію</th>
-                            <th className="text-right p-2">Загалом</th>
-                            <th className="text-left p-2">Статус</th>
-                            <th className="text-left p-2">Примітка</th>
-                            <th className="text-left p-2"></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {myOffers.map((item) => (
-                            <tr key={item.id} className="border-b hover:bg-muted/50">
-                              <td className="p-2">{new Date(item.created_at).toLocaleDateString()}</td>
-                              <td className="p-2">{item.quantity}</td>
-                              <td className="p-2 text-right">{item.price_per_share.toFixed(2)} USD</td>
-                              <td className="p-2 text-right">{(item.quantity * item.price_per_share).toFixed(2)} USD</td>
-                              <td className="p-2">
-                                <Badge variant={statusBadgeVariant(item.status)}>{statusLabel(item.status)}</Badge>
-                              </td>
-                              <td className="p-2 text-muted-foreground text-xs max-w-[150px] truncate">{item.notes || "—"}</td>
-                              <td className="p-2">
-                                {item.status === "active" && (
-                                  <Button size="sm" variant="destructive" onClick={() => cancelListing(item.id)}>
-                                    <XCircle className="h-4 w-4 mr-1" /> Скасувати
-                                  </Button>
-                                )}
-                              </td>
+            {isShareholder && (
+              <TabsContent value="my-offers">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Мої пропозиції</CardTitle>
+                    <CardDescription>Ваші пропозиції на передачу акцій</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {myOffers.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left p-2">Дата</th>
+                              <th className="text-left p-2">Початково</th>
+                              <th className="text-left p-2">Залишок</th>
+                              <th className="text-right p-2">Ціна / акцію</th>
+                              <th className="text-left p-2">Статус</th>
+                              <th className="text-left p-2">Примітка</th>
+                              <th className="text-left p-2"></th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-                      <h3 className="text-lg font-medium mb-1">У вас немає пропозицій</h3>
-                      {myShares > 0 ? (
-                        <Button className="mt-3" onClick={() => { setSellSharesCount("1"); setSellNote(""); setOpenSellDialog(true); }}>
-                          <TrendingUp className="h-4 w-4 mr-2" /> Створити пропозицію
-                        </Button>
-                      ) : (
-                        <p className="text-muted-foreground text-sm">У вас немає акцій для виставлення</p>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                          </thead>
+                          <tbody>
+                            {myOffers.map((item) => (
+                              <tr key={item.id} className="border-b hover:bg-muted/50">
+                                <td className="p-2">{new Date(item.created_at).toLocaleDateString()}</td>
+                                <td className="p-2">{item.quantity}</td>
+                                <td className="p-2 font-medium">{item.remaining_qty}</td>
+                                <td className="p-2 text-right">{item.price_per_share.toFixed(2)} USD</td>
+                                <td className="p-2">
+                                  <Badge variant={statusBadgeVariant(item.status)}>{statusLabel(item.status)}</Badge>
+                                </td>
+                                <td className="p-2 text-muted-foreground text-xs max-w-[150px] truncate">{item.notes || "—"}</td>
+                                <td className="p-2">
+                                  {(item.status === "active" || item.status === "partially_filled") && (
+                                    <Button size="sm" variant="destructive" onClick={() => cancelListing(item.id)}>
+                                      <XCircle className="h-4 w-4 mr-1" /> Скасувати
+                                    </Button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+                        <h3 className="text-lg font-medium mb-1">У вас немає пропозицій</h3>
+                        {myShares > 0 ? (
+                          <Button className="mt-3" onClick={() => { setSellSharesCount("1"); setSellNote(""); setOpenSellDialog(true); }}>
+                            <TrendingUp className="h-4 w-4 mr-2" /> Створити пропозицію
+                          </Button>
+                        ) : (
+                          <p className="text-muted-foreground text-sm">У вас немає акцій для виставлення</p>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
 
             {/* ── Мої заявки ── */}
             <TabsContent value="transactions">
@@ -929,12 +931,12 @@ export default function StockMarket() {
             <div className="space-y-4 py-2">
               <div className="space-y-1 text-sm">
                 <p><span className="font-medium">Від кого:</span> {selectedOffer.seller_name}</p>
-                <p><span className="font-medium">Доступно:</span> {selectedOffer.quantity} акцій</p>
+                <p><span className="font-medium">Доступно:</span> {selectedOffer.remaining_qty} акцій</p>
                 <p><span className="font-medium">Ціна за акцію:</span> {selectedOffer.price_per_share.toFixed(2)} USD</p>
               </div>
               <div>
                 <label className="text-sm font-medium">Кількість акцій:</label>
-                <Input type="number" min="1" max={selectedOffer.quantity} value={buyAmount} onChange={(e) => setBuyAmount(e.target.value)} />
+                <Input type="number" min="1" max={selectedOffer.remaining_qty} value={buyAmount} onChange={(e) => setBuyAmount(e.target.value)} />
               </div>
               <div className="border-t pt-3">
                 <p className="text-sm text-muted-foreground">Орієнтовна вартість:</p>
@@ -984,7 +986,7 @@ export default function StockMarket() {
                 {selectedTransaction.status === "pending" && selectedTransaction.buyer_id === currentUser.id && (
                   <Button size="sm" variant="destructive" onClick={cancelTransaction}>Скасувати заявку</Button>
                 )}
-                {isAdmin && (selectedTransaction.status === "pending" || selectedTransaction.status === "awaiting_offline_deal") && (
+                {isAdmin && selectedTransaction.status === "pending" && (
                   <>
                     <Button size="sm" variant="destructive" onClick={() => rejectTransaction(selectedTransaction.id)}>Відхилити</Button>
                     <Button size="sm" onClick={() => approveTransaction(selectedTransaction.id)}>Підтвердити передачу</Button>
