@@ -1380,6 +1380,7 @@ export type Database = {
         | "user"
         | "specialist"
         | "moderator"
+        | "candidate"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1514,6 +1515,7 @@ export const Constants = {
         "user",
         "specialist",
         "moderator",
+        "candidate",
       ],
     },
   },
