@@ -39,7 +39,9 @@ import {
   Briefcase,
   Crown,
   CalendarIcon,
+  Download,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 // ─── Period filter types ──────────────────────────────────────────────────────
@@ -78,6 +80,100 @@ interface ShareholderStat {
 
 function fmt(n: number) {
   return n.toFixed(2) + " ₴";
+}
+
+function getPeriodLabel(period: PeriodType, customFrom?: Date, customTo?: Date): string {
+  switch (period) {
+    case "all": return "Усі";
+    case "month": return "Цей місяць";
+    case "year": return "Цей рік";
+    case "last30": return "Останні 30 днів";
+    case "custom":
+      if (customFrom && customTo)
+        return `${format(customFrom, "dd.MM.yyyy")} — ${format(customTo, "dd.MM.yyyy")}`;
+      return "Власний період";
+  }
+}
+
+function escapeCsv(val: string): string {
+  if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+    return `"${val.replace(/"/g, '""')}"`;
+  }
+  return val;
+}
+
+function buildCsvContent(
+  periodLabel: string,
+  stats: {
+    totalAmount: number; totalExpenses: number; totalNet: number;
+    totalSpec: number; totalSharesPool: number; totalTitlePool: number; totalAdminFund: number;
+    orderRows: Array<{ order: ConfirmedOrder; net: number; spec: number; sharesPool: number; titlePool: number; adminFund: number }>;
+  },
+  filteredCount: number,
+  specialistEarnings: SpecialistEarning[],
+  shareholderStats: ShareholderStat[],
+): string {
+  const lines: string[] = [];
+  const n = (v: number) => v.toFixed(2);
+
+  // Section 1: Summary
+  lines.push("=== ЗВЕДЕНА СТАТИСТИКА ===");
+  lines.push(`Період,${escapeCsv(periodLabel)}`);
+  lines.push(`Підтверджених замовлень,${filteredCount}`);
+  lines.push(`Сума замовлень,${n(stats.totalAmount)}`);
+  lines.push(`Витрати,${n(stats.totalExpenses)}`);
+  lines.push(`Чистий прибуток,${n(stats.totalNet)}`);
+  lines.push(`50% фахівцям,${n(stats.totalSpec)}`);
+  lines.push(`20% на акції,${n(stats.totalSharesPool)}`);
+  lines.push(`17.5% титульні бонуси,${n(stats.totalTitlePool)}`);
+  lines.push(`12.5% адмін-фонд,${n(stats.totalAdminFund)}`);
+  lines.push("");
+
+  // Section 2: Orders
+  lines.push("=== ЗАМОВЛЕННЯ ===");
+  lines.push("Назва,Дата,Сума,Витрати,Чистий прибуток,50% фахівцям,20% акціям,17.5% тит. бонуси,12.5% адмін-фонд");
+  for (const row of stats.orderRows) {
+    lines.push([
+      escapeCsv(row.order.title),
+      new Date(row.order.order_date).toLocaleDateString("uk-UA"),
+      n(row.order.order_amount), n(row.order.order_expenses), n(row.net),
+      n(row.spec), n(row.sharesPool), n(row.titlePool), n(row.adminFund),
+    ].join(","));
+  }
+  lines.push("");
+
+  // Section 3: Specialists
+  lines.push("=== ФАХІВЦІ ===");
+  lines.push("Фахівець,Замовлень,Прогноз доходу");
+  for (const se of specialistEarnings) {
+    lines.push([escapeCsv(se.name), String(se.ordersCount), n(se.totalEarning)].join(","));
+  }
+  lines.push("");
+
+  // Section 4: Shareholders
+  lines.push("=== АКЦІОНЕРИ ===");
+  lines.push("Акціонер,Акцій,%,Титул,Базовий дохід,Титульний бонус,Разом");
+  for (const sh of shareholderStats) {
+    lines.push([
+      escapeCsv(sh.name), String(sh.shares), sh.percent.toFixed(2), escapeCsv(sh.title),
+      n(sh.baseIncome), n(sh.titleBonus), n(sh.totalIncome),
+    ].join(","));
+  }
+
+  return lines.join("\n");
+}
+
+function downloadCsv(content: string, filename: string) {
+  const BOM = "\uFEFF";
+  const blob = new Blob([BOM + content], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function InfoAlert({ message, sub }: { message: string; sub?: string }) {
@@ -377,14 +473,32 @@ export function FinancialStatsTab() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <BarChart3 className="h-5 w-5 text-primary" />
           Фінансова статистика
         </h2>
-        <Badge variant="outline" className="text-xs text-muted-foreground">
-          Read-only · не є бухгалтерією
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!stats || filteredOrders.length === 0}
+            onClick={() => {
+              if (!stats) return;
+              const label = getPeriodLabel(period, customFrom, customTo);
+              const csv = buildCsvContent(label, stats, filteredOrders.length, specialistEarnings, shareholderStats);
+              const datePart = format(new Date(), "yyyy-MM-dd");
+              downloadCsv(csv, `finances-${datePart}.csv`);
+              toast.success("CSV-файл завантажено");
+            }}
+          >
+            <Download className="h-4 w-4 mr-1" />
+            Експорт CSV
+          </Button>
+          <Badge variant="outline" className="text-xs text-muted-foreground">
+            Read-only · не є бухгалтерією
+          </Badge>
+        </div>
       </div>
 
       {/* ─── Period Filters ─── */}
@@ -612,7 +726,7 @@ export function FinancialStatsTab() {
                       ))}
                       <TableRow className="bg-muted/50 font-semibold">
                         <TableCell colSpan={4} className="text-xs text-muted-foreground">
-                          Усього ({orders.length} замовлень)
+                          Усього ({filteredOrders.length} замовлень)
                         </TableCell>
                         <TableCell className="text-right">{fmt(stats.totalNet)}</TableCell>
                         <TableCell className="text-right">{fmt(stats.totalSpec)}</TableCell>
