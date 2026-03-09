@@ -473,14 +473,32 @@ export function FinancialStatsTab() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <BarChart3 className="h-5 w-5 text-primary" />
           Фінансова статистика
         </h2>
-        <Badge variant="outline" className="text-xs text-muted-foreground">
-          Read-only · не є бухгалтерією
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!stats || filteredOrders.length === 0}
+            onClick={() => {
+              if (!stats) return;
+              const label = getPeriodLabel(period, customFrom, customTo);
+              const csv = buildCsvContent(label, stats, filteredOrders.length, specialistEarnings, shareholderStats);
+              const datePart = format(new Date(), "yyyy-MM-dd");
+              downloadCsv(csv, `finances-${datePart}.csv`);
+              toast.success("CSV-файл завантажено");
+            }}
+          >
+            <Download className="h-4 w-4 mr-1" />
+            Експорт CSV
+          </Button>
+          <Badge variant="outline" className="text-xs text-muted-foreground">
+            Read-only · не є бухгалтерією
+          </Badge>
+        </div>
       </div>
 
       {/* ─── Period Filters ─── */}
