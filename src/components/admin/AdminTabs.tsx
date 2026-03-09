@@ -11,6 +11,7 @@ import { CategoriesTab } from "./tabs/CategoriesTab";
 import { AnalyticsTab } from "./tabs/AnalyticsTab";
 import { FinancialStatsTab } from "./tabs/FinancialStatsTab";
 import { CalculationHistoryTab } from "./tabs/CalculationHistoryTab";
+import { AssetValuationTab } from "./tabs/AssetValuationTab";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
