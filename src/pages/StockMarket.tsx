@@ -129,6 +129,8 @@ async function fetchNamesMap(ids: string[]): Promise<Record<string, { name: stri
 
 export default function StockMarket() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "market";
   const { getCurrentUser, isAuthenticated, loading } = useSupabaseAuth();
   const currentUser = getCurrentUser();
   const { sharePriceUsd, totalShares, loading: settingsLoading } = useCompanySettings();
