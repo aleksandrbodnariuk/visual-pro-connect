@@ -495,6 +495,9 @@ export function StockExchangeTab() {
         </CardContent>
       </Card>
 
+      {/* Candidate / Access Management */}
+      <StockMarketAccessManager />
+
       {/* Transaction Details Dialog */}
       <Dialog open={openTransactionDialog} onOpenChange={setOpenTransactionDialog}>
         <DialogContent className="max-w-2xl">
