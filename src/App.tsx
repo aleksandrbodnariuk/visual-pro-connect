@@ -84,6 +84,7 @@ const AppContent = () => {
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/:tabName" element={<Admin />} />
             <Route path="/stock-market" element={<StockMarket />} />
+            <Route path="/shareholder-panel" element={<ShareholderPanel />} />
             <Route path="/post/:postId" element={<Post />} />
             <Route path="/my-files" element={<MyFiles />} />
             <Route path="/my-files/:type" element={<MyFiles />} />

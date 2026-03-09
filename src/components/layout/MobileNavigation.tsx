@@ -166,11 +166,31 @@ export function MobileNavigation() {
                           <span>Кабінет фахівця</span>
                         </Link>
                       )}
+                      {/* Панель акціонера */}
+                      {isShareholder && (
+                        <Link
+                          to="/shareholder-panel"
+                          onClick={() => setIsMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <Crown className="h-5 w-5" />
+                          <span>Панель акціонера</span>
+                        </Link>
+                      )}
+
+                      {/* Ринок акцій */}
+                      {isShareholder && (
+                        <Link
+                          to="/stock-market"
+                          onClick={() => setIsMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <TrendingUp className="h-5 w-5" />
+                          <span>Ринок акцій</span>
+                        </Link>
+                      )}
                       
                       <Separator className="my-4" />
-                      
-                      {/* Мої файли */}
-                      <p className="text-sm font-medium text-muted-foreground px-3 mb-2">Мої файли</p>
                       
                       <Link
                         to="/my-files/photos"
