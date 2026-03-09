@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PenLine, Save, Info, AlertCircle, Settings } from "lucide-react";
@@ -11,7 +11,7 @@ import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { SharePriceControl } from "@/components/admin/SharePriceControl";
 import { calcFullProfitDistribution, type ShareholderInput } from "@/lib/shareholderCalculations";
 
-const TITLES = ["Акціонер", "Магнат", "Барон", "Граф", "Маркіз", "Лорд", "Герцог", "Імператор"] as const;
+import { getTitleName } from "@/lib/shareholderRules";
 
 export function ShareholdersTab() {
   const {
@@ -111,16 +111,7 @@ export function ShareholdersTab() {
     }
   };
 
-  const changeShareholderTitle = async (userId: string, newTitle: string) => {
-    setShareholders(prev => prev.map(sh => sh.id === userId ? { ...sh, title: newTitle } : sh));
-    const { error } = await supabase.from('users').update({ title: newTitle }).eq('id', userId);
-    if (error) {
-      toast.error("Не вдалося зберегти титул");
-      await fetchShareholders();
-      return;
-    }
-    toast.success(`Титул змінено на "${newTitle}"`);
-  };
+  // Title is now auto-calculated by DB trigger on shares change
 
   const updateSharesCount = async (userId: string, sharesCount: number) => {
     if (isNaN(sharesCount) || sharesCount < 0) {
@@ -157,6 +148,8 @@ export function ShareholdersTab() {
     const newIssued = shareholders.reduce((sum, sh) => sum + (sh.id === userId ? sharesCount : sh.shares), 0);
     setIssuedShares(newIssued);
     toast.success("Кількість акцій оновлено");
+    // Refresh to get updated title from DB trigger
+    setTimeout(() => fetchShareholders(), 500);
   };
 
   const availableShares = Math.max(0, dbTotalShares - issuedShares);
@@ -345,19 +338,9 @@ export function ShareholdersTab() {
                       <tr key={shareholder.id} className="border-b hover:bg-muted/50">
                         <td className="p-2">{shareholder.firstName} {shareholder.lastName}</td>
                         <td className="p-2">
-                          <Select
-                            value={shareholder.title || "Акціонер"}
-                            onValueChange={(value) => changeShareholderTitle(shareholder.id, value)}
-                          >
-                            <SelectTrigger className="w-[150px]">
-                              <SelectValue placeholder="Титул" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {TITLES.map((title) => (
-                                <SelectItem key={title} value={title}>{title}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Badge variant="secondary">
+                            {shareholder.title || getTitleName(parseFloat(shareholder.percentage)) || '—'}
+                          </Badge>
                         </td>
                         <td className="p-2">
                           <div className="flex gap-2 items-center">
@@ -407,19 +390,9 @@ export function ShareholdersTab() {
                       <h3 className="font-semibold">{shareholder.firstName} {shareholder.lastName}</h3>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Титул:</span>
-                        <Select
-                          value={shareholder.title || "Акціонер"}
-                          onValueChange={(value) => changeShareholderTitle(shareholder.id, value)}
-                        >
-                          <SelectTrigger className="w-[130px]">
-                            <SelectValue placeholder="Титул" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TITLES.map((title) => (
-                              <SelectItem key={title} value={title}>{title}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Badge variant="secondary">
+                          {shareholder.title || getTitleName(parseFloat(shareholder.percentage)) || '—'}
+                        </Badge>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Кількість акцій:</span>
