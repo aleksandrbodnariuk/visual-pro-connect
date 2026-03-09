@@ -196,6 +196,7 @@ export function StockExchangeTab() {
     const { error } = await supabase.from('market').insert({
       seller_id: seller.id,
       quantity: count,
+      remaining_qty: count,
       price_per_share: price,
       status: 'active',
     });

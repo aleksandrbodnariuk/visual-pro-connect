@@ -279,6 +279,7 @@ export type Database = {
           notes: string | null
           price_per_share: number
           quantity: number
+          remaining_qty: number
           seller_id: string | null
           status: string | null
           updated_at: string | null
@@ -290,6 +291,7 @@ export type Database = {
           notes?: string | null
           price_per_share: number
           quantity: number
+          remaining_qty: number
           seller_id?: string | null
           status?: string | null
           updated_at?: string | null
@@ -301,6 +303,7 @@ export type Database = {
           notes?: string | null
           price_per_share?: number
           quantity?: number
+          remaining_qty?: number
           seller_id?: string | null
           status?: string | null
           updated_at?: string | null
@@ -1061,6 +1064,10 @@ export type Database = {
         Returns: boolean
       }
       check_admin_access: { Args: never; Returns: boolean }
+      create_share_listing: {
+        Args: { _note?: string; _quantity: number }
+        Returns: string
+      }
       ensure_user_profile: {
         Args: never
         Returns: {
