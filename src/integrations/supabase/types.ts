@@ -1367,6 +1367,7 @@ export type Database = {
         Args: { _access: string; _user_id: string }
         Returns: undefined
       }
+      sync_all_shareholder_titles: { Args: never; Returns: undefined }
       sync_user_title: { Args: { _user_id: string }; Returns: undefined }
       user_exists_by_phone: {
         Args: { _phone_number: string }
