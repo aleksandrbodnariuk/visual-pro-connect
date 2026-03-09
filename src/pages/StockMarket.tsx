@@ -140,6 +140,7 @@ export default function StockMarket() {
   const [transferLogs, setTransferLogs] = useState<TransferLog[]>([]);
   const [shareholders, setShareholders] = useState<ShareholderInfo[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
 
   // Dialogs
   const [openBuyDialog, setOpenBuyDialog] = useState(false);
