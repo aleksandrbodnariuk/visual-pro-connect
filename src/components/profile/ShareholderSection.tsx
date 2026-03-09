@@ -221,5 +221,8 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
         </div>
       </CardContent>
     </Card>
-  );
+
+    {/* ─── Profit Forecast Block ─── */}
+    <ShareholderProfitForecast userId={user.id} />
+  </>;
 }
