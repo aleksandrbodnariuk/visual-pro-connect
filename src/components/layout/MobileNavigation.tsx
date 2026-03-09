@@ -35,13 +35,15 @@ export function MobileNavigation() {
   const [isShareholder, setIsShareholder] = useState(false);
 
   useEffect(() => {
-    if (!currentUser?.id) { setIsSpecialist(false); setIsAdmin(false); return; }
+    if (!currentUser?.id) { setIsSpecialist(false); setIsAdmin(false); setIsShareholder(false); return; }
     Promise.all([
       supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'specialist' as any }),
       supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'admin' as any }),
-    ]).then(([specRes, adminRes]) => {
+      supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'shareholder' as any }),
+    ]).then(([specRes, adminRes, shareholderRes]) => {
       setIsSpecialist(specRes.data === true);
       setIsAdmin(adminRes.data === true || currentUser.founder_admin === true);
+      setIsShareholder(shareholderRes.data === true || currentUser.founder_admin === true);
     });
   }, [currentUser?.id]);
 
