@@ -182,7 +182,7 @@ export function MobileNavigation() {
                       )}
 
                       {/* Ринок акцій */}
-                      {isShareholder && (
+                      {hasStockAccess && (
                         <Link
                           to="/stock-market"
                           onClick={() => setIsMenuOpen(false)}
