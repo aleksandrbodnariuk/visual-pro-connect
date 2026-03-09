@@ -109,6 +109,54 @@ export function FinancialStatsTab() {
   const [specialistsOpen, setSpecialistsOpen] = useState(false);
   const [shareholdersOpen, setShareholdersOpen] = useState(false);
 
+  // ─── Period filter state ────────────────────────────────────────────────────
+  const [period, setPeriod] = useState<PeriodType>("all");
+  const [customFrom, setCustomFrom] = useState<Date | undefined>(undefined);
+  const [customTo, setCustomTo] = useState<Date | undefined>(undefined);
+
+  const periodError = useMemo(() => {
+    if (period === "custom" && customFrom && customTo && customFrom > customTo) {
+      return "Дата «від» не може бути пізніше за дату «до»";
+    }
+    return null;
+  }, [period, customFrom, customTo]);
+
+  const filteredOrders = useMemo(() => {
+    if (periodError) return [];
+    if (period === "all") return orders;
+
+    const now = new Date();
+    let from: Date | undefined;
+    let to: Date | undefined;
+
+    switch (period) {
+      case "month":
+        from = startOfMonth(now);
+        break;
+      case "year":
+        from = startOfYear(now);
+        break;
+      case "last30":
+        from = subDays(now, 30);
+        break;
+      case "custom":
+        from = customFrom;
+        to = customTo;
+        break;
+    }
+
+    return orders.filter((o) => {
+      const d = new Date(o.order_date);
+      if (from && d < from) return false;
+      if (to) {
+        const toEnd = new Date(to);
+        toEnd.setHours(23, 59, 59, 999);
+        if (d > toEnd) return false;
+      }
+      return true;
+    });
+  }, [orders, period, customFrom, customTo, periodError]);
+
   // ─── Fetch ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (settingsLoading) return;
