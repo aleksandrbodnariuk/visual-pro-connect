@@ -9,18 +9,24 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Package, FolderOpen } from "lucide-react";
+import {
+  Plus, Pencil, Trash2, Package, FolderOpen, ChevronUp, ChevronDown,
+  EyeOff, Eye, GripVertical,
+} from "lucide-react";
+
+/* ───── types ───── */
 
 interface AssetCategory {
   id: string;
   name: string;
   sort_order: number;
+  is_active: boolean;
 }
 
 interface AssetItem {
@@ -43,16 +49,26 @@ const CONDITION_LABELS: Record<string, string> = {
   poor: "Поганий",
 };
 
+/* ───── component ───── */
+
 export function AssetValuationTab() {
   const [categories, setCategories] = useState<AssetCategory[]>([]);
   const [items, setItems] = useState<AssetItem[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showHidden, setShowHidden] = useState(false);
 
-  // Item form state
+  // Category CRUD
+  const [catDialogOpen, setCatDialogOpen] = useState(false);
+  const [editingCat, setEditingCat] = useState<AssetCategory | null>(null);
+  const [catName, setCatName] = useState("");
+
+  // Item CRUD
   const [itemDialogOpen, setItemDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<AssetItem | null>(null);
   const [form, setForm] = useState({ name: "", description: "", quantity: "1", unit_price: "0", condition: "good", acquired_at: "" });
+
+  /* ── fetch ── */
 
   const fetchCategories = useCallback(async () => {
     const { data, error } = await supabase
@@ -60,9 +76,12 @@ export function AssetValuationTab() {
       .select("*")
       .order("sort_order");
     if (error) { console.error(error); return; }
-    setCategories(data || []);
-    if (!selectedCategoryId && data && data.length > 0) {
-      setSelectedCategoryId(data[0].id);
+    const all = (data || []) as AssetCategory[];
+    setCategories(all);
+    // auto-select first visible
+    if (!selectedCategoryId || !all.find((c) => c.id === selectedCategoryId)) {
+      const first = all.find((c) => c.is_active) || all[0];
+      if (first) setSelectedCategoryId(first.id);
     }
   }, [selectedCategoryId]);
 
@@ -75,7 +94,7 @@ export function AssetValuationTab() {
       .eq("category_id", selectedCategoryId)
       .order("created_at", { ascending: true });
     if (error) { console.error(error); setLoading(false); return; }
-    setItems(data || []);
+    setItems((data || []) as AssetItem[]);
     setLoading(false);
   }, [selectedCategoryId]);
 
@@ -83,11 +102,80 @@ export function AssetValuationTab() {
   useEffect(() => { fetchItems(); }, [selectedCategoryId]);
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
-
   const totalValue = items.reduce((s, i) => s + Number(i.total_price || 0), 0);
-  const grandTotal = categories.length > 0
-    ? items // we only show per-category total; grand total needs all items
-    : 0;
+
+  const visibleCategories = showHidden ? categories : categories.filter((c) => c.is_active);
+
+  /* ── category CRUD ── */
+
+  const openAddCat = () => {
+    setEditingCat(null);
+    setCatName("");
+    setCatDialogOpen(true);
+  };
+
+  const openEditCat = (cat: AssetCategory) => {
+    setEditingCat(cat);
+    setCatName(cat.name);
+    setCatDialogOpen(true);
+  };
+
+  const handleSaveCat = async () => {
+    const trimmed = catName.trim();
+    if (!trimmed) { toast.error("Назва обов'язкова"); return; }
+
+    if (editingCat) {
+      const { error } = await supabase
+        .from("asset_categories")
+        .update({ name: trimmed })
+        .eq("id", editingCat.id);
+      if (error) { toast.error("Помилка оновлення"); console.error(error); return; }
+      toast.success("Розділ оновлено");
+    } else {
+      const maxOrder = categories.length > 0 ? Math.max(...categories.map((c) => c.sort_order)) : 0;
+      const { error } = await supabase
+        .from("asset_categories")
+        .insert({ name: trimmed, sort_order: maxOrder + 1 });
+      if (error) { toast.error("Помилка додавання"); console.error(error); return; }
+      toast.success("Розділ додано");
+    }
+    setCatDialogOpen(false);
+    fetchCategories();
+  };
+
+  const handleToggleCatActive = async (cat: AssetCategory) => {
+    const { error } = await supabase
+      .from("asset_categories")
+      .update({ is_active: !cat.is_active })
+      .eq("id", cat.id);
+    if (error) { toast.error("Помилка"); console.error(error); return; }
+    toast.success(cat.is_active ? "Розділ приховано" : "Розділ активовано");
+    fetchCategories();
+  };
+
+  const handleMoveCat = async (cat: AssetCategory, direction: "up" | "down") => {
+    const idx = categories.findIndex((c) => c.id === cat.id);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= categories.length) return;
+
+    const other = categories[swapIdx];
+    await Promise.all([
+      supabase.from("asset_categories").update({ sort_order: other.sort_order }).eq("id", cat.id),
+      supabase.from("asset_categories").update({ sort_order: cat.sort_order }).eq("id", other.id),
+    ]);
+    fetchCategories();
+  };
+
+  const handleDeleteCat = async (cat: AssetCategory) => {
+    if (!confirm(`Видалити розділ "${cat.name}" та все майно в ньому?`)) return;
+    const { error } = await supabase.from("asset_categories").delete().eq("id", cat.id);
+    if (error) { toast.error("Помилка видалення"); console.error(error); return; }
+    toast.success("Розділ видалено");
+    if (selectedCategoryId === cat.id) setSelectedCategoryId(null);
+    fetchCategories();
+  };
+
+  /* ── item CRUD ── */
 
   const openAddItem = () => {
     setEditingItem(null);
@@ -141,139 +229,231 @@ export function AssetValuationTab() {
     fetchItems();
   };
 
+  /* ── render ── */
+
   return (
-    <div className="flex flex-col md:flex-row gap-4 min-h-[500px]">
-      {/* Sidebar — categories */}
-      <Card className="md:w-64 shrink-0">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <FolderOpen className="h-4 w-4" /> Розділи
-          </CardTitle>
+    <div className="flex flex-col lg:flex-row gap-6 min-h-[560px]">
+      {/* ── Left panel: categories ── */}
+      <Card className="lg:w-80 shrink-0">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FolderOpen className="h-5 w-5" /> Розділи
+            </CardTitle>
+            <Button size="sm" variant="outline" onClick={openAddCat}>
+              <Plus className="h-4 w-4 mr-1" /> Новий
+            </Button>
+          </div>
+          <button
+            onClick={() => setShowHidden(!showHidden)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors text-left mt-1"
+          >
+            {showHidden ? "Сховати приховані" : "Показати приховані"}
+          </button>
         </CardHeader>
-        <CardContent className="p-2 space-y-1">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategoryId(cat.id)}
-              className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                selectedCategoryId === cat.id
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted"
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
+
+        <CardContent className="px-3 pb-3 space-y-1">
+          {visibleCategories.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">Немає розділів</p>
+          )}
+          {visibleCategories.map((cat, idx) => {
+            const isSelected = selectedCategoryId === cat.id;
+            return (
+              <div
+                key={cat.id}
+                className={`group flex items-center gap-1 rounded-lg transition-colors ${
+                  isSelected ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                } ${!cat.is_active ? "opacity-50" : ""}`}
+              >
+                <GripVertical className="h-4 w-4 shrink-0 ml-1 text-muted-foreground/40" />
+
+                <button
+                  onClick={() => setSelectedCategoryId(cat.id)}
+                  className="flex-1 text-left px-2 py-3 text-sm font-medium truncate min-w-0"
+                >
+                  {cat.name}
+                  {!cat.is_active && <span className="ml-1 text-xs">(прихований)</span>}
+                </button>
+
+                {/* Action buttons — visible on hover or when selected */}
+                <div className={`flex items-center gap-0.5 pr-1 shrink-0 ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-opacity`}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-7 w-7 ${isSelected ? "hover:bg-primary-foreground/20 text-primary-foreground" : ""}`}
+                    onClick={(e) => { e.stopPropagation(); handleMoveCat(cat, "up"); }}
+                    disabled={idx === 0}
+                  >
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-7 w-7 ${isSelected ? "hover:bg-primary-foreground/20 text-primary-foreground" : ""}`}
+                    onClick={(e) => { e.stopPropagation(); handleMoveCat(cat, "down"); }}
+                    disabled={idx === visibleCategories.length - 1}
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-7 w-7 ${isSelected ? "hover:bg-primary-foreground/20 text-primary-foreground" : ""}`}
+                    onClick={(e) => { e.stopPropagation(); handleToggleCatActive(cat); }}
+                  >
+                    {cat.is_active ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-7 w-7 ${isSelected ? "hover:bg-primary-foreground/20 text-primary-foreground" : ""}`}
+                    onClick={(e) => { e.stopPropagation(); openEditCat(cat); }}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-7 w-7 text-destructive ${isSelected ? "hover:bg-primary-foreground/20" : ""}`}
+                    onClick={(e) => { e.stopPropagation(); handleDeleteCat(cat); }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
         </CardContent>
       </Card>
 
-      {/* Main content — items list */}
-      <div className="flex-1 space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
+      {/* ── Category dialog ── */}
+      <Dialog open={catDialogOpen} onOpenChange={setCatDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingCat ? "Перейменувати розділ" : "Новий розділ"}</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Назва розділу"
+            value={catName}
+            onChange={(e) => setCatName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSaveCat()}
+            autoFocus
+          />
+          <DialogFooter>
+            <Button onClick={handleSaveCat}>{editingCat ? "Зберегти" : "Створити"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Right panel: items ── */}
+      <div className="flex-1 space-y-4 min-w-0">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Package className="h-5 w-5" />
             {selectedCategory?.name || "Оберіть розділ"}
           </h3>
           {selectedCategoryId && (
             <div className="flex items-center gap-3">
-              <Badge variant="outline" className="text-sm">
-                Вартість розділу: {totalValue.toLocaleString("uk-UA")} грн
+              <Badge variant="outline" className="text-sm px-3 py-1">
+                Вартість: {totalValue.toLocaleString("uk-UA")} грн
               </Badge>
-              <Dialog open={itemDialogOpen} onOpenChange={setItemDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" onClick={openAddItem}>
-                    <Plus className="h-4 w-4 mr-1" /> Додати
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{editingItem ? "Редагувати" : "Додати"} майно</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-3">
-                    <Input placeholder="Назва *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                    <Textarea placeholder="Опис" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs text-muted-foreground">Кількість</label>
-                        <Input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
-                      </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground">Ціна за од. (грн)</label>
-                        <Input type="number" min="0" step="0.01" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs text-muted-foreground">Стан</label>
-                        <Select value={form.condition} onValueChange={(v) => setForm({ ...form, condition: v })}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(CONDITION_LABELS).map(([k, v]) => (
-                              <SelectItem key={k} value={k}>{v}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground">Дата придбання</label>
-                        <Input type="date" value={form.acquired_at} onChange={(e) => setForm({ ...form, acquired_at: e.target.value })} />
-                      </div>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button onClick={handleSaveItem}>{editingItem ? "Зберегти" : "Додати"}</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <Button size="default" onClick={openAddItem}>
+                <Plus className="h-4 w-4 mr-1" /> Додати майно
+              </Button>
             </div>
           )}
         </div>
 
+        {/* Item dialog */}
+        <Dialog open={itemDialogOpen} onOpenChange={setItemDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingItem ? "Редагувати" : "Додати"} майно</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <Input placeholder="Назва *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <Textarea placeholder="Опис" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Кількість</label>
+                  <Input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Ціна за од. (грн)</label>
+                  <Input type="number" min="0" step="0.01" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Стан</label>
+                  <Select value={form.condition} onValueChange={(v) => setForm({ ...form, condition: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(CONDITION_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Дата придбання</label>
+                  <Input type="date" value={form.acquired_at} onChange={(e) => setForm({ ...form, acquired_at: e.target.value })} />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleSaveItem}>{editingItem ? "Зберегти" : "Додати"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {selectedCategoryId && (
           <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Назва</TableHead>
-                  <TableHead className="hidden sm:table-cell">Опис</TableHead>
-                  <TableHead className="text-right">К-ть</TableHead>
-                  <TableHead className="text-right">Ціна/од.</TableHead>
-                  <TableHead className="text-right">Сума</TableHead>
-                  <TableHead className="hidden sm:table-cell">Стан</TableHead>
-                  <TableHead className="w-20"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Завантаження...</TableCell></TableRow>
-                ) : items.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Немає записів</TableCell></TableRow>
-                ) : (
-                  items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium max-w-[160px] truncate">{item.name}</TableCell>
-                      <TableCell className="hidden sm:table-cell max-w-[200px] truncate text-muted-foreground text-xs">{item.description}</TableCell>
-                      <TableCell className="text-right">{item.quantity}</TableCell>
-                      <TableCell className="text-right">{Number(item.unit_price).toLocaleString("uk-UA")}</TableCell>
-                      <TableCell className="text-right font-semibold">{Number(item.total_price).toLocaleString("uk-UA")}</TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <Badge variant="secondary" className="text-xs">{CONDITION_LABELS[item.condition || "good"] || item.condition}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditItem(item)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteItem(item.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+            <div className="overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Назва</TableHead>
+                    <TableHead className="hidden sm:table-cell">Опис</TableHead>
+                    <TableHead className="text-right">К-ть</TableHead>
+                    <TableHead className="text-right">Ціна/од.</TableHead>
+                    <TableHead className="text-right">Сума</TableHead>
+                    <TableHead className="hidden sm:table-cell">Стан</TableHead>
+                    <TableHead className="w-24"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Завантаження...</TableCell></TableRow>
+                  ) : items.length === 0 ? (
+                    <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Немає записів у цьому розділі</TableCell></TableRow>
+                  ) : (
+                    items.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium max-w-[180px] truncate">{item.name}</TableCell>
+                        <TableCell className="hidden sm:table-cell max-w-[220px] truncate text-muted-foreground text-xs">{item.description}</TableCell>
+                        <TableCell className="text-right">{item.quantity}</TableCell>
+                        <TableCell className="text-right">{Number(item.unit_price).toLocaleString("uk-UA")}</TableCell>
+                        <TableCell className="text-right font-semibold">{Number(item.total_price).toLocaleString("uk-UA")}</TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge variant="secondary" className="text-xs">{CONDITION_LABELS[item.condition || "good"] || item.condition}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditItem(item)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteItem(item.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </Card>
         )}
       </div>
