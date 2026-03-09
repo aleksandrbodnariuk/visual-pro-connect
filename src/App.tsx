@@ -31,6 +31,7 @@ const Notifications = lazy(() => import("./pages/Notifications"));
 const Friends = lazy(() => import("./pages/Friends"));
 const Admin = lazy(() => import("./pages/Admin"));
 const StockMarket = lazy(() => import("./pages/StockMarket"));
+const ShareholderPanel = lazy(() => import("./pages/ShareholderPanel"));
 const Post = lazy(() => import("./pages/Post"));
 const MyFiles = lazy(() => import("./pages/MyFiles"));
 const SpecialistPanel = lazy(() => import("./pages/SpecialistPanel"));
