@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Users, Plus, MessageSquare, Menu, User, Bell, Search, Settings, LogOut, Camera, Video, Music, Mic, Sparkles, UtensilsCrossed, Car, Flower2, UserPlus, FolderOpen, Image, Briefcase } from "lucide-react";
+import { Home, Users, Plus, MessageSquare, Menu, User, Bell, Search, Settings, LogOut, Camera, Video, Music, Mic, Sparkles, UtensilsCrossed, Car, Flower2, UserPlus, FolderOpen, Image, Briefcase, Crown, TrendingUp } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
