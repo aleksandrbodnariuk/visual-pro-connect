@@ -609,7 +609,7 @@ export function FinancialStatsTab() {
           <Button
             size="sm"
             variant="default"
-            disabled={!stats || filteredOrders.length === 0}
+            disabled={!stats || filteredOrders.length === 0 || !!periodError}
             onClick={() => setSaveDialogOpen(true)}
           >
             <Save className="h-4 w-4 mr-1" />

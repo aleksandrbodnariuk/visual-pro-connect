@@ -303,7 +303,7 @@ export function CalculationHistoryTab() {
                 <div>
                   <span className="text-muted-foreground">Чистий прибуток:</span>
                   <br />
-                  <strong className="text-green-600">{fmtUah(summary.total_net_profit || 0)}</strong>
+                  <strong className="text-primary">{fmtUah(summary.total_net_profit || 0)}</strong>
                 </div>
               </div>
 
