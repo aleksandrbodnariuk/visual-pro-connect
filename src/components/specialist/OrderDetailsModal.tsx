@@ -37,12 +37,17 @@ interface Props {
 
 export function OrderDetailsModal({ order, participants, open, onOpenChange, onUpdate, onAddParticipant, onRemoveParticipant, isAdmin }: Props) {
   const [editing, setEditing] = useState(false);
+  const [editingFinancials, setEditingFinancials] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [orderType, setOrderType] = useState<OrderType>('photo');
   const [date, setDate] = useState<Date | undefined>();
   const [price, setPrice] = useState('');
   const [notes, setNotes] = useState('');
+  // Фінансові поля
+  const [orderAmount, setOrderAmount] = useState('');
+  const [orderExpenses, setOrderExpenses] = useState('');
+  const [financialNotes, setFinancialNotes] = useState('');
   const [specialists, setSpecialists] = useState<SpecialistInfo[]>([]);
   const [participantInfos, setParticipantInfos] = useState<Record<string, SpecialistInfo>>({});
   const [addSpecId, setAddSpecId] = useState('');
@@ -56,7 +61,11 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
       setDate(parseISO(order.order_date));
       setPrice(order.price != null ? String(order.price) : '');
       setNotes(order.notes || '');
+      setOrderAmount(order.order_amount != null ? String(order.order_amount) : '');
+      setOrderExpenses(order.order_expenses != null ? String(order.order_expenses) : '');
+      setFinancialNotes(order.financial_notes || '');
       setEditing(false);
+      setEditingFinancials(false);
     }
   }, [order]);
 
