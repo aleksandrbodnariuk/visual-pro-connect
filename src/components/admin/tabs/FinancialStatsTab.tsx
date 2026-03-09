@@ -286,7 +286,7 @@ export function FinancialStatsTab() {
       totalAdminFund,
       orderRows,
     };
-  }, [orders]);
+  }, [filteredOrders]);
 
   // Specialist earnings
   const specialistEarnings = useMemo<SpecialistEarning[]>(() => {
