@@ -67,13 +67,16 @@ export function ShareholdersTab() {
           shares,
           percentage: percentage.toFixed(2),
           title: user.title || "Акціонер",
-          profit: 0,
           isShareHolder: true,
         });
       }
 
       setShareholders(shareholdersWithShares);
       setIssuedShares(totalIssued);
+
+      // Fetch confirmed orders for profit calculation
+      const { data: ordersData } = await supabase.rpc('get_confirmed_orders_for_forecast');
+      setConfirmedOrders(ordersData || []);
     } catch (error) {
       console.error("Error fetching shareholders data:", error);
       toast.error("Помилка при отриманні даних акціонерів");
