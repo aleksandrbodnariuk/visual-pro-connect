@@ -26,6 +26,7 @@ export function ShareholdersTab() {
   const [issuedShares, setIssuedShares] = useState<number>(0);
   const [shareholders, setShareholders] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [confirmedOrders, setConfirmedOrders] = useState<any[]>([]);
 
   // Sync input with DB value once loaded
   useEffect(() => {
