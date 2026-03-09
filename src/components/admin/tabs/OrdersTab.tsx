@@ -14,7 +14,9 @@ export function OrdersTab() {
     return JSON.parse(localStorage.getItem("orders") || "[]");
   });
   const [newOrderAmount, setNewOrderAmount] = useState("");
+  const [newOrderExpenses, setNewOrderExpenses] = useState("");
   const [newOrderDescription, setNewOrderDescription] = useState("");
+  const [newFinancialNotes, setNewFinancialNotes] = useState("");
 
   const addNewOrder = () => {
     if (!newOrderAmount || isNaN(parseFloat(newOrderAmount)) || parseFloat(newOrderAmount) <= 0) {
@@ -28,11 +30,14 @@ export function OrdersTab() {
     }
     
     const amount = parseFloat(newOrderAmount);
+    const expenses = parseFloat(newOrderExpenses) || 0;
     const orderId = Date.now().toString();
     
     const newOrder = {
       id: orderId,
       amount,
+      expenses,
+      financial_notes: newFinancialNotes.trim() || null,
       description: newOrderDescription,
       date: new Date().toISOString(),
       status: "Завершено"
@@ -42,39 +47,22 @@ export function OrdersTab() {
     setOrders(updatedOrders);
     localStorage.setItem("orders", JSON.stringify(updatedOrders));
     
-    // Distribute profit to shareholders
+    // УВАГА: стара мок-логіка розподілу прибутку (45%) ізольована нижче.
+    // Вона НЕ підключена до нових фінансових полів і НЕ є реальним розрахунком.
+    // Буде замінена на справжній алгоритм на наступному етапі.
+    /* --- LEGACY MOCK (не видаляти до наступного етапу) ---
     const profitToDistribute = amount * 0.45;
-    
     const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-    const shareholders = storedUsers.filter((user: any) => 
-      user.isShareHolder || user.role === "shareholder"
-    );
-    
-    if (shareholders.length > 0) {
-      // Calculate total shares
-      const totalShares = shareholders.reduce(
-        (sum: number, sh: any) => sum + (sh.shares || 0), 0
-      );
-      
-      // Update shareholder profits
-      const updatedUsers = storedUsers.map((user: any) => {
-        if (user.isShareHolder || user.role === "shareholder") {
-          const sharePortion = ((user.shares || 0) / totalShares) * profitToDistribute;
-          return {
-            ...user,
-            profit: (user.profit || 0) + sharePortion
-          };
-        }
-        return user;
-      });
-      
-      localStorage.setItem("users", JSON.stringify(updatedUsers));
-    }
+    // ... (стара логіка localStorage)
+    --- END LEGACY MOCK --- */
     
     setNewOrderAmount("");
+    setNewOrderExpenses("");
     setNewOrderDescription("");
+    setNewFinancialNotes("");
     
-    toast.success("Замовлення додано і прибуток розподілено між акціонерами");
+    const net = calcNetProfit(amount, expenses);
+    toast.success(`Замовлення додано. Чистий прибуток: ${net.toFixed(2)} ₴`);
   };
   
   const deleteOrder = (orderId: string) => {
