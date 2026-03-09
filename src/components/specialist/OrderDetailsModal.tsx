@@ -219,7 +219,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                 <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} />
               </div>
               <div className="flex gap-2">
-                <Button onClick={handleSave} className="flex-1">Зберегти</Button>
+                <Button onClick={handleSave} className="flex-1">Зберегти дані замовлення</Button>
                 <Button variant="outline" onClick={() => setEditing(false)}>Скасувати</Button>
               </div>
             </>
@@ -330,8 +330,8 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     Фінанси замовлення
                   </h4>
-                  {!editingFinancials && (
-                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setEditingFinancials(true)}>
+                  {!editingFinancials && !editing && (
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setEditingFinancials(true); setEditing(false); }}>
                       Редагувати
                     </Button>
                   )}
@@ -424,11 +424,11 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
           )}
 
           {/* Admin actions */}
-          {isAdmin && !editing && (
+          {isAdmin && !editing && !editingFinancials && (
             <>
               <Separator />
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                <Button variant="outline" size="sm" onClick={() => { setEditing(true); setEditingFinancials(false); }}>
                   Редагувати
                 </Button>
                 {order.status === 'pending' && (
