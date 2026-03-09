@@ -11,7 +11,7 @@ import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { SharePriceControl } from "@/components/admin/SharePriceControl";
 import { calcFullProfitDistribution, type ShareholderInput } from "@/lib/shareholderCalculations";
 
-const TITLES = ["Акціонер", "Магнат", "Барон", "Граф", "Маркіз", "Лорд", "Герцог", "Імператор"] as const;
+import { getTitleName } from "@/lib/shareholderRules";
 
 export function ShareholdersTab() {
   const {
