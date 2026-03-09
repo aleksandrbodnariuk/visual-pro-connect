@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
+import { format, startOfMonth, startOfYear, subDays } from "date-fns";
+import { uk } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { getTitleByPercent } from "@/lib/shareholderRules";
@@ -10,6 +12,9 @@ import {
 } from "@/lib/shareholderCalculations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Table,
   TableBody,
@@ -33,7 +38,13 @@ import {
   Loader2,
   Briefcase,
   Crown,
+  CalendarIcon,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// ─── Period filter types ──────────────────────────────────────────────────────
+
+type PeriodType = "all" | "month" | "year" | "last30" | "custom";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -97,6 +108,54 @@ export function FinancialStatsTab() {
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [specialistsOpen, setSpecialistsOpen] = useState(false);
   const [shareholdersOpen, setShareholdersOpen] = useState(false);
+
+  // ─── Period filter state ────────────────────────────────────────────────────
+  const [period, setPeriod] = useState<PeriodType>("all");
+  const [customFrom, setCustomFrom] = useState<Date | undefined>(undefined);
+  const [customTo, setCustomTo] = useState<Date | undefined>(undefined);
+
+  const periodError = useMemo(() => {
+    if (period === "custom" && customFrom && customTo && customFrom > customTo) {
+      return "Дата «від» не може бути пізніше за дату «до»";
+    }
+    return null;
+  }, [period, customFrom, customTo]);
+
+  const filteredOrders = useMemo(() => {
+    if (periodError) return [];
+    if (period === "all") return orders;
+
+    const now = new Date();
+    let from: Date | undefined;
+    let to: Date | undefined;
+
+    switch (period) {
+      case "month":
+        from = startOfMonth(now);
+        break;
+      case "year":
+        from = startOfYear(now);
+        break;
+      case "last30":
+        from = subDays(now, 30);
+        break;
+      case "custom":
+        from = customFrom;
+        to = customTo;
+        break;
+    }
+
+    return orders.filter((o) => {
+      const d = new Date(o.order_date);
+      if (from && d < from) return false;
+      if (to) {
+        const toEnd = new Date(to);
+        toEnd.setHours(23, 59, 59, 999);
+        if (d > toEnd) return false;
+      }
+      return true;
+    });
+  }, [orders, period, customFrom, customTo, periodError]);
 
   // ─── Fetch ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -178,7 +237,7 @@ export function FinancialStatsTab() {
 
   // ─── Aggregated calculations ────────────────────────────────────────────────
   const stats = useMemo(() => {
-    if (orders.length === 0) return null;
+    if (filteredOrders.length === 0) return null;
 
     let totalAmount = 0;
     let totalExpenses = 0;
@@ -197,7 +256,7 @@ export function FinancialStatsTab() {
       adminFund: number;
     }> = [];
 
-    for (const order of orders) {
+    for (const order of filteredOrders) {
       const net = calcNetProfit(order.order_amount, order.order_expenses);
       const pools = calcProfitPools(net);
       totalAmount += order.order_amount;
@@ -227,11 +286,11 @@ export function FinancialStatsTab() {
       totalAdminFund,
       orderRows,
     };
-  }, [orders]);
+  }, [filteredOrders]);
 
   // Specialist earnings
   const specialistEarnings = useMemo<SpecialistEarning[]>(() => {
-    if (!stats || orders.length === 0) return [];
+    if (!stats || filteredOrders.length === 0) return [];
 
     const earnings: Record<string, { ordersCount: number; totalEarning: number }> = {};
 
@@ -252,15 +311,15 @@ export function FinancialStatsTab() {
       name: specialistNames[id] || "Невідомий",
       ...data,
     })).sort((a, b) => b.totalEarning - a.totalEarning);
-  }, [stats, orderParticipants, specialistNames, orders]);
+  }, [stats, orderParticipants, specialistNames, filteredOrders]);
 
   // Shareholder stats
   const shareholderStats = useMemo<ShareholderStat[]>(() => {
-    if (!stats || orders.length === 0 || shareholderInputs.length === 0 || totalShares <= 0) return [];
+    if (!stats || filteredOrders.length === 0 || shareholderInputs.length === 0 || totalShares <= 0) return [];
 
     const totals: Record<string, { baseIncome: number; titleBonus: number; totalIncome: number }> = {};
 
-    for (const order of orders) {
+    for (const order of filteredOrders) {
       const dist = calcFullProfitDistribution(
         order.order_amount,
         order.order_expenses,
@@ -288,7 +347,7 @@ export function FinancialStatsTab() {
         ...t,
       };
     }).sort((a, b) => b.totalIncome - a.totalIncome);
-  }, [stats, orders, shareholderInputs, totalShares, shareholderNames]);
+  }, [stats, filteredOrders, shareholderInputs, totalShares, shareholderNames]);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   const isLoading = loading || settingsLoading;
@@ -328,10 +387,67 @@ export function FinancialStatsTab() {
         </Badge>
       </div>
 
+      {/* ─── Period Filters ─── */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {([
+            ["all", "Усі"],
+            ["month", "Цей місяць"],
+            ["year", "Цей рік"],
+            ["last30", "Останні 30 днів"],
+            ["custom", "Власний період"],
+          ] as [PeriodType, string][]).map(([key, label]) => (
+            <Button
+              key={key}
+              size="sm"
+              variant={period === key ? "default" : "outline"}
+              onClick={() => setPeriod(key)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+
+        {period === "custom" && (
+          <div className="flex flex-wrap items-center gap-3">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("w-[160px] justify-start text-left font-normal", !customFrom && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {customFrom ? format(customFrom, "dd.MM.yyyy") : "Від"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={customFrom} onSelect={setCustomFrom} initialFocus className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+            <span className="text-muted-foreground text-sm">—</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("w-[160px] justify-start text-left font-normal", !customTo && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {customTo ? format(customTo, "dd.MM.yyyy") : "До"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={customTo} onSelect={setCustomTo} initialFocus className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
+
+        {periodError && <InfoAlert message={periodError} />}
+      </div>
+
+      {/* ─── No results for period ─── */}
+      {!periodError && filteredOrders.length === 0 && orders.length > 0 && (
+        <InfoAlert message="За вибраний період підтверджених замовлень не знайдено" />
+      )}
+
       {/* ─── Summary Cards ─── */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard label="Підтверджених замовлень" value={String(orders.length)} />
+          <StatCard label="Підтверджених замовлень" value={String(filteredOrders.length)} />
           <StatCard label="Сума замовлень" value={fmt(stats.totalAmount)} />
           <StatCard label="Витрати" value={fmt(stats.totalExpenses)} />
           <StatCard label="Чистий прибуток" value={fmt(stats.totalNet)} highlight />
