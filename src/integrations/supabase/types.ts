@@ -1344,6 +1344,10 @@ export type Database = {
         Returns: undefined
       }
       set_founder_admin_status: { Args: never; Returns: undefined }
+      set_stock_market_access: {
+        Args: { _access: string; _user_id: string }
+        Returns: undefined
+      }
       user_exists_by_phone: {
         Args: { _phone_number: string }
         Returns: boolean

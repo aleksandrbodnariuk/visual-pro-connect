@@ -94,22 +94,21 @@ function StockMarketAccessManager() {
 
   const setAccess = async (userId: string, newRole: 'candidate' | 'shareholder' | 'none') => {
     try {
-      // Remove old candidate/shareholder roles
-      for (const role of ['candidate', 'shareholder'] as const) {
-        await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', role);
+      const { error } = await supabase.rpc('set_stock_market_access', {
+        _user_id: userId,
+        _access: newRole,
+      });
+      if (error) {
+        const msg = error.message || '';
+        if (msg.includes('володіє акціями')) {
+          toast.error('Не можна забрати доступ у користувача, який володіє акціями');
+        } else if (msg.includes('понизити до кандидата')) {
+          toast.error('Не можна понизити до кандидата користувача з акціями');
+        } else {
+          toast.error(msg || 'Помилка зміни доступу');
+        }
+        return;
       }
-
-      if (newRole === 'candidate') {
-        await supabase.from('user_roles').insert({ user_id: userId, role: 'candidate' as any });
-      } else if (newRole === 'shareholder') {
-        await supabase.from('user_roles').insert({ user_id: userId, role: 'shareholder' as any });
-        await supabase.from('users').update({ is_shareholder: true }).eq('id', userId);
-      }
-
-      if (newRole === 'none') {
-        await supabase.from('users').update({ is_shareholder: false }).eq('id', userId);
-      }
-
       toast.success(
         newRole === 'candidate' ? 'Надано доступ кандидата' :
         newRole === 'shareholder' ? 'Надано статус акціонера' :
@@ -189,7 +188,7 @@ function StockMarketAccessManager() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end flex-wrap">
-                        {u.accessRole !== 'candidate' && (
+                        {u.accessRole !== 'candidate' && u.shares === 0 && (
                           <Button size="sm" variant="outline" onClick={() => setAccess(u.id, 'candidate')}>
                             <UserPlus className="h-3 w-3 mr-1" /> Кандидат
                           </Button>
@@ -200,9 +199,18 @@ function StockMarketAccessManager() {
                           </Button>
                         )}
                         {u.accessRole !== 'none' && (
-                          <Button size="sm" variant="destructive" onClick={() => setAccess(u.id, 'none')}>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={u.shares > 0}
+                            title={u.shares > 0 ? 'Не можна забрати доступ у користувача, який володіє акціями' : undefined}
+                            onClick={() => setAccess(u.id, 'none')}
+                          >
                             <UserMinus className="h-3 w-3 mr-1" /> Зняти
                           </Button>
+                        )}
+                        {u.shares > 0 && u.accessRole !== 'none' && (
+                          <span className="text-xs text-muted-foreground ml-1 self-center">🔒 має акції</span>
                         )}
                       </div>
                     </TableCell>
