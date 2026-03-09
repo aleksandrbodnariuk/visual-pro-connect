@@ -725,9 +725,13 @@ export type Database = {
           created_at: string
           created_by: string
           description: string | null
+          financial_notes: string | null
+          financials_updated_at: string | null
           id: string
           notes: string | null
+          order_amount: number | null
           order_date: string
+          order_expenses: number | null
           order_type: string
           price: number | null
           status: string
@@ -738,9 +742,13 @@ export type Database = {
           created_at?: string
           created_by: string
           description?: string | null
+          financial_notes?: string | null
+          financials_updated_at?: string | null
           id?: string
           notes?: string | null
+          order_amount?: number | null
           order_date: string
+          order_expenses?: number | null
           order_type?: string
           price?: number | null
           status?: string
@@ -751,9 +759,13 @@ export type Database = {
           created_at?: string
           created_by?: string
           description?: string | null
+          financial_notes?: string | null
+          financials_updated_at?: string | null
           id?: string
           notes?: string | null
+          order_amount?: number | null
           order_date?: string
+          order_expenses?: number | null
           order_type?: string
           price?: number | null
           status?: string
