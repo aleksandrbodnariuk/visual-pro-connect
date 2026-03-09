@@ -299,6 +299,103 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
             )}
           </div>
 
+          {/* ── Фінанси замовлення (тільки адміністратор) ── */}
+          {isAdmin && (
+            <>
+              <Separator />
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium flex items-center gap-1.5">
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                    Фінанси замовлення
+                  </h4>
+                  {!editingFinancials && (
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setEditingFinancials(true)}>
+                      Редагувати
+                    </Button>
+                  )}
+                </div>
+
+                {editingFinancials ? (
+                  <div className="space-y-3 rounded-lg border p-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Сума замовлення (₴)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={orderAmount}
+                          onChange={e => setOrderAmount(e.target.value)}
+                          placeholder="0"
+                          className="h-8 text-sm mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Витрати (₴)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={orderExpenses}
+                          onChange={e => setOrderExpenses(e.target.value)}
+                          placeholder="0"
+                          className="h-8 text-sm mt-1"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Примітка до фінансів</Label>
+                      <Textarea
+                        value={financialNotes}
+                        onChange={e => setFinancialNotes(e.target.value)}
+                        rows={2}
+                        placeholder="Коментар до витрат або доходів..."
+                        className="text-sm mt-1"
+                      />
+                    </div>
+                    {/* Попередній чистий прибуток під час редагування */}
+                    {(orderAmount || orderExpenses) && (
+                      <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm">
+                        <span className="text-muted-foreground">Чистий прибуток:</span>
+                        <span className="font-semibold text-primary">
+                          {calcNetProfit(orderAmount ? Number(orderAmount) : 0, orderExpenses ? Number(orderExpenses) : 0).toFixed(2)} ₴
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleSaveFinancials} className="flex-1">Зберегти фінанси</Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingFinancials(false)}>Скасувати</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border p-3 space-y-2 text-sm">
+                    {netProfit !== null ? (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Сума замовлення:</span>
+                          <span>{(order.order_amount ?? 0).toFixed(2)} ₴</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Витрати:</span>
+                          <span>{(order.order_expenses ?? 0).toFixed(2)} ₴</span>
+                        </div>
+                        <Separator />
+                        <div className="flex justify-between font-semibold">
+                          <span>Чистий прибуток:</span>
+                          <span className="text-primary">{netProfit.toFixed(2)} ₴</span>
+                        </div>
+                        {order.financial_notes && (
+                          <p className="text-xs text-muted-foreground pt-1">{order.financial_notes}</p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground text-xs">Фінансові дані не введені</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
           {/* Admin actions */}
           {isAdmin && !editing && (
             <>
