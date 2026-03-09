@@ -347,7 +347,7 @@ export function FinancialStatsTab() {
         ...t,
       };
     }).sort((a, b) => b.totalIncome - a.totalIncome);
-  }, [stats, orders, shareholderInputs, totalShares, shareholderNames]);
+  }, [stats, filteredOrders, shareholderInputs, totalShares, shareholderNames]);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   const isLoading = loading || settingsLoading;
