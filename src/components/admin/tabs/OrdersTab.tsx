@@ -164,22 +164,26 @@ export function OrdersTab() {
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-2">ID</th>
                   <th className="text-left p-2">Дата</th>
                   <th className="text-left p-2">Опис</th>
                   <th className="text-right p-2">Сума (грн)</th>
+                  <th className="text-right p-2">Витрати (грн)</th>
+                  <th className="text-right p-2 text-primary">Чистий прибуток</th>
                   <th className="text-left p-2">Статус</th>
                   <th className="text-left p-2">Дії</th>
                 </tr>
               </thead>
               <tbody>
                 {orders.length > 0 ? (
-                  orders.map((order) => (
+                  orders.map((order) => {
+                    const net = calcNetProfit(order.amount ?? 0, order.expenses ?? 0);
+                    return (
                     <tr key={order.id} className="border-b hover:bg-muted/50">
-                      <td className="p-2">{order.id}</td>
                       <td className="p-2">{new Date(order.date).toLocaleDateString()}</td>
                       <td className="p-2">{order.description}</td>
-                      <td className="p-2 text-right">{order.amount.toFixed(2)}</td>
+                      <td className="p-2 text-right">{(order.amount ?? 0).toFixed(2)}</td>
+                      <td className="p-2 text-right text-muted-foreground">{(order.expenses ?? 0).toFixed(2)}</td>
+                      <td className="p-2 text-right font-semibold text-primary">{net.toFixed(2)}</td>
                       <td className="p-2">{order.status}</td>
                       <td className="p-2">
                         <div className="flex gap-2">
@@ -192,10 +196,11 @@ export function OrdersTab() {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="p-2 text-center text-muted-foreground">
+                    <td colSpan={7} className="p-2 text-center text-muted-foreground">
                       Немає активних замовлень
                     </td>
                   </tr>
