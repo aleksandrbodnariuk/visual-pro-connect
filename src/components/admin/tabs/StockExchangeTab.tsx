@@ -40,6 +40,183 @@ interface Transaction {
   created_at: string;
 }
 
+/* ── Stock Market Access Manager ── */
+
+interface AccessUser {
+  id: string;
+  full_name: string;
+  avatar_url?: string;
+  shares: number;
+  accessRole: 'none' | 'candidate' | 'shareholder';
+}
+
+function StockMarketAccessManager() {
+  const [users, setUsers] = useState<AccessUser[]>([]);
+  const [loadingAccess, setLoadingAccess] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'candidate' | 'shareholder' | 'none'>('all');
+
+  const loadAccessData = useCallback(async () => {
+    setLoadingAccess(true);
+    try {
+      const { data: allUsers } = await supabase.rpc('get_users_for_admin');
+      if (!allUsers) return;
+
+      const result: AccessUser[] = [];
+      for (const u of allUsers) {
+        const { data: roles } = await supabase.rpc('get_user_roles_array', { user_id: u.id });
+        const rolesArr: string[] = roles || [];
+        const { data: sharesData } = await supabase.from('shares').select('quantity').eq('user_id', u.id).maybeSingle();
+
+        let accessRole: 'none' | 'candidate' | 'shareholder' = 'none';
+        if (rolesArr.includes('shareholder')) accessRole = 'shareholder';
+        else if (rolesArr.includes('candidate')) accessRole = 'candidate';
+
+        // Skip founders/admins from this list (they always have access)
+        if (rolesArr.includes('founder') || rolesArr.includes('admin')) continue;
+
+        result.push({
+          id: u.id,
+          full_name: u.full_name || 'Без імені',
+          avatar_url: u.avatar_url || undefined,
+          shares: sharesData?.quantity || 0,
+          accessRole,
+        });
+      }
+      setUsers(result);
+    } catch (e) {
+      console.error('Error loading access data:', e);
+    } finally {
+      setLoadingAccess(false);
+    }
+  }, []);
+
+  useEffect(() => { loadAccessData(); }, [loadAccessData]);
+
+  const setAccess = async (userId: string, newRole: 'candidate' | 'shareholder' | 'none') => {
+    try {
+      // Remove old candidate/shareholder roles
+      for (const role of ['candidate', 'shareholder'] as const) {
+        await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', role);
+      }
+
+      if (newRole === 'candidate') {
+        await supabase.from('user_roles').insert({ user_id: userId, role: 'candidate' as any });
+      } else if (newRole === 'shareholder') {
+        await supabase.from('user_roles').insert({ user_id: userId, role: 'shareholder' as any });
+        await supabase.from('users').update({ is_shareholder: true }).eq('id', userId);
+      }
+
+      if (newRole === 'none') {
+        await supabase.from('users').update({ is_shareholder: false }).eq('id', userId);
+      }
+
+      toast.success(
+        newRole === 'candidate' ? 'Надано доступ кандидата' :
+        newRole === 'shareholder' ? 'Надано статус акціонера' :
+        'Доступ до ринку знято'
+      );
+      await loadAccessData();
+    } catch {
+      toast.error('Помилка зміни доступу');
+    }
+  };
+
+  const filteredUsers = filter === 'all' ? users : users.filter(u => u.accessRole === filter);
+
+  const accessLabel = (role: string) => {
+    switch (role) {
+      case 'candidate': return 'Кандидат';
+      case 'shareholder': return 'Акціонер';
+      default: return 'Немає доступу';
+    }
+  };
+
+  const accessBadgeVariant = (role: string) => {
+    switch (role) {
+      case 'shareholder': return 'default' as const;
+      case 'candidate': return 'secondary' as const;
+      default: return 'outline' as const;
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Shield className="h-5 w-5" /> Доступ до ринку акцій
+        </CardTitle>
+        <CardDescription>Керування доступом користувачів до внутрішнього ринку акцій. Адміністратори і засновники завжди мають доступ.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex gap-2 mb-4 flex-wrap">
+          {(['all', 'candidate', 'shareholder', 'none'] as const).map(f => (
+            <Button key={f} variant={filter === f ? 'default' : 'outline'} size="sm" onClick={() => setFilter(f)}>
+              {f === 'all' ? 'Усі' : f === 'candidate' ? 'Кандидати' : f === 'shareholder' ? 'Акціонери' : 'Без доступу'}
+            </Button>
+          ))}
+        </div>
+
+        {loadingAccess ? (
+          <div className="text-center py-8 text-muted-foreground">Завантаження...</div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">Немає користувачів у цій категорії</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Користувач</TableHead>
+                  <TableHead>Акції</TableHead>
+                  <TableHead>Статус доступу</TableHead>
+                  <TableHead className="text-right">Дії</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map(u => (
+                  <TableRow key={u.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={u.avatar_url} />
+                          <AvatarFallback>{u.full_name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium truncate max-w-[150px]">{u.full_name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{u.shares}</TableCell>
+                    <TableCell>
+                      <Badge variant={accessBadgeVariant(u.accessRole)}>{accessLabel(u.accessRole)}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-1 justify-end flex-wrap">
+                        {u.accessRole !== 'candidate' && (
+                          <Button size="sm" variant="outline" onClick={() => setAccess(u.id, 'candidate')}>
+                            <UserPlus className="h-3 w-3 mr-1" /> Кандидат
+                          </Button>
+                        )}
+                        {u.accessRole !== 'shareholder' && (
+                          <Button size="sm" variant="outline" onClick={() => setAccess(u.id, 'shareholder')}>
+                            <Shield className="h-3 w-3 mr-1" /> Акціонер
+                          </Button>
+                        )}
+                        {u.accessRole !== 'none' && (
+                          <Button size="sm" variant="destructive" onClick={() => setAccess(u.id, 'none')}>
+                            <UserMinus className="h-3 w-3 mr-1" /> Зняти
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function StockExchangeTab() {
   const { sharePriceUsd, loading: settingsLoading, updateSharePrice } = useCompanySettings();
   const [stockPrice, setStockPrice] = useState<string>("");
