@@ -290,7 +290,7 @@ export function FinancialStatsTab() {
 
   // Specialist earnings
   const specialistEarnings = useMemo<SpecialistEarning[]>(() => {
-    if (!stats || orders.length === 0) return [];
+    if (!stats || filteredOrders.length === 0) return [];
 
     const earnings: Record<string, { ordersCount: number; totalEarning: number }> = {};
 
