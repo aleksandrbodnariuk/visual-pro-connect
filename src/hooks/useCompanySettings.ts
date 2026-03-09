@@ -9,9 +9,11 @@ interface CompanySettings {
   updatedAt: string;
 }
 
+// Default values are 0 so the UI correctly shows "not configured" state
+// instead of falsely pretending the system is set up.
 const DEFAULT_SETTINGS: Omit<CompanySettings, 'id' | 'updatedAt'> = {
-  totalShares: 1000,
-  sharePriceUsd: 10,
+  totalShares: 0,
+  sharePriceUsd: 0,
 };
 
 export function useCompanySettings() {

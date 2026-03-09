@@ -51,16 +51,19 @@ export interface TitleThreshold {
 /**
  * Відсортовані від найвищого до найнижчого рівня.
  * `level` визначає, на скільки рівнів титульних бонусів має право акціонер.
+ *
+ * ВАЖЛИВО: мінімальний поріг — 1 %.
+ * Користувач із 0 акцій (або 0 %) НЕ отримує жодного титулу.
  */
 export const TITLE_THRESHOLDS: readonly TitleThreshold[] = [
   { minPercent: 100, maxPercent: 100, title: 'Імператор', level: 7 },
-  { minPercent: 50, maxPercent: 99, title: 'Герцог', level: 6 },
-  { minPercent: 40, maxPercent: 49, title: 'Лорд', level: 5 },
-  { minPercent: 30, maxPercent: 39, title: 'Маркіз', level: 4 },
-  { minPercent: 20, maxPercent: 29, title: 'Граф', level: 3 },
-  { minPercent: 10, maxPercent: 19, title: 'Барон', level: 2 },
-  { minPercent: 5, maxPercent: 9, title: 'Магнат', level: 1 },
-  { minPercent: 0, maxPercent: 4, title: 'Акціонер', level: 0 },
+  { minPercent: 50,  maxPercent: 99,  title: 'Герцог',    level: 6 },
+  { minPercent: 40,  maxPercent: 49,  title: 'Лорд',      level: 5 },
+  { minPercent: 30,  maxPercent: 39,  title: 'Маркіз',    level: 4 },
+  { minPercent: 20,  maxPercent: 29,  title: 'Граф',      level: 3 },
+  { minPercent: 10,  maxPercent: 19,  title: 'Барон',     level: 2 },
+  { minPercent: 5,   maxPercent: 9,   title: 'Магнат',    level: 1 },
+  { minPercent: 1,   maxPercent: 4,   title: 'Акціонер',  level: 0 },
 ] as const;
 
 // ─── Титульні бонуси ─────────────────────────────────────────────────────────
@@ -102,11 +105,31 @@ export const TITLE_BONUS_LEVELS: readonly TitleBonusLevel[] = [
 
 // ─── Допоміжне ───────────────────────────────────────────────────────────────
 
-/** Визначити титул за відсотком акцій */
-export function getTitleByPercent(percent: number): TitleThreshold {
+/**
+ * Визначити титул за відсотком акцій.
+ *
+ * Повертає `null` якщо:
+ * - percent <= 0 (0 акцій або система ще не налаштована)
+ * - totalShares = 0
+ *
+ * Це НОРМАЛЬНИЙ стан системи на початку роботи, а не помилка.
+ */
+export function getTitleByPercent(percent: number): TitleThreshold | null {
+  // Жодного титулу при 0 акцій або ненастроєній системі
+  if (percent <= 0) return null;
+
   const rounded = Math.floor(percent * 100) / 100; // уникнути floating-point
   for (const t of TITLE_THRESHOLDS) {
     if (rounded >= t.minPercent && rounded <= t.maxPercent) return t;
   }
-  return TITLE_THRESHOLDS[TITLE_THRESHOLDS.length - 1]; // fallback: Акціонер
+  // Якщо < 1 % (наприклад, 0.5 %) — теж без титулу, бо мінімум 1 %
+  return null;
+}
+
+/**
+ * Текстова назва титулу або порожній рядок, якщо титулу немає.
+ * Зручний helper для UI, щоб не перевіряти null скрізь.
+ */
+export function getTitleName(percent: number): string {
+  return getTitleByPercent(percent)?.title ?? '';
 }
