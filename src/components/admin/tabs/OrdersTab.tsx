@@ -107,7 +107,29 @@ export function OrdersTab() {
                   onChange={(e) => setNewOrderAmount(e.target.value)}
                 />
               </div>
+              <div>
+                <Label htmlFor="expenses">Витрати (грн)</Label>
+                <Input 
+                  id="expenses" 
+                  type="number" 
+                  placeholder="0" 
+                  value={newOrderExpenses}
+                  onChange={(e) => setNewOrderExpenses(e.target.value)}
+                />
+              </div>
             </div>
+            {/* Попередній чистий прибуток — read-only */}
+            {newOrderAmount && (
+              <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm">
+                <span className="text-muted-foreground">Чистий прибуток:</span>
+                <span className="font-semibold text-primary">
+                  {calcNetProfit(
+                    parseFloat(newOrderAmount) || 0,
+                    parseFloat(newOrderExpenses) || 0
+                  ).toFixed(2)} ₴
+                </span>
+              </div>
+            )}
             <div>
               <Label htmlFor="description">Опис замовлення</Label>
               <Textarea 
@@ -115,6 +137,15 @@ export function OrdersTab() {
                 placeholder="Опишіть деталі замовлення" 
                 value={newOrderDescription}
                 onChange={(e) => setNewOrderDescription(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="financialNotes">Фінансова примітка (необов'язково)</Label>
+              <Input
+                id="financialNotes"
+                placeholder="Коментар до фінансів..."
+                value={newFinancialNotes}
+                onChange={(e) => setNewFinancialNotes(e.target.value)}
               />
             </div>
             <Button onClick={addNewOrder}>Додати замовлення</Button>
