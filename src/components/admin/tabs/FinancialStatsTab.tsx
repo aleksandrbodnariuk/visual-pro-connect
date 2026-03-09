@@ -188,11 +188,11 @@ function downloadCsv(content: string, filename: string) {
 
 function InfoAlert({ message, sub }: { message: string; sub?: string }) {
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20 p-4 text-amber-800 dark:text-amber-300">
-      <AlertCircle className="h-5 w-5 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+    <div className="flex items-start gap-3 rounded-lg border border-border bg-muted p-4 text-foreground">
+      <AlertCircle className="h-5 w-5 mt-0.5 shrink-0 text-muted-foreground" />
       <div>
         <p className="text-sm font-medium">{message}</p>
-        {sub && <p className="text-xs mt-1 opacity-80">{sub}</p>}
+        {sub && <p className="text-xs mt-1 text-muted-foreground">{sub}</p>}
       </div>
     </div>
   );
@@ -201,7 +201,7 @@ function InfoAlert({ message, sub }: { message: string; sub?: string }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function FinancialStatsTab() {
-  const { totalShares, loading: settingsLoading } = useCompanySettings();
+  const { totalShares, sharePriceUsd, loading: settingsLoading } = useCompanySettings();
 
   const [orders, setOrders] = useState<ConfirmedOrder[]>([]);
   const [shareholderInputs, setShareholderInputs] = useState<ShareholderInput[]>([]);
@@ -462,11 +462,11 @@ export function FinancialStatsTab() {
 
   // ─── Save Snapshot ───────────────────────────────────────────────────────────
   const saveSnapshot = useCallback(async () => {
-    if (!stats || filteredOrders.length === 0) return;
+    if (!stats || filteredOrders.length === 0 || periodError) return;
     setIsSaving(true);
     try {
-      const { sharePriceUsd } = { sharePriceUsd: 0 }; // read from settings via context
       const periodLabel = getPeriodLabel(period, customFrom, customTo);
+      const createdBy = (await supabase.auth.getSession()).data.session?.user?.id ?? null;
 
       const payload = {
         summary: {
@@ -511,6 +511,7 @@ export function FinancialStatsTab() {
       };
 
       const { error } = await supabase.from("calculation_snapshots").insert({
+        created_by: createdBy,
         period_type: period,
         period_label: periodLabel,
         custom_from: customFrom ? format(customFrom, "yyyy-MM-dd") : null,
@@ -523,6 +524,8 @@ export function FinancialStatsTab() {
         shareholders_pool_20: stats.totalSharesPool,
         title_bonus_pool_17_5: stats.totalTitlePool,
         admin_fund_12_5: stats.totalAdminFund,
+        share_price_usd_snapshot: sharePriceUsd,
+        total_shares_snapshot: totalShares,
         notes: snapshotNotes.trim() || null,
         snapshot_payload: payload,
       });
@@ -538,7 +541,20 @@ export function FinancialStatsTab() {
     } finally {
       setIsSaving(false);
     }
-  }, [stats, filteredOrders, period, customFrom, customTo, specialistEarnings, shareholderStats, snapshotNotes]);
+  }, [
+    stats,
+    filteredOrders,
+    periodError,
+    period,
+    customFrom,
+    customTo,
+    specialistEarnings,
+    shareholderStats,
+    snapshotNotes,
+    sharePriceUsd,
+    totalShares,
+  ]);
+
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   const isLoading = loading || settingsLoading;
@@ -593,7 +609,7 @@ export function FinancialStatsTab() {
           <Button
             size="sm"
             variant="default"
-            disabled={!stats || filteredOrders.length === 0}
+            disabled={!stats || filteredOrders.length === 0 || !!periodError}
             onClick={() => setSaveDialogOpen(true)}
           >
             <Save className="h-4 w-4 mr-1" />
@@ -630,7 +646,10 @@ export function FinancialStatsTab() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>Скасувати</Button>
-            <Button onClick={saveSnapshot} disabled={isSaving}>
+            <Button
+              onClick={saveSnapshot}
+              disabled={isSaving || !stats || filteredOrders.length === 0 || !!periodError}
+            >
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
               Зберегти
             </Button>
