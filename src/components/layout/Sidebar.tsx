@@ -109,9 +109,6 @@ export function Sidebar({ className }: SidebarProps) {
               <TrendingUp className="mr-2 h-4 w-4" /> Ринок акцій
             </Button>
           )}
-              </Button>
-            </>
-          )}
         </nav>
       </div>
 
