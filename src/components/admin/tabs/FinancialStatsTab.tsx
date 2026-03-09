@@ -646,7 +646,10 @@ export function FinancialStatsTab() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>Скасувати</Button>
-            <Button onClick={saveSnapshot} disabled={isSaving}>
+            <Button
+              onClick={saveSnapshot}
+              disabled={isSaving || !stats || filteredOrders.length === 0 || !!periodError}
+            >
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
               Зберегти
             </Button>

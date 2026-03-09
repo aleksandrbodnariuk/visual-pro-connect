@@ -154,11 +154,11 @@ export function CalculationHistoryTab() {
 
   if (snapshots.length === 0) {
     return (
-      <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20 p-4 text-amber-800 dark:text-amber-300">
-        <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
+      <div className="flex items-start gap-3 rounded-lg border border-border bg-muted p-4 text-foreground">
+        <AlertCircle className="h-5 w-5 mt-0.5 shrink-0 text-muted-foreground" />
         <div>
           <p className="text-sm font-medium">Збережених розрахунків ще немає</p>
-          <p className="text-xs mt-1 opacity-80">Перейдіть у вкладку «Фінанси» і натисніть «Зберегти розрахунок».</p>
+          <p className="text-xs mt-1 text-muted-foreground">Перейдіть у вкладку «Фінанси» і натисніть «Зберегти розрахунок».</p>
         </div>
       </div>
     );
