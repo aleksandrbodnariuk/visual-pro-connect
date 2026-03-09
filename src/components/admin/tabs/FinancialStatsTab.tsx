@@ -188,11 +188,11 @@ function downloadCsv(content: string, filename: string) {
 
 function InfoAlert({ message, sub }: { message: string; sub?: string }) {
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20 p-4 text-amber-800 dark:text-amber-300">
-      <AlertCircle className="h-5 w-5 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+    <div className="flex items-start gap-3 rounded-lg border border-border bg-muted p-4 text-foreground">
+      <AlertCircle className="h-5 w-5 mt-0.5 shrink-0 text-muted-foreground" />
       <div>
         <p className="text-sm font-medium">{message}</p>
-        {sub && <p className="text-xs mt-1 opacity-80">{sub}</p>}
+        {sub && <p className="text-xs mt-1 text-muted-foreground">{sub}</p>}
       </div>
     </div>
   );
