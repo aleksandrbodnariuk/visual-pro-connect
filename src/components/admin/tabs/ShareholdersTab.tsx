@@ -385,7 +385,9 @@ export function ShareholdersTab() {
                             <span className="text-muted-foreground text-sm italic">Не розраховано</span>
                           )}
                         </td>
-                        <td className="p-2 text-muted-foreground text-sm italic">Після замовлень</td>
+                        <td className="p-2 text-sm">
+                          {getProfitDisplay(shareholder.id, shareholder.shares)}
+                        </td>
                         <td className="p-2">
                           <Button variant="outline" size="sm">
                             <PenLine className="h-4 w-4 mr-1" /> Деталі
