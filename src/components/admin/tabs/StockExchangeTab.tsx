@@ -48,6 +48,7 @@ interface AccessUser {
   avatar_url?: string;
   shares: number;
   accessRole: 'none' | 'candidate' | 'shareholder';
+  isFounderOrAdmin?: boolean;
 }
 
 function StockMarketAccessManager() {
@@ -84,12 +85,10 @@ function StockMarketAccessManager() {
       const result: AccessUser[] = [];
       for (const u of allUsers) {
         const rolesArr = rolesByUserId[u.id] || [];
-
-        // Skip founders/admins from this list (they always have access)
-        if (rolesArr.includes('founder') || rolesArr.includes('admin')) continue;
+        const isFounderOrAdmin = rolesArr.includes('founder') || rolesArr.includes('admin');
 
         let accessRole: 'none' | 'candidate' | 'shareholder' = 'none';
-        if (rolesArr.includes('shareholder')) accessRole = 'shareholder';
+        if (isFounderOrAdmin || rolesArr.includes('shareholder')) accessRole = 'shareholder';
         else if (rolesArr.includes('candidate')) accessRole = 'candidate';
 
         result.push({
@@ -98,6 +97,7 @@ function StockMarketAccessManager() {
           avatar_url: u.avatar_url || undefined,
           shares: sharesByUserId[u.id] || 0,
           accessRole,
+          isFounderOrAdmin,
         });
       }
       setUsers(result);
@@ -206,29 +206,35 @@ function StockMarketAccessManager() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end flex-wrap">
-                        {u.accessRole !== 'candidate' && u.shares === 0 && (
-                          <Button size="sm" variant="outline" onClick={() => setAccess(u.id, 'candidate')}>
-                            <UserPlus className="h-3 w-3 mr-1" /> Кандидат
-                          </Button>
-                        )}
-                        {u.accessRole !== 'shareholder' && (
-                          <Button size="sm" variant="outline" onClick={() => setAccess(u.id, 'shareholder')}>
-                            <Shield className="h-3 w-3 mr-1" /> Акціонер
-                          </Button>
-                        )}
-                        {u.accessRole !== 'none' && (
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={u.shares > 0}
-                            title={u.shares > 0 ? 'Не можна забрати доступ у користувача, який володіє акціями' : undefined}
-                            onClick={() => setAccess(u.id, 'none')}
-                          >
-                            <UserMinus className="h-3 w-3 mr-1" /> Зняти
-                          </Button>
-                        )}
-                        {u.shares > 0 && u.accessRole !== 'none' && (
-                          <span className="text-xs text-muted-foreground ml-1 self-center">🔒 має акції</span>
+                        {u.isFounderOrAdmin ? (
+                          <span className="text-xs text-muted-foreground self-center">🛡️ Засновник / Адмін</span>
+                        ) : (
+                          <>
+                            {u.accessRole !== 'candidate' && u.shares === 0 && (
+                              <Button size="sm" variant="outline" onClick={() => setAccess(u.id, 'candidate')}>
+                                <UserPlus className="h-3 w-3 mr-1" /> Кандидат
+                              </Button>
+                            )}
+                            {u.accessRole !== 'shareholder' && (
+                              <Button size="sm" variant="outline" onClick={() => setAccess(u.id, 'shareholder')}>
+                                <Shield className="h-3 w-3 mr-1" /> Акціонер
+                              </Button>
+                            )}
+                            {u.accessRole !== 'none' && (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                disabled={u.shares > 0}
+                                title={u.shares > 0 ? 'Не можна забрати доступ у користувача, який володіє акціями' : undefined}
+                                onClick={() => setAccess(u.id, 'none')}
+                              >
+                                <UserMinus className="h-3 w-3 mr-1" /> Зняти
+                              </Button>
+                            )}
+                            {u.shares > 0 && u.accessRole !== 'none' && (
+                              <span className="text-xs text-muted-foreground ml-1 self-center">🔒 має акції</span>
+                            )}
+                          </>
                         )}
                       </div>
                     </TableCell>
