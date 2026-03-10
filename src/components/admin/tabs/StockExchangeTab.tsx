@@ -48,6 +48,7 @@ interface AccessUser {
   avatar_url?: string;
   shares: number;
   accessRole: 'none' | 'candidate' | 'shareholder';
+  isFounderOrAdmin?: boolean;
 }
 
 function StockMarketAccessManager() {
