@@ -366,28 +366,43 @@ export function AssetValuationTab() {
 
         {/* Item dialog */}
         <Dialog open={itemDialogOpen} onOpenChange={setItemDialogOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle>{editingItem ? "Редагувати" : "Додати"} майно</DialogTitle>
+              <DialogTitle className="text-xl">{editingItem ? "Редагувати" : "Додати"} майно</DialogTitle>
             </DialogHeader>
-            <div className="space-y-3">
-              <Input placeholder="Назва *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              <Textarea placeholder="Опис" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-              <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Назва *</label>
+                <Input className="h-11 text-base" placeholder="Назва майна" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Опис / примітка</label>
+                <Textarea className="min-h-[80px] text-base" placeholder="Додаткова інформація" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-muted-foreground">Кількість</label>
-                  <Input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Кількість</label>
+                  <Input className="h-11 text-base" type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground">Ціна за од. (грн)</label>
-                  <Input type="number" min="0" step="0.01" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} />
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Ціна за од. (грн)</label>
+                  <Input className="h-11 text-base" type="number" min="0" step="0.01" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+
+              {/* Auto-calculated subtotal */}
+              <div className="rounded-lg bg-muted/60 border border-border px-4 py-3 flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground">Підсумок по позиції:</span>
+                <span className="text-lg font-bold text-foreground">
+                  {((parseInt(form.quantity) || 0) * (parseFloat(form.unit_price) || 0)).toLocaleString("uk-UA")} грн
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-muted-foreground">Стан</label>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Стан</label>
                   <Select value={form.condition} onValueChange={(v) => setForm({ ...form, condition: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {Object.entries(CONDITION_LABELS).map(([k, v]) => (
                         <SelectItem key={k} value={k}>{v}</SelectItem>
@@ -396,13 +411,14 @@ export function AssetValuationTab() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground">Дата придбання</label>
-                  <Input type="date" value={form.acquired_at} onChange={(e) => setForm({ ...form, acquired_at: e.target.value })} />
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Дата придбання</label>
+                  <Input className="h-11" type="date" value={form.acquired_at} onChange={(e) => setForm({ ...form, acquired_at: e.target.value })} />
                 </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button onClick={handleSaveItem}>{editingItem ? "Зберегти" : "Додати"}</Button>
+            <DialogFooter className="mt-2">
+              <Button variant="outline" onClick={() => setItemDialogOpen(false)}>Скасувати</Button>
+              <Button size="lg" onClick={handleSaveItem}>{editingItem ? "Зберегти зміни" : "Додати майно"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
