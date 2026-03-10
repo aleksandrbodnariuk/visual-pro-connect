@@ -84,12 +84,10 @@ function StockMarketAccessManager() {
       const result: AccessUser[] = [];
       for (const u of allUsers) {
         const rolesArr = rolesByUserId[u.id] || [];
-
-        // Skip founders/admins from this list (they always have access)
-        if (rolesArr.includes('founder') || rolesArr.includes('admin')) continue;
+        const isFounderOrAdmin = rolesArr.includes('founder') || rolesArr.includes('admin');
 
         let accessRole: 'none' | 'candidate' | 'shareholder' = 'none';
-        if (rolesArr.includes('shareholder')) accessRole = 'shareholder';
+        if (isFounderOrAdmin || rolesArr.includes('shareholder')) accessRole = 'shareholder';
         else if (rolesArr.includes('candidate')) accessRole = 'candidate';
 
         result.push({
@@ -98,6 +96,7 @@ function StockMarketAccessManager() {
           avatar_url: u.avatar_url || undefined,
           shares: sharesByUserId[u.id] || 0,
           accessRole,
+          isFounderOrAdmin,
         });
       }
       setUsers(result);
