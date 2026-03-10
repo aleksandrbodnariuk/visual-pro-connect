@@ -686,9 +686,16 @@ export default function StockMarket() {
             {isShareholder && (
               <TabsContent value="my-offers">
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Мої пропозиції</CardTitle>
-                    <CardDescription>Ваші пропозиції на передачу акцій</CardDescription>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Мої пропозиції</CardTitle>
+                      <CardDescription>Ваші пропозиції на передачу акцій</CardDescription>
+                    </div>
+                    {myShares > 0 && (
+                      <Button onClick={() => { setSellSharesCount("1"); setSellNote(""); setOpenSellDialog(true); }}>
+                        <TrendingUp className="h-4 w-4 mr-2" /> Створити пропозицію
+                      </Button>
+                    )}
                   </CardHeader>
                   <CardContent>
                     {myOffers.length > 0 ? (
@@ -732,13 +739,7 @@ export default function StockMarket() {
                       <div className="text-center py-8">
                         <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
                         <h3 className="text-lg font-medium mb-1">У вас немає пропозицій</h3>
-                        {myShares > 0 ? (
-                          <Button className="mt-3" onClick={() => { setSellSharesCount("1"); setSellNote(""); setOpenSellDialog(true); }}>
-                            <TrendingUp className="h-4 w-4 mr-2" /> Створити пропозицію
-                          </Button>
-                        ) : (
-                          <p className="text-muted-foreground text-sm">У вас немає акцій для виставлення</p>
-                        )}
+                        <p className="text-muted-foreground text-sm">Створіть пропозицію за допомогою кнопки вище</p>
                       </div>
                     )}
                   </CardContent>
