@@ -253,7 +253,7 @@ export function AssetValuationTab() {
     const { error } = await supabase.from("asset_items").delete().eq("id", id);
     if (error) { toast.error("Помилка видалення"); return; }
     toast.success("Видалено");
-    fetchItems();
+    refreshAll();
   };
 
   /* ── render ── */
