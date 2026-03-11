@@ -404,7 +404,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Витрати:</span>
-                          <span>{(savedExpenses ?? 0).toFixed(2)} ₴</span>
+                          <span>{(savedExpenses ?? 0).toFixed(2)} $</span>
                         </div>
                         <Separator />
                         <div className="flex justify-between font-semibold">
