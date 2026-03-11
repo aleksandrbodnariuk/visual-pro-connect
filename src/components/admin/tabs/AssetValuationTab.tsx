@@ -425,7 +425,7 @@ export function AssetValuationTab() {
               <div className="rounded-lg bg-muted/60 border border-border px-4 py-3 flex items-center justify-between">
                 <span className="text-sm font-medium text-muted-foreground">Підсумок по позиції:</span>
                 <span className="text-lg font-bold text-foreground">
-                  {((parseInt(form.quantity) || 0) * (parseFloat(form.unit_price) || 0)).toLocaleString("uk-UA")} грн
+                  {((parseInt(form.quantity) || 0) * (parseFloat(form.unit_price) || 0)).toLocaleString("en-US")} $
                 </span>
               </div>
 
