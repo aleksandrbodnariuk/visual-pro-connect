@@ -227,7 +227,7 @@ export function OrdersTab() {
                     <div className="grid grid-cols-3 gap-2 text-sm pt-1">
                       <div>
                         <p className="text-xs text-muted-foreground">Сума</p>
-                        <p className="font-medium">{(order.amount ?? 0).toFixed(2)} ₴</p>
+                        <p className="font-medium">{(order.amount ?? 0).toFixed(2)} $</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Витрати</p>
