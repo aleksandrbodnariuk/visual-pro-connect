@@ -503,6 +503,28 @@ export function AssetValuationTab() {
             </div>
           </Card>
         )}
+
+        {/* ── Grand total + share price preview ── */}
+        <Card className="border-primary/30">
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Загальна вартість усього майна</p>
+                <p className="text-2xl font-bold text-foreground">{grandTotal.toLocaleString("en-US")} $</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Preview ціни акції (майно / {totalShares || "?"} акцій)</p>
+                {settingsLoading ? (
+                  <p className="text-lg text-muted-foreground">Завантаження...</p>
+                ) : previewSharePrice !== null ? (
+                  <p className="text-2xl font-bold text-primary">{previewSharePrice.toFixed(2)} $</p>
+                ) : (
+                  <p className="text-sm text-destructive">total_shares = 0 або не налаштовано</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
