@@ -379,7 +379,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                       <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm">
                         <span className="text-muted-foreground">Чистий прибуток:</span>
                         <span className="font-semibold text-primary">
-                          {previewNetProfit.toFixed(2)} ₴
+                          {previewNetProfit.toFixed(2)} $
                         </span>
                       </div>
                     )}
