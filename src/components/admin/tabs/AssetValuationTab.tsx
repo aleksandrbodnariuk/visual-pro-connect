@@ -245,7 +245,7 @@ export function AssetValuationTab() {
       toast.success("Додано");
     }
     setItemDialogOpen(false);
-    fetchItems();
+    refreshAll();
   };
 
   const handleDeleteItem = async (id: string) => {
