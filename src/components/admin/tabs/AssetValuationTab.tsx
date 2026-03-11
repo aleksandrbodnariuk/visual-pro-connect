@@ -386,7 +386,7 @@ export function AssetValuationTab() {
           {selectedCategoryId && (
             <div className="flex items-center gap-3">
               <Badge variant="outline" className="text-sm px-3 py-1">
-                Вартість: {totalValue.toLocaleString("uk-UA")} грн
+                Розділ: {totalValue.toLocaleString("en-US")} $
               </Badge>
               <Button size="default" onClick={openAddItem}>
                 <Plus className="h-4 w-4 mr-1" /> Додати майно
