@@ -63,7 +63,7 @@ interface Props {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function fmt(n: number) {
-  return n.toFixed(2) + " ₴";
+  return n.toFixed(2) + " $";
 }
 
 function InfoAlert({

@@ -204,8 +204,8 @@ export function ShareholdersTab() {
     if (shares <= 0) return "Акції не призначено";
     if (confirmedOrders.length === 0) return "Немає замовлень";
     const profit = profitForecasts[userId];
-    if (profit === undefined || profit === 0) return "0.00 ₴";
-    return `${profit.toFixed(2)} ₴`;
+    if (profit === undefined || profit === 0) return "0.00 $";
+    return `${profit.toFixed(2)} $`;
   };
 
   return (

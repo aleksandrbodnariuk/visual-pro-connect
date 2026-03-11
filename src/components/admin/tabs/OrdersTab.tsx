@@ -235,7 +235,7 @@ export function OrdersTab() {
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Чистий</p>
-                        <p className="font-semibold text-primary">{net.toFixed(2)} ₴</p>
+                        <p className="font-semibold text-primary">{net.toFixed(2)} $</p>
                       </div>
                     </div>
                     

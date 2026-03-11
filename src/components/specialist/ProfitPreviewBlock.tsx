@@ -67,7 +67,7 @@ function EmptyState({ message }: { message: string }) {
 }
 
 function fmt(n: number) {
-  return n.toFixed(2) + ' ₴';
+  return n.toFixed(2) + ' $';
 }
 
 // ─── Основний компонент ───────────────────────────────────────────────────────

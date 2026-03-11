@@ -409,7 +409,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                         <Separator />
                         <div className="flex justify-between font-semibold">
                           <span>Чистий прибуток:</span>
-                          <span className="text-primary">{netProfit.toFixed(2)} ₴</span>
+                          <span className="text-primary">{netProfit.toFixed(2)} $</span>
                         </div>
                         {savedFinancialNotes && (
                           <p className="text-xs text-muted-foreground pt-1">{savedFinancialNotes}</p>

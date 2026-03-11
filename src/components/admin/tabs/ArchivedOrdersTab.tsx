@@ -98,7 +98,7 @@ export function ArchivedOrdersTab() {
                   <p className="text-sm">{order.description}</p>
                   
                   <div className="flex justify-between items-center pt-2">
-                    <span className="font-semibold">{order.amount.toFixed(2)} грн</span>
+                    <span className="font-semibold">{order.amount.toFixed(2)} $</span>
                   </div>
                   
                   <div className="flex gap-2 pt-2">
