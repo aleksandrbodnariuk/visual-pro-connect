@@ -296,10 +296,14 @@ export function AssetValuationTab() {
 
                 <button
                   onClick={() => setSelectedCategoryId(cat.id)}
-                  className="flex-1 text-left px-2 py-3 text-sm font-medium truncate min-w-0"
+                  className="flex-1 text-left px-2 py-3 text-sm font-medium min-w-0"
                 >
-                  {cat.name}
-                  {!cat.is_active && <span className="ml-1 text-xs">(прихований)</span>}
+                  <span className="block truncate">{cat.name}{!cat.is_active && <span className="ml-1 text-xs">(прихований)</span>}</span>
+                  {categoryTotals[cat.id] > 0 && (
+                    <span className={`block text-xs mt-0.5 ${isSelected ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                      {categoryTotals[cat.id].toLocaleString("en-US")} $
+                    </span>
+                  )}
                 </button>
 
                 {/* Action buttons — visible on hover or when selected */}
