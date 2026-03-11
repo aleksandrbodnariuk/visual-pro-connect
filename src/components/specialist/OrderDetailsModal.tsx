@@ -353,7 +353,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                         />
                       </div>
                       <div>
-                        <Label className="text-xs">Витрати (₴)</Label>
+                        <Label className="text-xs">Витрати ($)</Label>
                         <Input
                           type="number"
                           min="0"
