@@ -60,7 +60,8 @@ export function AssetValuationTab() {
   const [loading, setLoading] = useState(true);
   const [showHidden, setShowHidden] = useState(false);
 
-  const { totalShares, loading: settingsLoading } = useCompanySettings();
+  const { totalShares, sharePriceUsd, loading: settingsLoading, updateSharePrice } = useCompanySettings();
+  const [applying, setApplying] = useState(false);
 
   // Category CRUD
   const [catDialogOpen, setCatDialogOpen] = useState(false);
