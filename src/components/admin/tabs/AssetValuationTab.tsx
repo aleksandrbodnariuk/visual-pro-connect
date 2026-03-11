@@ -18,7 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Pencil, Trash2, Package, FolderOpen, ChevronUp, ChevronDown,
-  EyeOff, Eye, GripVertical,
+  EyeOff, Eye, GripVertical, CheckCircle2,
 } from "lucide-react";
 
 /* ───── types ───── */
@@ -60,7 +60,8 @@ export function AssetValuationTab() {
   const [loading, setLoading] = useState(true);
   const [showHidden, setShowHidden] = useState(false);
 
-  const { totalShares, loading: settingsLoading } = useCompanySettings();
+  const { totalShares, sharePriceUsd, loading: settingsLoading, updateSharePrice } = useCompanySettings();
+  const [applying, setApplying] = useState(false);
 
   // Category CRUD
   const [catDialogOpen, setCatDialogOpen] = useState(false);
@@ -506,14 +507,14 @@ export function AssetValuationTab() {
 
         {/* ── Grand total + share price preview ── */}
         <Card className="border-primary/30">
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Загальна вартість усього майна</p>
                 <p className="text-2xl font-bold text-foreground">{grandTotal.toLocaleString("en-US")} $</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Preview ціни акції (майно / {totalShares || "?"} акцій)</p>
+                <p className="text-sm text-muted-foreground">Розрахована ціна акції (майно / {totalShares || "?"} акцій)</p>
                 {settingsLoading ? (
                   <p className="text-lg text-muted-foreground">Завантаження...</p>
                 ) : previewSharePrice !== null ? (
@@ -523,6 +524,36 @@ export function AssetValuationTab() {
                 )}
               </div>
             </div>
+
+            {/* Current vs calculated comparison + apply button */}
+            {!settingsLoading && previewSharePrice !== null && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg bg-muted/50 border border-border px-4 py-3">
+                <div className="text-sm space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Поточна ціна акції:</span>
+                    <span className="font-semibold">{sharePriceUsd.toFixed(2)} $</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Розрахована ціна:</span>
+                    <span className="font-semibold text-primary">{previewSharePrice.toFixed(2)} $</span>
+                  </div>
+                </div>
+                <Button
+                  onClick={async () => {
+                    if (!confirm(`Встановити нову ціну акції: ${previewSharePrice.toFixed(2)} $ (замість ${sharePriceUsd.toFixed(2)} $)?`)) return;
+                    setApplying(true);
+                    const ok = await updateSharePrice(previewSharePrice);
+                    setApplying(false);
+                    if (ok) toast.success(`Ціну акції оновлено: ${previewSharePrice.toFixed(2)} $`);
+                  }}
+                  disabled={applying}
+                  className="shrink-0"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  {applying ? "Збереження..." : "Застосувати розраховану ціну"}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
