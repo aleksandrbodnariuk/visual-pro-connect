@@ -126,7 +126,7 @@ export function OrdersTab() {
                   {calcNetProfit(
                     parseFloat(newOrderAmount) || 0,
                     parseFloat(newOrderExpenses) || 0
-                  ).toFixed(2)} ₴
+                  ).toFixed(2)} $
                 </span>
               </div>
             )}
