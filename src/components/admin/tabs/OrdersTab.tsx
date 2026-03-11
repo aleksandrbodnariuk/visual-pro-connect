@@ -108,7 +108,7 @@ export function OrdersTab() {
                 />
               </div>
               <div>
-                <Label htmlFor="expenses">Витрати (грн)</Label>
+                <Label htmlFor="expenses">Витрати ($)</Label>
                 <Input 
                   id="expenses" 
                   type="number" 
