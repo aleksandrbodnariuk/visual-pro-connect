@@ -41,7 +41,7 @@ export function ArchivedOrdersTab() {
                 <th className="text-left p-2">Дата створення</th>
                 <th className="text-left p-2">Дата архівації</th>
                 <th className="text-left p-2">Опис</th>
-                <th className="text-right p-2">Сума (грн)</th>
+                <th className="text-right p-2">Сума ($)</th>
                 <th className="text-left p-2">Дії</th>
               </tr>
             </thead>
