@@ -166,8 +166,8 @@ export function OrdersTab() {
                 <tr className="border-b">
                   <th className="text-left p-2">Дата</th>
                   <th className="text-left p-2">Опис</th>
-                  <th className="text-right p-2">Сума (грн)</th>
-                  <th className="text-right p-2">Витрати (грн)</th>
+                   <th className="text-right p-2">Сума ($)</th>
+                   <th className="text-right p-2">Витрати ($)</th>
                   <th className="text-right p-2 text-primary">Чистий прибуток</th>
                   <th className="text-left p-2">Статус</th>
                   <th className="text-left p-2">Дії</th>
