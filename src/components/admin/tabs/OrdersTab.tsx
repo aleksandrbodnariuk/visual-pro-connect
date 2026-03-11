@@ -62,7 +62,7 @@ export function OrdersTab() {
     setNewFinancialNotes("");
     
     const net = calcNetProfit(amount, expenses);
-    toast.success(`Замовлення додано. Чистий прибуток: ${net.toFixed(2)} ₴`);
+    toast.success(`Замовлення додано. Чистий прибуток: ${net.toFixed(2)} $`);
   };
   
   const deleteOrder = (orderId: string) => {
