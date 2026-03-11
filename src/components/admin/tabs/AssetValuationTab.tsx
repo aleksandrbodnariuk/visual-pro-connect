@@ -416,7 +416,7 @@ export function AssetValuationTab() {
                   <Input className="h-11 text-base" type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-1.5 block">Ціна за од. (грн)</label>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Ціна за од. ($)</label>
                   <Input className="h-11 text-base" type="number" min="0" step="0.01" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} />
                 </div>
               </div>
