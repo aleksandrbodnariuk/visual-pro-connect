@@ -231,7 +231,7 @@ export function OrdersTab() {
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Витрати</p>
-                        <p className="text-muted-foreground">{(order.expenses ?? 0).toFixed(2)} ₴</p>
+                        <p className="text-muted-foreground">{(order.expenses ?? 0).toFixed(2)} $</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Чистий</p>
