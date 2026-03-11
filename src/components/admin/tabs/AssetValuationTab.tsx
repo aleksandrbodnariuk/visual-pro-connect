@@ -55,9 +55,12 @@ const CONDITION_LABELS: Record<string, string> = {
 export function AssetValuationTab() {
   const [categories, setCategories] = useState<AssetCategory[]>([]);
   const [items, setItems] = useState<AssetItem[]>([]);
+  const [allItems, setAllItems] = useState<AssetItem[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showHidden, setShowHidden] = useState(false);
+
+  const { totalShares, loading: settingsLoading } = useCompanySettings();
 
   // Category CRUD
   const [catDialogOpen, setCatDialogOpen] = useState(false);
@@ -99,11 +102,34 @@ export function AssetValuationTab() {
     setLoading(false);
   }, [selectedCategoryId]);
 
-  useEffect(() => { fetchCategories(); }, []);
+  const fetchAllItems = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("asset_items")
+      .select("*");
+    if (error) { console.error(error); return; }
+    setAllItems((data || []) as AssetItem[]);
+  }, []);
+
+  useEffect(() => { fetchCategories(); fetchAllItems(); }, []);
   useEffect(() => { fetchItems(); }, [selectedCategoryId]);
+
+  // Refresh allItems when items change (after add/edit/delete)
+  const refreshAll = () => { fetchItems(); fetchAllItems(); };
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
   const totalValue = items.reduce((s, i) => s + Number(i.total_price || 0), 0);
+  const grandTotal = allItems.reduce((s, i) => s + Number(i.total_price || 0), 0);
+
+  // Per-category totals
+  const categoryTotals = categories.reduce<Record<string, number>>((acc, cat) => {
+    acc[cat.id] = allItems
+      .filter((i) => i.category_id === cat.id)
+      .reduce((s, i) => s + Number(i.total_price || 0), 0);
+    return acc;
+  }, {});
+
+  // Share price preview
+  const previewSharePrice = totalShares > 0 ? grandTotal / totalShares : null;
 
   const visibleCategories = showHidden ? categories : categories.filter((c) => c.is_active);
 
