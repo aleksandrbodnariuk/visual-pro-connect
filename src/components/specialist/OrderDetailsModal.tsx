@@ -342,7 +342,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                   <div className="space-y-3 rounded-lg border p-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label className="text-xs">Сума замовлення (₴)</Label>
+                        <Label className="text-xs">Сума замовлення ($)</Label>
                         <Input
                           type="number"
                           min="0"
@@ -353,7 +353,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                         />
                       </div>
                       <div>
-                        <Label className="text-xs">Витрати (₴)</Label>
+                        <Label className="text-xs">Витрати ($)</Label>
                         <Input
                           type="number"
                           min="0"
@@ -379,7 +379,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                       <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm">
                         <span className="text-muted-foreground">Чистий прибуток:</span>
                         <span className="font-semibold text-primary">
-                          {previewNetProfit.toFixed(2)} ₴
+                          {previewNetProfit.toFixed(2)} $
                         </span>
                       </div>
                     )}
@@ -400,16 +400,16 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                       <>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Сума замовлення:</span>
-                          <span>{(savedAmount ?? 0).toFixed(2)} ₴</span>
+                          <span>{(savedAmount ?? 0).toFixed(2)} $</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Витрати:</span>
-                          <span>{(savedExpenses ?? 0).toFixed(2)} ₴</span>
+                          <span>{(savedExpenses ?? 0).toFixed(2)} $</span>
                         </div>
                         <Separator />
                         <div className="flex justify-between font-semibold">
                           <span>Чистий прибуток:</span>
-                          <span className="text-primary">{netProfit.toFixed(2)} ₴</span>
+                          <span className="text-primary">{netProfit.toFixed(2)} $</span>
                         </div>
                         {savedFinancialNotes && (
                           <p className="text-xs text-muted-foreground pt-1">{savedFinancialNotes}</p>

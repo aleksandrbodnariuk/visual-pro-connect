@@ -41,7 +41,7 @@ export function ArchivedOrdersTab() {
                 <th className="text-left p-2">Дата створення</th>
                 <th className="text-left p-2">Дата архівації</th>
                 <th className="text-left p-2">Опис</th>
-                <th className="text-right p-2">Сума (грн)</th>
+                <th className="text-right p-2">Сума ($)</th>
                 <th className="text-left p-2">Дії</th>
               </tr>
             </thead>
@@ -98,7 +98,7 @@ export function ArchivedOrdersTab() {
                   <p className="text-sm">{order.description}</p>
                   
                   <div className="flex justify-between items-center pt-2">
-                    <span className="font-semibold">{order.amount.toFixed(2)} грн</span>
+                    <span className="font-semibold">{order.amount.toFixed(2)} $</span>
                   </div>
                   
                   <div className="flex gap-2 pt-2">

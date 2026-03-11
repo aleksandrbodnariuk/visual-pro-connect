@@ -57,7 +57,7 @@ export function OrderList({ orders, selectedDate, onSelectOrder, selectedOrderId
             </div>
             {order.price != null && (
               <span className="text-sm font-semibold text-primary whitespace-nowrap">
-                {order.price} ₴
+                {order.price} $
               </span>
             )}
           </div>

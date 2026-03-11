@@ -48,7 +48,7 @@ interface Snapshot {
 }
 
 function fmtUah(n: number) {
-  return n.toFixed(2) + " ₴";
+  return n.toFixed(2) + " $";
 }
 
 function fmtUsd(n: number) {

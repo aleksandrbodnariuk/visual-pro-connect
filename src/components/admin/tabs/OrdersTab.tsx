@@ -62,7 +62,7 @@ export function OrdersTab() {
     setNewFinancialNotes("");
     
     const net = calcNetProfit(amount, expenses);
-    toast.success(`Замовлення додано. Чистий прибуток: ${net.toFixed(2)} ₴`);
+    toast.success(`Замовлення додано. Чистий прибуток: ${net.toFixed(2)} $`);
   };
   
   const deleteOrder = (orderId: string) => {
@@ -98,7 +98,7 @@ export function OrdersTab() {
           <div className="grid gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="amount">Сума замовлення (грн)</Label>
+                <Label htmlFor="amount">Сума замовлення ($)</Label>
                 <Input 
                   id="amount" 
                   type="number" 
@@ -108,7 +108,7 @@ export function OrdersTab() {
                 />
               </div>
               <div>
-                <Label htmlFor="expenses">Витрати (грн)</Label>
+                <Label htmlFor="expenses">Витрати ($)</Label>
                 <Input 
                   id="expenses" 
                   type="number" 
@@ -126,7 +126,7 @@ export function OrdersTab() {
                   {calcNetProfit(
                     parseFloat(newOrderAmount) || 0,
                     parseFloat(newOrderExpenses) || 0
-                  ).toFixed(2)} ₴
+                  ).toFixed(2)} $
                 </span>
               </div>
             )}
@@ -166,8 +166,8 @@ export function OrdersTab() {
                 <tr className="border-b">
                   <th className="text-left p-2">Дата</th>
                   <th className="text-left p-2">Опис</th>
-                  <th className="text-right p-2">Сума (грн)</th>
-                  <th className="text-right p-2">Витрати (грн)</th>
+                   <th className="text-right p-2">Сума ($)</th>
+                   <th className="text-right p-2">Витрати ($)</th>
                   <th className="text-right p-2 text-primary">Чистий прибуток</th>
                   <th className="text-left p-2">Статус</th>
                   <th className="text-left p-2">Дії</th>
@@ -227,15 +227,15 @@ export function OrdersTab() {
                     <div className="grid grid-cols-3 gap-2 text-sm pt-1">
                       <div>
                         <p className="text-xs text-muted-foreground">Сума</p>
-                        <p className="font-medium">{(order.amount ?? 0).toFixed(2)} ₴</p>
+                        <p className="font-medium">{(order.amount ?? 0).toFixed(2)} $</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Витрати</p>
-                        <p className="text-muted-foreground">{(order.expenses ?? 0).toFixed(2)} ₴</p>
+                        <p className="text-muted-foreground">{(order.expenses ?? 0).toFixed(2)} $</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Чистий</p>
-                        <p className="font-semibold text-primary">{net.toFixed(2)} ₴</p>
+                        <p className="font-semibold text-primary">{net.toFixed(2)} $</p>
                       </div>
                     </div>
                     

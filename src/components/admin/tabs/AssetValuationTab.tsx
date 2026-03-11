@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -54,9 +55,12 @@ const CONDITION_LABELS: Record<string, string> = {
 export function AssetValuationTab() {
   const [categories, setCategories] = useState<AssetCategory[]>([]);
   const [items, setItems] = useState<AssetItem[]>([]);
+  const [allItems, setAllItems] = useState<AssetItem[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showHidden, setShowHidden] = useState(false);
+
+  const { totalShares, loading: settingsLoading } = useCompanySettings();
 
   // Category CRUD
   const [catDialogOpen, setCatDialogOpen] = useState(false);
@@ -98,11 +102,34 @@ export function AssetValuationTab() {
     setLoading(false);
   }, [selectedCategoryId]);
 
-  useEffect(() => { fetchCategories(); }, []);
+  const fetchAllItems = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("asset_items")
+      .select("*");
+    if (error) { console.error(error); return; }
+    setAllItems((data || []) as AssetItem[]);
+  }, []);
+
+  useEffect(() => { fetchCategories(); fetchAllItems(); }, []);
   useEffect(() => { fetchItems(); }, [selectedCategoryId]);
+
+  // Refresh allItems when items change (after add/edit/delete)
+  const refreshAll = () => { fetchItems(); fetchAllItems(); };
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
   const totalValue = items.reduce((s, i) => s + Number(i.total_price || 0), 0);
+  const grandTotal = allItems.reduce((s, i) => s + Number(i.total_price || 0), 0);
+
+  // Per-category totals
+  const categoryTotals = categories.reduce<Record<string, number>>((acc, cat) => {
+    acc[cat.id] = allItems
+      .filter((i) => i.category_id === cat.id)
+      .reduce((s, i) => s + Number(i.total_price || 0), 0);
+    return acc;
+  }, {});
+
+  // Share price preview
+  const previewSharePrice = totalShares > 0 ? grandTotal / totalShares : null;
 
   const visibleCategories = showHidden ? categories : categories.filter((c) => c.is_active);
 
@@ -218,7 +245,7 @@ export function AssetValuationTab() {
       toast.success("Додано");
     }
     setItemDialogOpen(false);
-    fetchItems();
+    refreshAll();
   };
 
   const handleDeleteItem = async (id: string) => {
@@ -226,7 +253,7 @@ export function AssetValuationTab() {
     const { error } = await supabase.from("asset_items").delete().eq("id", id);
     if (error) { toast.error("Помилка видалення"); return; }
     toast.success("Видалено");
-    fetchItems();
+    refreshAll();
   };
 
   /* ── render ── */
@@ -269,10 +296,14 @@ export function AssetValuationTab() {
 
                 <button
                   onClick={() => setSelectedCategoryId(cat.id)}
-                  className="flex-1 text-left px-2 py-3 text-sm font-medium truncate min-w-0"
+                  className="flex-1 text-left px-2 py-3 text-sm font-medium min-w-0"
                 >
-                  {cat.name}
-                  {!cat.is_active && <span className="ml-1 text-xs">(прихований)</span>}
+                  <span className="block truncate">{cat.name}{!cat.is_active && <span className="ml-1 text-xs">(прихований)</span>}</span>
+                  {categoryTotals[cat.id] > 0 && (
+                    <span className={`block text-xs mt-0.5 ${isSelected ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                      {categoryTotals[cat.id].toLocaleString("en-US")} $
+                    </span>
+                  )}
                 </button>
 
                 {/* Action buttons — visible on hover or when selected */}
@@ -355,7 +386,7 @@ export function AssetValuationTab() {
           {selectedCategoryId && (
             <div className="flex items-center gap-3">
               <Badge variant="outline" className="text-sm px-3 py-1">
-                Вартість: {totalValue.toLocaleString("uk-UA")} грн
+                Розділ: {totalValue.toLocaleString("en-US")} $
               </Badge>
               <Button size="default" onClick={openAddItem}>
                 <Plus className="h-4 w-4 mr-1" /> Додати майно
@@ -385,7 +416,7 @@ export function AssetValuationTab() {
                   <Input className="h-11 text-base" type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-1.5 block">Ціна за од. (грн)</label>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Ціна за од. ($)</label>
                   <Input className="h-11 text-base" type="number" min="0" step="0.01" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} />
                 </div>
               </div>
@@ -394,7 +425,7 @@ export function AssetValuationTab() {
               <div className="rounded-lg bg-muted/60 border border-border px-4 py-3 flex items-center justify-between">
                 <span className="text-sm font-medium text-muted-foreground">Підсумок по позиції:</span>
                 <span className="text-lg font-bold text-foreground">
-                  {((parseInt(form.quantity) || 0) * (parseFloat(form.unit_price) || 0)).toLocaleString("uk-UA")} грн
+                  {((parseInt(form.quantity) || 0) * (parseFloat(form.unit_price) || 0)).toLocaleString("en-US")} $
                 </span>
               </div>
 
@@ -472,6 +503,28 @@ export function AssetValuationTab() {
             </div>
           </Card>
         )}
+
+        {/* ── Grand total + share price preview ── */}
+        <Card className="border-primary/30">
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Загальна вартість усього майна</p>
+                <p className="text-2xl font-bold text-foreground">{grandTotal.toLocaleString("en-US")} $</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Preview ціни акції (майно / {totalShares || "?"} акцій)</p>
+                {settingsLoading ? (
+                  <p className="text-lg text-muted-foreground">Завантаження...</p>
+                ) : previewSharePrice !== null ? (
+                  <p className="text-2xl font-bold text-primary">{previewSharePrice.toFixed(2)} $</p>
+                ) : (
+                  <p className="text-sm text-destructive">total_shares = 0 або не налаштовано</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
