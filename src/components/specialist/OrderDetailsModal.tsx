@@ -342,7 +342,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                   <div className="space-y-3 rounded-lg border p-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label className="text-xs">Сума замовлення (₴)</Label>
+                        <Label className="text-xs">Сума замовлення ($)</Label>
                         <Input
                           type="number"
                           min="0"
