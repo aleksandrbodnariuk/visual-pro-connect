@@ -18,7 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Pencil, Trash2, Package, FolderOpen, ChevronUp, ChevronDown,
-  EyeOff, Eye, GripVertical,
+  EyeOff, Eye, GripVertical, CheckCircle2,
 } from "lucide-react";
 
 /* ───── types ───── */
