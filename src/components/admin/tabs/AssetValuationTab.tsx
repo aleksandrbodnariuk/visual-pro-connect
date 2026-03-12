@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -18,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Pencil, Trash2, Package, FolderOpen, ChevronUp, ChevronDown,
-  EyeOff, Eye, GripVertical, CheckCircle2,
+  EyeOff, Eye, GripVertical, CheckCircle2, RefreshCw,
 } from "lucide-react";
 
 /* ───── types ───── */
