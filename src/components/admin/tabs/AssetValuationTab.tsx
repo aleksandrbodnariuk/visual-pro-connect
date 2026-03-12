@@ -209,7 +209,7 @@ export function AssetValuationTab() {
     setAllItems((data || []) as AssetItem[]);
   }, []);
 
-  useEffect(() => { fetchCategories(); fetchAllItems(); fetchAutoUpdateSetting(); }, []);
+  useEffect(() => { fetchCategories(); fetchAllItems(); fetchAutoUpdateSetting(); fetchSnapshots(); }, []);
   useEffect(() => { fetchItems(); }, [selectedCategoryId]);
 
   // Refresh allItems when items change (after add/edit/delete) + auto-update price
