@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -18,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Pencil, Trash2, Package, FolderOpen, ChevronUp, ChevronDown,
-  EyeOff, Eye, GripVertical, CheckCircle2,
+  EyeOff, Eye, GripVertical, CheckCircle2, RefreshCw,
 } from "lucide-react";
 
 /* ───── types ───── */
@@ -60,8 +61,49 @@ export function AssetValuationTab() {
   const [loading, setLoading] = useState(true);
   const [showHidden, setShowHidden] = useState(false);
 
-  const { totalShares, sharePriceUsd, loading: settingsLoading, updateSharePrice } = useCompanySettings();
+  const { totalShares, sharePriceUsd, loading: settingsLoading, updateSharePrice, refetch: refetchSettings } = useCompanySettings();
   const [applying, setApplying] = useState(false);
+  const [autoUpdate, setAutoUpdate] = useState(false);
+  const [autoUpdateLoading, setAutoUpdateLoading] = useState(true);
+
+  /* ── auto-update setting (persisted in site_settings) ── */
+
+  const fetchAutoUpdateSetting = useCallback(async () => {
+    const { data } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("id", "auto_update_share_price")
+      .maybeSingle();
+    setAutoUpdate(data?.value === "true");
+    setAutoUpdateLoading(false);
+  }, []);
+
+  const toggleAutoUpdate = async (checked: boolean) => {
+    setAutoUpdate(checked);
+    const { error } = await supabase
+      .from("site_settings")
+      .upsert({ id: "auto_update_share_price", value: String(checked), updated_at: new Date().toISOString() });
+    if (error) {
+      console.error(error);
+      toast.error("Не вдалося зберегти налаштування");
+      setAutoUpdate(!checked);
+      return;
+    }
+    toast.success(checked ? "Автооновлення ціни акції увімкнено" : "Автооновлення ціни акції вимкнено");
+  };
+
+  /** Recalculate and apply share price if auto-update is on */
+  const maybeAutoUpdatePrice = useCallback(async () => {
+    if (!autoUpdate) return;
+    if (totalShares <= 0) return;
+    // Fetch fresh total from DB
+    const { data, error } = await supabase.from("asset_items").select("total_price");
+    if (error) { console.error(error); return; }
+    const freshTotal = (data || []).reduce((s, i) => s + Number(i.total_price || 0), 0);
+    const newPrice = freshTotal / totalShares;
+    await updateSharePrice(newPrice);
+    refetchSettings();
+  }, [autoUpdate, totalShares, updateSharePrice, refetchSettings]);
 
   // Category CRUD
   const [catDialogOpen, setCatDialogOpen] = useState(false);
@@ -111,11 +153,15 @@ export function AssetValuationTab() {
     setAllItems((data || []) as AssetItem[]);
   }, []);
 
-  useEffect(() => { fetchCategories(); fetchAllItems(); }, []);
+  useEffect(() => { fetchCategories(); fetchAllItems(); fetchAutoUpdateSetting(); }, []);
   useEffect(() => { fetchItems(); }, [selectedCategoryId]);
 
-  // Refresh allItems when items change (after add/edit/delete)
-  const refreshAll = () => { fetchItems(); fetchAllItems(); };
+  // Refresh allItems when items change (after add/edit/delete) + auto-update price
+  const refreshAll = async () => {
+    await Promise.all([fetchItems(), fetchAllItems()]);
+    // Auto-update runs after fresh data is loaded
+    await maybeAutoUpdatePrice();
+  };
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
   const totalValue = items.reduce((s, i) => s + Number(i.total_price || 0), 0);
@@ -505,6 +551,30 @@ export function AssetValuationTab() {
           </Card>
         )}
 
+        {/* ── Auto-update toggle ── */}
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Автоматично оновлювати офіційну ціну акції при зміні майна</span>
+                </div>
+                <p className="text-xs text-muted-foreground ml-6">
+                  {autoUpdate
+                    ? "Ціна акції оновлюється автоматично після кожної зміни майна"
+                    : "Ціна акції оновлюється тільки вручну через кнопку нижче"}
+                </p>
+              </div>
+              <Switch
+                checked={autoUpdate}
+                onCheckedChange={toggleAutoUpdate}
+                disabled={autoUpdateLoading}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* ── Grand total + share price preview ── */}
         <Card className="border-primary/30">
           <CardContent className="pt-6 space-y-4">
@@ -525,7 +595,7 @@ export function AssetValuationTab() {
               </div>
             </div>
 
-            {/* Current vs calculated comparison + apply button */}
+            {/* Current vs calculated comparison + manual apply button (only when auto-update is OFF) */}
             {!settingsLoading && previewSharePrice !== null && (
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg bg-muted/50 border border-border px-4 py-3">
                 <div className="text-sm space-y-1">
@@ -537,21 +607,28 @@ export function AssetValuationTab() {
                     <span className="text-muted-foreground">Розрахована ціна:</span>
                     <span className="font-semibold text-primary">{previewSharePrice.toFixed(2)} $</span>
                   </div>
+                  {autoUpdate && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      ⚡ Автооновлення увімкнено — ціна синхронізується автоматично
+                    </p>
+                  )}
                 </div>
-                <Button
-                  onClick={async () => {
-                    if (!confirm(`Встановити нову ціну акції: ${previewSharePrice.toFixed(2)} $ (замість ${sharePriceUsd.toFixed(2)} $)?`)) return;
-                    setApplying(true);
-                    const ok = await updateSharePrice(previewSharePrice);
-                    setApplying(false);
-                    if (ok) toast.success(`Ціну акції оновлено: ${previewSharePrice.toFixed(2)} $`);
-                  }}
-                  disabled={applying}
-                  className="shrink-0"
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  {applying ? "Збереження..." : "Застосувати розраховану ціну"}
-                </Button>
+                {!autoUpdate && (
+                  <Button
+                    onClick={async () => {
+                      if (!confirm(`Встановити нову ціну акції: ${previewSharePrice.toFixed(2)} $ (замість ${sharePriceUsd.toFixed(2)} $)?`)) return;
+                      setApplying(true);
+                      const ok = await updateSharePrice(previewSharePrice);
+                      setApplying(false);
+                      if (ok) toast.success(`Ціну акції оновлено: ${previewSharePrice.toFixed(2)} $`);
+                    }}
+                    disabled={applying}
+                    className="shrink-0"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    {applying ? "Збереження..." : "Застосувати розраховану ціну"}
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
