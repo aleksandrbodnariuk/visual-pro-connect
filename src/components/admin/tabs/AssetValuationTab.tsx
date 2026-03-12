@@ -61,8 +61,49 @@ export function AssetValuationTab() {
   const [loading, setLoading] = useState(true);
   const [showHidden, setShowHidden] = useState(false);
 
-  const { totalShares, sharePriceUsd, loading: settingsLoading, updateSharePrice } = useCompanySettings();
+  const { totalShares, sharePriceUsd, loading: settingsLoading, updateSharePrice, refetch: refetchSettings } = useCompanySettings();
   const [applying, setApplying] = useState(false);
+  const [autoUpdate, setAutoUpdate] = useState(false);
+  const [autoUpdateLoading, setAutoUpdateLoading] = useState(true);
+
+  /* ── auto-update setting (persisted in site_settings) ── */
+
+  const fetchAutoUpdateSetting = useCallback(async () => {
+    const { data } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("id", "auto_update_share_price")
+      .maybeSingle();
+    setAutoUpdate(data?.value === "true");
+    setAutoUpdateLoading(false);
+  }, []);
+
+  const toggleAutoUpdate = async (checked: boolean) => {
+    setAutoUpdate(checked);
+    const { error } = await supabase
+      .from("site_settings")
+      .upsert({ id: "auto_update_share_price", value: String(checked), updated_at: new Date().toISOString() });
+    if (error) {
+      console.error(error);
+      toast.error("Не вдалося зберегти налаштування");
+      setAutoUpdate(!checked);
+      return;
+    }
+    toast.success(checked ? "Автооновлення ціни акції увімкнено" : "Автооновлення ціни акції вимкнено");
+  };
+
+  /** Recalculate and apply share price if auto-update is on */
+  const maybeAutoUpdatePrice = useCallback(async () => {
+    if (!autoUpdate) return;
+    if (totalShares <= 0) return;
+    // Fetch fresh total from DB
+    const { data, error } = await supabase.from("asset_items").select("total_price");
+    if (error) { console.error(error); return; }
+    const freshTotal = (data || []).reduce((s, i) => s + Number(i.total_price || 0), 0);
+    const newPrice = freshTotal / totalShares;
+    await updateSharePrice(newPrice);
+    refetchSettings();
+  }, [autoUpdate, totalShares, updateSharePrice, refetchSettings]);
 
   // Category CRUD
   const [catDialogOpen, setCatDialogOpen] = useState(false);
