@@ -44,6 +44,16 @@ interface AssetItem {
   created_at: string;
 }
 
+interface ValuationSnapshot {
+  id: string;
+  label: string;
+  total_asset_value: number;
+  total_shares: number;
+  calculated_share_price: number;
+  notes: string | null;
+  created_at: string;
+}
+
 const CONDITION_LABELS: Record<string, string> = {
   excellent: "Відмінний",
   good: "Добрий",
