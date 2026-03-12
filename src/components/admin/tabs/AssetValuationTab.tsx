@@ -115,6 +115,52 @@ export function AssetValuationTab() {
     refetchSettings();
   }, [autoUpdate, totalShares, updateSharePrice, refetchSettings]);
 
+  // Valuation history
+  const [snapshots, setSnapshots] = useState<ValuationSnapshot[]>([]);
+  const [snapshotLabel, setSnapshotLabel] = useState(`Оцінка ${new Date().getFullYear()}`);
+  const [snapshotNotes, setSnapshotNotes] = useState("");
+  const [savingSnapshot, setSavingSnapshot] = useState(false);
+
+  const fetchSnapshots = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("asset_valuation_snapshots")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) { console.error(error); return; }
+    setSnapshots((data || []) as ValuationSnapshot[]);
+  }, []);
+
+  const handleSaveSnapshot = async () => {
+    if (grandTotal <= 0 && totalShares <= 0) {
+      toast.error("Немає даних для збереження");
+      return;
+    }
+    const price = totalShares > 0 ? grandTotal / totalShares : 0;
+    if (!confirm(`Зберегти оцінку "${snapshotLabel.trim()}" (вартість: ${grandTotal.toLocaleString("en-US")} $, ціна акції: ${price.toFixed(2)} $)?`)) return;
+    setSavingSnapshot(true);
+    const { error } = await supabase.from("asset_valuation_snapshots").insert({
+      label: snapshotLabel.trim() || `Оцінка ${new Date().getFullYear()}`,
+      total_asset_value: grandTotal,
+      total_shares: totalShares,
+      calculated_share_price: price,
+      notes: snapshotNotes.trim() || null,
+      created_by: (await supabase.auth.getSession()).data.session?.user?.id || null,
+    });
+    setSavingSnapshot(false);
+    if (error) { toast.error("Помилка збереження"); console.error(error); return; }
+    toast.success("Оцінку збережено в історію");
+    setSnapshotNotes("");
+    fetchSnapshots();
+  };
+
+  const handleDeleteSnapshot = async (id: string) => {
+    if (!confirm("Видалити цей запис з історії?")) return;
+    const { error } = await supabase.from("asset_valuation_snapshots").delete().eq("id", id);
+    if (error) { toast.error("Помилка видалення"); return; }
+    toast.success("Запис видалено");
+    fetchSnapshots();
+  };
+
   // Category CRUD
   const [catDialogOpen, setCatDialogOpen] = useState(false);
   const [editingCat, setEditingCat] = useState<AssetCategory | null>(null);
