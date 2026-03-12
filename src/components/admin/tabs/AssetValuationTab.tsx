@@ -153,11 +153,15 @@ export function AssetValuationTab() {
     setAllItems((data || []) as AssetItem[]);
   }, []);
 
-  useEffect(() => { fetchCategories(); fetchAllItems(); }, []);
+  useEffect(() => { fetchCategories(); fetchAllItems(); fetchAutoUpdateSetting(); }, []);
   useEffect(() => { fetchItems(); }, [selectedCategoryId]);
 
-  // Refresh allItems when items change (after add/edit/delete)
-  const refreshAll = () => { fetchItems(); fetchAllItems(); };
+  // Refresh allItems when items change (after add/edit/delete) + auto-update price
+  const refreshAll = async () => {
+    await Promise.all([fetchItems(), fetchAllItems()]);
+    // Auto-update runs after fresh data is loaded
+    await maybeAutoUpdatePrice();
+  };
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
   const totalValue = items.reduce((s, i) => s + Number(i.total_price || 0), 0);
