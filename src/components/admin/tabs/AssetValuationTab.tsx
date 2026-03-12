@@ -19,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Pencil, Trash2, Package, FolderOpen, ChevronUp, ChevronDown,
-  EyeOff, Eye, GripVertical, CheckCircle2, RefreshCw,
+  EyeOff, Eye, GripVertical, CheckCircle2, RefreshCw, History, Save, CalendarDays,
 } from "lucide-react";
 
 /* ───── types ───── */
@@ -41,6 +41,16 @@ interface AssetItem {
   total_price: number;
   condition: string | null;
   acquired_at: string | null;
+  created_at: string;
+}
+
+interface ValuationSnapshot {
+  id: string;
+  label: string;
+  total_asset_value: number;
+  total_shares: number;
+  calculated_share_price: number;
+  notes: string | null;
   created_at: string;
 }
 
@@ -105,6 +115,52 @@ export function AssetValuationTab() {
     refetchSettings();
   }, [autoUpdate, totalShares, updateSharePrice, refetchSettings]);
 
+  // Valuation history
+  const [snapshots, setSnapshots] = useState<ValuationSnapshot[]>([]);
+  const [snapshotLabel, setSnapshotLabel] = useState(`Оцінка ${new Date().getFullYear()}`);
+  const [snapshotNotes, setSnapshotNotes] = useState("");
+  const [savingSnapshot, setSavingSnapshot] = useState(false);
+
+  const fetchSnapshots = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("asset_valuation_snapshots")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) { console.error(error); return; }
+    setSnapshots((data || []) as ValuationSnapshot[]);
+  }, []);
+
+  const handleSaveSnapshot = async () => {
+    if (grandTotal <= 0 && totalShares <= 0) {
+      toast.error("Немає даних для збереження");
+      return;
+    }
+    const price = totalShares > 0 ? grandTotal / totalShares : 0;
+    if (!confirm(`Зберегти оцінку "${snapshotLabel.trim()}" (вартість: ${grandTotal.toLocaleString("en-US")} $, ціна акції: ${price.toFixed(2)} $)?`)) return;
+    setSavingSnapshot(true);
+    const { error } = await supabase.from("asset_valuation_snapshots").insert({
+      label: snapshotLabel.trim() || `Оцінка ${new Date().getFullYear()}`,
+      total_asset_value: grandTotal,
+      total_shares: totalShares,
+      calculated_share_price: price,
+      notes: snapshotNotes.trim() || null,
+      created_by: (await supabase.auth.getSession()).data.session?.user?.id || null,
+    });
+    setSavingSnapshot(false);
+    if (error) { toast.error("Помилка збереження"); console.error(error); return; }
+    toast.success("Оцінку збережено в історію");
+    setSnapshotNotes("");
+    fetchSnapshots();
+  };
+
+  const handleDeleteSnapshot = async (id: string) => {
+    if (!confirm("Видалити цей запис з історії?")) return;
+    const { error } = await supabase.from("asset_valuation_snapshots").delete().eq("id", id);
+    if (error) { toast.error("Помилка видалення"); return; }
+    toast.success("Запис видалено");
+    fetchSnapshots();
+  };
+
   // Category CRUD
   const [catDialogOpen, setCatDialogOpen] = useState(false);
   const [editingCat, setEditingCat] = useState<AssetCategory | null>(null);
@@ -153,7 +209,7 @@ export function AssetValuationTab() {
     setAllItems((data || []) as AssetItem[]);
   }, []);
 
-  useEffect(() => { fetchCategories(); fetchAllItems(); fetchAutoUpdateSetting(); }, []);
+  useEffect(() => { fetchCategories(); fetchAllItems(); fetchAutoUpdateSetting(); fetchSnapshots(); }, []);
   useEffect(() => { fetchItems(); }, [selectedCategoryId]);
 
   // Refresh allItems when items change (after add/edit/delete) + auto-update price
@@ -630,6 +686,91 @@ export function AssetValuationTab() {
                   </Button>
                 )}
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Valuation History ── */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <History className="h-5 w-5" /> Історія щорічних оцінок майна
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Save new snapshot */}
+            <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+              <p className="text-sm font-medium flex items-center gap-2">
+                <CalendarDays className="h-4 w-4" /> Зберегти поточну оцінку
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Назва / рік</label>
+                  <Input
+                    value={snapshotLabel}
+                    onChange={(e) => setSnapshotLabel(e.target.value)}
+                    placeholder={`Оцінка ${new Date().getFullYear()}`}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Примітка (необов'язково)</label>
+                  <Input
+                    value={snapshotNotes}
+                    onChange={(e) => setSnapshotNotes(e.target.value)}
+                    placeholder="Додаткова інформація"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="text-xs text-muted-foreground space-y-0.5">
+                  <p>Вартість: <span className="font-semibold text-foreground">{grandTotal.toLocaleString("en-US")} $</span></p>
+                  <p>Акцій: <span className="font-semibold text-foreground">{totalShares}</span> | Ціна: <span className="font-semibold text-foreground">{previewSharePrice !== null ? `${previewSharePrice.toFixed(2)} $` : "—"}</span></p>
+                </div>
+                <Button onClick={handleSaveSnapshot} disabled={savingSnapshot || grandTotal <= 0}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {savingSnapshot ? "Збереження..." : "Зберегти оцінку року"}
+                </Button>
+              </div>
+            </div>
+
+            {/* History table */}
+            {snapshots.length > 0 ? (
+              <div className="overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Дата</TableHead>
+                      <TableHead>Назва</TableHead>
+                      <TableHead className="text-right">Вартість майна</TableHead>
+                      <TableHead className="text-right">Акцій</TableHead>
+                      <TableHead className="text-right">Ціна акції</TableHead>
+                      <TableHead className="hidden sm:table-cell">Примітка</TableHead>
+                      <TableHead className="w-12"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {snapshots.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell className="text-sm whitespace-nowrap">
+                          {new Date(s.created_at).toLocaleDateString("uk-UA")}
+                        </TableCell>
+                        <TableCell className="font-medium">{s.label}</TableCell>
+                        <TableCell className="text-right">{Number(s.total_asset_value).toLocaleString("en-US")} $</TableCell>
+                        <TableCell className="text-right">{s.total_shares}</TableCell>
+                        <TableCell className="text-right font-semibold">{Number(s.calculated_share_price).toFixed(2)} $</TableCell>
+                        <TableCell className="hidden sm:table-cell text-xs text-muted-foreground max-w-[200px] truncate">{s.notes}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteSnapshot(s.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">Ще немає збережених оцінок</p>
             )}
           </CardContent>
         </Card>

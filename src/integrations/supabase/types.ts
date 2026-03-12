@@ -148,6 +148,39 @@ export type Database = {
           },
         ]
       }
+      asset_valuation_snapshots: {
+        Row: {
+          calculated_share_price: number
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string
+          notes: string | null
+          total_asset_value: number
+          total_shares: number
+        }
+        Insert: {
+          calculated_share_price?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string
+          notes?: string | null
+          total_asset_value?: number
+          total_shares?: number
+        }
+        Update: {
+          calculated_share_price?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string
+          notes?: string | null
+          total_asset_value?: number
+          total_shares?: number
+        }
+        Relationships: []
+      }
       bmbg: {
         Row: {
           avatar_url: string | null
