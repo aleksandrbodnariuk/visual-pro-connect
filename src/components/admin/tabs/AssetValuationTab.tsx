@@ -624,9 +624,9 @@ export function AssetValuationTab() {
                 </TableHeader>
                 <TableBody>
                   {loading ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Завантаження...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Завантаження...</TableCell></TableRow>
                   ) : items.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Немає записів у цьому розділі</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Немає записів у цьому розділі</TableCell></TableRow>
                   ) : (
                     items.map((item) => (
                       <TableRow key={item.id}>
