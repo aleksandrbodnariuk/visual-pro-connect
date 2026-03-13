@@ -43,6 +43,7 @@ interface AssetItem {
   condition: string | null;
   acquired_at: string | null;
   created_at: string;
+  included_in_valuation: boolean;
 }
 
 interface ValuationSnapshot {
