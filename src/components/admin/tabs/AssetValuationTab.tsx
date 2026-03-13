@@ -29,6 +29,7 @@ interface AssetCategory {
   name: string;
   sort_order: number;
   is_active: boolean;
+  included_in_valuation: boolean;
 }
 
 interface AssetItem {
