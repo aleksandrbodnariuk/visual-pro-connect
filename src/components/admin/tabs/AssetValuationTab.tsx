@@ -319,6 +319,32 @@ export function AssetValuationTab() {
     fetchCategories();
   };
 
+  /* ── valuation inclusion toggles ── */
+
+  const handleToggleCatValuation = async (cat: AssetCategory) => {
+    const newVal = !cat.included_in_valuation;
+    const { error } = await supabase
+      .from("asset_categories")
+      .update({ included_in_valuation: newVal })
+      .eq("id", cat.id);
+    if (error) { toast.error("Помилка"); console.error(error); return; }
+    toast.success(newVal ? `"${cat.name}" включено в оцінку` : `"${cat.name}" виключено з оцінки`);
+    await fetchCategories();
+    await fetchAllItems();
+    await maybeAutoUpdatePrice();
+  };
+
+  const handleToggleItemValuation = async (item: AssetItem) => {
+    const newVal = !item.included_in_valuation;
+    const { error } = await supabase
+      .from("asset_items")
+      .update({ included_in_valuation: newVal })
+      .eq("id", item.id);
+    if (error) { toast.error("Помилка"); console.error(error); return; }
+    toast.success(newVal ? "Позицію включено в оцінку" : "Позицію виключено з оцінки");
+    refreshAll();
+  };
+
   /* ── item CRUD ── */
 
   const openAddItem = () => {
