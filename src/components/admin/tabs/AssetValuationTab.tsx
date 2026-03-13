@@ -139,16 +139,21 @@ export function AssetValuationTab() {
   }, []);
 
   const handleSaveSnapshot = async () => {
+    // Compute valuation total at save time
+    const catMap = new Map(categories.map(c => [c.id, c.included_in_valuation]));
+    const snapValuationTotal = allItems
+      .filter(i => i.included_in_valuation && catMap.get(i.category_id) !== false)
+      .reduce((s, i) => s + Number(i.total_price || 0), 0);
     if (grandTotal <= 0 && totalShares <= 0) {
       toast.error("Немає даних для збереження");
       return;
     }
-    const price = totalShares > 0 ? grandTotal / totalShares : 0;
-    if (!confirm(`Зберегти оцінку "${snapshotLabel.trim()}" (вартість: ${grandTotal.toLocaleString("en-US")} $, ціна акції: ${price.toFixed(2)} $)?`)) return;
+    const price = totalShares > 0 ? snapValuationTotal / totalShares : 0;
+    if (!confirm(`Зберегти оцінку "${snapshotLabel.trim()}" (вартість для оцінки: ${snapValuationTotal.toLocaleString("en-US")} $, ціна акції: ${price.toFixed(2)} $)?`)) return;
     setSavingSnapshot(true);
     const { error } = await supabase.from("asset_valuation_snapshots").insert({
       label: snapshotLabel.trim() || `Оцінка ${new Date().getFullYear()}`,
-      total_asset_value: grandTotal,
+      total_asset_value: snapValuationTotal,
       total_shares: totalShares,
       calculated_share_price: price,
       notes: snapshotNotes.trim() || null,
