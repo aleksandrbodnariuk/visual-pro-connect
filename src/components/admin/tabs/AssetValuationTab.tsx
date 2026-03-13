@@ -29,6 +29,7 @@ interface AssetCategory {
   name: string;
   sort_order: number;
   is_active: boolean;
+  included_in_valuation: boolean;
 }
 
 interface AssetItem {
@@ -42,6 +43,7 @@ interface AssetItem {
   condition: string | null;
   acquired_at: string | null;
   created_at: string;
+  included_in_valuation: boolean;
 }
 
 interface ValuationSnapshot {
@@ -106,10 +108,16 @@ export function AssetValuationTab() {
   const maybeAutoUpdatePrice = useCallback(async () => {
     if (!autoUpdate) return;
     if (totalShares <= 0) return;
-    // Fetch fresh total from DB
-    const { data, error } = await supabase.from("asset_items").select("total_price");
-    if (error) { console.error(error); return; }
-    const freshTotal = (data || []).reduce((s, i) => s + Number(i.total_price || 0), 0);
+    // Fetch fresh items + categories to respect included_in_valuation
+    const [itemsRes, catsRes] = await Promise.all([
+      supabase.from("asset_items").select("total_price, category_id, included_in_valuation"),
+      supabase.from("asset_categories").select("id, included_in_valuation"),
+    ]);
+    if (itemsRes.error || catsRes.error) return;
+    const excludedCats = new Set((catsRes.data || []).filter(c => !c.included_in_valuation).map(c => c.id));
+    const freshTotal = (itemsRes.data || [])
+      .filter(i => i.included_in_valuation && !excludedCats.has(i.category_id))
+      .reduce((s, i) => s + Number(i.total_price || 0), 0);
     const newPrice = freshTotal / totalShares;
     await updateSharePrice(newPrice);
     refetchSettings();
@@ -131,16 +139,21 @@ export function AssetValuationTab() {
   }, []);
 
   const handleSaveSnapshot = async () => {
+    // Compute valuation total at save time
+    const catMap = new Map(categories.map(c => [c.id, c.included_in_valuation]));
+    const snapValuationTotal = allItems
+      .filter(i => i.included_in_valuation && catMap.get(i.category_id) !== false)
+      .reduce((s, i) => s + Number(i.total_price || 0), 0);
     if (grandTotal <= 0 && totalShares <= 0) {
       toast.error("Немає даних для збереження");
       return;
     }
-    const price = totalShares > 0 ? grandTotal / totalShares : 0;
-    if (!confirm(`Зберегти оцінку "${snapshotLabel.trim()}" (вартість: ${grandTotal.toLocaleString("en-US")} $, ціна акції: ${price.toFixed(2)} $)?`)) return;
+    const price = totalShares > 0 ? snapValuationTotal / totalShares : 0;
+    if (!confirm(`Зберегти оцінку "${snapshotLabel.trim()}" (вартість для оцінки: ${snapValuationTotal.toLocaleString("en-US")} $, ціна акції: ${price.toFixed(2)} $)?`)) return;
     setSavingSnapshot(true);
     const { error } = await supabase.from("asset_valuation_snapshots").insert({
       label: snapshotLabel.trim() || `Оцінка ${new Date().getFullYear()}`,
-      total_asset_value: grandTotal,
+      total_asset_value: snapValuationTotal,
       total_shares: totalShares,
       calculated_share_price: price,
       notes: snapshotNotes.trim() || null,
@@ -223,6 +236,12 @@ export function AssetValuationTab() {
   const totalValue = items.reduce((s, i) => s + Number(i.total_price || 0), 0);
   const grandTotal = allItems.reduce((s, i) => s + Number(i.total_price || 0), 0);
 
+  // Valuation total: only items where both category and item are included
+  const excludedCatIds = new Set(categories.filter(c => !c.included_in_valuation).map(c => c.id));
+  const valuationTotal = allItems
+    .filter(i => i.included_in_valuation && !excludedCatIds.has(i.category_id))
+    .reduce((s, i) => s + Number(i.total_price || 0), 0);
+
   // Per-category totals
   const categoryTotals = categories.reduce<Record<string, number>>((acc, cat) => {
     acc[cat.id] = allItems
@@ -231,8 +250,8 @@ export function AssetValuationTab() {
     return acc;
   }, {});
 
-  // Share price preview
-  const previewSharePrice = totalShares > 0 ? grandTotal / totalShares : null;
+  // Share price preview based on valuation total (only included items)
+  const previewSharePrice = totalShares > 0 ? valuationTotal / totalShares : null;
 
   const visibleCategories = showHidden ? categories : categories.filter((c) => c.is_active);
 
@@ -303,6 +322,32 @@ export function AssetValuationTab() {
     toast.success("Розділ видалено");
     if (selectedCategoryId === cat.id) setSelectedCategoryId(null);
     fetchCategories();
+  };
+
+  /* ── valuation inclusion toggles ── */
+
+  const handleToggleCatValuation = async (cat: AssetCategory) => {
+    const newVal = !cat.included_in_valuation;
+    const { error } = await supabase
+      .from("asset_categories")
+      .update({ included_in_valuation: newVal })
+      .eq("id", cat.id);
+    if (error) { toast.error("Помилка"); console.error(error); return; }
+    toast.success(newVal ? `"${cat.name}" включено в оцінку` : `"${cat.name}" виключено з оцінки`);
+    await fetchCategories();
+    await fetchAllItems();
+    await maybeAutoUpdatePrice();
+  };
+
+  const handleToggleItemValuation = async (item: AssetItem) => {
+    const newVal = !item.included_in_valuation;
+    const { error } = await supabase
+      .from("asset_items")
+      .update({ included_in_valuation: newVal })
+      .eq("id", item.id);
+    if (error) { toast.error("Помилка"); console.error(error); return; }
+    toast.success(newVal ? "Позицію включено в оцінку" : "Позицію виключено з оцінки");
+    refreshAll();
   };
 
   /* ── item CRUD ── */
@@ -393,7 +438,7 @@ export function AssetValuationTab() {
                 key={cat.id}
                 className={`group flex items-center gap-1 rounded-lg transition-colors ${
                   isSelected ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                } ${!cat.is_active ? "opacity-50" : ""}`}
+                } ${!cat.is_active ? "opacity-50" : ""} ${!cat.included_in_valuation ? "border border-dashed border-muted-foreground/30" : ""}`}
               >
                 <GripVertical className="h-4 w-4 shrink-0 ml-1 text-muted-foreground/40" />
 
@@ -408,6 +453,15 @@ export function AssetValuationTab() {
                     </span>
                   )}
                 </button>
+
+                {/* Valuation inclusion toggle */}
+                <Switch
+                  checked={cat.included_in_valuation}
+                  onCheckedChange={() => handleToggleCatValuation(cat)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="shrink-0 scale-75"
+                  title={cat.included_in_valuation ? "Включено в оцінку акції" : "Виключено з оцінки акції"}
+                />
 
                 {/* Action buttons — visible on hover or when selected */}
                 <div className={`flex items-center gap-0.5 pr-1 shrink-0 ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-opacity`}>
@@ -563,6 +617,7 @@ export function AssetValuationTab() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10" title="Включити в оцінку акції">📊</TableHead>
                     <TableHead>Назва</TableHead>
                     <TableHead className="hidden sm:table-cell">Опис</TableHead>
                     <TableHead className="text-right">К-ть</TableHead>
@@ -574,12 +629,20 @@ export function AssetValuationTab() {
                 </TableHeader>
                 <TableBody>
                   {loading ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Завантаження...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Завантаження...</TableCell></TableRow>
                   ) : items.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Немає записів у цьому розділі</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Немає записів у цьому розділі</TableCell></TableRow>
                   ) : (
                     items.map((item) => (
-                      <TableRow key={item.id}>
+                      <TableRow key={item.id} className={!item.included_in_valuation ? "opacity-50" : ""}>
+                        <TableCell>
+                          <Switch
+                            checked={item.included_in_valuation}
+                            onCheckedChange={() => handleToggleItemValuation(item)}
+                            className="scale-75"
+                            title={item.included_in_valuation ? "Включено в оцінку" : "Виключено з оцінки"}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium max-w-[180px] truncate">{item.name}</TableCell>
                         <TableCell className="hidden sm:table-cell max-w-[220px] truncate text-muted-foreground text-xs">{item.description}</TableCell>
                         <TableCell className="text-right">{item.quantity}</TableCell>
@@ -638,6 +701,11 @@ export function AssetValuationTab() {
               <div>
                 <p className="text-sm text-muted-foreground">Загальна вартість усього майна</p>
                 <p className="text-2xl font-bold text-foreground">{grandTotal.toLocaleString("en-US")} $</p>
+                {valuationTotal !== grandTotal && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Для оцінки акції: <span className="font-semibold text-primary">{valuationTotal.toLocaleString("en-US")} $</span>
+                  </p>
+                )}
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Розрахована ціна акції (майно / {totalShares || "?"} акцій)</p>
