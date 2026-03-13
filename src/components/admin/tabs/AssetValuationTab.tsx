@@ -433,7 +433,7 @@ export function AssetValuationTab() {
                 key={cat.id}
                 className={`group flex items-center gap-1 rounded-lg transition-colors ${
                   isSelected ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                } ${!cat.is_active ? "opacity-50" : ""}`}
+                } ${!cat.is_active ? "opacity-50" : ""} ${!cat.included_in_valuation ? "border border-dashed border-muted-foreground/30" : ""}`}
               >
                 <GripVertical className="h-4 w-4 shrink-0 ml-1 text-muted-foreground/40" />
 
