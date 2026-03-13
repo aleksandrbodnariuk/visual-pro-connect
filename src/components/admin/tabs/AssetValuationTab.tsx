@@ -20,7 +20,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   Plus, Pencil, Trash2, Package, FolderOpen, ChevronUp, ChevronDown,
   EyeOff, Eye, GripVertical, CheckCircle2, RefreshCw, History, Save, CalendarDays,
+  MoreVertical, BarChart3,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 /* ───── types ───── */
 
@@ -454,60 +458,42 @@ export function AssetValuationTab() {
                   )}
                 </button>
 
-                {/* Valuation inclusion toggle */}
-                <Switch
-                  checked={cat.included_in_valuation}
-                  onCheckedChange={() => handleToggleCatValuation(cat)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="shrink-0 scale-75"
-                  title={cat.included_in_valuation ? "Включено в оцінку акції" : "Виключено з оцінки акції"}
-                />
-
-                {/* Action buttons — visible on hover or when selected */}
-                <div className={`flex items-center gap-0.5 pr-1 shrink-0 ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-opacity`}>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`h-7 w-7 ${isSelected ? "hover:bg-primary-foreground/20 text-primary-foreground" : ""}`}
-                    onClick={(e) => { e.stopPropagation(); handleMoveCat(cat, "up"); }}
-                    disabled={idx === 0}
-                  >
-                    <ChevronUp className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`h-7 w-7 ${isSelected ? "hover:bg-primary-foreground/20 text-primary-foreground" : ""}`}
-                    onClick={(e) => { e.stopPropagation(); handleMoveCat(cat, "down"); }}
-                    disabled={idx === visibleCategories.length - 1}
-                  >
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`h-7 w-7 ${isSelected ? "hover:bg-primary-foreground/20 text-primary-foreground" : ""}`}
-                    onClick={(e) => { e.stopPropagation(); handleToggleCatActive(cat); }}
-                  >
-                    {cat.is_active ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`h-7 w-7 ${isSelected ? "hover:bg-primary-foreground/20 text-primary-foreground" : ""}`}
-                    onClick={(e) => { e.stopPropagation(); openEditCat(cat); }}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`h-7 w-7 text-destructive ${isSelected ? "hover:bg-primary-foreground/20" : ""}`}
-                    onClick={(e) => { e.stopPropagation(); handleDeleteCat(cat); }}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+                {/* Three-dot menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-7 w-7 shrink-0 mr-1 ${isSelected ? "opacity-100 hover:bg-primary-foreground/20 text-primary-foreground" : "opacity-0 group-hover:opacity-100"} transition-opacity`}
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem onClick={() => handleToggleCatValuation(cat)}>
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      {cat.included_in_valuation ? "Виключити з оцінки" : "Включити в оцінку"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleToggleCatActive(cat)}>
+                      {cat.is_active ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                      {cat.is_active ? "Сховати" : "Показати"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleMoveCat(cat, "up")} disabled={idx === 0}>
+                      <ChevronUp className="h-4 w-4 mr-2" /> Вгору
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleMoveCat(cat, "down")} disabled={idx === visibleCategories.length - 1}>
+                      <ChevronDown className="h-4 w-4 mr-2" /> Вниз
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => openEditCat(cat)}>
+                      <Pencil className="h-4 w-4 mr-2" /> Перейменувати
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteCat(cat)}>
+                      <Trash2 className="h-4 w-4 mr-2" /> Видалити
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             );
           })}
