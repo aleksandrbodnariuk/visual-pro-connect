@@ -696,6 +696,11 @@ export function AssetValuationTab() {
               <div>
                 <p className="text-sm text-muted-foreground">Загальна вартість усього майна</p>
                 <p className="text-2xl font-bold text-foreground">{grandTotal.toLocaleString("en-US")} $</p>
+                {valuationTotal !== grandTotal && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Для оцінки акції: <span className="font-semibold text-primary">{valuationTotal.toLocaleString("en-US")} $</span>
+                  </p>
+                )}
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Розрахована ціна акції (майно / {totalShares || "?"} акцій)</p>
