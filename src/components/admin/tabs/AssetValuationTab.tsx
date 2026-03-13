@@ -629,7 +629,15 @@ export function AssetValuationTab() {
                     <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Немає записів у цьому розділі</TableCell></TableRow>
                   ) : (
                     items.map((item) => (
-                      <TableRow key={item.id}>
+                      <TableRow key={item.id} className={!item.included_in_valuation ? "opacity-50" : ""}>
+                        <TableCell>
+                          <Switch
+                            checked={item.included_in_valuation}
+                            onCheckedChange={() => handleToggleItemValuation(item)}
+                            className="scale-75"
+                            title={item.included_in_valuation ? "Включено в оцінку" : "Виключено з оцінки"}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium max-w-[180px] truncate">{item.name}</TableCell>
                         <TableCell className="hidden sm:table-cell max-w-[220px] truncate text-muted-foreground text-xs">{item.description}</TableCell>
                         <TableCell className="text-right">{item.quantity}</TableCell>
