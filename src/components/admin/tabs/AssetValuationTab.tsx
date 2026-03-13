@@ -108,10 +108,16 @@ export function AssetValuationTab() {
   const maybeAutoUpdatePrice = useCallback(async () => {
     if (!autoUpdate) return;
     if (totalShares <= 0) return;
-    // Fetch fresh total from DB
-    const { data, error } = await supabase.from("asset_items").select("total_price");
-    if (error) { console.error(error); return; }
-    const freshTotal = (data || []).reduce((s, i) => s + Number(i.total_price || 0), 0);
+    // Fetch fresh items + categories to respect included_in_valuation
+    const [itemsRes, catsRes] = await Promise.all([
+      supabase.from("asset_items").select("total_price, category_id, included_in_valuation"),
+      supabase.from("asset_categories").select("id, included_in_valuation"),
+    ]);
+    if (itemsRes.error || catsRes.error) return;
+    const excludedCats = new Set((catsRes.data || []).filter(c => !c.included_in_valuation).map(c => c.id));
+    const freshTotal = (itemsRes.data || [])
+      .filter(i => i.included_in_valuation && !excludedCats.has(i.category_id))
+      .reduce((s, i) => s + Number(i.total_price || 0), 0);
     const newPrice = freshTotal / totalShares;
     await updateSharePrice(newPrice);
     refetchSettings();
