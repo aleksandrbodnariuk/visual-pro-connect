@@ -612,6 +612,7 @@ export function AssetValuationTab() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10" title="Включити в оцінку акції">📊</TableHead>
                     <TableHead>Назва</TableHead>
                     <TableHead className="hidden sm:table-cell">Опис</TableHead>
                     <TableHead className="text-right">К-ть</TableHead>
