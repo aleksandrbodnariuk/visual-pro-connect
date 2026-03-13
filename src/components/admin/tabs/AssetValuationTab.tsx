@@ -449,6 +449,15 @@ export function AssetValuationTab() {
                   )}
                 </button>
 
+                {/* Valuation inclusion toggle */}
+                <Switch
+                  checked={cat.included_in_valuation}
+                  onCheckedChange={() => handleToggleCatValuation(cat)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="shrink-0 scale-75"
+                  title={cat.included_in_valuation ? "Включено в оцінку акції" : "Виключено з оцінки акції"}
+                />
+
                 {/* Action buttons — visible on hover or when selected */}
                 <div className={`flex items-center gap-0.5 pr-1 shrink-0 ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-opacity`}>
                   <Button
