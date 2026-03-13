@@ -231,6 +231,12 @@ export function AssetValuationTab() {
   const totalValue = items.reduce((s, i) => s + Number(i.total_price || 0), 0);
   const grandTotal = allItems.reduce((s, i) => s + Number(i.total_price || 0), 0);
 
+  // Valuation total: only items where both category and item are included
+  const excludedCatIds = new Set(categories.filter(c => !c.included_in_valuation).map(c => c.id));
+  const valuationTotal = allItems
+    .filter(i => i.included_in_valuation && !excludedCatIds.has(i.category_id))
+    .reduce((s, i) => s + Number(i.total_price || 0), 0);
+
   // Per-category totals
   const categoryTotals = categories.reduce<Record<string, number>>((acc, cat) => {
     acc[cat.id] = allItems
@@ -239,8 +245,8 @@ export function AssetValuationTab() {
     return acc;
   }, {});
 
-  // Share price preview
-  const previewSharePrice = totalShares > 0 ? grandTotal / totalShares : null;
+  // Share price preview based on valuation total (only included items)
+  const previewSharePrice = totalShares > 0 ? valuationTotal / totalShares : null;
 
   const visibleCategories = showHidden ? categories : categories.filter((c) => c.is_active);
 
