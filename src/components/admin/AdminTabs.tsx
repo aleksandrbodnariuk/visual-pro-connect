@@ -98,6 +98,10 @@ export function AdminTabs() {
       <TabsContent value="assets">
         <AssetValuationTab />
       </TabsContent>
+
+      <TabsContent value="payouts">
+        <PayoutsTab />
+      </TabsContent>
     </Tabs>
   );
 }

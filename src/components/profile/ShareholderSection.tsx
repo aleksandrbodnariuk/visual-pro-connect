@@ -218,6 +218,9 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
         </CardContent>
       </Card>
 
+      {/* ─── Payouts ─── */}
+      <ShareholderPayouts userId={user.id} />
+
       {/* ─── Profit Forecast (read-only, no DB writes) ─── */}
       <ShareholderProfitForecast userId={user.id} />
     </>
