@@ -46,6 +46,8 @@ export interface ProfitDistribution {
   titleBonusPool: number;
   /** 12.5 % — адмін-фонд */
   adminFund: number;
+  /** Сума титульних бонусів, які не розподілені (відсутні вищі титули) */
+  unclaimedTitleBonus: number;
   /** Деталі по кожному акціонеру */
   shareholders: ShareholderProfitResult[];
 }
@@ -151,6 +153,7 @@ export function calcFullProfitDistribution(
     return {
       netProfit,
       ...pools,
+      unclaimedTitleBonus: pools.titleBonusPool,
       shareholders: [],
     };
   }
@@ -178,9 +181,14 @@ export function calcFullProfitDistribution(
     };
   });
 
+  // Підрахунок не засвоєних титульних бонусів
+  const totalDistributedTitleBonus = results.reduce((sum, r) => sum + r.titleBonus, 0);
+  const unclaimedTitleBonus = Math.max(0, pools.titleBonusPool - totalDistributedTitleBonus);
+
   return {
     netProfit,
     ...pools,
+    unclaimedTitleBonus,
     shareholders: results,
   };
 }
