@@ -46,6 +46,8 @@ export interface ProfitDistribution {
   titleBonusPool: number;
   /** 12.5 % — адмін-фонд */
   adminFund: number;
+  /** Сума титульних бонусів, які не розподілені (відсутні вищі титули) */
+  unclaimedTitleBonus: number;
   /** Деталі по кожному акціонеру */
   shareholders: ShareholderProfitResult[];
 }
