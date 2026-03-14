@@ -851,6 +851,84 @@ export type Database = {
           },
         ]
       }
+      shareholder_payouts: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          base_income: number
+          confirmed_at: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          order_ids: string[]
+          paid_at: string | null
+          paid_by: string | null
+          reminder_sent_at: string | null
+          share_percent_at_calculation: number
+          shareholder_id: string
+          shares_at_calculation: number
+          status: string
+          title_at_calculation: string | null
+          title_bonus: number
+          total_shares_snapshot: number
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount?: number
+          base_income?: number
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_ids?: string[]
+          paid_at?: string | null
+          paid_by?: string | null
+          reminder_sent_at?: string | null
+          share_percent_at_calculation?: number
+          shareholder_id: string
+          shares_at_calculation?: number
+          status?: string
+          title_at_calculation?: string | null
+          title_bonus?: number
+          total_shares_snapshot?: number
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          base_income?: number
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_ids?: string[]
+          paid_at?: string | null
+          paid_by?: string | null
+          reminder_sent_at?: string | null
+          share_percent_at_calculation?: number
+          shareholder_id?: string
+          shares_at_calculation?: number
+          status?: string
+          title_at_calculation?: string | null
+          title_bonus?: number
+          total_shares_snapshot?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shareholder_payouts_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shareholder_payouts_shareholder_id_fkey"
+            columns: ["shareholder_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shares: {
         Row: {
           created_at: string | null
@@ -1237,6 +1315,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_force_confirm_payout: {
+        Args: { _payout_id: string }
+        Returns: undefined
+      }
       approve_share_transaction: {
         Args: { _transaction_id: string }
         Returns: undefined
@@ -1250,6 +1332,7 @@ export type Database = {
         Returns: undefined
       }
       check_admin_access: { Args: never; Returns: boolean }
+      confirm_payout: { Args: { _payout_id: string }; Returns: undefined }
       create_share_listing: {
         Args: { _note?: string; _quantity: number }
         Returns: string
@@ -1510,6 +1593,10 @@ export type Database = {
         Returns: boolean
       }
       is_user_admin: { Args: { _user_id: string }; Returns: boolean }
+      mark_payout_paid: {
+        Args: { _admin_notes?: string; _payout_id: string }
+        Returns: undefined
+      }
       notify_admins_stock_event: {
         Args: { _link?: string; _message: string }
         Returns: undefined
