@@ -48,6 +48,7 @@ export function AdminTabs() {
         <TabsTrigger value="finances">Фінанси</TabsTrigger>
         <TabsTrigger value="history">Історія розрахунків</TabsTrigger>
         <TabsTrigger value="assets">Облік майна</TabsTrigger>
+        <TabsTrigger value="payouts">Виплати</TabsTrigger>
       </TabsList>
       
       <TabsContent value="users">
