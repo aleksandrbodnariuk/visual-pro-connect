@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { getTitleByPercent } from "@/lib/shareholderRules";
 import { ShareholderProfitForecast } from "./ShareholderProfitForecast";
+import { ShareholderPayouts } from "./ShareholderPayouts";
 
 interface ShareholderSectionProps {
   user: {
