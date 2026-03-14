@@ -54,14 +54,14 @@ export interface TitleThreshold {
  * Користувач із 0 акцій (або 0 %) НЕ отримує жодного титулу.
  */
 export const TITLE_THRESHOLDS: readonly TitleThreshold[] = [
-  { minPercent: 100, maxPercent: 100, title: 'Імператор', level: 7 },
-  { minPercent: 50,  maxPercent: 99,  title: 'Герцог',    level: 6 },
-  { minPercent: 40,  maxPercent: 49,  title: 'Лорд',      level: 5 },
-  { minPercent: 30,  maxPercent: 39,  title: 'Маркіз',    level: 4 },
-  { minPercent: 20,  maxPercent: 29,  title: 'Граф',      level: 3 },
-  { minPercent: 10,  maxPercent: 19,  title: 'Барон',     level: 2 },
-  { minPercent: 5,   maxPercent: 9,   title: 'Магнат',    level: 1 },
-  { minPercent: 1,   maxPercent: 4,   title: 'Акціонер',  level: 0 },
+  { minPercent: 100, title: 'Імператор', level: 7 },
+  { minPercent: 50,  title: 'Герцог',    level: 6 },
+  { minPercent: 40,  title: 'Лорд',      level: 5 },
+  { minPercent: 30,  title: 'Маркіз',    level: 4 },
+  { minPercent: 20,  title: 'Граф',      level: 3 },
+  { minPercent: 10,  title: 'Барон',     level: 2 },
+  { minPercent: 5,   title: 'Магнат',    level: 1 },
+  { minPercent: 1,   title: 'Акціонер',  level: 0 },
 ] as const;
 
 // ─── Титульні бонуси ─────────────────────────────────────────────────────────
