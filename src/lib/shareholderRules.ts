@@ -117,8 +117,9 @@ export function getTitleByPercent(percent: number): TitleThreshold | null {
   if (percent <= 0) return null;
 
   const rounded = Math.floor(percent * 100) / 100; // уникнути floating-point
+  // Відсортовано від найвищого до найнижчого — перший збіг ≥ minPercent є правильним
   for (const t of TITLE_THRESHOLDS) {
-    if (rounded >= t.minPercent && rounded <= t.maxPercent) return t;
+    if (rounded >= t.minPercent) return t;
   }
   // Якщо < 1 % (наприклад, 0.5 %) — теж без титулу, бо мінімум 1 %
   return null;
