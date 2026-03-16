@@ -486,6 +486,37 @@ export function PayoutsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmed payout dialog */}
+      <Dialog open={!!deleteDialog} onOpenChange={() => setDeleteDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Видалити виплату</DialogTitle>
+            <DialogDescription>
+              {deleteDialog ? `${names[deleteDialog.shareholder_id] || 'Акціонер'} — ${fmt(deleteDialog.amount)}. Цю дію не можна скасувати.` : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialog(null)}>Скасувати</Button>
+            <Button variant="destructive" disabled={deleteLoading} onClick={async () => {
+              if (!deleteDialog) return;
+              setDeleteLoading(true);
+              const { error } = await supabase.from('shareholder_payouts').delete().eq('id', deleteDialog.id);
+              if (error) {
+                toast({ title: 'Помилка', description: error.message, variant: 'destructive' });
+              } else {
+                toast({ title: 'Виплату видалено' });
+                setDeleteDialog(null);
+                await loadPayouts();
+              }
+              setDeleteLoading(false);
+            }}>
+              {deleteLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
+              Видалити
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
