@@ -37,7 +37,7 @@ interface Props {
   isAdmin: boolean;
 }
 
-export function OrderDetailsModal({ order, participants, open, onOpenChange, onUpdate, onAddParticipant, onRemoveParticipant, isAdmin }: Props) {
+export function OrderDetailsModal({ order, participants, open, onOpenChange, onUpdate, onAddParticipant, onRemoveParticipant, onDelete, isAdmin }: Props) {
   const [editing, setEditing] = useState(false);
   const [editingFinancials, setEditingFinancials] = useState(false);
   const [title, setTitle] = useState('');
