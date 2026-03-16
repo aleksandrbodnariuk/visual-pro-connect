@@ -443,6 +443,48 @@ export function CalculationHistoryTab() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete single snapshot */}
+      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Видалити запис</DialogTitle>
+            <DialogDescription>Ви впевнені? Цю дію не можна скасувати.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Скасувати</Button>
+            <Button variant="destructive" onClick={async () => {
+              if (!deleteTarget) return;
+              const { error } = await supabase.from("calculation_snapshots").delete().eq("id", deleteTarget);
+              if (error) { toast.error("Помилка видалення"); return; }
+              setSnapshots(prev => prev.filter(s => s.id !== deleteTarget));
+              setDeleteTarget(null);
+              toast.success("Запис видалено");
+            }}>Видалити</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clear all */}
+      <Dialog open={clearAllOpen} onOpenChange={setClearAllOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Очистити всю історію</DialogTitle>
+            <DialogDescription>Ви впевнені, що хочете видалити всі {snapshots.length} записів? Цю дію не можна скасувати.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearAllOpen(false)}>Скасувати</Button>
+            <Button variant="destructive" onClick={async () => {
+              const ids = snapshots.map(s => s.id);
+              const { error } = await supabase.from("calculation_snapshots").delete().in("id", ids);
+              if (error) { toast.error("Помилка видалення"); return; }
+              setSnapshots([]);
+              setClearAllOpen(false);
+              toast.success("Історію очищено");
+            }}>Видалити все</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
