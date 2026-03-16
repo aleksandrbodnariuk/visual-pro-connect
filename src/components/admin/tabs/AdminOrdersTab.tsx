@@ -211,6 +211,7 @@ export function AdminOrdersTab() {
         onUpdate={updateOrder}
         onAddParticipant={addParticipant}
         onRemoveParticipant={removeParticipant}
+        onDelete={(id) => { setOrderToDelete(id); setDeleteDialogOpen(true); }}
         isAdmin={true}
       />
 
