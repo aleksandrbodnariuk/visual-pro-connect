@@ -190,8 +190,15 @@ export function CalculationHistoryTab() {
             className="pl-9"
           />
         </div>
-        <div className="text-xs text-muted-foreground">
-          Показано: <strong>{filteredSnapshots.length}</strong> / {snapshots.length}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            Показано: <strong>{filteredSnapshots.length}</strong> / {snapshots.length}
+          </span>
+          {snapshots.length > 0 && (
+            <Button size="sm" variant="destructive" onClick={() => setClearAllOpen(true)}>
+              <Trash2 className="h-4 w-4 mr-1" /> Очистити історію
+            </Button>
+          )}
         </div>
       </div>
 
