@@ -1170,6 +1170,35 @@ export default function StockMarket() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Dialog: Delete Transfer Log ── */}
+      <Dialog open={!!transferDeleteTarget} onOpenChange={() => setTransferDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Видалити запис</DialogTitle>
+            <DialogDescription>Ви впевнені, що хочете видалити цей запис з історії передач? Цю дію не можна скасувати.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTransferDeleteTarget(null)}>Скасувати</Button>
+            <Button variant="destructive" onClick={async () => {
+              if (!transferDeleteTarget) return;
+              const { error } = await supabase.from("share_transfer_log").delete().eq("id", transferDeleteTarget);
+              if (error) {
+                toast.error("Не вдалося видалити запис");
+                return;
+              }
+              setArchivedTransferIds(prev => {
+                const next = new Set(prev);
+                next.delete(transferDeleteTarget);
+                return next;
+              });
+              setTransferLogs(prev => prev.filter(l => l.id !== transferDeleteTarget));
+              setTransferDeleteTarget(null);
+              toast.success("Запис видалено");
+            }}>Видалити</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
