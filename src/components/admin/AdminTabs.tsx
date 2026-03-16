@@ -37,18 +37,27 @@ export function AdminTabs() {
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
       <TabsList className="mb-4 flex overflow-x-auto gap-1 w-full justify-start pb-2">
         <TabsTrigger value="users">Користувачі</TabsTrigger>
-        <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
         <TabsTrigger value="specialists">Фахівці</TabsTrigger>
-        <TabsTrigger value="orders">Замовлення</TabsTrigger>
-        <TabsTrigger value="stock-exchange">Облік часток</TabsTrigger>
+        <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
+
+        <div className="w-px self-stretch bg-border mx-1 shrink-0" />
+
         <TabsTrigger value="posts">Публікації</TabsTrigger>
         <TabsTrigger value="categories">Категорії</TabsTrigger>
-        <TabsTrigger value="settings">Налаштування</TabsTrigger>
         <TabsTrigger value="analytics">Аналітика</TabsTrigger>
+        <TabsTrigger value="settings">Налаштування</TabsTrigger>
+
+        <div className="w-px self-stretch bg-border mx-1 shrink-0" />
+
+        <TabsTrigger value="orders">Замовлення</TabsTrigger>
         <TabsTrigger value="finances">Фінанси</TabsTrigger>
-        <TabsTrigger value="history">Історія розрахунків</TabsTrigger>
-        <TabsTrigger value="assets">Облік майна</TabsTrigger>
         <TabsTrigger value="payouts">Виплати</TabsTrigger>
+        <TabsTrigger value="history">Історія розрахунків</TabsTrigger>
+
+        <div className="w-px self-stretch bg-border mx-1 shrink-0" />
+
+        <TabsTrigger value="stock-exchange">Облік часток</TabsTrigger>
+        <TabsTrigger value="assets">Облік майна</TabsTrigger>
       </TabsList>
       
       <TabsContent value="users">
