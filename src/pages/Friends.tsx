@@ -22,7 +22,7 @@ export default function Friends() {
             
             <div className="space-y-6">
               <FriendRequestsList />
-              <FriendsList />
+              <FriendsList showAll />
               <BlockedUsersList />
             </div>
           </div>

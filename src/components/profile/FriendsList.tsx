@@ -87,7 +87,7 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
     return name.charAt(0);
   };
 
-  const displayedFriends = friendsList.slice(0, 9);
+  const displayedFriends = showAll ? friendsList : friendsList.slice(0, 9);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
