@@ -97,6 +97,8 @@ export function PayoutsTab() {
   const [payLoading, setPayLoading] = useState(false);
   const [forceDialog, setForceDialog] = useState<PayoutRow | null>(null);
   const [forceLoading, setForceLoading] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState<PayoutRow | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // ── Load payouts ──────────────────────────────────────────────────────────
   const loadPayouts = useCallback(async () => {
