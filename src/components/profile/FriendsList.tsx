@@ -23,7 +23,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { isUserOnline } from "@/lib/onlineStatus";
 
-export function FriendsList({ userId, isCurrentUser = true }: { userId?: string; isCurrentUser?: boolean }) {
+export function FriendsList({ userId, isCurrentUser = true, showAll = false }: { userId?: string; isCurrentUser?: boolean; showAll?: boolean }) {
   const { friends: myFriends, refreshFriendRequests, removeFriend, blockUser } = useFriendRequests();
   const [otherUserFriends, setOtherUserFriends] = useState<Array<{ id: string; full_name: string | null; avatar_url: string | null }>>([]);
   const [isLoading, setIsLoading] = useState(false);
