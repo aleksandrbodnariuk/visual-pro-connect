@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   AlertCircle,
@@ -25,6 +25,7 @@ import {
   History,
   Loader2,
   Search,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -68,6 +69,8 @@ export function CalculationHistoryTab() {
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [specialistsOpen, setSpecialistsOpen] = useState(false);
   const [shareholdersOpen, setShareholdersOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [clearAllOpen, setClearAllOpen] = useState(false);
 
   const [query, setQuery] = useState("");
   const [creatorNames, setCreatorNames] = useState<Record<string, string>>({});
@@ -187,8 +190,15 @@ export function CalculationHistoryTab() {
             className="pl-9"
           />
         </div>
-        <div className="text-xs text-muted-foreground">
-          Показано: <strong>{filteredSnapshots.length}</strong> / {snapshots.length}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            Показано: <strong>{filteredSnapshots.length}</strong> / {snapshots.length}
+          </span>
+          {snapshots.length > 0 && (
+            <Button size="sm" variant="destructive" onClick={() => setClearAllOpen(true)}>
+              <Trash2 className="h-4 w-4 mr-1" /> Очистити історію
+            </Button>
+          )}
         </div>
       </div>
 
@@ -231,9 +241,12 @@ export function CalculationHistoryTab() {
                   <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
                     {snap.notes || "—"}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="flex gap-1">
                     <Button size="sm" variant="outline" onClick={() => openDetails(snap)}>
                       <Eye className="h-4 w-4 mr-1" /> Відкрити
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setDeleteTarget(snap.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -428,6 +441,48 @@ export function CalculationHistoryTab() {
               </Collapsible>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete single snapshot */}
+      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Видалити запис</DialogTitle>
+            <DialogDescription>Ви впевнені? Цю дію не можна скасувати.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Скасувати</Button>
+            <Button variant="destructive" onClick={async () => {
+              if (!deleteTarget) return;
+              const { error } = await supabase.from("calculation_snapshots").delete().eq("id", deleteTarget);
+              if (error) { toast.error("Помилка видалення"); return; }
+              setSnapshots(prev => prev.filter(s => s.id !== deleteTarget));
+              setDeleteTarget(null);
+              toast.success("Запис видалено");
+            }}>Видалити</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clear all */}
+      <Dialog open={clearAllOpen} onOpenChange={setClearAllOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Очистити всю історію</DialogTitle>
+            <DialogDescription>Ви впевнені, що хочете видалити всі {snapshots.length} записів? Цю дію не можна скасувати.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearAllOpen(false)}>Скасувати</Button>
+            <Button variant="destructive" onClick={async () => {
+              const ids = snapshots.map(s => s.id);
+              const { error } = await supabase.from("calculation_snapshots").delete().in("id", ids);
+              if (error) { toast.error("Помилка видалення"); return; }
+              setSnapshots([]);
+              setClearAllOpen(false);
+              toast.success("Історію очищено");
+            }}>Видалити все</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

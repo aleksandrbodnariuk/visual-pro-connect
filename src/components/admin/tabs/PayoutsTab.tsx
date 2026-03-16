@@ -16,7 +16,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import {
   Calculator, DollarSign, CheckCircle2, Clock, AlertCircle, Loader2,
-  Send, ShieldCheck, RefreshCw,
+  Send, ShieldCheck, RefreshCw, Trash2,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -97,6 +97,8 @@ export function PayoutsTab() {
   const [payLoading, setPayLoading] = useState(false);
   const [forceDialog, setForceDialog] = useState<PayoutRow | null>(null);
   const [forceLoading, setForceLoading] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState<PayoutRow | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // ── Load payouts ──────────────────────────────────────────────────────────
   const loadPayouts = useCallback(async () => {
@@ -418,6 +420,11 @@ export function PayoutsTab() {
             names={names}
             loading={loading}
             emptyText="Ще немає підтверджених виплат."
+            actions={(p) => (
+              <Button size="sm" variant="ghost" onClick={() => setDeleteDialog(p)}>
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </Button>
+            )}
           />
         </TabsContent>
       </Tabs>
@@ -475,6 +482,37 @@ export function PayoutsTab() {
             <Button onClick={handleForceConfirm} disabled={forceLoading}>
               {forceLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-1" />}
               Підтвердити
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmed payout dialog */}
+      <Dialog open={!!deleteDialog} onOpenChange={() => setDeleteDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Видалити виплату</DialogTitle>
+            <DialogDescription>
+              {deleteDialog ? `${names[deleteDialog.shareholder_id] || 'Акціонер'} — ${fmt(deleteDialog.amount)}. Цю дію не можна скасувати.` : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialog(null)}>Скасувати</Button>
+            <Button variant="destructive" disabled={deleteLoading} onClick={async () => {
+              if (!deleteDialog) return;
+              setDeleteLoading(true);
+              const { error } = await supabase.from('shareholder_payouts').delete().eq('id', deleteDialog.id);
+              if (error) {
+                toast({ title: 'Помилка', description: error.message, variant: 'destructive' });
+              } else {
+                toast({ title: 'Виплату видалено' });
+                setDeleteDialog(null);
+                await loadPayouts();
+              }
+              setDeleteLoading(false);
+            }}>
+              {deleteLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
+              Видалити
             </Button>
           </DialogFooter>
         </DialogContent>

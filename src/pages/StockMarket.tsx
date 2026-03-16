@@ -156,6 +156,10 @@ export default function StockMarket() {
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
+  // Archive & delete for transfer history
+  const [archivedTransferIds, setArchivedTransferIds] = useState<Set<string>>(new Set());
+  const [transferDeleteTarget, setTransferDeleteTarget] = useState<string | null>(null);
+
   const isAdmin = currentUser?.isAdmin || currentUser?.founder_admin;
   const isShareholder = currentUser?.isShareHolder;
 
@@ -872,13 +876,32 @@ export default function StockMarket() {
             <TabsContent value="history">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <History className="h-5 w-5" /> Історія передач акцій
-                  </CardTitle>
-                  <CardDescription>Журнал усіх підтверджених передач</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <History className="h-5 w-5" /> Історія передач акцій
+                      </CardTitle>
+                      <CardDescription>Журнал усіх підтверджених передач</CardDescription>
+                    </div>
+                    {isAdmin && transferLogs.some(l => !archivedTransferIds.has(l.id)) && (
+                      <Button size="sm" variant="outline" onClick={() => {
+                        const visibleIds = transferLogs.filter(l => !archivedTransferIds.has(l.id)).map(l => l.id);
+                        setArchivedTransferIds(prev => {
+                          const next = new Set(prev);
+                          visibleIds.forEach(id => next.add(id));
+                          return next;
+                        });
+                        toast.success("Усі записи переміщено в архів");
+                      }}>
+                        Архівувати все
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  {transferLogs.length > 0 ? (
+                  {(() => {
+                    const visibleLogs = transferLogs.filter(l => !archivedTransferIds.has(l.id));
+                    return visibleLogs.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
@@ -890,10 +913,11 @@ export default function StockMarket() {
                             <th className="text-right p-2">Ціна / акцію</th>
                             <th className="text-right p-2">Загалом</th>
                             <th className="text-left p-2">Підтвердив</th>
+                            {isAdmin && <th className="text-left p-2"></th>}
                           </tr>
                         </thead>
                         <tbody>
-                          {transferLogs.map((log) => (
+                          {visibleLogs.map((log) => (
                             <tr key={log.id} className="border-b hover:bg-muted/50">
                               <td className="p-2">{new Date(log.created_at).toLocaleDateString()}</td>
                               <td className="p-2">{log.from_name}</td>
@@ -902,6 +926,16 @@ export default function StockMarket() {
                               <td className="p-2 text-right">{log.price_per_share_usd.toFixed(2)} USD</td>
                               <td className="p-2 text-right">{log.total_amount_usd.toFixed(2)} USD</td>
                               <td className="p-2">{log.confirmed_by_name || "—"}</td>
+                              {isAdmin && (
+                                <td className="p-2">
+                                  <Button size="sm" variant="ghost" onClick={() => {
+                                    setArchivedTransferIds(prev => new Set(prev).add(log.id));
+                                    toast.success("Переміщено в архів");
+                                  }}>
+                                    В архів
+                                  </Button>
+                                </td>
+                              )}
                             </tr>
                           ))}
                         </tbody>
@@ -912,6 +946,57 @@ export default function StockMarket() {
                       <History className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
                       <h3 className="text-lg font-medium mb-1">Немає записів</h3>
                       <p className="text-muted-foreground text-sm">Журнал передач поки порожній</p>
+                    </div>
+                  );
+                  })()}
+
+                  {/* Archived section */}
+                  {isAdmin && archivedTransferIds.size > 0 && (
+                    <div className="mt-6 border-t pt-4">
+                      <h4 className="text-sm font-medium text-muted-foreground mb-3">Архів ({transferLogs.filter(l => archivedTransferIds.has(l.id)).length})</h4>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm opacity-70">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left p-2">Дата</th>
+                              <th className="text-left p-2">Від кого</th>
+                              <th className="text-left p-2">Кому</th>
+                              <th className="text-left p-2">Акцій</th>
+                              <th className="text-right p-2">Загалом</th>
+                              <th className="text-left p-2"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {transferLogs.filter(l => archivedTransferIds.has(l.id)).map((log) => (
+                              <tr key={log.id} className="border-b hover:bg-muted/50">
+                                <td className="p-2">{new Date(log.created_at).toLocaleDateString()}</td>
+                                <td className="p-2">{log.from_name}</td>
+                                <td className="p-2">{log.to_name}</td>
+                                <td className="p-2">{log.shares_qty}</td>
+                                <td className="p-2 text-right">{log.total_amount_usd.toFixed(2)} USD</td>
+                                <td className="p-2">
+                                  <div className="flex gap-1">
+                                    <Button size="sm" variant="ghost" onClick={() => {
+                                      setArchivedTransferIds(prev => {
+                                        const next = new Set(prev);
+                                        next.delete(log.id);
+                                        return next;
+                                      });
+                                    }}>
+                                      Повернути
+                                    </Button>
+                                    <Button size="sm" variant="destructive" onClick={() => {
+                                      setTransferDeleteTarget(log.id);
+                                    }}>
+                                      Видалити
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -1082,6 +1167,35 @@ export default function StockMarket() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenSellDialog(false)}>Скасувати</Button>
             <Button onClick={createProposal} disabled={availableShares <= 0}>Опублікувати</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Delete Transfer Log ── */}
+      <Dialog open={!!transferDeleteTarget} onOpenChange={() => setTransferDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Видалити запис</DialogTitle>
+            <DialogDescription>Ви впевнені, що хочете видалити цей запис з історії передач? Цю дію не можна скасувати.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTransferDeleteTarget(null)}>Скасувати</Button>
+            <Button variant="destructive" onClick={async () => {
+              if (!transferDeleteTarget) return;
+              const { error } = await supabase.from("share_transfer_log").delete().eq("id", transferDeleteTarget);
+              if (error) {
+                toast.error("Не вдалося видалити запис");
+                return;
+              }
+              setArchivedTransferIds(prev => {
+                const next = new Set(prev);
+                next.delete(transferDeleteTarget);
+                return next;
+              });
+              setTransferLogs(prev => prev.filter(l => l.id !== transferDeleteTarget));
+              setTransferDeleteTarget(null);
+              toast.success("Запис видалено");
+            }}>Видалити</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
