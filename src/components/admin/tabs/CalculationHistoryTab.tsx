@@ -241,9 +241,12 @@ export function CalculationHistoryTab() {
                   <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
                     {snap.notes || "—"}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="flex gap-1">
                     <Button size="sm" variant="outline" onClick={() => openDetails(snap)}>
                       <Eye className="h-4 w-4 mr-1" /> Відкрити
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setDeleteTarget(snap.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
                 </TableRow>
