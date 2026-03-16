@@ -33,10 +33,11 @@ interface Props {
   onUpdate: (id: string, updates: Partial<SpecialistOrder>) => Promise<boolean>;
   onAddParticipant: (orderId: string, specialistId: string, role: string) => Promise<boolean>;
   onRemoveParticipant: (participantId: string) => Promise<boolean>;
+  onDelete?: (orderId: string) => void;
   isAdmin: boolean;
 }
 
-export function OrderDetailsModal({ order, participants, open, onOpenChange, onUpdate, onAddParticipant, onRemoveParticipant, isAdmin }: Props) {
+export function OrderDetailsModal({ order, participants, open, onOpenChange, onUpdate, onAddParticipant, onRemoveParticipant, onDelete, isAdmin }: Props) {
   const [editing, setEditing] = useState(false);
   const [editingFinancials, setEditingFinancials] = useState(false);
   const [title, setTitle] = useState('');
@@ -458,6 +459,11 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                 {order.status !== 'archived' && (
                   <Button size="sm" variant="secondary" onClick={handleArchive}>
                     <Archive className="h-3.5 w-3.5 mr-1" /> В архів
+                  </Button>
+                )}
+                {order.status === 'archived' && onDelete && (
+                  <Button size="sm" variant="destructive" onClick={() => onDelete(order.id)}>
+                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Видалити
                   </Button>
                 )}
               </div>
