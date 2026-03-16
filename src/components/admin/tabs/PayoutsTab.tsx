@@ -420,6 +420,11 @@ export function PayoutsTab() {
             names={names}
             loading={loading}
             emptyText="Ще немає підтверджених виплат."
+            actions={(p) => (
+              <Button size="sm" variant="ghost" onClick={() => setDeleteDialog(p)}>
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </Button>
+            )}
           />
         </TabsContent>
       </Tabs>
