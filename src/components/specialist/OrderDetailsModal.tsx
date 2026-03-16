@@ -33,6 +33,7 @@ interface Props {
   onUpdate: (id: string, updates: Partial<SpecialistOrder>) => Promise<boolean>;
   onAddParticipant: (orderId: string, specialistId: string, role: string) => Promise<boolean>;
   onRemoveParticipant: (participantId: string) => Promise<boolean>;
+  onDelete?: (orderId: string) => void;
   isAdmin: boolean;
 }
 
