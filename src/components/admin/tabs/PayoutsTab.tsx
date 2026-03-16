@@ -16,7 +16,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import {
   Calculator, DollarSign, CheckCircle2, Clock, AlertCircle, Loader2,
-  Send, ShieldCheck, RefreshCw,
+  Send, ShieldCheck, RefreshCw, Trash2,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
