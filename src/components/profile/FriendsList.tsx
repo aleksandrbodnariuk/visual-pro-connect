@@ -23,7 +23,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { isUserOnline } from "@/lib/onlineStatus";
 
-export function FriendsList({ userId, isCurrentUser = true }: { userId?: string; isCurrentUser?: boolean }) {
+export function FriendsList({ userId, isCurrentUser = true, showAll = false }: { userId?: string; isCurrentUser?: boolean; showAll?: boolean }) {
   const { friends: myFriends, refreshFriendRequests, removeFriend, blockUser } = useFriendRequests();
   const [otherUserFriends, setOtherUserFriends] = useState<Array<{ id: string; full_name: string | null; avatar_url: string | null }>>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -87,7 +87,7 @@ export function FriendsList({ userId, isCurrentUser = true }: { userId?: string;
     return name.charAt(0);
   };
 
-  const displayedFriends = friendsList.slice(0, 9);
+  const displayedFriends = showAll ? friendsList : friendsList.slice(0, 9);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -190,9 +190,13 @@ export function FriendsList({ userId, isCurrentUser = true }: { userId?: string;
               <h3 className="font-semibold text-lg">Друзі</h3>
               <p className="text-sm text-muted-foreground">{friendsList.length} друзів</p>
             </div>
-            {friendsList.length > 9 && isCurrentUser && (
+            {!showAll && friendsList.length > 9 && (
               <Button variant="link" asChild className="text-primary">
-                <Link to="/friends">Переглянути всіх друзів</Link>
+                {isCurrentUser ? (
+                  <Link to="/friends">Переглянути всіх друзів</Link>
+                ) : (
+                  <Link to={`/profile/${userId}`}>Переглянути всіх друзів</Link>
+                )}
               </Button>
             )}
           </div>
