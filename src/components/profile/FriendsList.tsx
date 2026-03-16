@@ -190,9 +190,13 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
               <h3 className="font-semibold text-lg">Друзі</h3>
               <p className="text-sm text-muted-foreground">{friendsList.length} друзів</p>
             </div>
-            {friendsList.length > 9 && isCurrentUser && (
+            {!showAll && friendsList.length > 9 && (
               <Button variant="link" asChild className="text-primary">
-                <Link to="/friends">Переглянути всіх друзів</Link>
+                {isCurrentUser ? (
+                  <Link to="/friends">Переглянути всіх друзів</Link>
+                ) : (
+                  <Link to={`/profile/${userId}`}>Переглянути всіх друзів</Link>
+                )}
               </Button>
             )}
           </div>
