@@ -69,6 +69,8 @@ export function CalculationHistoryTab() {
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [specialistsOpen, setSpecialistsOpen] = useState(false);
   const [shareholdersOpen, setShareholdersOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [clearAllOpen, setClearAllOpen] = useState(false);
 
   const [query, setQuery] = useState("");
   const [creatorNames, setCreatorNames] = useState<Record<string, string>>({});
