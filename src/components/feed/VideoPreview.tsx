@@ -74,28 +74,9 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
   }
 
   if (embed.platform === 'facebook') {
-    // Facebook Reels - show as link (iframe embeds don't render properly)
+    // Facebook Reels - use LinkPreview (iframe embeds don't render properly)
     if (embed.isVertical) {
-      return (
-        <div className="rounded-lg overflow-hidden border max-w-[320px] mx-auto bg-muted">
-          <div className="aspect-[9/16] flex items-center justify-center bg-black/5">
-            <a 
-              href={embed.originalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-col items-center gap-3 text-primary hover:text-primary/80 transition-colors"
-            >
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <ExternalLink className="h-8 w-8" />
-              </div>
-              <span className="font-medium">Відкрити в Facebook</span>
-            </a>
-          </div>
-          <div className="p-2 flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="font-medium">FACEBOOK REELS</span>
-          </div>
-        </div>
-      );
+      return <LinkPreview url={embed.originalUrl} />;
     }
 
     // Regular Facebook video
