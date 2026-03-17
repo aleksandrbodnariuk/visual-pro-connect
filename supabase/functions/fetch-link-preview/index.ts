@@ -31,6 +31,19 @@ function isBlockedUrl(url: string): boolean {
   }
 }
 
+function decodeHtmlEntities(str: string): string {
+  return str
+    .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&middot;/g, '·');
+}
+
 function extractMetaContent(html: string, selectors: string[]): string | null {
   for (const selector of selectors) {
     const regex = new RegExp(
@@ -39,7 +52,7 @@ function extractMetaContent(html: string, selectors: string[]): string | null {
     );
     const match = html.match(regex);
     if (match) {
-      return match[1] || match[2];
+      return decodeHtmlEntities(match[1] || match[2]);
     }
   }
   return null;
