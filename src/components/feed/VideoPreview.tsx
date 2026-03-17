@@ -9,8 +9,8 @@ interface VideoPreviewProps {
 export function VideoPreview({ embed }: VideoPreviewProps) {
   // Визначаємо CSS клас для контейнера залежно від орієнтації
   const aspectClass = embed.isVertical 
-    ? "aspect-[9/16] max-w-[320px] mx-auto"  // Вертикальне - 9:16, центроване
-    : "aspect-video w-full";  // Горизонтальне - 16:9, на всю ширину
+    ? "aspect-[9/16] max-w-[320px] mx-auto"
+    : "aspect-video w-full";
 
   if (embed.platform === 'youtube') {
     return (
@@ -74,25 +74,22 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
   }
 
   if (embed.platform === 'facebook') {
-    // Facebook Reels - use LinkPreview (iframe embeds don't render properly)
-    if (embed.isVertical) {
-      return <LinkPreview url={embed.originalUrl} />;
-    }
-
-    // Regular Facebook video
     return (
-      <div className="rounded-lg overflow-hidden border bg-muted">
-        <div className="aspect-video w-full">
+      <div className={`rounded-lg overflow-hidden border bg-muted ${embed.isVertical ? 'max-w-[320px] mx-auto' : ''}`}>
+        <div className={aspectClass}>
           <iframe
             src={embed.embedUrl}
-            className="w-full h-full"
+            className="w-full h-full border-0"
             allowFullScreen
-            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
-            title="Facebook відео"
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            scrolling="no"
+            title={embed.isVertical ? "Facebook Reel" : "Facebook відео"}
           />
         </div>
         <div className="p-2 flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-medium">FACEBOOK.COM</span>
+          <span className="font-medium">
+            {embed.isVertical ? 'FACEBOOK REELS' : 'FACEBOOK.COM'}
+          </span>
         </div>
       </div>
     );
