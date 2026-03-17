@@ -74,9 +74,34 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
   }
 
   if (embed.platform === 'facebook') {
+    // Facebook Reels - show as link (iframe embeds don't render properly)
+    if (embed.isVertical) {
+      return (
+        <div className="rounded-lg overflow-hidden border max-w-[320px] mx-auto bg-muted">
+          <div className="aspect-[9/16] flex items-center justify-center bg-black/5">
+            <a 
+              href={embed.originalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col items-center gap-3 text-primary hover:text-primary/80 transition-colors"
+            >
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <ExternalLink className="h-8 w-8" />
+              </div>
+              <span className="font-medium">Відкрити в Facebook</span>
+            </a>
+          </div>
+          <div className="p-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="font-medium">FACEBOOK REELS</span>
+          </div>
+        </div>
+      );
+    }
+
+    // Regular Facebook video
     return (
       <div className="rounded-lg overflow-hidden border bg-muted">
-        <div className={aspectClass}>
+        <div className="aspect-video w-full">
           <iframe
             src={embed.embedUrl}
             className="w-full h-full"
@@ -86,9 +111,7 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
           />
         </div>
         <div className="p-2 flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-medium">
-            {embed.isVertical ? 'FACEBOOK REELS' : 'FACEBOOK.COM'}
-          </span>
+          <span className="font-medium">FACEBOOK.COM</span>
         </div>
       </div>
     );
