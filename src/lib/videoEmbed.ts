@@ -81,7 +81,7 @@ export function extractVideoEmbed(text: string): VideoEmbed | null {
     return {
       platform: 'facebook',
       videoId: fbReelMatch[1],
-      embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false`,
+      embedUrl: `https://www.facebook.com/plugins/post.php?href=${encodeURIComponent(url)}&show_text=false&width=320`,
       originalUrl: url,
       isVertical: true
     };
@@ -93,7 +93,7 @@ export function extractVideoEmbed(text: string): VideoEmbed | null {
     return {
       platform: 'facebook',
       videoId: fbShareReelMatch[1],
-      embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false`,
+      embedUrl: `https://www.facebook.com/plugins/post.php?href=${encodeURIComponent(url)}&show_text=false&width=320`,
       originalUrl: url,
       isVertical: true
     };
