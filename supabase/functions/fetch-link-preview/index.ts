@@ -12,6 +12,10 @@ interface LinkPreviewData {
   siteName: string | null;
   url: string;
   favicon: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
+  videoWidth?: number | null;
+  videoHeight?: number | null;
 }
 
 // SSRF protection: block internal/private network URLs
