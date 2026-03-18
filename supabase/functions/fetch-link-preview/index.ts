@@ -201,6 +201,10 @@ Deno.serve(async (req) => {
       ),
       siteName: extractMetaContent(html, ['og:site_name']) || new URL(url).hostname,
       favicon: extractFavicon(html, url),
+      imageWidth: extractNumericMetaContent(html, ['og:image:width', 'twitter:image:width']),
+      imageHeight: extractNumericMetaContent(html, ['og:image:height', 'twitter:image:height']),
+      videoWidth: extractNumericMetaContent(html, ['og:video:width', 'og:video:secure_url:width']),
+      videoHeight: extractNumericMetaContent(html, ['og:video:height', 'og:video:secure_url:height']),
     };
 
     console.log('Preview extracted:', preview.title);

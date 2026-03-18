@@ -75,7 +75,8 @@ export function extractVideoEmbed(text: string): VideoEmbed | null {
     };
   }
   
-  // Facebook Reels (перевіряємо першим - вертикальне відео)
+  // Facebook Reels / share links: не визначаємо орієнтацію лише по URL,
+  // бо частина таких відео фактично горизонтальні
   const fbReelMatch = url.match(FACEBOOK_REEL_REGEX);
   if (fbReelMatch && fbReelMatch[1]) {
     return {
@@ -83,11 +84,9 @@ export function extractVideoEmbed(text: string): VideoEmbed | null {
       videoId: fbReelMatch[1],
       embedUrl: `https://www.facebook.com/plugins/post.php?href=${encodeURIComponent(url)}&show_text=false&width=320`,
       originalUrl: url,
-      isVertical: true
     };
   }
   
-  // Facebook Share Reels (вертикальне відео)
   const fbShareReelMatch = url.match(FACEBOOK_SHARE_REEL_REGEX);
   if (fbShareReelMatch && fbShareReelMatch[1]) {
     return {
@@ -95,7 +94,6 @@ export function extractVideoEmbed(text: string): VideoEmbed | null {
       videoId: fbShareReelMatch[1],
       embedUrl: `https://www.facebook.com/plugins/post.php?href=${encodeURIComponent(url)}&show_text=false&width=320`,
       originalUrl: url,
-      isVertical: true
     };
   }
   
