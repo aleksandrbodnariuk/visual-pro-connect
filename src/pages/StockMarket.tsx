@@ -17,6 +17,9 @@ import {
   XCircle,
   DollarSign,
   BarChart3,
+  Archive,
+  RotateCcw,
+  Trash2,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
