@@ -62,6 +62,14 @@ function extractMetaContent(html: string, selectors: string[]): string | null {
   return null;
 }
 
+function extractNumericMetaContent(html: string, selectors: string[]): number | null {
+  const value = extractMetaContent(html, selectors);
+  if (!value) return null;
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function extractTitle(html: string): string | null {
   const ogTitle = extractMetaContent(html, ['og:title']);
   if (ogTitle) return ogTitle;
