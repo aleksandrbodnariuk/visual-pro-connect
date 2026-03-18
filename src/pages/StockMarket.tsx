@@ -875,53 +875,150 @@ export default function StockMarket() {
             {/* ── Мої заявки ── */}
             <TabsContent value="transactions">
               <Card>
-                <CardHeader>
-                  <CardTitle>Мої заявки</CardTitle>
-                  <CardDescription>Подані та отримані заявки на передачу акцій</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <CardTitle>Мої заявки</CardTitle>
+                    <CardDescription>Подані та отримані заявки на передачу акцій</CardDescription>
+                  </div>
+                  {myTransactions.filter(tx => !archivedTxIds.has(tx.id) && tx.status !== 'pending').length > 0 && (
+                    <Button size="sm" variant="outline" onClick={() => {
+                      const archivable = myTransactions.filter(tx => !archivedTxIds.has(tx.id) && tx.status !== 'pending');
+                      setArchivedTxIds(prev => {
+                        const next = new Set(prev);
+                        archivable.forEach(tx => next.add(tx.id));
+                        return next;
+                      });
+                      toast.success("Завершені заявки переміщено в архів");
+                    }}>
+                      <Archive className="h-4 w-4 mr-1" /> Архівувати
+                    </Button>
+                  )}
                 </CardHeader>
                 <CardContent>
-                  {myTransactions.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left p-2">Дата</th>
-                            <th className="text-left p-2">Тип</th>
-                            <th className="text-left p-2">Контрагент</th>
-                            <th className="text-left p-2">Акцій</th>
-                            <th className="text-right p-2">Сума</th>
-                            <th className="text-left p-2">Статус</th>
-                            <th className="text-left p-2"></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {myTransactions.map((tx) => (
-                            <tr key={tx.id} className="border-b hover:bg-muted/50">
-                              <td className="p-2">{new Date(tx.created_at).toLocaleDateString()}</td>
-                              <td className="p-2">{tx.seller_id === currentUser.id ? "Передача" : "Отримання"}</td>
-                              <td className="p-2">{tx.seller_id === currentUser.id ? tx.buyer_name : tx.seller_name}</td>
-                              <td className="p-2">{tx.quantity}</td>
-                              <td className="p-2 text-right">{tx.total_price.toFixed(2)} USD</td>
-                              <td className="p-2">
-                                <Badge variant={statusBadgeVariant(tx.status)}>{statusLabel(tx.status)}</Badge>
-                              </td>
-                              <td className="p-2">
-                                <Button size="sm" variant="outline" onClick={() => { setSelectedTransaction(tx); setOpenDetailsDialog(true); }}>
-                                  Деталі
+                  {(() => {
+                    const visibleTx = myTransactions.filter(tx => !archivedTxIds.has(tx.id));
+                    const archivedTx = myTransactions.filter(tx => archivedTxIds.has(tx.id));
+                    return (
+                      <>
+                        {visibleTx.length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b">
+                                  <th className="text-left p-2">Дата</th>
+                                  <th className="text-left p-2">Тип</th>
+                                  <th className="text-left p-2">Контрагент</th>
+                                  <th className="text-left p-2">Акцій</th>
+                                  <th className="text-right p-2">Сума</th>
+                                  <th className="text-left p-2">Статус</th>
+                                  <th className="text-left p-2"></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {visibleTx.map((tx) => (
+                                  <tr key={tx.id} className="border-b hover:bg-muted/50">
+                                    <td className="p-2">{new Date(tx.created_at).toLocaleDateString()}</td>
+                                    <td className="p-2">{tx.seller_id === currentUser.id ? "Передача" : "Отримання"}</td>
+                                    <td className="p-2">{tx.seller_id === currentUser.id ? tx.buyer_name : tx.seller_name}</td>
+                                    <td className="p-2">{tx.quantity}</td>
+                                    <td className="p-2 text-right">{tx.total_price.toFixed(2)} USD</td>
+                                    <td className="p-2">
+                                      <Badge variant={statusBadgeVariant(tx.status)}>{statusLabel(tx.status)}</Badge>
+                                    </td>
+                                    <td className="p-2 flex gap-1">
+                                      <Button size="sm" variant="outline" onClick={() => { setSelectedTransaction(tx); setOpenDetailsDialog(true); }}>
+                                        Деталі
+                                      </Button>
+                                      {tx.status !== 'pending' && (
+                                        <Button size="sm" variant="ghost" onClick={() => {
+                                          setArchivedTxIds(prev => new Set(prev).add(tx.id));
+                                          toast.success("Переміщено в архів");
+                                        }}>
+                                          <Archive className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-center py-8">
+                            <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+                            <h3 className="text-lg font-medium mb-1">Немає заявок</h3>
+                            <p className="text-muted-foreground text-sm">Ваші заявки з'являться тут</p>
+                          </div>
+                        )}
+
+                        {/* Archived transactions */}
+                        {archivedTx.length > 0 && (
+                          <div className="mt-6 border-t pt-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <button
+                                onClick={() => setShowTxArchive(!showTxArchive)}
+                                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                              >
+                                <Archive className="h-4 w-4" />
+                                Архів ({archivedTx.length})
+                                <span className="text-xs">{showTxArchive ? '▲' : '▼'}</span>
+                              </button>
+                              {showTxArchive && (
+                                <Button size="sm" variant="destructive" onClick={() => {
+                                  setArchivedTxIds(new Set());
+                                  toast.success("Архів очищено");
+                                }}>
+                                  <Trash2 className="h-4 w-4 mr-1" /> Очистити архів
                                 </Button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-                      <h3 className="text-lg font-medium mb-1">Немає заявок</h3>
-                      <p className="text-muted-foreground text-sm">Ваші заявки з'являться тут</p>
-                    </div>
-                  )}
+                              )}
+                            </div>
+                            {showTxArchive && (
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm opacity-70">
+                                  <thead>
+                                    <tr className="border-b">
+                                      <th className="text-left p-2">Дата</th>
+                                      <th className="text-left p-2">Тип</th>
+                                      <th className="text-left p-2">Контрагент</th>
+                                      <th className="text-left p-2">Акцій</th>
+                                      <th className="text-right p-2">Сума</th>
+                                      <th className="text-left p-2">Статус</th>
+                                      <th className="text-left p-2"></th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {archivedTx.map((tx) => (
+                                      <tr key={tx.id} className="border-b hover:bg-muted/50">
+                                        <td className="p-2">{new Date(tx.created_at).toLocaleDateString()}</td>
+                                        <td className="p-2">{tx.seller_id === currentUser.id ? "Передача" : "Отримання"}</td>
+                                        <td className="p-2">{tx.seller_id === currentUser.id ? tx.buyer_name : tx.seller_name}</td>
+                                        <td className="p-2">{tx.quantity}</td>
+                                        <td className="p-2 text-right">{tx.total_price.toFixed(2)} USD</td>
+                                        <td className="p-2">
+                                          <Badge variant={statusBadgeVariant(tx.status)}>{statusLabel(tx.status)}</Badge>
+                                        </td>
+                                        <td className="p-2">
+                                          <Button size="sm" variant="ghost" onClick={() => {
+                                            setArchivedTxIds(prev => {
+                                              const next = new Set(prev);
+                                              next.delete(tx.id);
+                                              return next;
+                                            });
+                                          }}>
+                                            <RotateCcw className="h-4 w-4 mr-1" /> Повернути
+                                          </Button>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             </TabsContent>
