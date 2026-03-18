@@ -12,6 +12,10 @@ interface LinkPreviewData {
   siteName: string | null;
   url: string;
   favicon: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
+  videoWidth?: number | null;
+  videoHeight?: number | null;
 }
 
 // SSRF protection: block internal/private network URLs
@@ -56,6 +60,14 @@ function extractMetaContent(html: string, selectors: string[]): string | null {
     }
   }
   return null;
+}
+
+function extractNumericMetaContent(html: string, selectors: string[]): number | null {
+  const value = extractMetaContent(html, selectors);
+  if (!value) return null;
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function extractTitle(html: string): string | null {
@@ -189,6 +201,10 @@ Deno.serve(async (req) => {
       ),
       siteName: extractMetaContent(html, ['og:site_name']) || new URL(url).hostname,
       favicon: extractFavicon(html, url),
+      imageWidth: extractNumericMetaContent(html, ['og:image:width', 'twitter:image:width']),
+      imageHeight: extractNumericMetaContent(html, ['og:image:height', 'twitter:image:height']),
+      videoWidth: extractNumericMetaContent(html, ['og:video:width', 'og:video:secure_url:width']),
+      videoHeight: extractNumericMetaContent(html, ['og:video:height', 'og:video:secure_url:height']),
     };
 
     console.log('Preview extracted:', preview.title);

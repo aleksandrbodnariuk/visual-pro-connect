@@ -1,16 +1,63 @@
+import { useEffect, useMemo, useState } from "react";
 import { VideoEmbed } from "@/lib/videoEmbed";
 import { ExternalLink } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { LinkPreview } from "./LinkPreview";
 
 interface VideoPreviewProps {
   embed: VideoEmbed;
 }
 
+interface FacebookPreviewMeta {
+  imageWidth?: number | null;
+  imageHeight?: number | null;
+  videoWidth?: number | null;
+  videoHeight?: number | null;
+}
+
 export function VideoPreview({ embed }: VideoPreviewProps) {
-  // Визначаємо CSS клас для контейнера залежно від орієнтації
-  const aspectClass = embed.isVertical 
-    ? "aspect-[9/16] max-w-[320px] mx-auto"
-    : "aspect-video w-full";
+  const [facebookIsVertical, setFacebookIsVertical] = useState<boolean | null>(embed.isVertical ?? null);
+
+  useEffect(() => {
+    if (embed.platform !== "facebook") return;
+
+    let isMounted = true;
+
+    const resolveFacebookOrientation = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("fetch-link-preview", {
+          body: { url: embed.originalUrl },
+        });
+
+        if (error || !data?.success || !isMounted) return;
+
+        const preview = (data.data ?? {}) as FacebookPreviewMeta;
+        const width = preview.videoWidth ?? preview.imageWidth ?? null;
+        const height = preview.videoHeight ?? preview.imageHeight ?? null;
+
+        if (width && height) {
+          setFacebookIsVertical(height > width);
+        }
+      } catch {
+        // fallback to URL-based/default layout
+      }
+    };
+
+    resolveFacebookOrientation();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [embed.originalUrl, embed.platform]);
+
+  const isVertical = embed.platform === "facebook"
+    ? (facebookIsVertical ?? false)
+    : !!embed.isVertical;
+
+  const aspectClass = useMemo(
+    () => (isVertical ? "aspect-[9/16] max-w-[320px] mx-auto" : "aspect-video w-full"),
+    [isVertical]
+  );
 
   if (embed.platform === 'youtube') {
     return (
@@ -26,7 +73,7 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
         </div>
         <div className="p-2 flex items-center gap-2 text-xs text-muted-foreground">
           <span className="font-medium">
-            {embed.isVertical ? 'YOUTUBE SHORTS' : 'YOUTUBE.COM'}
+            {isVertical ? 'YOUTUBE SHORTS' : 'YOUTUBE.COM'}
           </span>
         </div>
       </div>
@@ -75,7 +122,7 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
 
   if (embed.platform === 'facebook') {
     return (
-      <div className={`rounded-lg overflow-hidden border bg-muted ${embed.isVertical ? 'max-w-[320px] mx-auto' : ''}`}>
+      <div className={`rounded-lg overflow-hidden border bg-muted ${isVertical ? 'max-w-[320px] mx-auto' : ''}`}>
         <div className={aspectClass}>
           <iframe
             src={embed.embedUrl}
@@ -83,18 +130,17 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
             allowFullScreen
             allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
             scrolling="no"
-            title={embed.isVertical ? "Facebook Reel" : "Facebook відео"}
+            title={isVertical ? "Facebook Reel" : "Facebook відео"}
           />
         </div>
         <div className="p-2 flex items-center gap-2 text-xs text-muted-foreground">
           <span className="font-medium">
-            {embed.isVertical ? 'FACEBOOK REELS' : 'FACEBOOK.COM'}
+            {isVertical ? 'FACEBOOK REELS' : 'FACEBOOK.COM'}
           </span>
         </div>
       </div>
     );
   }
   
-  // Для інших посилань - показуємо прев'ю з Open Graph
   return <LinkPreview url={embed.originalUrl} />;
 }
