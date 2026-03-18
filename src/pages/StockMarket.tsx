@@ -163,6 +163,30 @@ export default function StockMarket() {
   const [archivedTransferIds, setArchivedTransferIds] = useState<Set<string>>(new Set());
   const [transferDeleteTarget, setTransferDeleteTarget] = useState<string | null>(null);
 
+  // Archive for My Offers & My Transactions (persisted in localStorage)
+  const [archivedOfferIds, setArchivedOfferIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('stock_archived_offers');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+  const [archivedTxIds, setArchivedTxIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('stock_archived_transactions');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+  const [showOffersArchive, setShowOffersArchive] = useState(false);
+  const [showTxArchive, setShowTxArchive] = useState(false);
+
+  // Persist archive sets
+  useEffect(() => {
+    localStorage.setItem('stock_archived_offers', JSON.stringify([...archivedOfferIds]));
+  }, [archivedOfferIds]);
+  useEffect(() => {
+    localStorage.setItem('stock_archived_transactions', JSON.stringify([...archivedTxIds]));
+  }, [archivedTxIds]);
+
   const isAdmin = currentUser?.isAdmin || currentUser?.founder_admin;
   const isShareholder = currentUser?.isShareHolder;
 
