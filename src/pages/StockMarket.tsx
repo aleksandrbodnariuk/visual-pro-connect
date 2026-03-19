@@ -1298,7 +1298,8 @@ export default function StockMarket() {
                         </table>
                       </div>
                     </div>
-                  )}
+                    ) : null;
+                  })()}
                 </CardContent>
               </Card>
             </TabsContent>
