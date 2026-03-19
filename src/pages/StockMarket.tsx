@@ -1013,6 +1013,12 @@ export default function StockMarket() {
                               </button>
                               {showTxArchive && (
                                 <Button size="sm" variant="destructive" onClick={() => {
+                                  const archivedIds = myTransactions.filter(tx => archivedTxIds.has(tx.id)).map(tx => tx.id);
+                                  setMyTxDeletedIds(prev => {
+                                    const next = new Set(prev);
+                                    archivedIds.forEach(id => next.add(id));
+                                    return next;
+                                  });
                                   setArchivedTxIds(new Set());
                                   toast.success("Архів очищено");
                                 }}>
