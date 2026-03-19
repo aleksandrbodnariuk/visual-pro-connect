@@ -1267,7 +1267,7 @@ export default function StockMarket() {
                             </tr>
                           </thead>
                           <tbody>
-                            {transferLogs.filter(l => archivedTransferIds.has(l.id)).map((log) => (
+                            {archivedLogs.map((log) => (
                               <tr key={log.id} className="border-b hover:bg-muted/50">
                                 <td className="p-2">{new Date(log.created_at).toLocaleDateString()}</td>
                                 <td className="p-2">{log.from_name}</td>
