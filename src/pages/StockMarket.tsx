@@ -1168,9 +1168,9 @@ export default function StockMarket() {
                       </CardTitle>
                       <CardDescription>Журнал усіх підтверджених передач</CardDescription>
                     </div>
-                    {isAdmin && transferLogs.some(l => !archivedTransferIds.has(l.id)) && (
+                    {isAdmin && transferLogs.some(l => !archivedTransferIds.has(l.id) && !transferDeletedIds.has(l.id)) && (
                       <Button size="sm" variant="outline" onClick={() => {
-                        const visibleIds = transferLogs.filter(l => !archivedTransferIds.has(l.id)).map(l => l.id);
+                        const visibleIds = transferLogs.filter(l => !archivedTransferIds.has(l.id) && !transferDeletedIds.has(l.id)).map(l => l.id);
                         setArchivedTransferIds(prev => {
                           const next = new Set(prev);
                           visibleIds.forEach(id => next.add(id));
