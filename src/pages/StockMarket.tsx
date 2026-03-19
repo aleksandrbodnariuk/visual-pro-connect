@@ -179,6 +179,26 @@ export default function StockMarket() {
   const [showOffersArchive, setShowOffersArchive] = useState(false);
   const [showTxArchive, setShowTxArchive] = useState(false);
 
+  // Permanently deleted items (hidden from both active and archive)
+  const [myOffersDeletedIds, setMyOffersDeletedIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('stock_deleted_offers');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+  const [myTxDeletedIds, setMyTxDeletedIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('stock_deleted_transactions');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+  const [transferDeletedIds, setTransferDeletedIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('stock_deleted_transfers');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+
   // Persist archive sets
   useEffect(() => {
     localStorage.setItem('stock_archived_offers', JSON.stringify([...archivedOfferIds]));
