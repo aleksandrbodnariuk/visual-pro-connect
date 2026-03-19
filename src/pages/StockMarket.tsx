@@ -938,8 +938,8 @@ export default function StockMarket() {
                 </CardHeader>
                 <CardContent>
                   {(() => {
-                    const visibleTx = myTransactions.filter(tx => !archivedTxIds.has(tx.id));
-                    const archivedTx = myTransactions.filter(tx => archivedTxIds.has(tx.id));
+                    const visibleTx = myTransactions.filter(tx => !archivedTxIds.has(tx.id) && !myTxDeletedIds.has(tx.id));
+                    const archivedTx = myTransactions.filter(tx => archivedTxIds.has(tx.id) && !myTxDeletedIds.has(tx.id));
                     return (
                       <>
                         {visibleTx.length > 0 ? (
