@@ -844,6 +844,12 @@ export default function StockMarket() {
                                 </button>
                                 {showOffersArchive && (
                                   <Button size="sm" variant="destructive" onClick={() => {
+                                    const archivedIds = myOffers.filter(o => archivedOfferIds.has(o.id)).map(o => o.id);
+                                    setMyOffersDeletedIds(prev => {
+                                      const next = new Set(prev);
+                                      archivedIds.forEach(id => next.add(id));
+                                      return next;
+                                    });
                                     setArchivedOfferIds(new Set());
                                     toast.success("Архів очищено");
                                   }}>
