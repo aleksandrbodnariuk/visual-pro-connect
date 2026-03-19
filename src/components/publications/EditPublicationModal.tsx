@@ -260,7 +260,7 @@ export function EditPublicationModal({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,video/*"
+                accept="image/*"
                 onChange={handleFileSelect}
                 className="hidden"
               />
