@@ -567,7 +567,7 @@ export default function StockMarket() {
   const activeListings = allListings.filter(
     (l) => (l.status === "active" || l.status === "partially_filled") && l.seller_id !== currentUser?.id && l.remaining_qty > 0
   );
-  const myOffers = allListings.filter((l) => l.seller_id === currentUser?.id);
+  const myOffers = allListings.filter((l) => l.seller_id === currentUser?.id && !myOffersDeletedIds.has(l.id));
   const pendingTx = allTransactions.filter((t) => t.status === "pending");
   const myPercentage = totalShares > 0 ? ((myShares / totalShares) * 100).toFixed(2) : "0.00";
 
