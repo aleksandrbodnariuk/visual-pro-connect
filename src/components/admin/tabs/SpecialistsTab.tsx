@@ -71,7 +71,6 @@ export function SpecialistsTab() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-left p-2">Фахівець</th>
-                    <th className="text-left p-2">Спеціалізація</th>
                     <th className="text-left p-2">Категорії</th>
                     <th className="text-left p-2">Місто</th>
                   </tr>
@@ -87,9 +86,6 @@ export function SpecialistsTab() {
                           </Avatar>
                           <span className="font-medium">{spec.full_name || "Без імені"}</span>
                         </div>
-                      </td>
-                      <td className="p-2 text-sm text-muted-foreground">
-                        {spec.title || "—"}
                       </td>
                       <td className="p-2">
                         <div className="flex flex-wrap gap-1">
