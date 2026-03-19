@@ -1011,15 +1011,28 @@ export default function StockMarket() {
                                           <Badge variant={statusBadgeVariant(tx.status)}>{statusLabel(tx.status)}</Badge>
                                         </td>
                                         <td className="p-2">
-                                          <Button size="sm" variant="ghost" onClick={() => {
-                                            setArchivedTxIds(prev => {
-                                              const next = new Set(prev);
-                                              next.delete(tx.id);
-                                              return next;
-                                            });
-                                          }}>
-                                            <RotateCcw className="h-4 w-4 mr-1" /> Повернути
-                                          </Button>
+                                          <div className="flex gap-1">
+                                            <Button size="sm" variant="ghost" onClick={() => {
+                                              setArchivedTxIds(prev => {
+                                                const next = new Set(prev);
+                                                next.delete(tx.id);
+                                                return next;
+                                              });
+                                            }}>
+                                              <RotateCcw className="h-4 w-4 mr-1" /> Повернути
+                                            </Button>
+                                            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => {
+                                              setArchivedTxIds(prev => {
+                                                const next = new Set(prev);
+                                                next.delete(tx.id);
+                                                return next;
+                                              });
+                                              setMyTxDeletedIds(prev => new Set(prev).add(tx.id));
+                                              toast.success("Запис видалено з архіву");
+                                            }}>
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </div>
                                         </td>
                                       </tr>
                                     ))}
