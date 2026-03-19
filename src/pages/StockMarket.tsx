@@ -1173,7 +1173,7 @@ export default function StockMarket() {
                 </CardHeader>
                 <CardContent>
                   {(() => {
-                    const visibleLogs = transferLogs.filter(l => !archivedTransferIds.has(l.id));
+                    const visibleLogs = transferLogs.filter(l => !archivedTransferIds.has(l.id) && !transferDeletedIds.has(l.id));
                     return visibleLogs.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
