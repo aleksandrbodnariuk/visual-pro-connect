@@ -63,8 +63,13 @@ export function EditPublicationModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-      toast.error('Підтримуються лише зображення та відео');
+    if (file.type.startsWith('video/')) {
+      toast.error('Наразі ця функція в розробці. Але ви можете вставити посилання на відео.');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Підтримуються лише зображення');
       return;
     }
 
