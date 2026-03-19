@@ -179,6 +179,26 @@ export default function StockMarket() {
   const [showOffersArchive, setShowOffersArchive] = useState(false);
   const [showTxArchive, setShowTxArchive] = useState(false);
 
+  // Permanently deleted items (hidden from both active and archive)
+  const [myOffersDeletedIds, setMyOffersDeletedIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('stock_deleted_offers');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+  const [myTxDeletedIds, setMyTxDeletedIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('stock_deleted_transactions');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+  const [transferDeletedIds, setTransferDeletedIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('stock_deleted_transfers');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+
   // Persist archive sets
   useEffect(() => {
     localStorage.setItem('stock_archived_offers', JSON.stringify([...archivedOfferIds]));
@@ -186,6 +206,15 @@ export default function StockMarket() {
   useEffect(() => {
     localStorage.setItem('stock_archived_transactions', JSON.stringify([...archivedTxIds]));
   }, [archivedTxIds]);
+  useEffect(() => {
+    localStorage.setItem('stock_deleted_offers', JSON.stringify([...myOffersDeletedIds]));
+  }, [myOffersDeletedIds]);
+  useEffect(() => {
+    localStorage.setItem('stock_deleted_transactions', JSON.stringify([...myTxDeletedIds]));
+  }, [myTxDeletedIds]);
+  useEffect(() => {
+    localStorage.setItem('stock_deleted_transfers', JSON.stringify([...transferDeletedIds]));
+  }, [transferDeletedIds]);
 
   const isAdmin = currentUser?.isAdmin || currentUser?.founder_admin;
   const isShareholder = currentUser?.isShareHolder;
@@ -538,7 +567,7 @@ export default function StockMarket() {
   const activeListings = allListings.filter(
     (l) => (l.status === "active" || l.status === "partially_filled") && l.seller_id !== currentUser?.id && l.remaining_qty > 0
   );
-  const myOffers = allListings.filter((l) => l.seller_id === currentUser?.id);
+  const myOffers = allListings.filter((l) => l.seller_id === currentUser?.id && !myOffersDeletedIds.has(l.id));
   const pendingTx = allTransactions.filter((t) => t.status === "pending");
   const myPercentage = totalShares > 0 ? ((myShares / totalShares) * 100).toFixed(2) : "0.00";
 
@@ -815,6 +844,12 @@ export default function StockMarket() {
                                 </button>
                                 {showOffersArchive && (
                                   <Button size="sm" variant="destructive" onClick={() => {
+                                    const archivedIds = myOffers.filter(o => archivedOfferIds.has(o.id)).map(o => o.id);
+                                    setMyOffersDeletedIds(prev => {
+                                      const next = new Set(prev);
+                                      archivedIds.forEach(id => next.add(id));
+                                      return next;
+                                    });
                                     setArchivedOfferIds(new Set());
                                     toast.success("Архів очищено");
                                   }}>
@@ -846,15 +881,28 @@ export default function StockMarket() {
                                             <Badge variant={statusBadgeVariant(item.status)}>{statusLabel(item.status)}</Badge>
                                           </td>
                                           <td className="p-2">
-                                            <Button size="sm" variant="ghost" onClick={() => {
-                                              setArchivedOfferIds(prev => {
-                                                const next = new Set(prev);
-                                                next.delete(item.id);
-                                                return next;
-                                              });
-                                            }}>
-                                              <RotateCcw className="h-4 w-4 mr-1" /> Повернути
-                                            </Button>
+                                            <div className="flex gap-1">
+                                              <Button size="sm" variant="ghost" onClick={() => {
+                                                setArchivedOfferIds(prev => {
+                                                  const next = new Set(prev);
+                                                  next.delete(item.id);
+                                                  return next;
+                                                });
+                                              }}>
+                                                <RotateCcw className="h-4 w-4 mr-1" /> Повернути
+                                              </Button>
+                                              <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => {
+                                                setArchivedOfferIds(prev => {
+                                                  const next = new Set(prev);
+                                                  next.delete(item.id);
+                                                  return next;
+                                                });
+                                                setMyOffersDeletedIds(prev => new Set(prev).add(item.id));
+                                                toast.success("Запис видалено з архіву");
+                                              }}>
+                                                <Trash2 className="h-4 w-4" />
+                                              </Button>
+                                            </div>
                                           </td>
                                         </tr>
                                       ))}
@@ -880,9 +928,9 @@ export default function StockMarket() {
                     <CardTitle>Мої заявки</CardTitle>
                     <CardDescription>Подані та отримані заявки на передачу акцій</CardDescription>
                   </div>
-                  {myTransactions.filter(tx => !archivedTxIds.has(tx.id) && tx.status !== 'pending').length > 0 && (
+                  {myTransactions.filter(tx => !archivedTxIds.has(tx.id) && !myTxDeletedIds.has(tx.id) && tx.status !== 'pending').length > 0 && (
                     <Button size="sm" variant="outline" onClick={() => {
-                      const archivable = myTransactions.filter(tx => !archivedTxIds.has(tx.id) && tx.status !== 'pending');
+                      const archivable = myTransactions.filter(tx => !archivedTxIds.has(tx.id) && !myTxDeletedIds.has(tx.id) && tx.status !== 'pending');
                       setArchivedTxIds(prev => {
                         const next = new Set(prev);
                         archivable.forEach(tx => next.add(tx.id));
@@ -896,8 +944,8 @@ export default function StockMarket() {
                 </CardHeader>
                 <CardContent>
                   {(() => {
-                    const visibleTx = myTransactions.filter(tx => !archivedTxIds.has(tx.id));
-                    const archivedTx = myTransactions.filter(tx => archivedTxIds.has(tx.id));
+                    const visibleTx = myTransactions.filter(tx => !archivedTxIds.has(tx.id) && !myTxDeletedIds.has(tx.id));
+                    const archivedTx = myTransactions.filter(tx => archivedTxIds.has(tx.id) && !myTxDeletedIds.has(tx.id));
                     return (
                       <>
                         {visibleTx.length > 0 ? (
@@ -965,6 +1013,12 @@ export default function StockMarket() {
                               </button>
                               {showTxArchive && (
                                 <Button size="sm" variant="destructive" onClick={() => {
+                                  const archivedIds = myTransactions.filter(tx => archivedTxIds.has(tx.id)).map(tx => tx.id);
+                                  setMyTxDeletedIds(prev => {
+                                    const next = new Set(prev);
+                                    archivedIds.forEach(id => next.add(id));
+                                    return next;
+                                  });
                                   setArchivedTxIds(new Set());
                                   toast.success("Архів очищено");
                                 }}>
@@ -998,15 +1052,28 @@ export default function StockMarket() {
                                           <Badge variant={statusBadgeVariant(tx.status)}>{statusLabel(tx.status)}</Badge>
                                         </td>
                                         <td className="p-2">
-                                          <Button size="sm" variant="ghost" onClick={() => {
-                                            setArchivedTxIds(prev => {
-                                              const next = new Set(prev);
-                                              next.delete(tx.id);
-                                              return next;
-                                            });
-                                          }}>
-                                            <RotateCcw className="h-4 w-4 mr-1" /> Повернути
-                                          </Button>
+                                          <div className="flex gap-1">
+                                            <Button size="sm" variant="ghost" onClick={() => {
+                                              setArchivedTxIds(prev => {
+                                                const next = new Set(prev);
+                                                next.delete(tx.id);
+                                                return next;
+                                              });
+                                            }}>
+                                              <RotateCcw className="h-4 w-4 mr-1" /> Повернути
+                                            </Button>
+                                            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => {
+                                              setArchivedTxIds(prev => {
+                                                const next = new Set(prev);
+                                                next.delete(tx.id);
+                                                return next;
+                                              });
+                                              setMyTxDeletedIds(prev => new Set(prev).add(tx.id));
+                                              toast.success("Запис видалено з архіву");
+                                            }}>
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </div>
                                         </td>
                                       </tr>
                                     ))}
@@ -1101,9 +1168,9 @@ export default function StockMarket() {
                       </CardTitle>
                       <CardDescription>Журнал усіх підтверджених передач</CardDescription>
                     </div>
-                    {isAdmin && transferLogs.some(l => !archivedTransferIds.has(l.id)) && (
+                    {isAdmin && transferLogs.some(l => !archivedTransferIds.has(l.id) && !transferDeletedIds.has(l.id)) && (
                       <Button size="sm" variant="outline" onClick={() => {
-                        const visibleIds = transferLogs.filter(l => !archivedTransferIds.has(l.id)).map(l => l.id);
+                        const visibleIds = transferLogs.filter(l => !archivedTransferIds.has(l.id) && !transferDeletedIds.has(l.id)).map(l => l.id);
                         setArchivedTransferIds(prev => {
                           const next = new Set(prev);
                           visibleIds.forEach(id => next.add(id));
@@ -1118,7 +1185,7 @@ export default function StockMarket() {
                 </CardHeader>
                 <CardContent>
                   {(() => {
-                    const visibleLogs = transferLogs.filter(l => !archivedTransferIds.has(l.id));
+                    const visibleLogs = transferLogs.filter(l => !archivedTransferIds.has(l.id) && !transferDeletedIds.has(l.id));
                     return visibleLogs.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
@@ -1169,9 +1236,24 @@ export default function StockMarket() {
                   })()}
 
                   {/* Archived section */}
-                  {isAdmin && archivedTransferIds.size > 0 && (
+                  {isAdmin && (() => {
+                    const archivedLogs = transferLogs.filter(l => archivedTransferIds.has(l.id) && !transferDeletedIds.has(l.id));
+                    return archivedLogs.length > 0 ? (
                     <div className="mt-6 border-t pt-4">
-                      <h4 className="text-sm font-medium text-muted-foreground mb-3">Архів ({transferLogs.filter(l => archivedTransferIds.has(l.id)).length})</h4>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-medium text-muted-foreground">Архів ({archivedLogs.length})</h4>
+                        <Button size="sm" variant="destructive" onClick={() => {
+                          setTransferDeletedIds(prev => {
+                            const next = new Set(prev);
+                            archivedLogs.forEach(l => next.add(l.id));
+                            return next;
+                          });
+                          setArchivedTransferIds(new Set());
+                          toast.success("Архів очищено");
+                        }}>
+                          <Trash2 className="h-4 w-4 mr-1" /> Очистити архів
+                        </Button>
+                      </div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm opacity-70">
                           <thead>
@@ -1185,7 +1267,7 @@ export default function StockMarket() {
                             </tr>
                           </thead>
                           <tbody>
-                            {transferLogs.filter(l => archivedTransferIds.has(l.id)).map((log) => (
+                            {archivedLogs.map((log) => (
                               <tr key={log.id} className="border-b hover:bg-muted/50">
                                 <td className="p-2">{new Date(log.created_at).toLocaleDateString()}</td>
                                 <td className="p-2">{log.from_name}</td>
@@ -1216,7 +1298,8 @@ export default function StockMarket() {
                         </table>
                       </div>
                     </div>
-                  )}
+                    ) : null;
+                  })()}
                 </CardContent>
               </Card>
             </TabsContent>
