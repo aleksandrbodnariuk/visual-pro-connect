@@ -1236,9 +1236,24 @@ export default function StockMarket() {
                   })()}
 
                   {/* Archived section */}
-                  {isAdmin && archivedTransferIds.size > 0 && (
+                  {isAdmin && (() => {
+                    const archivedLogs = transferLogs.filter(l => archivedTransferIds.has(l.id) && !transferDeletedIds.has(l.id));
+                    return archivedLogs.length > 0 ? (
                     <div className="mt-6 border-t pt-4">
-                      <h4 className="text-sm font-medium text-muted-foreground mb-3">Архів ({transferLogs.filter(l => archivedTransferIds.has(l.id)).length})</h4>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-medium text-muted-foreground">Архів ({archivedLogs.length})</h4>
+                        <Button size="sm" variant="destructive" onClick={() => {
+                          setTransferDeletedIds(prev => {
+                            const next = new Set(prev);
+                            archivedLogs.forEach(l => next.add(l.id));
+                            return next;
+                          });
+                          setArchivedTransferIds(new Set());
+                          toast.success("Архів очищено");
+                        }}>
+                          <Trash2 className="h-4 w-4 mr-1" /> Очистити архів
+                        </Button>
+                      </div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm opacity-70">
                           <thead>
