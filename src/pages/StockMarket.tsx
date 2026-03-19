@@ -206,6 +206,15 @@ export default function StockMarket() {
   useEffect(() => {
     localStorage.setItem('stock_archived_transactions', JSON.stringify([...archivedTxIds]));
   }, [archivedTxIds]);
+  useEffect(() => {
+    localStorage.setItem('stock_deleted_offers', JSON.stringify([...myOffersDeletedIds]));
+  }, [myOffersDeletedIds]);
+  useEffect(() => {
+    localStorage.setItem('stock_deleted_transactions', JSON.stringify([...myTxDeletedIds]));
+  }, [myTxDeletedIds]);
+  useEffect(() => {
+    localStorage.setItem('stock_deleted_transfers', JSON.stringify([...transferDeletedIds]));
+  }, [transferDeletedIds]);
 
   const isAdmin = currentUser?.isAdmin || currentUser?.founder_admin;
   const isShareholder = currentUser?.isShareHolder;
