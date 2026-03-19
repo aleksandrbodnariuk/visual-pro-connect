@@ -117,8 +117,10 @@ export function NewsFeed() {
     if (!file) return;
     if (type === 'audio') {
       if (!file.type.startsWith('audio/')) { toast({ title: 'Підтримуються лише аудіо файли', variant: 'destructive' }); return; }
-    } else if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-      toast({ title: 'Підтримуються лише зображення та відео', variant: 'destructive' }); return;
+    } else if (file.type.startsWith('video/')) {
+      toast({ title: 'Наразі ця функція в розробці. Але ви можете вставити посилання на відео.', variant: 'destructive' }); return;
+    } else if (!file.type.startsWith('image/')) {
+      toast({ title: 'Підтримуються лише зображення', variant: 'destructive' }); return;
     }
     if (file.size > 50 * 1024 * 1024) { toast({ title: 'Розмір файлу не повинен перевищувати 50MB', variant: 'destructive' }); return; }
     setIsFormExpanded(true);

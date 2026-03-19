@@ -254,6 +254,13 @@ export default function MyFiles() {
         });
         if (error) throw error;
       } else if (selectedFiles.length > 0) {
+        // Block direct video file uploads
+        const hasVideoFile = selectedFiles.some(f => f.type.startsWith('video/') || detectFileType(f) === 'videos');
+        if (hasVideoFile) {
+          toast.error('Наразі завантаження відео в розробці. Але ви можете вставити посилання на відео.');
+          setUploading(false);
+          return;
+        }
         for (const file of selectedFiles) {
           const detected = detectFileType(file);
           const fileType = detected === 'photos' ? 'photo' : detected === 'videos' ? 'video' : 'music';

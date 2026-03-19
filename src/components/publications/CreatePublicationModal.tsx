@@ -52,24 +52,20 @@ export function CreatePublicationModal({
       return;
     }
 
-    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-      toast.error('Підтримуються лише зображення та відео');
+    if (file.type.startsWith('video/')) {
+      toast.error('Наразі ця функція в розробці. Але ви можете вставити посилання на відео.');
       return;
     }
 
-    // Validate size for images
-    if (file.type.startsWith('image/')) {
-      const sizeCheck = validateImageSize(file, 'post');
-      if (!sizeCheck.valid) {
-        toast.error(sizeCheck.message);
-        return;
-      }
-    } else {
-      const maxSize = 50 * 1024 * 1024; // 50MB for video
-      if (file.size > maxSize) {
-        toast.error('Розмір файлу не повинен перевищувати 50MB');
-        return;
-      }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Підтримуються лише зображення');
+      return;
+    }
+
+    const sizeCheck = validateImageSize(file, 'post');
+    if (!sizeCheck.valid) {
+      toast.error(sizeCheck.message);
+      return;
     }
 
     setSelectedFile(file);
@@ -221,7 +217,7 @@ export function CreatePublicationModal({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*,video/*"
+              accept="image/*"
               onChange={handleFileSelect}
               className="hidden"
             />
