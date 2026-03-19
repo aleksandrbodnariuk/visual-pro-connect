@@ -922,9 +922,9 @@ export default function StockMarket() {
                     <CardTitle>Мої заявки</CardTitle>
                     <CardDescription>Подані та отримані заявки на передачу акцій</CardDescription>
                   </div>
-                  {myTransactions.filter(tx => !archivedTxIds.has(tx.id) && tx.status !== 'pending').length > 0 && (
+                  {myTransactions.filter(tx => !archivedTxIds.has(tx.id) && !myTxDeletedIds.has(tx.id) && tx.status !== 'pending').length > 0 && (
                     <Button size="sm" variant="outline" onClick={() => {
-                      const archivable = myTransactions.filter(tx => !archivedTxIds.has(tx.id) && tx.status !== 'pending');
+                      const archivable = myTransactions.filter(tx => !archivedTxIds.has(tx.id) && !myTxDeletedIds.has(tx.id) && tx.status !== 'pending');
                       setArchivedTxIds(prev => {
                         const next = new Set(prev);
                         archivable.forEach(tx => next.add(tx.id));
