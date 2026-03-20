@@ -581,7 +581,7 @@ export function UsersTab() {
             </div>
 
             {filteredUsers.map((user) => (
-              <div key={user.id} className="grid grid-cols-9 gap-4 items-center py-2 border-b">
+              <div key={user.id} className="grid grid-cols-10 gap-4 items-center py-2 border-b">
                 <div className="text-xs font-mono flex items-center gap-1 min-w-0">
                   <span className="truncate max-w-[120px]" title={user.id}>
                     {user.id}
