@@ -472,9 +472,25 @@ export default function MyFiles() {
             </div>
           )}
           {file.videoEmbed && file.videoEmbed.platform !== 'link' ? (
-            <div className="pointer-events-none">
-              <VideoPreview embed={file.videoEmbed} />
-            </div>
+            file.videoEmbed.thumbnailUrl ? (
+              <div className="relative aspect-video">
+                <img src={file.videoEmbed.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center">
+                    <Video className="h-5 w-5 text-white" />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="relative aspect-video bg-muted flex flex-col items-center justify-center gap-2">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Video className="h-5 w-5 text-primary" />
+                </div>
+                <span className="text-xs font-medium text-muted-foreground uppercase">
+                  {file.videoEmbed.platform === 'facebook' ? 'Facebook' : file.videoEmbed.platform}
+                </span>
+              </div>
+            )
           ) : file.media_url ? (
             <video src={file.media_url} className="w-full aspect-video object-cover" preload="metadata" muted />
           ) : null}
