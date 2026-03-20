@@ -118,15 +118,17 @@ export function calcTitleBonus(
   allShareholders: ShareholderInput[],
   totalShares: number,
   netProfit: number,
+  config?: ShareholderDistConfig,
 ): number {
   if (userTitleLevel === null || totalShares <= 0 || netProfit <= 0 || userShares <= 0) return 0;
 
+  const cfg = config ?? DEFAULT_DIST_CONFIG;
+  const perLevel = cfg.titleBonusPercent / 7;
   let bonus = 0;
 
   for (const level of TITLE_BONUS_LEVELS) {
     if (userTitleLevel < level.minTitleLevel) continue;
 
-    // Сума акцій усіх акціонерів, які проходять цей рівень
     const eligibleShares = allShareholders.reduce((sum, sh) => {
       const pct = calcSharePercent(sh.shares, totalShares);
       const t = getTitleByPercent(pct);
@@ -136,7 +138,7 @@ export function calcTitleBonus(
 
     if (eligibleShares <= 0) continue;
 
-    const levelPool = netProfit * TITLE_BONUS_PERCENT_PER_LEVEL;
+    const levelPool = netProfit * perLevel;
     bonus += (userShares / eligibleShares) * levelPool;
   }
 
@@ -145,28 +147,17 @@ export function calcTitleBonus(
 
 // ─── Повний розрахунок ───────────────────────────────────────────────────────
 
-/**
- * Повний розподіл прибутку від одного замовлення.
- *
- * @param orderAmount  Сума замовлення
- * @param expenses     Витрати
- * @param shareholders Список акціонерів з кількістю акцій
- * @param totalShares  Загальна кількість акцій у компанії (з company_settings)
- *
- * Якщо totalShares = 0, shareholders = [] або netProfit = 0 —
- * повертає нульові пули і порожній масив акціонерів.
- * Це нормальний стан системи до налаштування, а не помилка.
- */
 export function calcFullProfitDistribution(
   orderAmount: number,
   expenses: number,
   shareholders: ShareholderInput[],
   totalShares: number,
+  config?: ShareholderDistConfig,
 ): ProfitDistribution {
+  const cfg = config ?? DEFAULT_DIST_CONFIG;
   const netProfit = calcNetProfit(orderAmount, expenses);
-  const pools = calcProfitPools(netProfit);
+  const pools = calcProfitPools(netProfit, cfg);
 
-  // Якщо система не налаштована — повертаємо порожній результат
   if (totalShares <= 0 || shareholders.length === 0) {
     return {
       netProfit,
@@ -186,6 +177,7 @@ export function calcFullProfitDistribution(
       shareholders,
       totalShares,
       netProfit,
+      cfg,
     );
 
     return {
@@ -199,7 +191,6 @@ export function calcFullProfitDistribution(
     };
   });
 
-  // Підрахунок не засвоєних титульних бонусів
   const totalDistributedTitleBonus = results.reduce((sum, r) => sum + r.titleBonus, 0);
   const unclaimedTitleBonus = Math.max(0, pools.titleBonusPool - totalDistributedTitleBonus);
 
