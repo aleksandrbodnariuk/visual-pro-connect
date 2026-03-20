@@ -14,12 +14,8 @@
 
 // ─── Константи ───────────────────────────────────────────────────────────────
 
-/** Відсоток від net_profit для кожної ролі в ланцюгу */
-export const REP_PERCENT: Record<string, number> = {
-  representative: 0.05,
-  manager: 0.03,
-  director: 0.02,
-};
+/** Максимальний сумарний відсоток представників */
+export const REP_MAX_PERCENT = 0.10;
 
 // ─── Типи ────────────────────────────────────────────────────────────────────
 
@@ -48,14 +44,61 @@ export interface RepresentativePoolResult {
   deductions: RepresentativeDeduction[];
 }
 
+// ─── Визначення відсотків за комбінацією ─────────────────────────────────────
+
+/**
+ * Визначає відсотки для кожної ролі залежно від комбінації в ланцюгу:
+ *
+ *   A) тільки representative           → rep 5%
+ *   B) representative + manager         → rep 5%, manager 3%
+ *   C) manager без director             → manager 8%
+ *   D) тільки director                  → director 10%
+ *   E) representative + manager + director → rep 5%, manager 3%, director 2%
+ *   F) manager + director               → manager 8%, director 2%
+ *
+ * Загальний % ніколи не перевищує 10%.
+ */
+function resolvePercents(chain: RepresentativeChainNode[]): Map<string, number> {
+  const hasRep = chain.some(n => n.role === 'representative');
+  const hasManager = chain.some(n => n.role === 'manager');
+  const hasDirector = chain.some(n => n.role === 'director');
+
+  const percents = new Map<string, number>();
+
+  if (hasRep && hasManager && hasDirector) {
+    // E) rep 5% + manager 3% + director 2% = 10%
+    percents.set('representative', 0.05);
+    percents.set('manager', 0.03);
+    percents.set('director', 0.02);
+  } else if (hasRep && hasManager) {
+    // B) rep 5% + manager 3% = 8%
+    percents.set('representative', 0.05);
+    percents.set('manager', 0.03);
+  } else if (hasManager && hasDirector) {
+    // F) manager 8% + director 2% = 10%
+    percents.set('manager', 0.08);
+    percents.set('director', 0.02);
+  } else if (hasRep) {
+    // A) rep 5%
+    percents.set('representative', 0.05);
+  } else if (hasManager) {
+    // C) manager 8%
+    percents.set('manager', 0.08);
+  } else if (hasDirector) {
+    // D) director 10%
+    percents.set('director', 0.10);
+  }
+
+  return percents;
+}
+
 // ─── Обчислення ──────────────────────────────────────────────────────────────
 
 /**
  * Розрахунок відрахувань представників від net_profit.
  *
  * @param netProfit      Чистий прибуток замовлення (order_amount - expenses)
- * @param chain          Ланцюг представників від прямого до верхнього (representative → manager → director)
- *                       Порядок: [прямий представник, його parent (manager), grandparent (director)]
+ * @param chain          Ланцюг представників (representative → manager → director)
  *
  * Якщо chain порожній або netProfit <= 0, повертає нульовий результат.
  */
@@ -72,10 +115,11 @@ export function calcRepresentativePool(
     };
   }
 
+  const percents = resolvePercents(chain);
   const deductions: RepresentativeDeduction[] = [];
 
   for (const node of chain) {
-    const percent = REP_PERCENT[node.role] ?? 0;
+    const percent = percents.get(node.role) ?? 0;
     if (percent <= 0) continue;
 
     deductions.push({
@@ -91,9 +135,9 @@ export function calcRepresentativePool(
   const totalPercent = deductions.reduce((sum, d) => sum + d.percent, 0);
 
   return {
-    totalPercent,
-    totalAmount,
-    netProfitAfterReps: Math.max(0, netProfit - totalAmount),
+    totalPercent: Math.min(totalPercent, REP_MAX_PERCENT),
+    totalAmount: Math.min(totalAmount, netProfit * REP_MAX_PERCENT),
+    netProfitAfterReps: Math.max(0, netProfit - Math.min(totalAmount, netProfit * REP_MAX_PERCENT)),
     deductions,
   };
 }
