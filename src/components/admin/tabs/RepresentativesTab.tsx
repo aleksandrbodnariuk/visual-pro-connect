@@ -293,6 +293,14 @@ export function RepresentativesTab() {
           <Settings2 className="h-4 w-4 mr-1" />
           Налаштування
         </Button>
+        <Button
+          variant={activeView === "services" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveView("services")}
+        >
+          <Package className="h-4 w-4 mr-1" />
+          Послуги
+        </Button>
       </div>
 
       {/* ── Structure View ── */}
