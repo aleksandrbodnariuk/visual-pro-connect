@@ -4,15 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PenLine, Save, Info, AlertCircle, Settings } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { PenLine, Save, Info, AlertCircle, Settings, Percent, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { SharePriceControl } from "@/components/admin/SharePriceControl";
-import { calcFullProfitDistribution, type ShareholderInput } from "@/lib/shareholderCalculations";
-
+import { calcFullProfitDistribution, type ShareholderInput, type ShareholderDistConfig, DEFAULT_DIST_CONFIG } from "@/lib/shareholderCalculations";
+import { useProfitDistConfig } from "@/hooks/useProfitDistConfig";
 import { getTitleName } from "@/lib/shareholderRules";
-
+import { useAuth } from "@/context/AuthContext";
 export function ShareholdersTab() {
   const {
     totalShares: dbTotalShares,
