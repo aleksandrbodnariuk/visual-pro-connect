@@ -20,6 +20,7 @@ import {
   type ShareholderProfitResult,
   type ShareholderInput,
 } from '@/lib/shareholderCalculations';
+import { useProfitDistConfig } from '@/hooks/useProfitDistConfig';
 import {
   calcRepresentativePool,
   type RepCommissionConfig,

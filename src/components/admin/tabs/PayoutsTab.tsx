@@ -24,6 +24,7 @@ import {
   calcFullProfitDistribution,
   type ShareholderInput,
 } from '@/lib/shareholderCalculations';
+import { useProfitDistConfig } from '@/hooks/useProfitDistConfig';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

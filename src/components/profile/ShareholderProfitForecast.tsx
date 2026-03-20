@@ -6,6 +6,7 @@ import {
   calcFullProfitDistribution,
   type ShareholderInput,
 } from "@/lib/shareholderCalculations";
+import { useProfitDistConfig } from "@/hooks/useProfitDistConfig";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
