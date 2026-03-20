@@ -224,10 +224,17 @@ export function RepresentativesTab() {
 
   // ── Save settings ──
   const saveSettings = async () => {
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
     setSettingsLoading(true);
     try {
       const upserts = [
-        { id: SETTING_COMMISSION_PERCENT, value: commissionPercent, updated_at: new Date().toISOString() },
+        { id: SETTING_TOTAL_MAX, value: totalMaxPercent, updated_at: new Date().toISOString() },
+        { id: SETTING_PERSONAL, value: personalPercent, updated_at: new Date().toISOString() },
+        { id: SETTING_MANAGER, value: managerPercent, updated_at: new Date().toISOString() },
+        { id: SETTING_DIRECTOR, value: directorPercent, updated_at: new Date().toISOString() },
         { id: SETTING_INVITE_TEXT, value: inviteText, updated_at: new Date().toISOString() },
       ];
 
