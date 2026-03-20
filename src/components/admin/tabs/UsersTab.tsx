@@ -118,6 +118,79 @@ export function UsersTab() {
     }
   };
 
+  const loadRepresentatives = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('representatives')
+        .select('id, user_id');
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((r: any) => { map[r.user_id] = r.id; });
+      setRepresentativeIds(map);
+    } catch (error) {
+      console.error("Помилка завантаження представників:", error);
+    }
+  };
+
+  const isRepresentative = (userId: string): boolean => {
+    return Boolean(representativeIds[userId]);
+  };
+
+  const toggleRepresentativeStatus = async (userId: string) => {
+    try {
+      const current = isRepresentative(userId);
+      if (current) {
+        // Remove representative record
+        const { error } = await supabase
+          .from('representatives')
+          .delete()
+          .eq('user_id', userId);
+        if (error) throw error;
+
+        // Remove role from user_roles
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId)
+          .eq('role', 'representative');
+
+        setRepresentativeIds(prev => {
+          const updated = { ...prev };
+          delete updated[userId];
+          return updated;
+        });
+        setUserRoles(prev => ({
+          ...prev,
+          [userId]: (prev[userId] || []).filter(r => r !== 'representative'),
+        }));
+        toast.success("Статус представника знято");
+      } else {
+        // Create representative record
+        const { data, error } = await supabase
+          .from('representatives')
+          .insert({ user_id: userId, role: 'representative' as any })
+          .select('id')
+          .single();
+        if (error) throw error;
+
+        // Add role to user_roles
+        await supabase
+          .from('user_roles')
+          .upsert({ user_id: userId, role: 'representative' as any }, { onConflict: 'user_id,role' });
+
+        setRepresentativeIds(prev => ({ ...prev, [userId]: data.id }));
+        setUserRoles(prev => ({
+          ...prev,
+          [userId]: [...(prev[userId] || []), 'representative'],
+        }));
+        toast.success("Статус представника надано");
+      }
+    } catch (error) {
+      console.error("Помилка зміни статусу представника:", error);
+      toast.error("Помилка зміни статусу представника");
+    }
+  };
+
   // Перевіряє чи користувач є фахівцем
   const isSpecialist = (userId: string): boolean => {
     return userRoles[userId]?.includes('specialist') || false;
