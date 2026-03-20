@@ -1820,6 +1820,18 @@ export type Database = {
           title: string
         }[]
       }
+      get_team_tree: {
+        Args: { _representative_id: string }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          id: string
+          level: number
+          parent_id: string
+          role: string
+          user_id: string
+        }[]
+      }
       get_title_by_share_percent: {
         Args: { _percent: number }
         Returns: string
