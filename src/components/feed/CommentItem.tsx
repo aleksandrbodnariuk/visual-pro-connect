@@ -133,7 +133,25 @@ export function CommentItem({ comment, depth = 0, postAuthorId, currentUserId, o
                 </button>
               </div>
             ) : (
-              <span className="break-words">{comment.content}</span>
+              <>
+                <span className="break-words">{displayedContent}</span>
+                {isLongComment && !showFullComment && (
+                  <button 
+                    onClick={() => setShowFullComment(true)} 
+                    className="ml-1 text-xs font-semibold text-muted-foreground hover:underline"
+                  >
+                    Показати більше
+                  </button>
+                )}
+                {isLongComment && showFullComment && (
+                  <button 
+                    onClick={() => setShowFullComment(false)} 
+                    className="ml-1 text-xs font-semibold text-muted-foreground hover:underline"
+                  >
+                    Згорнути
+                  </button>
+                )}
+              </>
             )}
           </div>
           
