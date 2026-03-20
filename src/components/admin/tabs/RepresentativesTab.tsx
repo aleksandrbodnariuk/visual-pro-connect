@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, Users, ShoppingCart, Settings2, ChevronDown, ChevronRight, UserX, Package } from "lucide-react";
+import { Save, Users, ShoppingCart, Settings2, ChevronDown, ChevronRight, UserX, Package, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminServicesManager } from "@/components/admin/AdminServicesManager";
@@ -45,8 +45,13 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 // ── Settings keys in site_settings ──
-const SETTING_COMMISSION_PERCENT = "rep-commission-percent";
 const SETTING_INVITE_TEXT = "rep-invite-text";
+const SETTING_TOTAL_MAX = "rep-total-max-percent";
+const SETTING_PERSONAL = "rep-personal-percent";
+const SETTING_MANAGER = "rep-manager-percent";
+const SETTING_DIRECTOR = "rep-director-percent";
+
+const ALL_SETTING_KEYS = [SETTING_INVITE_TEXT, SETTING_TOTAL_MAX, SETTING_PERSONAL, SETTING_MANAGER, SETTING_DIRECTOR];
 
 export function RepresentativesTab() {
   const [tree, setTree] = useState<RepNode[]>([]);
@@ -55,9 +60,19 @@ export function RepresentativesTab() {
   const [activeView, setActiveView] = useState<"structure" | "orders" | "services" | "settings">("structure");
 
   // Settings state
-  const [commissionPercent, setCommissionPercent] = useState("5");
+  const [totalMaxPercent, setTotalMaxPercent] = useState("10");
+  const [personalPercent, setPersonalPercent] = useState("5");
+  const [managerPercent, setManagerPercent] = useState("3");
+  const [directorPercent, setDirectorPercent] = useState("2");
   const [inviteText, setInviteText] = useState("Приєднуйтесь до нашої спільноти!");
   const [settingsLoading, setSettingsLoading] = useState(false);
+
+  // Validation
+  const sumPercent = parseFloat(personalPercent || "0") + parseFloat(managerPercent || "0") + parseFloat(directorPercent || "0");
+  const maxPercent = parseFloat(totalMaxPercent || "0");
+  const validationError = sumPercent > maxPercent
+    ? `Сума відсотків (${sumPercent}%) перевищує загальний ліміт (${maxPercent}%)`
+    : null;
 
   // ── Load representatives tree ──
   const loadTree = useCallback(async () => {
@@ -187,10 +202,13 @@ export function RepresentativesTab() {
       const { data } = await supabase
         .from("site_settings")
         .select("id, value")
-        .in("id", [SETTING_COMMISSION_PERCENT, SETTING_INVITE_TEXT]);
+        .in("id", ALL_SETTING_KEYS);
 
       (data || []).forEach((s: any) => {
-        if (s.id === SETTING_COMMISSION_PERCENT) setCommissionPercent(s.value);
+        if (s.id === SETTING_TOTAL_MAX) setTotalMaxPercent(s.value);
+        if (s.id === SETTING_PERSONAL) setPersonalPercent(s.value);
+        if (s.id === SETTING_MANAGER) setManagerPercent(s.value);
+        if (s.id === SETTING_DIRECTOR) setDirectorPercent(s.value);
         if (s.id === SETTING_INVITE_TEXT) setInviteText(s.value);
       });
     } catch (err) {
@@ -206,10 +224,17 @@ export function RepresentativesTab() {
 
   // ── Save settings ──
   const saveSettings = async () => {
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
     setSettingsLoading(true);
     try {
       const upserts = [
-        { id: SETTING_COMMISSION_PERCENT, value: commissionPercent, updated_at: new Date().toISOString() },
+        { id: SETTING_TOTAL_MAX, value: totalMaxPercent, updated_at: new Date().toISOString() },
+        { id: SETTING_PERSONAL, value: personalPercent, updated_at: new Date().toISOString() },
+        { id: SETTING_MANAGER, value: managerPercent, updated_at: new Date().toISOString() },
+        { id: SETTING_DIRECTOR, value: directorPercent, updated_at: new Date().toISOString() },
         { id: SETTING_INVITE_TEXT, value: inviteText, updated_at: new Date().toISOString() },
       ];
 
@@ -408,24 +433,92 @@ export function RepresentativesTab() {
         <Card>
           <CardHeader>
             <CardTitle>Налаштування представників</CardTitle>
-            <CardDescription>Комісійний відсоток та текст запрошення</CardDescription>
+            <CardDescription>Комісійні відсотки та текст запрошення</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="commission-percent">Комісійний відсоток (%)</Label>
-              <Input
-                id="commission-percent"
-                type="number"
-                min="0"
-                max="100"
-                step="0.5"
-                value={commissionPercent}
-                onChange={(e) => setCommissionPercent(e.target.value)}
-                className="max-w-[200px]"
-              />
-              <p className="text-xs text-muted-foreground">
-                Відсоток від суми замовлення, який отримує представник
-              </p>
+            {/* Commission percentages */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="total-max-percent">Загальний відсоток представників (%)</Label>
+                <Input
+                  id="total-max-percent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={totalMaxPercent}
+                  onChange={(e) => setTotalMaxPercent(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Максимальний сумарний % від чистого прибутку
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="personal-percent">Особисте замовлення — Представник (%)</Label>
+                <Input
+                  id="personal-percent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={personalPercent}
+                  onChange={(e) => setPersonalPercent(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Комісія представника, який привів замовлення
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="manager-percent">Перша лінія — Менеджер (%)</Label>
+                <Input
+                  id="manager-percent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={managerPercent}
+                  onChange={(e) => setManagerPercent(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Комісія менеджера (батько представника)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="director-percent">Друга лінія — Директор (%)</Label>
+                <Input
+                  id="director-percent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={directorPercent}
+                  onChange={(e) => setDirectorPercent(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Комісія директора (батько менеджера)
+                </p>
+              </div>
+            </div>
+
+            {/* Validation warning */}
+            {validationError && (
+              <div className="flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {validationError}
+              </div>
+            )}
+
+            {/* Info about combinations */}
+            <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground text-sm mb-1">Як працюють комбінації:</p>
+              <p>• Тільки представник → {personalPercent}%</p>
+              <p>• Представник + менеджер → {personalPercent}% + {managerPercent}%</p>
+              <p>• Представник + менеджер + директор → {personalPercent}% + {managerPercent}% + {directorPercent}%</p>
+              <p>• Менеджер без представника → {(parseFloat(personalPercent || "0") + parseFloat(managerPercent || "0")).toFixed(1)}%</p>
+              <p>• Тільки директор → {totalMaxPercent}%</p>
             </div>
 
             <div className="space-y-2">
@@ -442,7 +535,7 @@ export function RepresentativesTab() {
               </p>
             </div>
 
-            <Button onClick={saveSettings} disabled={settingsLoading}>
+            <Button onClick={saveSettings} disabled={settingsLoading || !!validationError}>
               <Save className="h-4 w-4 mr-1" />
               Зберегти налаштування
             </Button>

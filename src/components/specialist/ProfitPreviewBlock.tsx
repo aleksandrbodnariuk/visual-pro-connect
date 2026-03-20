@@ -20,6 +20,11 @@ import {
   type ShareholderProfitResult,
   type ShareholderInput,
 } from '@/lib/shareholderCalculations';
+import {
+  calcRepresentativePool,
+  type RepCommissionConfig,
+  DEFAULT_REP_CONFIG,
+} from '@/lib/representativeCalculations';
 import { OrderParticipant, ORDER_TYPE_LABELS } from './types';
 
 // ─── Типи ─────────────────────────────────────────────────────────────────────
@@ -82,6 +87,7 @@ export function ProfitPreviewBlock({
   const [totalShares, setTotalShares] = useState<number>(0);
   const [shareholders, setShareholders] = useState<ShareholderInfo[]>([]);
   const [distribution, setDistribution] = useState<ProfitDistribution | null>(null);
+  const [repConfig, setRepConfig] = useState<RepCommissionConfig>(DEFAULT_REP_CONFIG);
 
   // ── Завантаження реальних даних ─────────────────────────────────────────────
   useEffect(() => {
@@ -132,9 +138,25 @@ export function ProfitPreviewBlock({
           shares: r.quantity,
         }));
 
+      // 4. Load rep commission config from site_settings
+      const { data: repSettings } = await supabase
+        .from('site_settings')
+        .select('id, value')
+        .in('id', ['rep-total-max-percent', 'rep-personal-percent', 'rep-manager-percent', 'rep-director-percent']);
+
+      const cfg = { ...DEFAULT_REP_CONFIG };
+      (repSettings || []).forEach((s: any) => {
+        const v = parseFloat(s.value) / 100;
+        if (s.id === 'rep-total-max-percent') cfg.totalMaxPercent = v;
+        if (s.id === 'rep-personal-percent') cfg.personalPercent = v;
+        if (s.id === 'rep-manager-percent') cfg.managerPercent = v;
+        if (s.id === 'rep-director-percent') cfg.directorPercent = v;
+      });
+
       if (!cancelled) {
         setTotalShares(total);
         setShareholders(shList);
+        setRepConfig(cfg);
         setLoading(false);
       }
     }

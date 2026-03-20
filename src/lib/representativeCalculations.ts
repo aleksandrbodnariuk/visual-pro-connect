@@ -3,18 +3,34 @@
  * Чисті функції — не залежать від UI, Supabase чи конкретного компонента.
  *
  * Ланцюг виплат (від net_profit):
- *   representative (прямий) → 5%
- *   manager (parent)        → 3%
- *   director (grandparent)  → 2%
- *   Макс. сумарно           → 10%
+ *   representative (прямий) → configurable (default 5%)
+ *   manager (parent)        → configurable (default 3%)
+ *   director (grandparent)  → configurable (default 2%)
+ *   Макс. сумарно           → configurable (default 10%)
  *
  * Залишок після відрахування представників
  * передається в існуючу формулу акціонерів (50/20/17.5/12.5).
  */
 
-// ─── Константи ───────────────────────────────────────────────────────────────
+// ─── Конфігурація ────────────────────────────────────────────────────────────
 
-/** Максимальний сумарний відсоток представників */
+/** Конфігурація відсотків комісій представників (у частках, напр. 0.05 = 5%) */
+export interface RepCommissionConfig {
+  totalMaxPercent: number;   // загальний ліміт (default 0.10)
+  personalPercent: number;   // особисте замовлення / representative (default 0.05)
+  managerPercent: number;    // перша лінія / manager (default 0.03)
+  directorPercent: number;   // друга лінія / director (default 0.02)
+}
+
+/** Значення за замовчуванням (захардкоджені як fallback) */
+export const DEFAULT_REP_CONFIG: RepCommissionConfig = {
+  totalMaxPercent: 0.10,
+  personalPercent: 0.05,
+  managerPercent: 0.03,
+  directorPercent: 0.02,
+};
+
+/** Максимальний сумарний відсоток представників (legacy, використовується як fallback) */
 export const REP_MAX_PERCENT = 0.10;
 
 // ─── Типи ────────────────────────────────────────────────────────────────────
@@ -47,18 +63,13 @@ export interface RepresentativePoolResult {
 // ─── Визначення відсотків за комбінацією ─────────────────────────────────────
 
 /**
- * Визначає відсотки для кожної ролі залежно від комбінації в ланцюгу:
- *
- *   A) тільки representative           → rep 5%
- *   B) representative + manager         → rep 5%, manager 3%
- *   C) manager без director             → manager 8%
- *   D) тільки director                  → director 10%
- *   E) representative + manager + director → rep 5%, manager 3%, director 2%
- *   F) manager + director               → manager 8%, director 2%
- *
- * Загальний % ніколи не перевищує 10%.
+ * Визначає відсотки для кожної ролі залежно від комбінації в ланцюгу.
+ * Використовує конфігуровані відсотки замість захардкоджених.
  */
-function resolvePercents(chain: RepresentativeChainNode[]): Map<string, number> {
+function resolvePercents(
+  chain: RepresentativeChainNode[],
+  cfg: RepCommissionConfig,
+): Map<string, number> {
   const hasRep = chain.some(n => n.role === 'representative');
   const hasManager = chain.some(n => n.role === 'manager');
   const hasDirector = chain.some(n => n.role === 'director');
@@ -66,27 +77,27 @@ function resolvePercents(chain: RepresentativeChainNode[]): Map<string, number> 
   const percents = new Map<string, number>();
 
   if (hasRep && hasManager && hasDirector) {
-    // E) rep 5% + manager 3% + director 2% = 10%
-    percents.set('representative', 0.05);
-    percents.set('manager', 0.03);
-    percents.set('director', 0.02);
+    // E) rep + manager + director
+    percents.set('representative', cfg.personalPercent);
+    percents.set('manager', cfg.managerPercent);
+    percents.set('director', cfg.directorPercent);
   } else if (hasRep && hasManager) {
-    // B) rep 5% + manager 3% = 8%
-    percents.set('representative', 0.05);
-    percents.set('manager', 0.03);
+    // B) rep + manager
+    percents.set('representative', cfg.personalPercent);
+    percents.set('manager', cfg.managerPercent);
   } else if (hasManager && hasDirector) {
-    // F) manager 8% + director 2% = 10%
-    percents.set('manager', 0.08);
-    percents.set('director', 0.02);
+    // F) manager + director (manager gets personal + manager share)
+    percents.set('manager', cfg.personalPercent + cfg.managerPercent);
+    percents.set('director', cfg.directorPercent);
   } else if (hasRep) {
-    // A) rep 5%
-    percents.set('representative', 0.05);
+    // A) тільки rep
+    percents.set('representative', cfg.personalPercent);
   } else if (hasManager) {
-    // C) manager 8%
-    percents.set('manager', 0.08);
+    // C) тільки manager (gets personal + manager share)
+    percents.set('manager', cfg.personalPercent + cfg.managerPercent);
   } else if (hasDirector) {
-    // D) director 10%
-    percents.set('director', 0.10);
+    // D) тільки director (gets total max)
+    percents.set('director', cfg.totalMaxPercent);
   }
 
   return percents;
@@ -99,12 +110,12 @@ function resolvePercents(chain: RepresentativeChainNode[]): Map<string, number> 
  *
  * @param netProfit      Чистий прибуток замовлення (order_amount - expenses)
  * @param chain          Ланцюг представників (representative → manager → director)
- *
- * Якщо chain порожній або netProfit <= 0, повертає нульовий результат.
+ * @param config         Конфігурація відсотків (опціонально, за замовчуванням DEFAULT_REP_CONFIG)
  */
 export function calcRepresentativePool(
   netProfit: number,
   chain: RepresentativeChainNode[],
+  config: RepCommissionConfig = DEFAULT_REP_CONFIG,
 ): RepresentativePoolResult {
   if (netProfit <= 0 || chain.length === 0) {
     return {
@@ -115,7 +126,7 @@ export function calcRepresentativePool(
     };
   }
 
-  const percents = resolvePercents(chain);
+  const percents = resolvePercents(chain, config);
   const deductions: RepresentativeDeduction[] = [];
 
   for (const node of chain) {
@@ -135,9 +146,9 @@ export function calcRepresentativePool(
   const totalPercent = deductions.reduce((sum, d) => sum + d.percent, 0);
 
   return {
-    totalPercent: Math.min(totalPercent, REP_MAX_PERCENT),
-    totalAmount: Math.min(totalAmount, netProfit * REP_MAX_PERCENT),
-    netProfitAfterReps: Math.max(0, netProfit - Math.min(totalAmount, netProfit * REP_MAX_PERCENT)),
+    totalPercent: Math.min(totalPercent, config.totalMaxPercent),
+    totalAmount: Math.min(totalAmount, netProfit * config.totalMaxPercent),
+    netProfitAfterReps: Math.max(0, netProfit - Math.min(totalAmount, netProfit * config.totalMaxPercent)),
     deductions,
   };
 }
@@ -166,16 +177,6 @@ export interface FullDistributionWithReps extends ProfitDistribution {
 
 /**
  * Повний розподіл прибутку з урахуванням unallocated_funds та представників.
- *
- * Порядок:
- *   1. Витрати покриваються з unallocated_funds
- *   2. Якщо не вистачає — різниця з order_amount
- *   3. Відрахування представників (5%/3%/2% по ланцюгу)
- *   4. Залишок → існуюча формула (50/20/17.5/12.5)
- *   5. Unclaimed title bonuses → unallocated_funds
- *
- * Це КЛІЄНТСЬКИЙ preview — реальний розрахунок виконується серверною
- * функцією process_order_profit().
  */
 export function calcFullDistributionWithReps(
   orderAmount: number,
@@ -184,6 +185,7 @@ export function calcFullDistributionWithReps(
   totalShares: number,
   repChain: RepresentativeChainNode[],
   unallocatedFunds: number = 0,
+  repConfig: RepCommissionConfig = DEFAULT_REP_CONFIG,
 ): FullDistributionWithReps {
   // STEP 1: Cover expenses from unallocated_funds
   const coveredFromFund = Math.min(unallocatedFunds, expenses);
@@ -194,7 +196,7 @@ export function calcFullDistributionWithReps(
   const originalNetProfit = Math.max(0, orderAmount - remainingExpenses);
 
   // STEP 3: Representative pool
-  const repPool = calcRepresentativePool(originalNetProfit, repChain);
+  const repPool = calcRepresentativePool(originalNetProfit, repChain, repConfig);
 
   // STEP 4: Shareholder distribution (UNCHANGED formula)
   const adjustedOrderAmount = repPool.netProfitAfterReps + remainingExpenses;
