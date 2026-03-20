@@ -449,6 +449,9 @@ export function RepresentativesTab() {
           </CardContent>
         </Card>
       )}
+
+      {/* ── Services View ── */}
+      {activeView === "services" && <AdminServicesManager />}
     </div>
   );
 }
