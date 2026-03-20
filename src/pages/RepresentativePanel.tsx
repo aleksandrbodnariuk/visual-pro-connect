@@ -160,10 +160,6 @@ export default function RepresentativePanel() {
           </div>
           {repRecord && (
             <div className="flex gap-2 flex-wrap">
-              <Button onClick={() => navigate('/services')} size="sm" variant="outline">
-                <BookOpen className="h-4 w-4 mr-2" />
-                Каталог
-              </Button>
               <Button onClick={() => setBookingOpen(true)} size="sm" variant="outline">
                 <CalendarPlus className="h-4 w-4 mr-2" />
                 Бронювання
