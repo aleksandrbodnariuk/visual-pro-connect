@@ -138,9 +138,25 @@ export function ProfitPreviewBlock({
           shares: r.quantity,
         }));
 
+      // 4. Load rep commission config from site_settings
+      const { data: repSettings } = await supabase
+        .from('site_settings')
+        .select('id, value')
+        .in('id', ['rep-total-max-percent', 'rep-personal-percent', 'rep-manager-percent', 'rep-director-percent']);
+
+      const cfg = { ...DEFAULT_REP_CONFIG };
+      (repSettings || []).forEach((s: any) => {
+        const v = parseFloat(s.value) / 100;
+        if (s.id === 'rep-total-max-percent') cfg.totalMaxPercent = v;
+        if (s.id === 'rep-personal-percent') cfg.personalPercent = v;
+        if (s.id === 'rep-manager-percent') cfg.managerPercent = v;
+        if (s.id === 'rep-director-percent') cfg.directorPercent = v;
+      });
+
       if (!cancelled) {
         setTotalShares(total);
         setShareholders(shList);
+        setRepConfig(cfg);
         setLoading(false);
       }
     }
