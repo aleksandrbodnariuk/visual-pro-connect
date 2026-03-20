@@ -35,6 +35,7 @@ const ShareholderPanel = lazy(() => import("./pages/ShareholderPanel"));
 const Post = lazy(() => import("./pages/Post"));
 const MyFiles = lazy(() => import("./pages/MyFiles"));
 const SpecialistPanel = lazy(() => import("./pages/SpecialistPanel"));
+const RepresentativePanel = lazy(() => import("./pages/RepresentativePanel"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const PageLoader = () => (
