@@ -45,8 +45,13 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 // ── Settings keys in site_settings ──
-const SETTING_COMMISSION_PERCENT = "rep-commission-percent";
 const SETTING_INVITE_TEXT = "rep-invite-text";
+const SETTING_TOTAL_MAX = "rep-total-max-percent";
+const SETTING_PERSONAL = "rep-personal-percent";
+const SETTING_MANAGER = "rep-manager-percent";
+const SETTING_DIRECTOR = "rep-director-percent";
+
+const ALL_SETTING_KEYS = [SETTING_INVITE_TEXT, SETTING_TOTAL_MAX, SETTING_PERSONAL, SETTING_MANAGER, SETTING_DIRECTOR];
 
 export function RepresentativesTab() {
   const [tree, setTree] = useState<RepNode[]>([]);
@@ -55,9 +60,19 @@ export function RepresentativesTab() {
   const [activeView, setActiveView] = useState<"structure" | "orders" | "services" | "settings">("structure");
 
   // Settings state
-  const [commissionPercent, setCommissionPercent] = useState("5");
+  const [totalMaxPercent, setTotalMaxPercent] = useState("10");
+  const [personalPercent, setPersonalPercent] = useState("5");
+  const [managerPercent, setManagerPercent] = useState("3");
+  const [directorPercent, setDirectorPercent] = useState("2");
   const [inviteText, setInviteText] = useState("Приєднуйтесь до нашої спільноти!");
   const [settingsLoading, setSettingsLoading] = useState(false);
+
+  // Validation
+  const sumPercent = parseFloat(personalPercent || "0") + parseFloat(managerPercent || "0") + parseFloat(directorPercent || "0");
+  const maxPercent = parseFloat(totalMaxPercent || "0");
+  const validationError = sumPercent > maxPercent
+    ? `Сума відсотків (${sumPercent}%) перевищує загальний ліміт (${maxPercent}%)`
+    : null;
 
   // ── Load representatives tree ──
   const loadTree = useCallback(async () => {
