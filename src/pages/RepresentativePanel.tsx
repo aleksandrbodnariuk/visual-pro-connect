@@ -16,6 +16,7 @@ import { EarningsBlock } from '@/components/representative/EarningsBlock';
 import { ServiceCalculator } from '@/components/representative/ServiceCalculator';
 import { PortfolioBlock } from '@/components/representative/PortfolioBlock';
 import { ShareInviteBlock } from '@/components/representative/ShareInviteBlock';
+import { AnalyticsBlock } from '@/components/representative/AnalyticsBlock';
 
 interface RepresentativeRecord {
   id: string;
