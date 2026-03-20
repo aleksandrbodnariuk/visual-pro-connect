@@ -794,6 +794,45 @@ export type Database = {
         }
         Relationships: []
       }
+      representative_invites: {
+        Row: {
+          created_at: string
+          id: string
+          invited_user_id: string
+          inviter_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_user_id: string
+          inviter_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_user_id?: string
+          inviter_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "representative_invites_invited_user_id_fkey"
+            columns: ["invited_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "representative_invites_inviter_id_fkey"
+            columns: ["inviter_id"]
+            isOneToOne: false
+            referencedRelation: "representatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       representatives: {
         Row: {
           created_at: string
@@ -1354,6 +1393,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_representative_invite: {
+        Args: { _invite_id: string }
+        Returns: undefined
+      }
       admin_force_confirm_payout: {
         Args: { _payout_id: string }
         Returns: undefined
