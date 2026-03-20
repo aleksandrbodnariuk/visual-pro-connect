@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, Users, ShoppingCart, Settings2, ChevronDown, ChevronRight, UserX, Package } from "lucide-react";
+import { Save, Users, ShoppingCart, Settings2, ChevronDown, ChevronRight, UserX, Package, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminServicesManager } from "@/components/admin/AdminServicesManager";
