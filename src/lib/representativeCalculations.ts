@@ -200,8 +200,8 @@ export function calcFullDistributionWithReps(
   const adjustedOrderAmount = repPool.netProfitAfterReps + remainingExpenses;
   const shareholderDist = calcFullProfitDistribution(adjustedOrderAmount, remainingExpenses, shareholders, totalShares);
 
-  // STEP 5: admin_fund goes back to unallocated_funds
-  fundBalance += shareholderDist.adminFund;
+  // STEP 5: unclaimed title bonuses → unallocated_funds
+  fundBalance += shareholderDist.unclaimedTitleBonus;
 
   return {
     ...shareholderDist,
