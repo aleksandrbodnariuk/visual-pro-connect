@@ -159,7 +159,7 @@ export function CommentItem({ comment, depth = 0, postAuthorId, currentUserId, o
           {isOwnComment && !isEditing && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="absolute -right-7 top-1 opacity-0 group-hover/comment:opacity-100 transition-opacity p-0.5 rounded-full hover:bg-muted">
+                <button className="absolute right-0 top-1 opacity-0 group-hover/comment:opacity-100 transition-opacity p-0.5 rounded-full hover:bg-muted">
                   <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
