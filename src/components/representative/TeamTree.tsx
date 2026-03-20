@@ -40,7 +40,6 @@ export function TeamTree({ representativeId }: TeamTreeProps) {
 
   const loadTeam = async () => {
     try {
-      // Get all representatives where parent_id = this representative
       const { data: children, error } = await supabase
         .from('representatives')
         .select('*')
@@ -96,21 +95,21 @@ export function TeamTree({ representativeId }: TeamTreeProps) {
       </CardHeader>
       <CardContent>
         {members.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            У вас поки немає залучених представників. Натисніть «Залучити друга» щоб надіслати запрошення.
+          <p className="text-sm text-muted-foreground text-center py-4 break-words">
+            У вас поки немає залучених представників. Натисніть «Залучити» щоб надіслати запрошення.
           </p>
         ) : (
           <div className="space-y-2">
             {members.map((member) => (
-              <div key={member.id} className="flex items-center gap-3 p-3 rounded-lg border">
-                <Avatar className="h-9 w-9">
+              <div key={member.id} className="flex items-center gap-3 p-3 rounded-lg border min-h-[52px]">
+                <Avatar className="h-9 w-9 shrink-0">
                   <AvatarImage src={member.avatar_url} />
                   <AvatarFallback>{(member.full_name || '?')[0]}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{member.full_name}</p>
                 </div>
-                <Badge variant={ROLE_VARIANTS[member.role] || 'secondary'}>
+                <Badge variant={ROLE_VARIANTS[member.role] || 'secondary'} className="shrink-0 text-xs">
                   {ROLE_LABELS[member.role] || member.role}
                 </Badge>
               </div>

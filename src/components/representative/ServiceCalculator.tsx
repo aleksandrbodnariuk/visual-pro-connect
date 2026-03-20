@@ -80,7 +80,7 @@ export function ServiceCalculator() {
   if (loading) {
     return (
       <Card>
-        <CardHeader><CardTitle className="text-lg">Калькулятор послуг</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base sm:text-lg">Калькулятор послуг</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
@@ -92,38 +92,40 @@ export function ServiceCalculator() {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
+        <CardTitle className="text-base sm:text-lg flex items-center gap-2">
           <Calculator className="h-5 w-5 text-muted-foreground" />
           Калькулятор послуг
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Step 1: Categories */}
+        {/* Step 1: Categories — horizontal scroll */}
         <div>
           <p className="text-xs text-muted-foreground mb-2">Оберіть категорію</p>
-          <div className="flex flex-wrap gap-2">
-            {categories.map((cat) => {
-              const Icon = CATEGORY_ICONS[cat.icon] || Camera;
-              const isActive = selectedCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => {
-                    setSelectedCategory(isActive ? null : cat.id);
-                    setSelectedService(null);
-                  }}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-colors',
-                    isActive
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-card hover:bg-muted border-border'
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {cat.name}
-                </button>
-              );
-            })}
+          <div className="overflow-x-auto -mx-3 px-3 pb-1">
+            <div className="flex gap-2 min-w-max">
+              {categories.map((cat) => {
+                const Icon = CATEGORY_ICONS[cat.icon] || Camera;
+                const isActive = selectedCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      setSelectedCategory(isActive ? null : cat.id);
+                      setSelectedService(null);
+                    }}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-2 rounded-full text-sm border transition-colors whitespace-nowrap min-h-[44px]',
+                      isActive
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-card hover:bg-muted border-border'
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {cat.name}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -137,14 +139,14 @@ export function ServiceCalculator() {
                   key={svc.id}
                   onClick={() => setSelectedService(selectedService === svc.id ? null : svc.id)}
                   className={cn(
-                    'w-full flex items-center justify-between p-2.5 rounded-lg border text-left text-sm transition-colors',
+                    'w-full flex items-center justify-between p-3 rounded-lg border text-left text-sm transition-colors min-h-[44px]',
                     selectedService === svc.id
                       ? 'bg-primary/10 border-primary/30'
                       : 'hover:bg-muted'
                   )}
                 >
-                  <span className="font-medium">{svc.name}</span>
-                  <ChevronRight className={cn('h-4 w-4 text-muted-foreground transition-transform', selectedService === svc.id && 'rotate-90')} />
+                  <span className="font-medium truncate mr-2">{svc.name}</span>
+                  <ChevronRight className={cn('h-4 w-4 text-muted-foreground transition-transform shrink-0', selectedService === svc.id && 'rotate-90')} />
                 </button>
               ))}
             </div>
@@ -161,14 +163,14 @@ export function ServiceCalculator() {
             <p className="text-xs text-muted-foreground mb-2">Пакети</p>
             <div className="space-y-2">
               {filteredPackages.map((pkg) => (
-                <div key={pkg.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <div key={pkg.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{pkg.name}</p>
                     {pkg.description && (
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">{pkg.description}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 break-words">{pkg.description}</p>
                     )}
                   </div>
-                  <Badge variant="secondary" className="ml-3 tabular-nums shrink-0">
+                  <Badge variant="secondary" className="tabular-nums shrink-0">
                     ${Number(pkg.price).toFixed(2)}
                   </Badge>
                 </div>

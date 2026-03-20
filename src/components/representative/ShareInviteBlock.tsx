@@ -39,36 +39,35 @@ export function ShareInviteBlock({ representativeId, onInviteDialogOpen }: Share
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
+        <CardTitle className="text-base sm:text-lg flex items-center gap-2">
           <UserPlus className="h-5 w-5 text-muted-foreground" />
           Запросити друга
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Referral link preview */}
-        <div className="p-3 rounded-lg bg-muted/50 border">
+        {/* Referral link */}
+        <div className="p-3 rounded-lg bg-muted/50 border overflow-hidden">
           <p className="text-xs text-muted-foreground mb-1">Ваше посилання</p>
           <p className="text-sm font-mono break-all select-all">{referralLink}</p>
         </div>
 
-        {/* Share buttons */}
-        <div className="grid grid-cols-3 gap-2">
-          <Button variant="outline" size="sm" onClick={handleCopy} className="w-full">
+        {/* Share buttons — stack on very small mobile */}
+        <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
+          <Button variant="outline" size="sm" onClick={handleCopy} className="w-full min-h-[44px]">
             {copied ? <Check className="h-4 w-4 mr-1.5" /> : <Copy className="h-4 w-4 mr-1.5" />}
             {copied ? 'Готово' : 'Копіювати'}
           </Button>
-          <Button variant="outline" size="sm" onClick={handleViber} className="w-full">
+          <Button variant="outline" size="sm" onClick={handleViber} className="w-full min-h-[44px]">
             <MessageCircle className="h-4 w-4 mr-1.5" />
             Viber
           </Button>
-          <Button variant="outline" size="sm" onClick={handleFacebook} className="w-full">
+          <Button variant="outline" size="sm" onClick={handleFacebook} className="w-full min-h-[44px]">
             <Facebook className="h-4 w-4 mr-1.5" />
             Facebook
           </Button>
         </div>
 
-        {/* Direct invite */}
-        <Button onClick={onInviteDialogOpen} className="w-full" variant="default">
+        <Button onClick={onInviteDialogOpen} className="w-full min-h-[44px]" variant="default">
           <UserPlus className="h-4 w-4 mr-2" />
           Запросити з платформи
         </Button>
