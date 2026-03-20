@@ -303,8 +303,8 @@ export function ShareholderProfitForecast({ userId }: Props) {
             {/* Summary cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <SummaryCard label="Чистий прибуток (усі)" value={fmt(forecast.totalNetProfit)} />
-              <SummaryCard label="Базовий дохід (20%)" value={fmt(forecast.totalBaseIncome)} accent />
-              <SummaryCard label="Титульний бонус (17.5%)" value={fmt(forecast.totalTitleBonus)} accent />
+              <SummaryCard label={`Базовий дохід (${(distConfig.sharesPercent * 100).toFixed(1)}%)`} value={fmt(forecast.totalBaseIncome)} accent />
+              <SummaryCard label={`Титульний бонус (${(distConfig.titleBonusPercent * 100).toFixed(1)}%)`} value={fmt(forecast.totalTitleBonus)} accent />
               <SummaryCard
                 label="Разом прогноз"
                 value={fmt(forecast.totalIncome)}
