@@ -1687,6 +1687,25 @@ export type Database = {
           website: string
         }[]
       }
+      get_financial_audit_log: {
+        Args: { _order_id?: string }
+        Returns: {
+          created_at: string
+          id: string
+          net_profit: number
+          order_id: string
+          representatives_total: number
+          shareholders_total: number
+          unallocated_added: number
+          unallocated_used: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "financial_audit_log"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_issued_shares_count: { Args: never; Returns: number }
       get_minimal_public_profiles: {
         Args: never
