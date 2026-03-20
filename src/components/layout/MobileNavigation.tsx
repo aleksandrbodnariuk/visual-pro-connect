@@ -195,7 +195,17 @@ export function MobileNavigation() {
                         </Link>
                       )}
 
-                      {/* Ринок акцій */}
+                      {/* Кабінет представника */}
+                      {(isRepresentative || isAdmin) && (
+                        <Link
+                          to="/representative-panel"
+                          onClick={() => setIsMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <UsersRound className="h-5 w-5" />
+                          <span>Кабінет представника</span>
+                        </Link>
+                      )}
                       {hasStockAccess && (
                         <Link
                           to="/stock-market"
