@@ -411,6 +411,47 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_audit_log: {
+        Row: {
+          created_at: string
+          id: string
+          net_profit: number
+          order_id: string
+          representatives_total: number
+          shareholders_total: number
+          unallocated_added: number
+          unallocated_used: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          net_profit?: number
+          order_id: string
+          representatives_total?: number
+          shareholders_total?: number
+          unallocated_added?: number
+          unallocated_used?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          net_profit?: number
+          order_id?: string
+          representatives_total?: number
+          shareholders_total?: number
+          unallocated_added?: number
+          unallocated_used?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_audit_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "specialist_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       friend_requests: {
         Row: {
           created_at: string | null
