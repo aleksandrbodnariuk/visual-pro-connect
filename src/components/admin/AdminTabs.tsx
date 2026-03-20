@@ -73,6 +73,10 @@ export function AdminTabs() {
       <TabsContent value="specialists">
         <SpecialistsTab />
       </TabsContent>
+
+      <TabsContent value="representatives">
+        <RepresentativesTab />
+      </TabsContent>
       
       <TabsContent value="orders">
         <AdminOrdersTab />
