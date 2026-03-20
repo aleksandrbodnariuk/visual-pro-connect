@@ -59,6 +59,8 @@ const formatTimeAgo = (dateString: string): string => {
   return date.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
 };
 
+const COMMENT_TRUNCATE_LENGTH = 200;
+
 export function CommentItem({ comment, depth = 0, postAuthorId, currentUserId, onReply, getLikes, onToggleReaction, onEditComment, onDeleteComment, likesLoading = false }: CommentItemProps) {
   const isPostAuthor = comment.user_id === postAuthorId;
   const isOwnComment = currentUserId === comment.user_id;
@@ -66,8 +68,14 @@ export function CommentItem({ comment, depth = 0, postAuthorId, currentUserId, o
   
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(comment.content);
+  const [showFullComment, setShowFullComment] = useState(false);
 
   const { userReaction, likesCount, topReactions } = getLikes(comment.id);
+  
+  const isLongComment = comment.content.length > COMMENT_TRUNCATE_LENGTH;
+  const displayedContent = isLongComment && !showFullComment
+    ? comment.content.slice(0, COMMENT_TRUNCATE_LENGTH) + '...'
+    : comment.content;
 
   const handleLikeClick = () => {
     onToggleReaction(comment.id, userReaction ? userReaction : 'like');
