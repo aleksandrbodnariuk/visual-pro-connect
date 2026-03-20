@@ -14,6 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 export default function Notifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [acceptingInvite, setAcceptingInvite] = useState<string | null>(null);
   const { user: authUser } = useAuth();
   const navigate = useNavigate();
 
