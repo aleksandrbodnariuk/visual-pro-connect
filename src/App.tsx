@@ -35,6 +35,7 @@ const ShareholderPanel = lazy(() => import("./pages/ShareholderPanel"));
 const Post = lazy(() => import("./pages/Post"));
 const MyFiles = lazy(() => import("./pages/MyFiles"));
 const SpecialistPanel = lazy(() => import("./pages/SpecialistPanel"));
+const RepresentativePanel = lazy(() => import("./pages/RepresentativePanel"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const PageLoader = () => (
@@ -92,6 +93,7 @@ const AppContent = () => {
             <Route path="/files/:userId/:type" element={<MyFiles />} />
             <Route path="/category/:categoryId" element={<Search />} />
             <Route path="/panel-fahivtsya" element={<SpecialistPanel />} />
+            <Route path="/representative-panel" element={<RepresentativePanel />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

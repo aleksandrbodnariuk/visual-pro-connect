@@ -15,15 +15,29 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
   const { user } = useAuth();
   const [isSpecialist, setIsSpecialist] = useState(false);
   const [hasStockAccess, setHasStockAccess] = useState(false);
+  const [isRepresentative, setIsRepresentative] = useState(false);
 
   useEffect(() => {
-    if (!user) { setIsSpecialist(false); setHasStockAccess(false); return; }
+    if (!user) { setIsSpecialist(false); setHasStockAccess(false); setIsRepresentative(false); return; }
+
+    const checkRepAccess = async () => {
+      try {
+        for (const role of ['representative', 'manager', 'director'] as const) {
+          const { data } = await supabase.rpc('has_role', { _user_id: user.id, _role: role as any });
+          if (data === true) return true;
+        }
+      } catch { /* ignore */ }
+      return false;
+    };
+
     Promise.all([
       supabase.rpc('has_role', { _user_id: user.id, _role: 'specialist' as any }),
       supabase.rpc('has_stock_market_access', { _user_id: user.id }),
-    ]).then(([specRes, stockRes]) => {
+      checkRepAccess(),
+    ]).then(([specRes, stockRes, repAccess]) => {
       setIsSpecialist(specRes.data === true);
       setHasStockAccess(stockRes.data === true);
+      setIsRepresentative(repAccess);
     });
   }, [user]);
 
@@ -94,6 +108,16 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
           }`}
         >
           Кабінет
+        </Link>
+      )}
+      {(isRepresentative || isAdmin) && (
+        <Link
+          to="/representative-panel"
+          className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
+            isActive("/representative-panel") ? "text-foreground" : "text-foreground/60"
+          }`}
+        >
+          Представники
         </Link>
       )}
       {isAdmin && (
