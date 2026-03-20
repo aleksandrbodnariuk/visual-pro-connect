@@ -302,13 +302,13 @@ export default function Notifications() {
                   className={`transition-colors cursor-pointer hover:bg-accent/50 ${!notification.is_read ? "border-l-4 border-l-primary" : ""}`}
                   onClick={() => {
                     if (!notification.is_read) markAsRead(notification.id);
-                    if (notification.link) navigate(notification.link);
+                    if (notification.link && !isInviteNotification(notification.link)) navigate(notification.link);
                   }}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
                       <div className="mt-1">
-                        {getNotificationIcon(notification.type || "info")}
+                        {getNotificationIcon(notification.type || "info", notification.link)}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-1">
@@ -318,7 +318,7 @@ export default function Notifications() {
                               {new Date(notification.created_at || notification.date).toLocaleDateString()}
                             </span>
                             <div className="flex space-x-2">
-                              {notification.link && (
+                              {notification.link && !isInviteNotification(notification.link) && (
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
@@ -348,6 +348,26 @@ export default function Notifications() {
                           </div>
                         </div>
                         <p className="text-muted-foreground">{notification.message || notification.content}</p>
+                        {isInviteNotification(notification.link) && (
+                          <div className="mt-3">
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAcceptInvite(notification.id, getInviteId(notification.link));
+                              }}
+                              disabled={acceptingInvite === notification.id}
+                              className="min-h-[44px]"
+                            >
+                              {acceptingInvite === notification.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                              )}
+                              Прийняти запрошення
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
