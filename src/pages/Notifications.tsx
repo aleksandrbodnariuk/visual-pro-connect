@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { Bell, Calendar, Info, CheckCircle, AlertTriangle, Trash, ExternalLink } from "lucide-react";
+import { Bell, Calendar, Info, CheckCircle, AlertTriangle, Trash, ExternalLink, UserPlus, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 export default function Notifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [acceptingInvite, setAcceptingInvite] = useState<string | null>(null);
   const { user: authUser } = useAuth();
   const navigate = useNavigate();
 
@@ -197,7 +198,42 @@ export default function Notifications() {
     }
   };
 
-  const getNotificationIcon = (type: string) => {
+  const isInviteNotification = (link: string | null) => {
+    return link?.startsWith('/accept-invite/');
+  };
+
+  const getInviteId = (link: string) => {
+    return link.replace('/accept-invite/', '');
+  };
+
+
+  const handleAcceptInvite = async (notificationId: string, inviteId: string) => {
+    setAcceptingInvite(notificationId);
+    try {
+      const { error } = await supabase.rpc('accept_representative_invite', {
+        _invite_id: inviteId,
+      });
+      if (error) throw error;
+
+      toast.success('Запрошення прийнято! Ви тепер представник.');
+      
+      // Remove the notification
+      await deleteNotification(notificationId);
+      
+      // Navigate to representative panel
+      navigate('/representative-panel');
+    } catch (err: any) {
+      console.error('Accept invite error:', err);
+      toast.error(err.message || 'Помилка при прийнятті запрошення');
+    } finally {
+      setAcceptingInvite(null);
+    }
+  };
+
+  const getNotificationIcon = (type: string, link: string | null) => {
+    if (isInviteNotification(link)) {
+      return <UserPlus className="h-5 w-5 text-primary" />;
+    }
     switch (type) {
       case "info":
         return <Info className="h-5 w-5 text-blue-500" />;
@@ -206,7 +242,7 @@ export default function Notifications() {
       case "warning":
         return <AlertTriangle className="h-5 w-5 text-amber-500" />;
       default:
-        return <Bell className="h-5 w-5 text-gray-500" />;
+        return <Bell className="h-5 w-5 text-muted-foreground" />;
     }
   };
 
@@ -266,13 +302,13 @@ export default function Notifications() {
                   className={`transition-colors cursor-pointer hover:bg-accent/50 ${!notification.is_read ? "border-l-4 border-l-primary" : ""}`}
                   onClick={() => {
                     if (!notification.is_read) markAsRead(notification.id);
-                    if (notification.link) navigate(notification.link);
+                    if (notification.link && !isInviteNotification(notification.link)) navigate(notification.link);
                   }}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
                       <div className="mt-1">
-                        {getNotificationIcon(notification.type || "info")}
+                        {getNotificationIcon(notification.type || "info", notification.link)}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-1">
@@ -282,7 +318,7 @@ export default function Notifications() {
                               {new Date(notification.created_at || notification.date).toLocaleDateString()}
                             </span>
                             <div className="flex space-x-2">
-                              {notification.link && (
+                              {notification.link && !isInviteNotification(notification.link) && (
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
@@ -312,6 +348,26 @@ export default function Notifications() {
                           </div>
                         </div>
                         <p className="text-muted-foreground">{notification.message || notification.content}</p>
+                        {isInviteNotification(notification.link) && (
+                          <div className="mt-3">
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAcceptInvite(notification.id, getInviteId(notification.link));
+                              }}
+                              disabled={acceptingInvite === notification.id}
+                              className="min-h-[44px]"
+                            >
+                              {acceptingInvite === notification.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                              )}
+                              Прийняти запрошення
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
