@@ -87,6 +87,7 @@ export function ProfitPreviewBlock({
   const [totalShares, setTotalShares] = useState<number>(0);
   const [shareholders, setShareholders] = useState<ShareholderInfo[]>([]);
   const [distribution, setDistribution] = useState<ProfitDistribution | null>(null);
+  const [repConfig, setRepConfig] = useState<RepCommissionConfig>(DEFAULT_REP_CONFIG);
 
   // ── Завантаження реальних даних ─────────────────────────────────────────────
   useEffect(() => {
