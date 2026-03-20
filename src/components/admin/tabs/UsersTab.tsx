@@ -9,6 +9,7 @@ import { UserRole } from "@/components/admin/users/UserRole";
 
 import { ShareholderToggle } from "@/components/admin/users/ShareholderToggle";
 import { SpecialistToggle } from "@/components/admin/users/SpecialistToggle";
+import { RepresentativeToggle } from "@/components/admin/users/RepresentativeToggle";
 import { UserActions } from "@/components/admin/users/UserActions";
 import { DeleteUserDialog } from "@/components/admin/users/DeleteUserDialog";
 import { Copy, Clock } from "lucide-react";
