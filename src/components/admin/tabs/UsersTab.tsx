@@ -44,6 +44,7 @@ const isValidPhoneNumber = (value: string | null | undefined): boolean => {
 export function UsersTab() {
   const [users, setUsers] = useState<any[]>([]);
   const [userRoles, setUserRoles] = useState<Record<string, string[]>>({});
+  const [representativeIds, setRepresentativeIds] = useState<Record<string, string>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [showBlocked, setShowBlocked] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
