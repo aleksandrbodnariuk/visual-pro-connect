@@ -10,6 +10,7 @@ import {
   calcProfitPools,
   type ShareholderInput,
 } from "@/lib/shareholderCalculations";
+import { useProfitDistConfig } from "@/hooks/useProfitDistConfig";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -202,6 +203,7 @@ function InfoAlert({ message, sub }: { message: string; sub?: string }) {
 
 export function FinancialStatsTab() {
   const { totalShares, sharePriceUsd, loading: settingsLoading } = useCompanySettings();
+  const { config: distConfig, loading: distConfigLoading } = useProfitDistConfig();
 
   const [orders, setOrders] = useState<ConfirmedOrder[]>([]);
   const [shareholderInputs, setShareholderInputs] = useState<ShareholderInput[]>([]);
@@ -369,7 +371,7 @@ export function FinancialStatsTab() {
 
     for (const order of filteredOrders) {
       const net = calcNetProfit(order.order_amount, order.order_expenses);
-      const pools = calcProfitPools(net);
+      const pools = calcProfitPools(net, distConfig);
       totalAmount += order.order_amount;
       totalExpenses += order.order_expenses;
       totalNet += net;
@@ -397,7 +399,7 @@ export function FinancialStatsTab() {
       totalAdminFund,
       orderRows,
     };
-  }, [filteredOrders]);
+  }, [filteredOrders, distConfig]);
 
   // Specialist earnings
   const specialistEarnings = useMemo<SpecialistEarning[]>(() => {
@@ -436,6 +438,7 @@ export function FinancialStatsTab() {
         order.order_expenses,
         shareholderInputs,
         totalShares,
+        distConfig,
       );
       for (const sh of dist.shareholders) {
         if (!totals[sh.userId]) totals[sh.userId] = { baseIncome: 0, titleBonus: 0, totalIncome: 0 };
@@ -458,7 +461,7 @@ export function FinancialStatsTab() {
         ...t,
       };
     }).sort((a, b) => b.totalIncome - a.totalIncome);
-  }, [stats, filteredOrders, shareholderInputs, totalShares, shareholderNames]);
+  }, [stats, filteredOrders, shareholderInputs, totalShares, shareholderNames, distConfig]);
 
   // ─── Save Snapshot ───────────────────────────────────────────────────────────
   const saveSnapshot = useCallback(async () => {

@@ -20,6 +20,7 @@ import {
   type ShareholderProfitResult,
   type ShareholderInput,
 } from '@/lib/shareholderCalculations';
+import { useProfitDistConfig } from '@/hooks/useProfitDistConfig';
 import {
   calcRepresentativePool,
   type RepCommissionConfig,
@@ -88,6 +89,7 @@ export function ProfitPreviewBlock({
   const [shareholders, setShareholders] = useState<ShareholderInfo[]>([]);
   const [distribution, setDistribution] = useState<ProfitDistribution | null>(null);
   const [repConfig, setRepConfig] = useState<RepCommissionConfig>(DEFAULT_REP_CONFIG);
+  const { config: distConfig, loading: distConfigLoading } = useProfitDistConfig();
 
   // ── Завантаження реальних даних ─────────────────────────────────────────────
   useEffect(() => {
@@ -181,9 +183,9 @@ export function ProfitPreviewBlock({
       shares: s.shares,
     }));
 
-    const dist = calcFullProfitDistribution(orderAmount, orderExpenses, inputs, totalShares);
+    const dist = calcFullProfitDistribution(orderAmount, orderExpenses, inputs, totalShares, distConfig);
     setDistribution(dist);
-  }, [orderAmount, orderExpenses, shareholders, totalShares, loading]);
+  }, [orderAmount, orderExpenses, shareholders, totalShares, loading, distConfig, distConfigLoading]);
 
   // ── Перевірки готовності ─────────────────────────────────────────────────────
 
@@ -217,16 +219,16 @@ export function ProfitPreviewBlock({
         <div className="rounded-lg border p-3 space-y-2 text-sm bg-muted/20">
           <Row label="Чистий прибуток" value={fmt(distribution.netProfit)} bold />
           <Separator />
-          <Row label="50% — фахівцям" value={fmt(distribution.specialistsPool)} />
-          <Row label="20% — акціонерам (за акціями)" value={fmt(distribution.sharesPool)} />
-          <Row label="17.5% — титульні бонуси" value={fmt(distribution.titleBonusPool)} />
+          <Row label={`${(distConfig.specialistsPercent * 100).toFixed(1)}% — фахівцям`} value={fmt(distribution.specialistsPool)} />
+          <Row label={`${(distConfig.sharesPercent * 100).toFixed(1)}% — акціонерам (за акціями)`} value={fmt(distribution.sharesPool)} />
+          <Row label={`${(distConfig.titleBonusPercent * 100).toFixed(1)}% — титульні бонуси`} value={fmt(distribution.titleBonusPool)} />
           {distribution.unclaimedTitleBonus > 0.005 && (
             <div className="flex justify-between text-sm text-amber-500">
               <span className="pl-3 text-xs">↳ не засвоєні</span>
               <span className="text-xs">{fmt(distribution.unclaimedTitleBonus)}</span>
             </div>
           )}
-          <Row label="12.5% — адміністративний фонд" value={fmt(distribution.adminFund)} />
+          <Row label={`${(distConfig.adminFundPercent * 100).toFixed(1)}% — адміністративний фонд`} value={fmt(distribution.adminFund)} />
         </div>
       )}
 

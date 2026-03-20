@@ -4,16 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PenLine, Save, Info, AlertCircle, Settings } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { PenLine, Save, Info, AlertCircle, Settings, Percent, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { SharePriceControl } from "@/components/admin/SharePriceControl";
-import { calcFullProfitDistribution, type ShareholderInput } from "@/lib/shareholderCalculations";
-
+import { calcFullProfitDistribution, type ShareholderInput, type ShareholderDistConfig, DEFAULT_DIST_CONFIG } from "@/lib/shareholderCalculations";
+import { useProfitDistConfig } from "@/hooks/useProfitDistConfig";
 import { getTitleName } from "@/lib/shareholderRules";
-
+import { useAuth } from "@/context/AuthContext";
 export function ShareholdersTab() {
+  const { user } = useAuth();
   const {
     totalShares: dbTotalShares,
     sharePriceUsd,
@@ -22,18 +24,41 @@ export function ShareholdersTab() {
     settings,
   } = useCompanySettings();
 
+  const { config: distConfig, loading: distConfigLoading, reload: reloadDistConfig } = useProfitDistConfig();
+
   const [totalSharesInput, setTotalSharesInput] = useState<number>(0);
   const [issuedShares, setIssuedShares] = useState<number>(0);
   const [shareholders, setShareholders] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [confirmedOrders, setConfirmedOrders] = useState<any[]>([]);
 
+  // Profit distribution editing state
+  const [editingDist, setEditingDist] = useState(false);
+  const [distInputs, setDistInputs] = useState({
+    specialists: '50',
+    shares: '20',
+    titleBonus: '17.5',
+    adminFund: '12.5',
+  });
+  const [distSaving, setDistSaving] = useState(false);
   // Sync input with DB value once loaded
   useEffect(() => {
     if (!settingsLoading) {
       setTotalSharesInput(dbTotalShares);
     }
   }, [dbTotalShares, settingsLoading]);
+
+  // Sync dist config inputs when loaded
+  useEffect(() => {
+    if (!distConfigLoading) {
+      setDistInputs({
+        specialists: (distConfig.specialistsPercent * 100).toString(),
+        shares: (distConfig.sharesPercent * 100).toString(),
+        titleBonus: (distConfig.titleBonusPercent * 100).toString(),
+        adminFund: (distConfig.adminFundPercent * 100).toString(),
+      });
+    }
+  }, [distConfig, distConfigLoading]);
 
   const fetchShareholders = useCallback(async () => {
     setLoading(true);
@@ -166,8 +191,43 @@ export function ShareholdersTab() {
   };
 
   const availableShares = Math.max(0, dbTotalShares - issuedShares);
-  // System is in setup state if total shares is 0 (not yet configured by admin)
   const systemNotConfigured = !settingsLoading && dbTotalShares <= 0;
+
+  // Dist config validation
+  const distSum = useMemo(() => {
+    return [distInputs.specialists, distInputs.shares, distInputs.titleBonus, distInputs.adminFund]
+      .reduce((s, v) => s + (parseFloat(v) || 0), 0);
+  }, [distInputs]);
+  const distSumValid = Math.abs(distSum - 100) < 0.01;
+
+  const saveDistConfig = async () => {
+    if (!distSumValid) {
+      toast.error('Сума відсотків повинна дорівнювати 100%');
+      return;
+    }
+    setDistSaving(true);
+    try {
+      const updates = [
+        { id: 'profit-specialists-percent', value: distInputs.specialists },
+        { id: 'profit-shares-percent', value: distInputs.shares },
+        { id: 'profit-title-bonus-percent', value: distInputs.titleBonus },
+        { id: 'profit-admin-fund-percent', value: distInputs.adminFund },
+      ];
+      for (const u of updates) {
+        const { error } = await supabase
+          .from('site_settings')
+          .update({ value: u.value, updated_at: new Date().toISOString() })
+          .eq('id', u.id);
+        if (error) throw error;
+      }
+      toast.success('Відсотки розподілу прибутку збережено');
+      setEditingDist(false);
+      reloadDistConfig();
+    } catch (err: any) {
+      toast.error('Помилка збереження: ' + (err.message || ''));
+    }
+    setDistSaving(false);
+  };
 
   // Calculate profit forecasts for all shareholders based on confirmed orders
   const profitForecasts = useMemo(() => {
@@ -180,7 +240,6 @@ export function ShareholdersTab() {
       shares: sh.shares,
     }));
 
-    // Sum up forecasts from all confirmed orders
     const totals: Record<string, number> = {};
     
     for (const order of confirmedOrders) {
@@ -188,7 +247,8 @@ export function ShareholdersTab() {
         Number(order.order_amount),
         Number(order.order_expenses),
         shareholderInputs,
-        dbTotalShares
+        dbTotalShares,
+        distConfig,
       );
       
       for (const sh of dist.shareholders) {
@@ -197,8 +257,7 @@ export function ShareholdersTab() {
     }
     
     return totals;
-  }, [shareholders, confirmedOrders, dbTotalShares]);
-
+  }, [shareholders, confirmedOrders, dbTotalShares, distConfig]);
   const getProfitDisplay = (userId: string, shares: number) => {
     if (dbTotalShares <= 0) return "—";
     if (shares <= 0) return "Акції не призначено";
@@ -305,6 +364,132 @@ export function ShareholdersTab() {
 
       {/* ─── Share price setting ─── */}
       <SharePriceControl />
+
+      {/* ─── Profit distribution settings ─── */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Percent className="h-5 w-5" />
+                Розподіл чистого прибутку
+              </CardTitle>
+              <CardDescription>Налаштування відсотків розподілу між пулами</CardDescription>
+            </div>
+            {!editingDist && (
+              <Button variant="outline" size="sm" onClick={() => setEditingDist(true)}>
+                <PenLine className="h-4 w-4 mr-1" /> Змінити
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {distConfigLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground py-4">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Завантаження…
+            </div>
+          ) : editingDist ? (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <Label>Фахівці (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    max="100"
+                    value={distInputs.specialists}
+                    onChange={(e) => setDistInputs(p => ({ ...p, specialists: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label>Акціонери (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    max="100"
+                    value={distInputs.shares}
+                    onChange={(e) => setDistInputs(p => ({ ...p, shares: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label>Титульні бонуси (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    max="100"
+                    value={distInputs.titleBonus}
+                    onChange={(e) => setDistInputs(p => ({ ...p, titleBonus: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label>Адмін-фонд (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    max="100"
+                    value={distInputs.adminFund}
+                    onChange={(e) => setDistInputs(p => ({ ...p, adminFund: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm font-medium ${distSumValid ? 'text-green-600' : 'text-destructive'}`}>
+                    Сума: {distSum.toFixed(1)}%
+                  </span>
+                  {!distSumValid && (
+                    <span className="text-xs text-destructive">Повинна дорівнювати 100%</span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setEditingDist(false)}>
+                    Скасувати
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={saveDistConfig}
+                    disabled={!distSumValid || distSaving}
+                  >
+                    {distSaving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+                    Зберегти
+                  </Button>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Титульний бонус розділяється на 7 рівнів рівномірно (кожен = загальний ÷ 7).
+                Зміни застосовуються одразу до всіх нових розрахунків.
+              </p>
+            </>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Фахівці</p>
+                <p className="text-lg font-bold">{(distConfig.specialistsPercent * 100).toFixed(1)}%</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Акціонери</p>
+                <p className="text-lg font-bold">{(distConfig.sharesPercent * 100).toFixed(1)}%</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Титульні бонуси</p>
+                <p className="text-lg font-bold">{(distConfig.titleBonusPercent * 100).toFixed(1)}%</p>
+                <p className="text-xs text-muted-foreground">({(distConfig.titleBonusPercent * 100 / 7).toFixed(2)}% × 7)</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Адмін-фонд</p>
+                <p className="text-lg font-bold">{(distConfig.adminFundPercent * 100).toFixed(1)}%</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ─── Shareholders management ─── */}
       <Card>

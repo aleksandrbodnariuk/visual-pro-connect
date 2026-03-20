@@ -6,6 +6,7 @@ import {
   calcFullProfitDistribution,
   type ShareholderInput,
 } from "@/lib/shareholderCalculations";
+import { useProfitDistConfig } from "@/hooks/useProfitDistConfig";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -100,6 +101,7 @@ function InfoAlert({
 
 export function ShareholderProfitForecast({ userId }: Props) {
   const { totalShares, loading: settingsLoading } = useCompanySettings();
+  const { config: distConfig, loading: distConfigLoading } = useProfitDistConfig();
 
   const [userShares, setUserShares]       = useState<number>(0);
   const [allShareholderInputs, setAllShareholderInputs] = useState<ShareholderInput[]>([]);
@@ -180,7 +182,8 @@ export function ShareholderProfitForecast({ userId }: Props) {
         order.order_amount,
         order.order_expenses,
         allShareholderInputs,
-        totalShares
+        totalShares,
+        distConfig,
       );
       const me = dist.shareholders.find((s) => s.userId === userId);
       return {
@@ -203,7 +206,7 @@ export function ShareholderProfitForecast({ userId }: Props) {
     );
 
     return { ...sum, ordersCount: rows.length, rows };
-  }, [loading, settingsLoading, totalShares, userShares, confirmedOrders, allShareholderInputs, userId]);
+  }, [loading, settingsLoading, totalShares, userShares, confirmedOrders, allShareholderInputs, userId, distConfig]);
 
   // ─── Derived display values ─────────────────────────────────────────────────
   const percentage = totalShares > 0 && userShares > 0
@@ -300,8 +303,8 @@ export function ShareholderProfitForecast({ userId }: Props) {
             {/* Summary cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <SummaryCard label="Чистий прибуток (усі)" value={fmt(forecast.totalNetProfit)} />
-              <SummaryCard label="Базовий дохід (20%)" value={fmt(forecast.totalBaseIncome)} accent />
-              <SummaryCard label="Титульний бонус (17.5%)" value={fmt(forecast.totalTitleBonus)} accent />
+              <SummaryCard label={`Базовий дохід (${(distConfig.sharesPercent * 100).toFixed(1)}%)`} value={fmt(forecast.totalBaseIncome)} accent />
+              <SummaryCard label={`Титульний бонус (${(distConfig.titleBonusPercent * 100).toFixed(1)}%)`} value={fmt(forecast.totalTitleBonus)} accent />
               <SummaryCard
                 label="Разом прогноз"
                 value={fmt(forecast.totalIncome)}

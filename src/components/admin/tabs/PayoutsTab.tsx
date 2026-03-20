@@ -24,6 +24,7 @@ import {
   calcFullProfitDistribution,
   type ShareholderInput,
 } from '@/lib/shareholderCalculations';
+import { useProfitDistConfig } from '@/hooks/useProfitDistConfig';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -86,6 +87,7 @@ function statusVariant(s: string): 'default' | 'secondary' | 'outline' | 'destru
 
 export function PayoutsTab() {
   const [payouts, setPayouts] = useState<PayoutRow[]>([]);
+  const { config: distConfig } = useProfitDistConfig();
   const [names, setNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
@@ -213,6 +215,7 @@ export function PayoutsTab() {
             order.order_expenses,
             shareholders.map(s => s.input),
             totalShares,
+            distConfig,
           );
           const shResult = dist.shareholders.find(r => r.userId === sh.userId);
           if (shResult) {
