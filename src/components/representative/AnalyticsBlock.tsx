@@ -34,8 +34,8 @@ interface PersonalStats {
 }
 
 export function AnalyticsBlock() {
-  const { user } = useAuth();
-  const isAdmin = user?.is_admin === true;
+  const { appUser } = useAuth();
+  const isAdmin = appUser?.is_admin === true;
 
   const [period, setPeriod] = useState<Period>('month');
   const [stats, setStats] = useState<FinancialStats | null>(null);
