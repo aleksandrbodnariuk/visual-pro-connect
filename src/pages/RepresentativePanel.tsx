@@ -203,37 +203,17 @@ export default function RepresentativePanel() {
             </Card>
 
             {/* 4. Калькулятор послуг */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Briefcase className="h-5 w-5 text-muted-foreground" />
-                  Калькулятор послуг
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Button onClick={() => navigate('/services')} variant="outline" className="w-full">
-                  <BookOpen className="h-4 w-4 mr-2" />
-                  Відкрити каталог послуг
-                </Button>
-              </CardContent>
-            </Card>
+            <ServiceCalculator />
 
             {/* 5. Портфоліо */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-muted-foreground" />
-                  Портфоліо фахівців
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Button onClick={() => navigate('/services?tab=portfolio')} variant="outline" className="w-full">
-                  Переглянути роботи
-                </Button>
-              </CardContent>
-            </Card>
+            <PortfolioBlock />
 
             {/* 6. Запросити друга */}
+            <ShareInviteBlock
+              representativeId={repRecord.id}
+              onInviteDialogOpen={() => setInviteOpen(true)}
+            />
+
             <InvitesList userId={user!.id} onAccepted={loadRepresentative} />
           </div>
         )}
