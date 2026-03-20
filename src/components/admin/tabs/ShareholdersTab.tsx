@@ -15,6 +15,7 @@ import { useProfitDistConfig } from "@/hooks/useProfitDistConfig";
 import { getTitleName } from "@/lib/shareholderRules";
 import { useAuth } from "@/context/AuthContext";
 export function ShareholdersTab() {
+  const { user } = useAuth();
   const {
     totalShares: dbTotalShares,
     sharePriceUsd,
@@ -23,12 +24,23 @@ export function ShareholdersTab() {
     settings,
   } = useCompanySettings();
 
+  const { config: distConfig, loading: distConfigLoading, reload: reloadDistConfig } = useProfitDistConfig();
+
   const [totalSharesInput, setTotalSharesInput] = useState<number>(0);
   const [issuedShares, setIssuedShares] = useState<number>(0);
   const [shareholders, setShareholders] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [confirmedOrders, setConfirmedOrders] = useState<any[]>([]);
 
+  // Profit distribution editing state
+  const [editingDist, setEditingDist] = useState(false);
+  const [distInputs, setDistInputs] = useState({
+    specialists: '50',
+    shares: '20',
+    titleBonus: '17.5',
+    adminFund: '12.5',
+  });
+  const [distSaving, setDistSaving] = useState(false);
   // Sync input with DB value once loaded
   useEffect(() => {
     if (!settingsLoading) {
