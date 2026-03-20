@@ -624,6 +624,11 @@ export function UsersTab() {
                   user={{ ...user, is_specialist: isSpecialist(user.id) }} 
                   onToggleSpecialist={toggleSpecialistStatus} 
                 />
+                <RepresentativeToggle
+                  isRepresentative={isRepresentative(user.id)}
+                  onToggle={() => toggleRepresentativeStatus(user.id)}
+                  disabled={Boolean(user.founder_admin)}
+                />
                 <div className="text-xs text-muted-foreground flex items-center gap-1 min-w-0" title={user.last_seen ? new Date(user.last_seen).toLocaleString('uk-UA') : 'Ніколи'}>
                   <Clock className="h-3 w-3 shrink-0" />
                   <span className="truncate">{formatLastSeen(user.last_seen)}</span>
