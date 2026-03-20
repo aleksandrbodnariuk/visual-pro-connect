@@ -40,6 +40,7 @@ export function AdminTabs() {
         <TabsTrigger value="users">Користувачі</TabsTrigger>
         <TabsTrigger value="specialists">Фахівці</TabsTrigger>
         <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
+        <TabsTrigger value="representatives">Представники</TabsTrigger>
 
         <div className="w-px self-stretch bg-border mx-1 shrink-0" />
 
