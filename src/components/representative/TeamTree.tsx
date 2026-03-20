@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, Loader2, ChevronRight } from 'lucide-react';
+import { Users, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface TeamMember {
   id: string;
@@ -15,16 +14,25 @@ interface TeamMember {
   level: number;
 }
 
+interface TreeNode {
+  id: string;
+  userId: string;
+  fullName: string;
+  avatarUrl: string;
+  role: string;
+  children: TreeNode[];
+}
+
 const ROLE_LABELS: Record<string, string> = {
   representative: 'Представник',
   manager: 'Менеджер',
   director: 'Директор',
 };
 
-const ROLE_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  director: 'destructive',
-  manager: 'default',
-  representative: 'secondary',
+const ROLE_COLORS: Record<string, string> = {
+  representative: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  manager: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  director: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
 };
 
 interface TeamTreeProps {
@@ -32,40 +40,60 @@ interface TeamTreeProps {
 }
 
 export function TeamTree({ representativeId }: TeamTreeProps) {
-  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [tree, setTree] = useState<TreeNode[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadTeam();
-  }, [representativeId]);
-
-  const loadTeam = async () => {
+  const loadTeam = useCallback(async () => {
     try {
       const { data, error } = await supabase.rpc('get_team_tree', {
         _representative_id: representativeId,
       });
 
       if (error) throw error;
-      setMembers((data as TeamMember[]) || []);
+
+      const members = (data as TeamMember[]) || [];
+      setTotalCount(members.length);
+
+      // Build tree: level 1 are roots, level 2 are children
+      const level1 = members.filter((m) => m.level === 1);
+      const level2 = members.filter((m) => m.level === 2);
+
+      const childrenByParent = new Map<string, TeamMember[]>();
+      for (const m of level2) {
+        if (!m.parent_id) continue;
+        const arr = childrenByParent.get(m.parent_id) || [];
+        arr.push(m);
+        childrenByParent.set(m.parent_id, arr);
+      }
+
+      const treeNodes: TreeNode[] = level1.map((m) => ({
+        id: m.id,
+        userId: m.user_id,
+        fullName: m.full_name,
+        avatarUrl: m.avatar_url,
+        role: m.role,
+        children: (childrenByParent.get(m.id) || []).map((child) => ({
+          id: child.id,
+          userId: child.user_id,
+          fullName: child.full_name,
+          avatarUrl: child.avatar_url,
+          role: child.role,
+          children: [],
+        })),
+      }));
+
+      setTree(treeNodes);
     } catch (err) {
       console.error('Error loading team:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [representativeId]);
 
-  const level1 = members.filter((m) => m.level === 1);
-  const level2 = members.filter((m) => m.level === 2);
-
-  // Group level 2 by parent_id
-  const childrenByParent = new Map<string, TeamMember[]>();
-  for (const m of level2) {
-    const arr = childrenByParent.get(m.parent_id!) || [];
-    arr.push(m);
-    childrenByParent.set(m.parent_id!, arr);
-  }
-
-  const totalCount = members.length;
+  useEffect(() => {
+    loadTeam();
+  }, [loadTeam]);
 
   if (loading) {
     return (
@@ -86,25 +114,15 @@ export function TeamTree({ representativeId }: TeamTreeProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {level1.length === 0 ? (
+        {tree.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4 break-words">
             У вас поки немає залучених представників. Натисніть «Залучити» щоб надіслати запрошення.
           </p>
         ) : (
-          <div className="space-y-1">
-            {level1.map((member) => {
-              const children = childrenByParent.get(member.id) || [];
-              return (
-                <div key={member.id}>
-                  {/* Level 1 member */}
-                  <MemberRow member={member} indent={0} hasChildren={children.length > 0} />
-                  {/* Level 2 children */}
-                  {children.map((child) => (
-                    <MemberRow key={child.id} member={child} indent={1} hasChildren={false} />
-                  ))}
-                </div>
-              );
-            })}
+          <div className="space-y-0.5">
+            {tree.map((node) => (
+              <TeamTreeNode key={node.id} node={node} depth={0} />
+            ))}
           </div>
         )}
       </CardContent>
@@ -112,36 +130,56 @@ export function TeamTree({ representativeId }: TeamTreeProps) {
   );
 }
 
-function MemberRow({
-  member,
-  indent,
-  hasChildren,
-}: {
-  member: TeamMember;
-  indent: number;
-  hasChildren: boolean;
-}) {
+function TeamTreeNode({ node, depth }: { node: TreeNode; depth: number }) {
+  const [expanded, setExpanded] = useState(true);
+  const hasChildren = node.children.length > 0;
+
   return (
-    <div
-      className="flex items-center gap-3 p-3 rounded-lg border min-h-[52px]"
-      style={{ marginLeft: indent * 28 }}
-    >
-      {indent > 0 && (
-        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 -ml-1" />
-      )}
-      <Avatar className="h-9 w-9 shrink-0">
-        <AvatarImage src={member.avatar_url} />
-        <AvatarFallback>{(member.full_name || '?')[0]}</AvatarFallback>
-      </Avatar>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{member.full_name}</p>
-        {hasChildren && (
-          <p className="text-xs text-muted-foreground">має команду</p>
+    <div>
+      <div
+        className="flex items-center gap-2 py-2 px-3 rounded-md hover:bg-muted/50 transition-colors"
+        style={{ paddingLeft: `${depth * 24 + 12}px` }}
+      >
+        {hasChildren ? (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="p-0.5 hover:bg-muted rounded"
+          >
+            {expanded ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            )}
+          </button>
+        ) : (
+          <span className="w-5" />
         )}
+
+        {node.avatarUrl ? (
+          <img
+            src={node.avatarUrl}
+            alt=""
+            className="h-7 w-7 rounded-full object-cover shrink-0"
+          />
+        ) : (
+          <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-medium shrink-0">
+            {(node.fullName || '?')[0]}
+          </div>
+        )}
+
+        <span className="font-medium text-sm flex-1 min-w-0 truncate">
+          {node.fullName}
+        </span>
+
+        <Badge className={`text-xs shrink-0 ${ROLE_COLORS[node.role] || ''}`} variant="secondary">
+          {ROLE_LABELS[node.role] || node.role}
+        </Badge>
       </div>
-      <Badge variant={ROLE_VARIANTS[member.role] || 'secondary'} className="shrink-0 text-xs">
-        {ROLE_LABELS[member.role] || member.role}
-      </Badge>
+
+      {expanded &&
+        node.children.map((child) => (
+          <TeamTreeNode key={child.id} node={child} depth={depth + 1} />
+        ))}
     </div>
   );
 }
