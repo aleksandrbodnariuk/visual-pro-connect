@@ -371,7 +371,7 @@ export function FinancialStatsTab() {
 
     for (const order of filteredOrders) {
       const net = calcNetProfit(order.order_amount, order.order_expenses);
-      const pools = calcProfitPools(net);
+      const pools = calcProfitPools(net, distConfig);
       totalAmount += order.order_amount;
       totalExpenses += order.order_expenses;
       totalNet += net;
