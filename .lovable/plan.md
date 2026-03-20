@@ -1,117 +1,59 @@
 
 
-# Fix: Real-time Messages, Comments, and Likes
+## Plan: Configurable Representative Commission Percentages
 
-## Root Cause (Confirmed by Supabase GitHub Issue #1524)
+### Problem
+All representative commission percentages are hardcoded in both client-side (`representativeCalculations.ts`) and server-side (`process_order_profit` SQL function). The admin can only change a single "commission percent" field that isn't actually used in calculations.
 
-The problem is a **confirmed Supabase Realtime bug**: when multiple channels subscribe to the same table with overlapping filters, **only one channel receives the event**. The others are silently ignored.
+### Changes
 
-In this project, **three components** simultaneously use `useUnreadMessages()`, each creating its own Supabase Realtime channel with the identical filter `receiver_id=eq.{userId}`:
+#### 1. Add 4 new site_settings keys (Database Migration)
+Store configurable percentages in `site_settings`:
+- `rep-total-max-percent` (default: `10`) — total pool cap
+- `rep-personal-percent` (default: `5`) — personal order commission (representative level)
+- `rep-manager-percent` (default: `3`) — first line (manager) commission
+- `rep-director-percent` (default: `2`) — second line (director) commission
 
-1. `NavbarNavigation` (desktop menu)
-2. `MobileNavigation` (mobile bottom bar -- hidden via CSS but the hook still runs!)
-3. Potentially more instances on pages with `Sidebar`
+Seed these with current defaults. Remove the old `rep-commission-percent` key (or keep for backward compat).
 
-Even though each channel has a unique name, Supabase only delivers the event to one of them. Which one "wins" is unpredictable. When the winning instance dispatches `new-message-received`, Messages.tsx calls `reloadActiveChat()` -- but if the wrong instance wins (or none does due to race conditions), the chat doesn't update. Meanwhile, the badge might update via a different code path (e.g., `messages-read` event from another operation).
+#### 2. Update Admin Settings UI (`RepresentativesTab.tsx`)
+Replace the single "Комісійний відсоток" input with 4 inputs:
+- **Загальний відсоток представників (%)** — max pool, currently 10%
+- **Особисте замовлення (%)** — representative's personal cut, currently 5%
+- **Перша лінія / Менеджер (%)** — manager cut, currently 3%
+- **Друга лінія / Директор (%)** — director cut, currently 2%
 
-Reference: https://github.com/supabase/realtime/issues/1524
+Add validation: personal + manager + director must not exceed total max. Show a warning/info about how combinations work (e.g., when only manager exists, they get personal + manager = 8%).
 
-## Solution: Two-Part Fix
+#### 3. Update Client-side Calculations (`representativeCalculations.ts`)
+- Make `resolvePercents` accept configurable rates instead of hardcoded `0.05/0.03/0.02`
+- Add a `RepCommissionConfig` interface with the 4 values
+- Update `calcRepresentativePool` and `calcFullDistributionWithReps` to accept this config
+- Update all call sites (ProfitPreviewBlock, FinancialStatsTab) to load settings from `site_settings` and pass them
 
-### Part 1: Singleton Realtime Subscription
+#### 4. Update Server-side `process_order_profit` (Database Migration)
+Modify the function to read percentages from `site_settings` at execution time instead of using hardcoded values. The logic for combinations remains the same (A-F cases), but uses the configured values:
+- When only rep: uses `rep-personal-percent`
+- When rep + manager: `rep-personal-percent` + `rep-manager-percent`
+- When manager alone (no rep below): `rep-personal-percent` + `rep-manager-percent`
+- When all three: `rep-personal-percent` + `rep-manager-percent` + `rep-director-percent`
+- Total capped at `rep-total-max-percent`
 
-Make `useUnreadMessages` use a **single shared Realtime channel** regardless of how many components use the hook. This is done with module-level variables:
+#### 5. Validation Rules
+- All values must be >= 0
+- `personal + manager + director <= total max`
+- Show real-time validation in the admin form before saving
 
-- A shared channel reference and subscriber counter
-- First component to mount creates the channel
-- Last component to unmount removes it
-- All instances share the same event source
+### Files to Change
+- `supabase/migrations/` — new migration to seed settings + update `process_order_profit`
+- `src/components/admin/tabs/RepresentativesTab.tsx` — expanded settings form
+- `src/lib/representativeCalculations.ts` — parameterized calculation functions
+- `src/components/specialist/ProfitPreviewBlock.tsx` — load config from settings
+- `src/components/admin/tabs/FinancialStatsTab.tsx` — load config from settings (if it uses rep calculations)
 
-```text
-Before (broken):
-  NavbarNavigation  -> useUnreadMessages -> channel "unread-abc" (receiver_id filter)
-  MobileNavigation  -> useUnreadMessages -> channel "unread-def" (receiver_id filter)
-  Result: Only ONE channel receives events (Supabase bug #1524)
-
-After (fixed):
-  NavbarNavigation  -> useUnreadMessages -> shares channel "unread-singleton"
-  MobileNavigation  -> useUnreadMessages -> shares channel "unread-singleton"
-  Result: ONE channel, always receives events
-```
-
-### Part 2: Polling Fallback for Messages Page
-
-Even with the singleton fix, Realtime can occasionally drop events (network hiccups, server restarts). Add a **3-second polling interval** in Messages.tsx as a guaranteed fallback:
-
-- Only polls when there is an active chat open
-- Only polls when the browser tab is visible (uses `document.hidden`)
-- Compares message count to avoid unnecessary re-renders
-- Cleans up on unmount or when chat changes
-
-This is the same approach used by Facebook Messenger, WhatsApp Web, and Telegram Web -- they all use WebSocket for instant delivery with polling as a safety net.
-
-### Part 3: Auto-Scroll in MessageList
-
-Currently, `MessageList` has no auto-scroll. When new messages arrive (via realtime or polling), the user might not see them if scrolled up. Add:
-
-- `useRef` for the scroll container
-- `useEffect` that scrolls to bottom when `messages.length` changes
-- Only auto-scrolls if user is already near the bottom (within 100px)
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `src/hooks/useUnreadMessages.ts` | Singleton pattern: module-level channel shared across all hook instances |
-| `src/pages/Messages.tsx` | Add 3-second polling fallback with visibility check; add error handling to reloadActiveChat |
-| `src/components/messages/MessageList.tsx` | Add auto-scroll to bottom on new messages |
-
-## Technical Details
-
-### useUnreadMessages.ts -- Singleton Pattern
-
-```text
-Module-level variables:
-  let sharedChannel = null
-  let sharedUserId = null
-  let subscriberCount = 0
-
-On mount (subscriberCount goes from 0 to 1):
-  Create channel, subscribe to receiver_id filter
-  Store in sharedChannel
-
-On unmount (subscriberCount goes from 1 to 0):
-  Remove channel
-  Reset sharedChannel
-
-On mount (subscriberCount > 1):
-  Skip channel creation, reuse existing
-```
-
-### Messages.tsx -- Polling
-
-```text
-useEffect (depends on activeChat):
-  if no active chat -> skip
-  interval = setInterval(3000):
-    if document.hidden -> skip (tab not visible)
-    call reloadActiveChat()
-  return cleanup -> clearInterval
-```
-
-### MessageList.tsx -- Auto-Scroll
-
-```text
-scrollRef on the outer div
-useEffect([messages.length]):
-  if scrollRef at bottom (within 100px) -> scrollIntoView
-```
-
-## Expected Results
-
-- Messages appear instantly (via realtime) or within 3 seconds (via polling) -- guaranteed
-- Badge updates reliably (single subscription, no conflicts)
-- Chat auto-scrolls to show new messages
-- No performance impact (polling pauses when tab is hidden)
-- Comments and likes also benefit from the reduced channel conflicts
+### What Stays Unchanged
+- Shareholder profit distribution formula (50/20/17.5/12.5)
+- Title bonus system
+- Unallocated funds logic
+- Representative hierarchy/promotion logic
 
