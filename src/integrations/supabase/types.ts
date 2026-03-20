@@ -389,6 +389,7 @@ export type Database = {
           id: string
           share_price_usd: number
           total_shares: number
+          unallocated_funds: number
           updated_at: string
           updated_by: string | null
         }
@@ -396,6 +397,7 @@ export type Database = {
           id?: string
           share_price_usd?: number
           total_shares?: number
+          unallocated_funds?: number
           updated_at?: string
           updated_by?: string | null
         }
@@ -403,6 +405,7 @@ export type Database = {
           id?: string
           share_price_usd?: number
           total_shares?: number
+          unallocated_funds?: number
           updated_at?: string
           updated_by?: string | null
         }
@@ -1739,6 +1742,7 @@ export type Database = {
         Args: { _link?: string; _message: string }
         Returns: undefined
       }
+      process_order_profit: { Args: { _order_id: string }; Returns: Json }
       record_visit: { Args: never; Returns: undefined }
       reject_share_transaction: {
         Args: { _transaction_id: string }
