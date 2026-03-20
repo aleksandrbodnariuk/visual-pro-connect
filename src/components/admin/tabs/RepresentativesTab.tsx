@@ -52,7 +52,7 @@ export function RepresentativesTab() {
   const [tree, setTree] = useState<RepNode[]>([]);
   const [orders, setOrders] = useState<RepOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState<"structure" | "orders" | "settings">("structure");
+  const [activeView, setActiveView] = useState<"structure" | "orders" | "services" | "settings">("structure");
 
   // Settings state
   const [commissionPercent, setCommissionPercent] = useState("5");
