@@ -794,6 +794,51 @@ export type Database = {
         }
         Relationships: []
       }
+      representative_earnings: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          order_id: string
+          percent: number
+          representative_id: string
+          role_snapshot: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          order_id: string
+          percent?: number
+          representative_id: string
+          role_snapshot: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          order_id?: string
+          percent?: number
+          representative_id?: string
+          role_snapshot?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "representative_earnings_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "specialist_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "representative_earnings_representative_id_fkey"
+            columns: ["representative_id"]
+            isOneToOne: false
+            referencedRelation: "representatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       representative_invites: {
         Row: {
           created_at: string
