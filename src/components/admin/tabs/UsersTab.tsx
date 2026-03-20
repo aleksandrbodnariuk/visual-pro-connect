@@ -53,6 +53,7 @@ export function UsersTab() {
   useEffect(() => {
     loadUsers();
     loadUserRoles();
+    loadRepresentatives();
   }, []);
 
   const loadUsers = async () => {
