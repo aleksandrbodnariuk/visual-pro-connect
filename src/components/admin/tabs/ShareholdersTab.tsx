@@ -48,6 +48,18 @@ export function ShareholdersTab() {
     }
   }, [dbTotalShares, settingsLoading]);
 
+  // Sync dist config inputs when loaded
+  useEffect(() => {
+    if (!distConfigLoading) {
+      setDistInputs({
+        specialists: (distConfig.specialistsPercent * 100).toString(),
+        shares: (distConfig.sharesPercent * 100).toString(),
+        titleBonus: (distConfig.titleBonusPercent * 100).toString(),
+        adminFund: (distConfig.adminFundPercent * 100).toString(),
+      });
+    }
+  }, [distConfig, distConfigLoading]);
+
   const fetchShareholders = useCallback(async () => {
     setLoading(true);
     try {
