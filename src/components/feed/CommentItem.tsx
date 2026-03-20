@@ -59,6 +59,8 @@ const formatTimeAgo = (dateString: string): string => {
   return date.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
 };
 
+const COMMENT_TRUNCATE_LENGTH = 200;
+
 export function CommentItem({ comment, depth = 0, postAuthorId, currentUserId, onReply, getLikes, onToggleReaction, onEditComment, onDeleteComment, likesLoading = false }: CommentItemProps) {
   const isPostAuthor = comment.user_id === postAuthorId;
   const isOwnComment = currentUserId === comment.user_id;
@@ -66,8 +68,14 @@ export function CommentItem({ comment, depth = 0, postAuthorId, currentUserId, o
   
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(comment.content);
+  const [showFullComment, setShowFullComment] = useState(false);
 
   const { userReaction, likesCount, topReactions } = getLikes(comment.id);
+  
+  const isLongComment = comment.content.length > COMMENT_TRUNCATE_LENGTH;
+  const displayedContent = isLongComment && !showFullComment
+    ? comment.content.slice(0, COMMENT_TRUNCATE_LENGTH) + '...'
+    : comment.content;
 
   const handleLikeClick = () => {
     onToggleReaction(comment.id, userReaction ? userReaction : 'like');
@@ -97,7 +105,7 @@ export function CommentItem({ comment, depth = 0, postAuthorId, currentUserId, o
         </Avatar>
       </Link>
       <div className="flex-1 min-w-0">
-        <div className="group/comment relative inline-block max-w-full">
+        <div className="group/comment relative inline-block max-w-full pr-8">
           <div className="bg-muted/50 rounded-2xl px-3 py-1 text-sm [&>*]:leading-[1.1]">
             <Link to={`/profile/${comment.user_id}`} className="font-semibold text-xs hover:underline">
               {comment.user?.full_name || 'Користувач'}
@@ -125,7 +133,25 @@ export function CommentItem({ comment, depth = 0, postAuthorId, currentUserId, o
                 </button>
               </div>
             ) : (
-              <span className="break-words">{comment.content}</span>
+              <>
+                <span className="break-words">{displayedContent}</span>
+                {isLongComment && !showFullComment && (
+                  <button 
+                    onClick={() => setShowFullComment(true)} 
+                    className="ml-1 text-xs font-semibold text-muted-foreground hover:underline"
+                  >
+                    Показати більше
+                  </button>
+                )}
+                {isLongComment && showFullComment && (
+                  <button 
+                    onClick={() => setShowFullComment(false)} 
+                    className="ml-1 text-xs font-semibold text-muted-foreground hover:underline"
+                  >
+                    Згорнути
+                  </button>
+                )}
+              </>
             )}
           </div>
           
@@ -133,7 +159,7 @@ export function CommentItem({ comment, depth = 0, postAuthorId, currentUserId, o
           {isOwnComment && !isEditing && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="absolute -right-7 top-1 opacity-0 group-hover/comment:opacity-100 transition-opacity p-0.5 rounded-full hover:bg-muted">
+                <button className="absolute right-0 top-1 opacity-0 group-hover/comment:opacity-100 transition-opacity p-0.5 rounded-full hover:bg-muted">
                   <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
