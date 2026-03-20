@@ -18,13 +18,24 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
   const [isRepresentative, setIsRepresentative] = useState(false);
 
   useEffect(() => {
-    if (!user) { setIsSpecialist(false); setHasStockAccess(false); return; }
+    if (!user) { setIsSpecialist(false); setHasStockAccess(false); setIsRepresentative(false); return; }
     Promise.all([
       supabase.rpc('has_role', { _user_id: user.id, _role: 'specialist' as any }),
       supabase.rpc('has_stock_market_access', { _user_id: user.id }),
-    ]).then(([specRes, stockRes]) => {
+      supabase.rpc('has_role', { _user_id: user.id, _role: 'representative' as any }).then(r => r.data === true)
+        .catch(() => false)
+        .then(isRep => {
+          if (isRep) return true;
+          return supabase.rpc('has_role', { _user_id: user.id, _role: 'manager' as any }).then(r => r.data === true).catch(() => false);
+        })
+        .then(hasRepRole => {
+          if (hasRepRole) return true;
+          return supabase.rpc('has_role', { _user_id: user.id, _role: 'director' as any }).then(r => r.data === true).catch(() => false);
+        }),
+    ]).then(([specRes, stockRes, repAccess]) => {
       setIsSpecialist(specRes.data === true);
       setHasStockAccess(stockRes.data === true);
+      setIsRepresentative(repAccess === true);
     });
   }, [user]);
 
