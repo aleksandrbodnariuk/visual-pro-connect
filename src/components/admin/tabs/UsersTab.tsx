@@ -699,6 +699,13 @@ export function UsersTab() {
                       onToggleSpecialist={toggleSpecialistStatus} 
                     />
                   </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Представник:</span>
+                    <RepresentativeToggle
+                      isRepresentative={isRepresentative(user.id)}
+                      onToggle={() => toggleRepresentativeStatus(user.id)}
+                      disabled={Boolean(user.founder_admin)}
+                    />
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="h-3 w-3" />
                     <span>{formatLastSeen(user.last_seen)}</span>
