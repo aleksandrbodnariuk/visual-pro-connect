@@ -6,13 +6,13 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, UserPlus, CalendarPlus, Loader2, BookOpen } from 'lucide-react';
-import { toast } from 'sonner';
+import { Users, UserPlus, CalendarPlus, Loader2, BookOpen, Briefcase } from 'lucide-react';
 import { InviteFriendDialog } from '@/components/representative/InviteFriendDialog';
 import { InvitesList } from '@/components/representative/InvitesList';
 import { TeamTree } from '@/components/representative/TeamTree';
 import { RepBookingCalendar } from '@/components/representative/RepBookingCalendar';
 import { CreateBookingDialog } from '@/components/representative/CreateBookingDialog';
+import { EarningsBlock } from '@/components/representative/EarningsBlock';
 
 interface RepresentativeRecord {
   id: string;
@@ -179,6 +179,13 @@ export default function RepresentativePanel() {
 
         {repRecord && (
           <div className="space-y-6">
+            {/* 1. Мій дохід */}
+            <EarningsBlock representativeId={repRecord.id} />
+
+            {/* 2. Моя команда */}
+            <TeamTree representativeId={repRecord.id} />
+
+            {/* 3. Календар */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Календар бронювань</CardTitle>
@@ -192,8 +199,39 @@ export default function RepresentativePanel() {
               </CardContent>
             </Card>
 
+            {/* 4. Калькулятор послуг */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Briefcase className="h-5 w-5 text-muted-foreground" />
+                  Калькулятор послуг
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={() => navigate('/services')} variant="outline" className="w-full">
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Відкрити каталог послуг
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* 5. Портфоліо */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-muted-foreground" />
+                  Портфоліо фахівців
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={() => navigate('/services?tab=portfolio')} variant="outline" className="w-full">
+                  Переглянути роботи
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* 6. Запросити друга */}
             <InvitesList userId={user!.id} onAccepted={loadRepresentative} />
-            <TeamTree representativeId={repRecord.id} />
           </div>
         )}
       </div>
