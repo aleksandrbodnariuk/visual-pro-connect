@@ -461,7 +461,7 @@ export function FinancialStatsTab() {
         ...t,
       };
     }).sort((a, b) => b.totalIncome - a.totalIncome);
-  }, [stats, filteredOrders, shareholderInputs, totalShares, shareholderNames]);
+  }, [stats, filteredOrders, shareholderInputs, totalShares, shareholderNames, distConfig]);
 
   // ─── Save Snapshot ───────────────────────────────────────────────────────────
   const saveSnapshot = useCallback(async () => {
