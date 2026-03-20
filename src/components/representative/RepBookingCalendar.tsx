@@ -55,44 +55,45 @@ export function RepBookingCalendar({ bookings, selectedDate, onSelectDate }: Pro
   const selectedBookings = selectedKey ? bookingsByDate.get(selectedKey) || [] : [];
 
   return (
-    <div className="border rounded-lg p-4 bg-card">
-      <Calendar
-        mode="single"
-        selected={selectedDate}
-        onSelect={onSelectDate}
-        month={month}
-        onMonthChange={setMonth}
-        locale={uk}
-        className="p-0 pointer-events-auto"
-        components={{
-          DayContent: ({ date }) => {
-            const key = format(date, "yyyy-MM-dd");
-            const dayBookings = bookingsByDate.get(key);
-            const isBusy = busyDates.has(key);
-            return (
-              <div className="relative flex flex-col items-center">
-                <span>{date.getDate()}</span>
-                {dayBookings && dayBookings.length > 0 && (
-                  <div className="flex gap-0.5 mt-0.5">
-                    {dayBookings.slice(0, 3).map((b, i) => (
-                      <div
-                        key={i}
-                        className={cn(
-                          "w-1.5 h-1.5 rounded-full",
-                          STATUS_COLORS[b.status] || "bg-muted-foreground"
-                        )}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          },
-        }}
-      />
+    <div className="border rounded-lg p-3 sm:p-4 bg-card">
+      <div className="flex justify-center overflow-x-auto">
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={onSelectDate}
+          month={month}
+          onMonthChange={setMonth}
+          locale={uk}
+          className="p-0 pointer-events-auto"
+          components={{
+            DayContent: ({ date }) => {
+              const key = format(date, "yyyy-MM-dd");
+              const dayBookings = bookingsByDate.get(key);
+              return (
+                <div className="relative flex flex-col items-center min-w-[28px] min-h-[28px] justify-center">
+                  <span>{date.getDate()}</span>
+                  {dayBookings && dayBookings.length > 0 && (
+                    <div className="flex gap-0.5 mt-0.5">
+                      {dayBookings.slice(0, 3).map((b, i) => (
+                        <div
+                          key={i}
+                          className={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            STATUS_COLORS[b.status] || "bg-muted-foreground"
+                          )}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            },
+          }}
+        />
+      </div>
 
       {/* Legend */}
-      <div className="flex gap-3 mt-3 pt-3 border-t text-xs text-muted-foreground">
+      <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t text-xs text-muted-foreground">
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-emerald-500" />
           Зайнято
@@ -116,12 +117,12 @@ export function RepBookingCalendar({ bookings, selectedDate, onSelectDate }: Pro
           ) : (
             <div className="space-y-2 mt-2">
               {selectedBookings.map((b) => (
-                <div key={b.id} className="flex items-center justify-between text-sm">
-                  <span className="truncate flex-1">{b.title}</span>
+                <div key={b.id} className="flex items-center justify-between text-sm gap-2">
+                  <span className="truncate flex-1 min-w-0">{b.title}</span>
                   <Badge
                     variant="secondary"
                     className={cn(
-                      "ml-2 text-xs",
+                      "shrink-0 text-xs",
                       b.status === "pending" && "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
                       b.status === "confirmed" && "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
                     )}

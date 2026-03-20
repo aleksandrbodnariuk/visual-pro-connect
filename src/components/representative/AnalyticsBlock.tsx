@@ -48,7 +48,6 @@ export function AnalyticsBlock() {
       setLoading(true);
       try {
         if (isAdmin) {
-          // Admin: load global financial stats + top representatives
           const [statsRes, topRes] = await Promise.all([
             (supabase.rpc as any)('get_financial_stats', { _period: period }),
             (supabase.rpc as any)('get_top_representatives', { _period: period }),
@@ -77,7 +76,6 @@ export function AnalyticsBlock() {
             })));
           }
         } else {
-          // Representative: load only personal stats
           const { data, error } = await (supabase.rpc as any)('get_my_representative_stats');
           if (!error && data && data.length > 0) {
             const d = data[0];
@@ -106,7 +104,6 @@ export function AnalyticsBlock() {
     { value: 'all', label: 'Весь час' },
   ];
 
-  // Personal stats cards (for representatives)
   const personalCards = personalStats ? [
     { label: 'Мій дохід', value: `$${personalStats.total_earnings.toFixed(2)}`, icon: DollarSign, color: 'text-emerald-600' },
     { label: 'Замовлень', value: String(personalStats.orders_count), icon: ShoppingCart, color: 'text-blue-600' },
@@ -114,7 +111,6 @@ export function AnalyticsBlock() {
     { label: 'Команда', value: String(personalStats.team_size), icon: Users, color: 'text-primary' },
   ] : [];
 
-  // Admin stats cards
   const adminCards = stats ? [
     { label: 'Загальний прибуток', value: `$${stats.total_profit.toFixed(2)}`, icon: DollarSign, color: 'text-emerald-600' },
     { label: 'Виплати представникам', value: `$${stats.total_representatives_paid.toFixed(2)}`, icon: Users, color: 'text-blue-600' },
@@ -127,8 +123,8 @@ export function AnalyticsBlock() {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <CardTitle className="text-lg flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-muted-foreground" />
             {isAdmin ? 'Аналітика' : 'Моя статистика'}
           </CardTitle>
@@ -140,7 +136,7 @@ export function AnalyticsBlock() {
                   variant={period === p.value ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setPeriod(p.value)}
-                  className="text-xs h-7 px-2.5"
+                  className="text-xs min-h-[44px] sm:min-h-[32px] h-auto px-3 sm:px-2.5"
                 >
                   {p.label}
                 </Button>
@@ -150,8 +146,8 @@ export function AnalyticsBlock() {
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
-        {/* Stats grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* Stats grid — 1 col mobile, 2 col small, 4 col desktop */}
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3">
           {loading ? (
             Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="space-y-2 p-3 rounded-lg border bg-card">
@@ -161,12 +157,12 @@ export function AnalyticsBlock() {
             ))
           ) : (
             displayCards.map((card) => (
-              <div key={card.label} className="p-3 rounded-lg border bg-card space-y-1">
+              <div key={card.label} className="p-3 rounded-lg border bg-card space-y-1 overflow-hidden">
                 <div className="flex items-center gap-1.5">
-                  <card.icon className={`h-3.5 w-3.5 ${card.color}`} />
-                  <span className="text-[11px] text-muted-foreground leading-tight">{card.label}</span>
+                  <card.icon className={`h-3.5 w-3.5 shrink-0 ${card.color}`} />
+                  <span className="text-[11px] text-muted-foreground leading-tight truncate">{card.label}</span>
                 </div>
-                <p className="text-lg font-bold tabular-nums">
+                <p className="text-lg font-bold tabular-nums break-all overflow-wrap-anywhere">
                   {card.value}
                 </p>
               </div>
@@ -174,7 +170,7 @@ export function AnalyticsBlock() {
           )}
         </div>
 
-        {/* Top representatives — admin only */}
+        {/* Top representatives — admin only, horizontal scroll on mobile */}
         {isAdmin && (
           <div>
             <h3 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
@@ -192,34 +188,36 @@ export function AnalyticsBlock() {
                 Немає даних за цей період
               </p>
             ) : (
-              <div className="space-y-2">
-                {topReps.map((rep, idx) => (
-                  <div
-                    key={rep.user_id}
-                    className="flex items-center gap-3 p-2.5 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                  >
-                    <span className="text-sm font-bold text-muted-foreground w-5 text-center tabular-nums">
-                      {idx + 1}
-                    </span>
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={rep.avatar_url || undefined} />
-                      <AvatarFallback className="text-xs">
-                        {(rep.full_name || '?').slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {rep.full_name || 'Без імені'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {rep.orders_count} замовлень
-                      </p>
+              <div className="overflow-x-auto -mx-3 px-3">
+                <div className="space-y-2 min-w-[320px]">
+                  {topReps.map((rep, idx) => (
+                    <div
+                      key={rep.user_id}
+                      className="flex items-center gap-3 p-2.5 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                    >
+                      <span className="text-sm font-bold text-muted-foreground w-5 text-center tabular-nums shrink-0">
+                        {idx + 1}
+                      </span>
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarImage src={rep.avatar_url || undefined} />
+                        <AvatarFallback className="text-xs">
+                          {(rep.full_name || '?').slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {rep.full_name || 'Без імені'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {rep.orders_count} замовлень
+                        </p>
+                      </div>
+                      <Badge variant="secondary" className="tabular-nums font-mono text-xs shrink-0">
+                        ${rep.earnings.toFixed(2)}
+                      </Badge>
                     </div>
-                    <Badge variant="secondary" className="tabular-nums font-mono text-xs">
-                      ${rep.earnings.toFixed(2)}
-                    </Badge>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>

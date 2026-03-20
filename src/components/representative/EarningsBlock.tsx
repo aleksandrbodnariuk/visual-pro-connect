@@ -61,20 +61,20 @@ export function EarningsBlock({ representativeId }: EarningsBlockProps) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
+        <CardTitle className="text-base sm:text-lg flex items-center gap-2">
           <DollarSign className="h-5 w-5 text-muted-foreground" />
           Мій дохід
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4">
           {items.map((item) => (
-            <div key={item.label} className="text-center space-y-1">
+            <div key={item.label} className="text-center space-y-1 p-3 rounded-lg border bg-card">
               <item.icon className={`h-5 w-5 mx-auto ${item.color}`} />
               {loading ? (
                 <Skeleton className="h-7 w-20 mx-auto" />
               ) : (
-                <p className="text-xl font-bold tabular-nums">
+                <p className="text-lg sm:text-xl font-bold tabular-nums break-all">
                   ${item.value.toFixed(2)}
                 </p>
               )}

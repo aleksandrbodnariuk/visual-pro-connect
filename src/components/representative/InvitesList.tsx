@@ -39,10 +39,8 @@ export function InvitesList({ userId, onAccepted }: InvitesListProps) {
 
       if (error) throw error;
 
-      // Load inviter names
       if (data && data.length > 0) {
         const inviterIds = data.map(i => i.inviter_id);
-        // Get user_ids from representatives table
         const { data: reps } = await supabase
           .from('representatives')
           .select('id, user_id')
@@ -103,9 +101,9 @@ export function InvitesList({ userId, onAccepted }: InvitesListProps) {
       </CardHeader>
       <CardContent className="space-y-3">
         {invites.map((invite) => (
-          <div key={invite.id} className="flex items-center justify-between p-3 rounded-lg border">
-            <div>
-              <p className="text-sm font-medium">
+          <div key={invite.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border">
+            <div className="min-w-0">
+              <p className="text-sm font-medium break-words">
                 {invite.inviter_name} запрошує вас стати представником
               </p>
               <p className="text-xs text-muted-foreground">
@@ -116,6 +114,7 @@ export function InvitesList({ userId, onAccepted }: InvitesListProps) {
               size="sm"
               onClick={() => handleAccept(invite.id)}
               disabled={accepting === invite.id}
+              className="min-h-[44px] shrink-0 self-end sm:self-center"
             >
               {accepting === invite.id ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

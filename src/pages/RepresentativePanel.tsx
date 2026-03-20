@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, UserPlus, CalendarPlus, Loader2 } from 'lucide-react';
 import { InviteFriendDialog } from '@/components/representative/InviteFriendDialog';
@@ -17,6 +17,7 @@ import { ServiceCalculator } from '@/components/representative/ServiceCalculator
 import { PortfolioBlock } from '@/components/representative/PortfolioBlock';
 import { ShareInviteBlock } from '@/components/representative/ShareInviteBlock';
 import { AnalyticsBlock } from '@/components/representative/AnalyticsBlock';
+import { Card as UICard, CardHeader, CardTitle, CardContent as UICardContent } from '@/components/ui/card';
 
 interface RepresentativeRecord {
   id: string;
@@ -131,12 +132,12 @@ export default function RepresentativePanel() {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen flex items-center justify-center pt-16">
-          <Card className="max-w-md w-full mx-4">
+        <div className="min-h-screen flex items-center justify-center pt-16 px-4">
+          <Card className="max-w-md w-full">
             <CardContent className="pt-6 text-center">
               <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h2 className="text-lg font-semibold mb-2">Доступ обмежено</h2>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground break-words">
                 Ви не є представником. Зверніться до вашого менеджера або директора для отримання запрошення.
               </p>
             </CardContent>
@@ -149,10 +150,11 @@ export default function RepresentativePanel() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen pt-16 sm:pt-20 pb-20 px-3 sm:px-6 max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Кабінет представника</h1>
+      <div className="min-h-screen pt-16 sm:pt-20 pb-24 px-3 sm:px-4 md:px-6 max-w-5xl mx-auto scroll-smooth">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold truncate">Кабінет представника</h1>
             {repRecord && (
               <Badge variant="secondary" className="mt-1">
                 {ROLE_LABELS[repRecord.role] || repRecord.role}
@@ -160,14 +162,23 @@ export default function RepresentativePanel() {
             )}
           </div>
           {repRecord && (
-            <div className="flex gap-2 flex-wrap">
-              <Button onClick={() => setBookingOpen(true)} size="sm" variant="outline">
-                <CalendarPlus className="h-4 w-4 mr-2" />
-                Бронювання
+            <div className="flex gap-2 shrink-0">
+              <Button
+                onClick={() => setBookingOpen(true)}
+                size="sm"
+                variant="outline"
+                className="min-h-[44px] min-w-[44px] text-xs sm:text-sm"
+              >
+                <CalendarPlus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Бронювання</span>
               </Button>
-              <Button onClick={() => setInviteOpen(true)} size="sm">
-                <UserPlus className="h-4 w-4 mr-2" />
-                Залучити
+              <Button
+                onClick={() => setInviteOpen(true)}
+                size="sm"
+                className="min-h-[44px] min-w-[44px] text-xs sm:text-sm"
+              >
+                <UserPlus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Залучити</span>
               </Button>
             </div>
           )}
@@ -178,42 +189,34 @@ export default function RepresentativePanel() {
         )}
 
         {repRecord && (
-          <div className="space-y-6">
-            {/* 1. Мій дохід */}
+          <div className="space-y-4 sm:space-y-6">
             <EarningsBlock representativeId={repRecord.id} />
-
-            {/* 2. Моя команда */}
             <TeamTree representativeId={repRecord.id} />
 
-            {/* 3. Календар */}
-            <Card>
+            <UICard>
               <CardHeader>
-                <CardTitle className="text-lg">Календар бронювань</CardTitle>
+                <CardTitle className="text-base sm:text-lg">Календар бронювань</CardTitle>
               </CardHeader>
-              <CardContent>
-                <RepBookingCalendar
-                  bookings={bookings}
-                  selectedDate={selectedDate}
-                  onSelectDate={setSelectedDate}
-                />
-              </CardContent>
-            </Card>
+              <UICardContent>
+                <div className="overflow-x-auto -mx-2 px-2">
+                  <RepBookingCalendar
+                    bookings={bookings}
+                    selectedDate={selectedDate}
+                    onSelectDate={setSelectedDate}
+                  />
+                </div>
+              </UICardContent>
+            </UICard>
 
-            {/* 4. Калькулятор послуг */}
             <ServiceCalculator />
-
-            {/* 5. Портфоліо */}
             <PortfolioBlock />
 
-            {/* 6. Запросити друга */}
             <ShareInviteBlock
               representativeId={repRecord.id}
               onInviteDialogOpen={() => setInviteOpen(true)}
             />
 
             <InvitesList userId={user!.id} onAccepted={loadRepresentative} />
-
-            {/* 7. Аналітика */}
             <AnalyticsBlock />
           </div>
         )}

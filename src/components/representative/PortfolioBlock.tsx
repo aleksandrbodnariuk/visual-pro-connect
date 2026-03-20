@@ -78,7 +78,7 @@ export function PortfolioBlock() {
   if (loading) {
     return (
       <Card>
-        <CardHeader><CardTitle className="text-lg">Портфоліо фахівців</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base sm:text-lg">Портфоліо фахівців</CardTitle></CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[1, 2, 3].map((i) => <Skeleton key={i} className="aspect-square rounded-lg" />)}
@@ -91,29 +91,31 @@ export function PortfolioBlock() {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
+        <CardTitle className="text-base sm:text-lg flex items-center gap-2">
           <ImageIcon className="h-5 w-5 text-muted-foreground" />
           Портфоліо фахівців
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Filters */}
-        <div className="flex flex-wrap gap-2">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-colors',
-                filter === f.key
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-card hover:bg-muted border-border'
-              )}
-            >
-              <f.icon className="h-3.5 w-3.5" />
-              {f.label}
-            </button>
-          ))}
+        {/* Filters — horizontal scroll on mobile */}
+        <div className="overflow-x-auto -mx-3 px-3 pb-1">
+          <div className="flex gap-2 min-w-max">
+            {FILTERS.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-2 rounded-full text-sm border transition-colors whitespace-nowrap min-h-[44px]',
+                  filter === f.key
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-card hover:bg-muted border-border'
+                )}
+              >
+                <f.icon className="h-3.5 w-3.5" />
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {filtered.length === 0 ? (
@@ -121,7 +123,7 @@ export function PortfolioBlock() {
             Немає робіт у цій категорії
           </p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {filtered.map((item) => {
               const profile = profiles.get(item.user_id);
               const Icon = TYPE_ICON[item.media_type] || Camera;
