@@ -494,7 +494,13 @@ export default function MyFiles() {
           ) : file.media_url ? (
             <video src={file.media_url} className="w-full aspect-video object-cover" preload="metadata" muted />
           ) : null}
-          {file.content && <p className="p-2 text-sm truncate">{file.content}</p>}
+          {file.videoEmbed && (
+            <div className="p-2 text-xs text-muted-foreground">
+              <span className="font-medium uppercase">{file.videoEmbed.platform === 'youtube' && file.videoEmbed.isVertical ? 'YouTube Shorts' : file.videoEmbed.platform === 'youtube' ? 'YouTube.com' : file.videoEmbed.platform === 'facebook' ? 'Facebook.com' : file.videoEmbed.platform}</span>
+              <p className="truncate opacity-70">{file.videoEmbed.originalUrl}</p>
+            </div>
+          )}
+          {!file.videoEmbed && file.content && <p className="p-2 text-sm truncate">{file.content}</p>}
           {isUploaded && isOwnFiles && (
             <button
               onClick={e => { e.stopPropagation(); deleteFile(file.id); }}
