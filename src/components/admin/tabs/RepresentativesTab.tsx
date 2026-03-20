@@ -202,10 +202,13 @@ export function RepresentativesTab() {
       const { data } = await supabase
         .from("site_settings")
         .select("id, value")
-        .in("id", [SETTING_COMMISSION_PERCENT, SETTING_INVITE_TEXT]);
+        .in("id", ALL_SETTING_KEYS);
 
       (data || []).forEach((s: any) => {
-        if (s.id === SETTING_COMMISSION_PERCENT) setCommissionPercent(s.value);
+        if (s.id === SETTING_TOTAL_MAX) setTotalMaxPercent(s.value);
+        if (s.id === SETTING_PERSONAL) setPersonalPercent(s.value);
+        if (s.id === SETTING_MANAGER) setManagerPercent(s.value);
+        if (s.id === SETTING_DIRECTOR) setDirectorPercent(s.value);
         if (s.id === SETTING_INVITE_TEXT) setInviteText(s.value);
       });
     } catch (err) {
