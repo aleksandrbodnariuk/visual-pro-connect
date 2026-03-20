@@ -1761,6 +1761,15 @@ export type Database = {
           website: string
         }[]
       }
+      get_my_representative_stats: {
+        Args: never
+        Returns: {
+          avg_check: number
+          orders_count: number
+          team_size: number
+          total_earnings: number
+        }[]
+      }
       get_representative_stats: {
         Args: { _user_id: string }
         Returns: {
