@@ -15,6 +15,7 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
   const { user } = useAuth();
   const [isSpecialist, setIsSpecialist] = useState(false);
   const [hasStockAccess, setHasStockAccess] = useState(false);
+  const [isRepresentative, setIsRepresentative] = useState(false);
 
   useEffect(() => {
     if (!user) { setIsSpecialist(false); setHasStockAccess(false); return; }
