@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Users, Plus, MessageSquare, Menu, User, Bell, Search, Settings, LogOut, Camera, Video, Music, Mic, Sparkles, UtensilsCrossed, Car, Flower2, UserPlus, FolderOpen, Image, Briefcase, Crown, TrendingUp } from "lucide-react";
+import { Home, Users, Plus, MessageSquare, Menu, User, Bell, Search, Settings, LogOut, Camera, Video, Music, Mic, Sparkles, UtensilsCrossed, Car, Flower2, UserPlus, FolderOpen, Image, Briefcase, Crown, TrendingUp, UsersRound } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -34,19 +34,33 @@ export function MobileNavigation() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isShareholder, setIsShareholder] = useState(false);
   const [hasStockAccess, setHasStockAccess] = useState(false);
+  const [isRepresentative, setIsRepresentative] = useState(false);
 
   useEffect(() => {
-    if (!currentUser?.id) { setIsSpecialist(false); setIsAdmin(false); setIsShareholder(false); setHasStockAccess(false); return; }
+    if (!currentUser?.id) { setIsSpecialist(false); setIsAdmin(false); setIsShareholder(false); setHasStockAccess(false); setIsRepresentative(false); return; }
+
+    const checkRepAccess = async () => {
+      try {
+        for (const role of ['representative', 'manager', 'director'] as const) {
+          const { data } = await supabase.rpc('has_role', { _user_id: currentUser.id, _role: role as any });
+          if (data === true) return true;
+        }
+      } catch { /* ignore */ }
+      return false;
+    };
+
     Promise.all([
       supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'specialist' as any }),
       supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'admin' as any }),
       supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'shareholder' as any }),
       supabase.rpc('has_stock_market_access', { _user_id: currentUser.id }),
-    ]).then(([specRes, adminRes, shareholderRes, stockRes]) => {
+      checkRepAccess(),
+    ]).then(([specRes, adminRes, shareholderRes, stockRes, repAccess]) => {
       setIsSpecialist(specRes.data === true);
       setIsAdmin(adminRes.data === true || currentUser.founder_admin === true);
       setIsShareholder(shareholderRes.data === true || currentUser.founder_admin === true);
       setHasStockAccess(stockRes.data === true || currentUser.founder_admin === true);
+      setIsRepresentative(repAccess);
     });
   }, [currentUser?.id]);
 
@@ -181,7 +195,17 @@ export function MobileNavigation() {
                         </Link>
                       )}
 
-                      {/* Ринок акцій */}
+                      {/* Кабінет представника */}
+                      {(isRepresentative || isAdmin) && (
+                        <Link
+                          to="/representative-panel"
+                          onClick={() => setIsMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <UsersRound className="h-5 w-5" />
+                          <span>Кабінет представника</span>
+                        </Link>
+                      )}
                       {hasStockAccess && (
                         <Link
                           to="/stock-market"
