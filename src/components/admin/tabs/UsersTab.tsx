@@ -703,7 +703,6 @@ export function UsersTab() {
                     <RepresentativeToggle
                       isRepresentative={isRepresentative(user.id)}
                       onToggle={() => toggleRepresentativeStatus(user.id)}
-                      disabled={Boolean(user.founder_admin)}
                     />
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
