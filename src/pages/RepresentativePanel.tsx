@@ -212,6 +212,9 @@ export default function RepresentativePanel() {
             />
 
             <InvitesList userId={user!.id} onAccepted={loadRepresentative} />
+
+            {/* 7. Аналітика */}
+            <AnalyticsBlock />
           </div>
         )}
       </div>
