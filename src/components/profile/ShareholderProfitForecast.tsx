@@ -206,7 +206,7 @@ export function ShareholderProfitForecast({ userId }: Props) {
     );
 
     return { ...sum, ordersCount: rows.length, rows };
-  }, [loading, settingsLoading, totalShares, userShares, confirmedOrders, allShareholderInputs, userId]);
+  }, [loading, settingsLoading, totalShares, userShares, confirmedOrders, allShareholderInputs, userId, distConfig]);
 
   // ─── Derived display values ─────────────────────────────────────────────────
   const percentage = totalShares > 0 && userShares > 0
