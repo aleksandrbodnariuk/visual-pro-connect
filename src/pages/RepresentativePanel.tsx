@@ -6,11 +6,13 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, UserPlus, ChevronRight, Loader2 } from 'lucide-react';
+import { Users, UserPlus, CalendarPlus, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { InviteFriendDialog } from '@/components/representative/InviteFriendDialog';
 import { InvitesList } from '@/components/representative/InvitesList';
 import { TeamTree } from '@/components/representative/TeamTree';
+import { RepBookingCalendar } from '@/components/representative/RepBookingCalendar';
+import { CreateBookingDialog } from '@/components/representative/CreateBookingDialog';
 
 interface RepresentativeRecord {
   id: string;
@@ -18,6 +20,14 @@ interface RepresentativeRecord {
   role: string;
   parent_id: string | null;
   created_at: string;
+}
+
+interface Booking {
+  id: string;
+  title: string;
+  order_date: string;
+  status: string;
+  description: string | null;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -32,7 +42,11 @@ export default function RepresentativePanel() {
   const [repRecord, setRepRecord] = useState<RepresentativeRecord | null>(null);
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [bookingOpen, setBookingOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   const loadRepresentative = useCallback(async () => {
     if (!user) return;
@@ -50,7 +64,6 @@ export default function RepresentativePanel() {
         setRepRecord(data as RepresentativeRecord);
         setHasAccess(true);
       } else {
-        // Check for pending invites
         const { data: invites } = await supabase
           .from('representative_invites')
           .select('*')
@@ -58,7 +71,7 @@ export default function RepresentativePanel() {
           .eq('status', 'pending');
 
         if (invites && invites.length > 0) {
-          setHasAccess(true); // show page with pending invites
+          setHasAccess(true);
         } else {
           setHasAccess(false);
         }
@@ -71,6 +84,22 @@ export default function RepresentativePanel() {
     }
   }, [user]);
 
+  const loadBookings = useCallback(async () => {
+    if (!repRecord) return;
+    try {
+      const { data, error } = await supabase
+        .from('specialist_orders')
+        .select('id, title, order_date, status, description')
+        .eq('representative_id', repRecord.id)
+        .order('order_date', { ascending: true });
+
+      if (error) throw error;
+      setBookings((data || []) as Booking[]);
+    } catch (err) {
+      console.error('Error loading bookings:', err);
+    }
+  }, [repRecord]);
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
@@ -78,6 +107,10 @@ export default function RepresentativePanel() {
     }
     if (user) loadRepresentative();
   }, [user, authLoading, navigate, loadRepresentative]);
+
+  useEffect(() => {
+    if (repRecord) loadBookings();
+  }, [repRecord, loadBookings]);
 
   if (authLoading || loading) {
     return (
@@ -123,21 +156,38 @@ export default function RepresentativePanel() {
             )}
           </div>
           {repRecord && (
-            <Button onClick={() => setInviteOpen(true)} size="sm">
-              <UserPlus className="h-4 w-4 mr-2" />
-              Залучити друга
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setBookingOpen(true)} size="sm" variant="outline">
+                <CalendarPlus className="h-4 w-4 mr-2" />
+                Бронювання
+              </Button>
+              <Button onClick={() => setInviteOpen(true)} size="sm">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Залучити
+              </Button>
+            </div>
           )}
         </div>
 
-        {/* Pending invites for this user (if not yet a representative) */}
         {!repRecord && (
           <InvitesList userId={user!.id} onAccepted={loadRepresentative} />
         )}
 
-        {/* Representative content */}
         {repRecord && (
           <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Календар бронювань</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RepBookingCalendar
+                  bookings={bookings}
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                />
+              </CardContent>
+            </Card>
+
             <InvitesList userId={user!.id} onAccepted={loadRepresentative} />
             <TeamTree representativeId={repRecord.id} />
           </div>
@@ -145,12 +195,22 @@ export default function RepresentativePanel() {
       </div>
 
       {repRecord && (
-        <InviteFriendDialog
-          open={inviteOpen}
-          onOpenChange={setInviteOpen}
-          representativeId={repRecord.id}
-          onInviteSent={loadRepresentative}
-        />
+        <>
+          <InviteFriendDialog
+            open={inviteOpen}
+            onOpenChange={setInviteOpen}
+            representativeId={repRecord.id}
+            onInviteSent={loadRepresentative}
+          />
+          <CreateBookingDialog
+            open={bookingOpen}
+            onOpenChange={setBookingOpen}
+            representativeId={repRecord.id}
+            userId={user!.id}
+            initialDate={selectedDate}
+            onCreated={loadBookings}
+          />
+        </>
       )}
     </>
   );
