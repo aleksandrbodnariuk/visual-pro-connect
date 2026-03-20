@@ -86,18 +86,18 @@ function resolvePercents(
     percents.set('representative', cfg.personalPercent);
     percents.set('manager', cfg.managerPercent);
   } else if (hasManager && hasDirector) {
-    // F) manager + director (manager gets personal + manager share)
-    percents.set('manager', cfg.personalPercent + cfg.managerPercent);
+    // F) manager + director (manager gets personal, director gets director share)
+    percents.set('manager', cfg.personalPercent);
     percents.set('director', cfg.directorPercent);
   } else if (hasRep) {
     // A) тільки rep
     percents.set('representative', cfg.personalPercent);
   } else if (hasManager) {
-    // C) тільки manager (gets personal + manager share)
-    percents.set('manager', cfg.personalPercent + cfg.managerPercent);
+    // C) тільки manager (gets personal — особисте замовлення)
+    percents.set('manager', cfg.personalPercent);
   } else if (hasDirector) {
-    // D) тільки director (gets total max)
-    percents.set('director', cfg.totalMaxPercent);
+    // D) тільки director (gets personal — особисте замовлення)
+    percents.set('director', cfg.personalPercent);
   }
 
   return percents;

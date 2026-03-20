@@ -517,8 +517,8 @@ export function RepresentativesTab() {
               <p>• Тільки представник → {personalPercent}%</p>
               <p>• Представник + менеджер → {personalPercent}% + {managerPercent}%</p>
               <p>• Представник + менеджер + директор → {personalPercent}% + {managerPercent}% + {directorPercent}%</p>
-              <p>• Менеджер без представника → {(parseFloat(personalPercent || "0") + parseFloat(managerPercent || "0")).toFixed(1)}%</p>
-              <p>• Тільки директор → {totalMaxPercent}%</p>
+               <p>• Менеджер без представника → {personalPercent}% (особисте замовлення)</p>
+               <p>• Тільки директор → {personalPercent}% (особисте замовлення)</p>
             </div>
 
             <div className="space-y-2">
