@@ -433,24 +433,92 @@ export function RepresentativesTab() {
         <Card>
           <CardHeader>
             <CardTitle>Налаштування представників</CardTitle>
-            <CardDescription>Комісійний відсоток та текст запрошення</CardDescription>
+            <CardDescription>Комісійні відсотки та текст запрошення</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="commission-percent">Комісійний відсоток (%)</Label>
-              <Input
-                id="commission-percent"
-                type="number"
-                min="0"
-                max="100"
-                step="0.5"
-                value={commissionPercent}
-                onChange={(e) => setCommissionPercent(e.target.value)}
-                className="max-w-[200px]"
-              />
-              <p className="text-xs text-muted-foreground">
-                Відсоток від суми замовлення, який отримує представник
-              </p>
+            {/* Commission percentages */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="total-max-percent">Загальний відсоток представників (%)</Label>
+                <Input
+                  id="total-max-percent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={totalMaxPercent}
+                  onChange={(e) => setTotalMaxPercent(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Максимальний сумарний % від чистого прибутку
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="personal-percent">Особисте замовлення — Представник (%)</Label>
+                <Input
+                  id="personal-percent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={personalPercent}
+                  onChange={(e) => setPersonalPercent(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Комісія представника, який привів замовлення
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="manager-percent">Перша лінія — Менеджер (%)</Label>
+                <Input
+                  id="manager-percent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={managerPercent}
+                  onChange={(e) => setManagerPercent(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Комісія менеджера (батько представника)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="director-percent">Друга лінія — Директор (%)</Label>
+                <Input
+                  id="director-percent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={directorPercent}
+                  onChange={(e) => setDirectorPercent(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Комісія директора (батько менеджера)
+                </p>
+              </div>
+            </div>
+
+            {/* Validation warning */}
+            {validationError && (
+              <div className="flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {validationError}
+              </div>
+            )}
+
+            {/* Info about combinations */}
+            <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground text-sm mb-1">Як працюють комбінації:</p>
+              <p>• Тільки представник → {personalPercent}%</p>
+              <p>• Представник + менеджер → {personalPercent}% + {managerPercent}%</p>
+              <p>• Представник + менеджер + директор → {personalPercent}% + {managerPercent}% + {directorPercent}%</p>
+              <p>• Менеджер без представника → {(parseFloat(personalPercent || "0") + parseFloat(managerPercent || "0")).toFixed(1)}%</p>
+              <p>• Тільки директор → {totalMaxPercent}%</p>
             </div>
 
             <div className="space-y-2">
@@ -467,7 +535,7 @@ export function RepresentativesTab() {
               </p>
             </div>
 
-            <Button onClick={saveSettings} disabled={settingsLoading}>
+            <Button onClick={saveSettings} disabled={settingsLoading || !!validationError}>
               <Save className="h-4 w-4 mr-1" />
               Зберегти налаштування
             </Button>
