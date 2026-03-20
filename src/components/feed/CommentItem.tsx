@@ -105,7 +105,7 @@ export function CommentItem({ comment, depth = 0, postAuthorId, currentUserId, o
         </Avatar>
       </Link>
       <div className="flex-1 min-w-0">
-        <div className="group/comment relative inline-block max-w-full">
+        <div className="group/comment relative inline-block max-w-full pr-8">
           <div className="bg-muted/50 rounded-2xl px-3 py-1 text-sm [&>*]:leading-[1.1]">
             <Link to={`/profile/${comment.user_id}`} className="font-semibold text-xs hover:underline">
               {comment.user?.full_name || 'Користувач'}
