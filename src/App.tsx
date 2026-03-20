@@ -93,6 +93,7 @@ const AppContent = () => {
             <Route path="/files/:userId/:type" element={<MyFiles />} />
             <Route path="/category/:categoryId" element={<Search />} />
             <Route path="/panel-fahivtsya" element={<SpecialistPanel />} />
+            <Route path="/representative-panel" element={<RepresentativePanel />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
