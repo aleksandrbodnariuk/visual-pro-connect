@@ -197,7 +197,43 @@ export default function Notifications() {
     }
   };
 
-  const getNotificationIcon = (type: string) => {
+  const isInviteNotification = (link: string | null) => {
+    return link?.startsWith('/accept-invite/');
+  };
+
+  const getInviteId = (link: string) => {
+    return link.replace('/accept-invite/', '');
+  };
+
+  const [acceptingInvite, setAcceptingInvite] = useState<string | null>(null);
+
+  const handleAcceptInvite = async (notificationId: string, inviteId: string) => {
+    setAcceptingInvite(notificationId);
+    try {
+      const { error } = await supabase.rpc('accept_representative_invite', {
+        _invite_id: inviteId,
+      });
+      if (error) throw error;
+
+      toast.success('Запрошення прийнято! Ви тепер представник.');
+      
+      // Remove the notification
+      await deleteNotification(notificationId);
+      
+      // Navigate to representative panel
+      navigate('/representative-panel');
+    } catch (err: any) {
+      console.error('Accept invite error:', err);
+      toast.error(err.message || 'Помилка при прийнятті запрошення');
+    } finally {
+      setAcceptingInvite(null);
+    }
+  };
+
+  const getNotificationIcon = (type: string, link: string | null) => {
+    if (isInviteNotification(link)) {
+      return <UserPlus className="h-5 w-5 text-primary" />;
+    }
     switch (type) {
       case "info":
         return <Info className="h-5 w-5 text-blue-500" />;
@@ -206,7 +242,7 @@ export default function Notifications() {
       case "warning":
         return <AlertTriangle className="h-5 w-5 text-amber-500" />;
       default:
-        return <Bell className="h-5 w-5 text-gray-500" />;
+        return <Bell className="h-5 w-5 text-muted-foreground" />;
     }
   };
 
