@@ -36,6 +36,7 @@ const Post = lazy(() => import("./pages/Post"));
 const MyFiles = lazy(() => import("./pages/MyFiles"));
 const SpecialistPanel = lazy(() => import("./pages/SpecialistPanel"));
 const RepresentativePanel = lazy(() => import("./pages/RepresentativePanel"));
+const ServiceCatalog = lazy(() => import("./pages/ServiceCatalog"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const PageLoader = () => (
@@ -94,6 +95,7 @@ const AppContent = () => {
             <Route path="/category/:categoryId" element={<Search />} />
             <Route path="/panel-fahivtsya" element={<SpecialistPanel />} />
             <Route path="/representative-panel" element={<RepresentativePanel />} />
+            <Route path="/services" element={<ServiceCatalog />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

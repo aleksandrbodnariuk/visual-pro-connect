@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, Users, ShoppingCart, Settings2, ChevronDown, ChevronRight, UserX } from "lucide-react";
+import { Save, Users, ShoppingCart, Settings2, ChevronDown, ChevronRight, UserX, Package } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { AdminServicesManager } from "@/components/admin/AdminServicesManager";
 
 interface RepNode {
   id: string;
@@ -51,7 +52,7 @@ export function RepresentativesTab() {
   const [tree, setTree] = useState<RepNode[]>([]);
   const [orders, setOrders] = useState<RepOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState<"structure" | "orders" | "settings">("structure");
+  const [activeView, setActiveView] = useState<"structure" | "orders" | "services" | "settings">("structure");
 
   // Settings state
   const [commissionPercent, setCommissionPercent] = useState("5");
@@ -292,6 +293,14 @@ export function RepresentativesTab() {
           <Settings2 className="h-4 w-4 mr-1" />
           Налаштування
         </Button>
+        <Button
+          variant={activeView === "services" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveView("services")}
+        >
+          <Package className="h-4 w-4 mr-1" />
+          Послуги
+        </Button>
       </div>
 
       {/* ── Structure View ── */}
@@ -440,6 +449,9 @@ export function RepresentativesTab() {
           </CardContent>
         </Card>
       )}
+
+      {/* ── Services View ── */}
+      {activeView === "services" && <AdminServicesManager />}
     </div>
   );
 }

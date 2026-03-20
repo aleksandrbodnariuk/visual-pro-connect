@@ -6,7 +6,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, UserPlus, CalendarPlus, Loader2 } from 'lucide-react';
+import { Users, UserPlus, CalendarPlus, Loader2, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { InviteFriendDialog } from '@/components/representative/InviteFriendDialog';
 import { InvitesList } from '@/components/representative/InvitesList';
@@ -156,7 +156,11 @@ export default function RepresentativePanel() {
             )}
           </div>
           {repRecord && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Button onClick={() => navigate('/services')} size="sm" variant="outline">
+                <BookOpen className="h-4 w-4 mr-2" />
+                Каталог
+              </Button>
               <Button onClick={() => setBookingOpen(true)} size="sm" variant="outline">
                 <CalendarPlus className="h-4 w-4 mr-2" />
                 Бронювання
