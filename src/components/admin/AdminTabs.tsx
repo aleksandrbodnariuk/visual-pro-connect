@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsersTab } from "./tabs/UsersTab";
 import { ShareholdersTab } from "./tabs/ShareholdersTab";
 import { SpecialistsTab } from "./tabs/SpecialistsTab";
+import { RepresentativesTab } from "./tabs/RepresentativesTab";
 import { AdminOrdersTab } from "./tabs/AdminOrdersTab";
 import { StockExchangeTab } from "./tabs/StockExchangeTab";
 import { PostsTab } from "./tabs/PostsTab";
@@ -39,6 +40,7 @@ export function AdminTabs() {
         <TabsTrigger value="users">Користувачі</TabsTrigger>
         <TabsTrigger value="specialists">Фахівці</TabsTrigger>
         <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
+        <TabsTrigger value="representatives">Представники</TabsTrigger>
 
         <div className="w-px self-stretch bg-border mx-1 shrink-0" />
 
@@ -70,6 +72,10 @@ export function AdminTabs() {
       
       <TabsContent value="specialists">
         <SpecialistsTab />
+      </TabsContent>
+
+      <TabsContent value="representatives">
+        <RepresentativesTab />
       </TabsContent>
       
       <TabsContent value="orders">

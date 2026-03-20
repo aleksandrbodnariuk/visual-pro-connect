@@ -9,6 +9,7 @@ import { UserRole } from "@/components/admin/users/UserRole";
 
 import { ShareholderToggle } from "@/components/admin/users/ShareholderToggle";
 import { SpecialistToggle } from "@/components/admin/users/SpecialistToggle";
+import { RepresentativeToggle } from "@/components/admin/users/RepresentativeToggle";
 import { UserActions } from "@/components/admin/users/UserActions";
 import { DeleteUserDialog } from "@/components/admin/users/DeleteUserDialog";
 import { Copy, Clock } from "lucide-react";
@@ -43,6 +44,7 @@ const isValidPhoneNumber = (value: string | null | undefined): boolean => {
 export function UsersTab() {
   const [users, setUsers] = useState<any[]>([]);
   const [userRoles, setUserRoles] = useState<Record<string, string[]>>({});
+  const [representativeIds, setRepresentativeIds] = useState<Record<string, string>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [showBlocked, setShowBlocked] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -51,6 +53,7 @@ export function UsersTab() {
   useEffect(() => {
     loadUsers();
     loadUserRoles();
+    loadRepresentatives();
   }, []);
 
   const loadUsers = async () => {
@@ -112,6 +115,79 @@ export function UsersTab() {
       setUserRoles(rolesMap);
     } catch (error) {
       console.error("Помилка завантаження ролей:", error);
+    }
+  };
+
+  const loadRepresentatives = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('representatives')
+        .select('id, user_id');
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((r: any) => { map[r.user_id] = r.id; });
+      setRepresentativeIds(map);
+    } catch (error) {
+      console.error("Помилка завантаження представників:", error);
+    }
+  };
+
+  const isRepresentative = (userId: string): boolean => {
+    return Boolean(representativeIds[userId]);
+  };
+
+  const toggleRepresentativeStatus = async (userId: string) => {
+    try {
+      const current = isRepresentative(userId);
+      if (current) {
+        // Remove representative record
+        const { error } = await supabase
+          .from('representatives')
+          .delete()
+          .eq('user_id', userId);
+        if (error) throw error;
+
+        // Remove role from user_roles
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId)
+          .eq('role', 'representative');
+
+        setRepresentativeIds(prev => {
+          const updated = { ...prev };
+          delete updated[userId];
+          return updated;
+        });
+        setUserRoles(prev => ({
+          ...prev,
+          [userId]: (prev[userId] || []).filter(r => r !== 'representative'),
+        }));
+        toast.success("Статус представника знято");
+      } else {
+        // Create representative record
+        const { data, error } = await supabase
+          .from('representatives')
+          .insert({ user_id: userId, role: 'representative' as any })
+          .select('id')
+          .single();
+        if (error) throw error;
+
+        // Add role to user_roles
+        await supabase
+          .from('user_roles')
+          .upsert({ user_id: userId, role: 'representative' as any }, { onConflict: 'user_id,role' });
+
+        setRepresentativeIds(prev => ({ ...prev, [userId]: data.id }));
+        setUserRoles(prev => ({
+          ...prev,
+          [userId]: [...(prev[userId] || []), 'representative'],
+        }));
+        toast.success("Статус представника надано");
+      }
+    } catch (error) {
+      console.error("Помилка зміни статусу представника:", error);
+      toast.error("Помилка зміни статусу представника");
     }
   };
 
@@ -490,8 +566,8 @@ export function UsersTab() {
 
         {/* Desktop Table - hidden on mobile */}
         <div className="hidden md:block overflow-x-auto">
-          <div className="min-w-[1200px] space-y-4">
-            <div className="grid grid-cols-9 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
+          <div className="min-w-[1400px] space-y-4">
+            <div className="grid grid-cols-10 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
               <div>ID</div>
               <div>Email</div>
               <div>Ім'я</div>
@@ -499,12 +575,13 @@ export function UsersTab() {
               <div>Роль</div>
               <div>Акціонер</div>
               <div>Фахівець</div>
+              <div>Представник</div>
               <div>Останній візит</div>
               <div>Дії</div>
             </div>
 
             {filteredUsers.map((user) => (
-              <div key={user.id} className="grid grid-cols-9 gap-4 items-center py-2 border-b">
+              <div key={user.id} className="grid grid-cols-10 gap-4 items-center py-2 border-b">
                 <div className="text-xs font-mono flex items-center gap-1 min-w-0">
                   <span className="truncate max-w-[120px]" title={user.id}>
                     {user.id}
@@ -546,6 +623,11 @@ export function UsersTab() {
                 <SpecialistToggle 
                   user={{ ...user, is_specialist: isSpecialist(user.id) }} 
                   onToggleSpecialist={toggleSpecialistStatus} 
+                />
+                <RepresentativeToggle
+                  isRepresentative={isRepresentative(user.id)}
+                  onToggle={() => toggleRepresentativeStatus(user.id)}
+                  disabled={Boolean(user.founder_admin)}
                 />
                 <div className="text-xs text-muted-foreground flex items-center gap-1 min-w-0" title={user.last_seen ? new Date(user.last_seen).toLocaleString('uk-UA') : 'Ніколи'}>
                   <Clock className="h-3 w-3 shrink-0" />
@@ -615,6 +697,14 @@ export function UsersTab() {
                     <SpecialistToggle 
                       user={{ ...user, is_specialist: isSpecialist(user.id) }} 
                       onToggleSpecialist={toggleSpecialistStatus} 
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Представник:</span>
+                    <RepresentativeToggle
+                      isRepresentative={isRepresentative(user.id)}
+                      onToggle={() => toggleRepresentativeStatus(user.id)}
+                      disabled={Boolean(user.founder_admin)}
                     />
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">

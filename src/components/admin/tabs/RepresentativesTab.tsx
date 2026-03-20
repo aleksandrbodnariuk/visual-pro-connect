@@ -1,0 +1,523 @@
+
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Save, Users, ShoppingCart, Settings2, ChevronDown, ChevronRight, UserX } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
+interface RepNode {
+  id: string;
+  userId: string;
+  fullName: string;
+  avatarUrl: string | null;
+  role: string;
+  parentId: string | null;
+  children: RepNode[];
+  isActive: boolean;
+}
+
+interface RepOrder {
+  id: string;
+  title: string;
+  status: string;
+  order_amount: number | null;
+  order_date: string;
+  representative_name: string;
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  representative: "Представник",
+  manager: "Менеджер",
+  director: "Директор",
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  representative: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  manager: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+  director: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
+};
+
+// ── Settings keys in site_settings ──
+const SETTING_COMMISSION_PERCENT = "rep-commission-percent";
+const SETTING_INVITE_TEXT = "rep-invite-text";
+
+export function RepresentativesTab() {
+  const [tree, setTree] = useState<RepNode[]>([]);
+  const [orders, setOrders] = useState<RepOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeView, setActiveView] = useState<"structure" | "orders" | "settings">("structure");
+
+  // Settings state
+  const [commissionPercent, setCommissionPercent] = useState("5");
+  const [inviteText, setInviteText] = useState("Приєднуйтесь до нашої спільноти!");
+  const [settingsLoading, setSettingsLoading] = useState(false);
+
+  // ── Load representatives tree ──
+  const loadTree = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Load representatives with user info
+      const { data: reps, error } = await supabase
+        .from("representatives")
+        .select("id, user_id, role, parent_id, created_at");
+
+      if (error) throw error;
+
+      if (!reps || reps.length === 0) {
+        setTree([]);
+        setLoading(false);
+        return;
+      }
+
+      const userIds = reps.map((r) => r.user_id);
+      const { data: profiles } = await supabase.rpc("get_safe_public_profiles_by_ids", {
+        _ids: userIds,
+      });
+
+      const profileMap: Record<string, any> = {};
+      (profiles || []).forEach((p: any) => {
+        profileMap[p.id] = p;
+      });
+
+      // Check which users are blocked
+      const { data: usersData } = await supabase.rpc("get_users_for_admin");
+      const blockedMap: Record<string, boolean> = {};
+      (usersData || []).forEach((u: any) => {
+        blockedMap[u.id] = Boolean(u.is_blocked);
+      });
+
+      // Build tree
+      const nodeMap: Record<string, RepNode> = {};
+      reps.forEach((r) => {
+        const profile = profileMap[r.user_id];
+        nodeMap[r.id] = {
+          id: r.id,
+          userId: r.user_id,
+          fullName: profile?.full_name || "Без імені",
+          avatarUrl: profile?.avatar_url || null,
+          role: r.role,
+          parentId: r.parent_id,
+          children: [],
+          isActive: !blockedMap[r.user_id],
+        };
+      });
+
+      const roots: RepNode[] = [];
+      Object.values(nodeMap).forEach((node) => {
+        if (node.parentId && nodeMap[node.parentId]) {
+          nodeMap[node.parentId].children.push(node);
+        } else {
+          roots.push(node);
+        }
+      });
+
+      setTree(roots);
+    } catch (err) {
+      console.error("Error loading representatives:", err);
+      toast.error("Помилка завантаження представників");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ── Load orders linked to representatives ──
+  const loadOrders = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("specialist_orders")
+        .select("id, title, status, order_amount, order_date, representative_id")
+        .not("representative_id", "is", null)
+        .order("order_date", { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      // Get representative user names
+      const repIds = [...new Set((data || []).map((o) => o.representative_id!))];
+      let repNameMap: Record<string, string> = {};
+
+      if (repIds.length > 0) {
+        const { data: reps } = await supabase
+          .from("representatives")
+          .select("id, user_id")
+          .in("id", repIds);
+
+        if (reps && reps.length > 0) {
+          const userIds = reps.map((r) => r.user_id);
+          const { data: profiles } = await supabase.rpc("get_safe_public_profiles_by_ids", {
+            _ids: userIds,
+          });
+
+          const profileMap: Record<string, string> = {};
+          (profiles || []).forEach((p: any) => {
+            profileMap[p.id] = p.full_name || "Без імені";
+          });
+
+          reps.forEach((r) => {
+            repNameMap[r.id] = profileMap[r.user_id] || "Без імені";
+          });
+        }
+      }
+
+      setOrders(
+        (data || []).map((o) => ({
+          id: o.id,
+          title: o.title,
+          status: o.status,
+          order_amount: o.order_amount,
+          order_date: o.order_date,
+          representative_name: repNameMap[o.representative_id!] || "—",
+        }))
+      );
+    } catch (err) {
+      console.error("Error loading representative orders:", err);
+    }
+  }, []);
+
+  // ── Load settings ──
+  const loadSettings = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from("site_settings")
+        .select("id, value")
+        .in("id", [SETTING_COMMISSION_PERCENT, SETTING_INVITE_TEXT]);
+
+      (data || []).forEach((s: any) => {
+        if (s.id === SETTING_COMMISSION_PERCENT) setCommissionPercent(s.value);
+        if (s.id === SETTING_INVITE_TEXT) setInviteText(s.value);
+      });
+    } catch (err) {
+      console.error("Error loading rep settings:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTree();
+    loadOrders();
+    loadSettings();
+  }, [loadTree, loadOrders, loadSettings]);
+
+  // ── Save settings ──
+  const saveSettings = async () => {
+    setSettingsLoading(true);
+    try {
+      const upserts = [
+        { id: SETTING_COMMISSION_PERCENT, value: commissionPercent, updated_at: new Date().toISOString() },
+        { id: SETTING_INVITE_TEXT, value: inviteText, updated_at: new Date().toISOString() },
+      ];
+
+      for (const item of upserts) {
+        const { error } = await supabase
+          .from("site_settings")
+          .upsert(item, { onConflict: "id" });
+        if (error) throw error;
+      }
+
+      toast.success("Налаштування збережено");
+    } catch (err) {
+      console.error("Error saving rep settings:", err);
+      toast.error("Помилка збереження налаштувань");
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  // ── Toggle user block status ──
+  const toggleRepresentativeBlock = async (userId: string, currentlyActive: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("users")
+        .update({ is_blocked: currentlyActive })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      toast.success(currentlyActive ? "Користувача заблоковано" : "Користувача розблоковано");
+      loadTree();
+    } catch (err) {
+      console.error("Error toggling block:", err);
+      toast.error("Помилка зміни статусу");
+    }
+  };
+
+  // ── Count all nodes ──
+  const countNodes = (nodes: RepNode[]): number => {
+    let count = 0;
+    for (const n of nodes) {
+      count += 1 + countNodes(n.children);
+    }
+    return count;
+  };
+
+  const totalReps = countNodes(tree);
+
+  const STATUS_LABELS: Record<string, string> = {
+    pending: "Очікує",
+    confirmed: "Підтверджено",
+    completed: "Виконано",
+    cancelled: "Скасовано",
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* ── View Switcher ── */}
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          variant={activeView === "structure" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveView("structure")}
+        >
+          <Users className="h-4 w-4 mr-1" />
+          Структура ({totalReps})
+        </Button>
+        <Button
+          variant={activeView === "orders" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveView("orders")}
+        >
+          <ShoppingCart className="h-4 w-4 mr-1" />
+          Замовлення ({orders.length})
+        </Button>
+        <Button
+          variant={activeView === "settings" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveView("settings")}
+        >
+          <Settings2 className="h-4 w-4 mr-1" />
+          Налаштування
+        </Button>
+      </div>
+
+      {/* ── Structure View ── */}
+      {activeView === "structure" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Структура представників</CardTitle>
+            <CardDescription>Ієрархія представників, менеджерів та директорів</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+              </div>
+            ) : tree.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p className="font-medium">Немає представників</p>
+                <p className="text-sm mt-1">
+                  Призначте представників у вкладці «Користувачі» або через систему запрошень.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {tree.map((node) => (
+                  <TreeNode
+                    key={node.id}
+                    node={node}
+                    depth={0}
+                    onToggleBlock={toggleRepresentativeBlock}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Orders View ── */}
+      {activeView === "orders" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Замовлення через представників</CardTitle>
+            <CardDescription>Замовлення, прив'язані до представників</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {orders.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <ShoppingCart className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p className="font-medium">Немає замовлень</p>
+              </div>
+            ) : (
+              <>
+                {/* Desktop */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left">
+                        <th className="p-2">Замовлення</th>
+                        <th className="p-2">Представник</th>
+                        <th className="p-2">Дата</th>
+                        <th className="p-2">Сума</th>
+                        <th className="p-2">Статус</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map((o) => (
+                        <tr key={o.id} className="border-b hover:bg-muted/50">
+                          <td className="p-2 font-medium">{o.title}</td>
+                          <td className="p-2">{o.representative_name}</td>
+                          <td className="p-2">{new Date(o.order_date).toLocaleDateString("uk-UA")}</td>
+                          <td className="p-2">{o.order_amount != null ? `${o.order_amount} $` : "—"}</td>
+                          <td className="p-2">
+                            <Badge variant="secondary">{STATUS_LABELS[o.status] || o.status}</Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {/* Mobile */}
+                <div className="md:hidden space-y-3">
+                  {orders.map((o) => (
+                    <Card key={o.id} className="p-3">
+                      <p className="font-medium">{o.title}</p>
+                      <p className="text-sm text-muted-foreground">{o.representative_name}</p>
+                      <div className="flex justify-between mt-2 text-sm">
+                        <span>{new Date(o.order_date).toLocaleDateString("uk-UA")}</span>
+                        <span>{o.order_amount != null ? `${o.order_amount} $` : "—"}</span>
+                      </div>
+                      <Badge variant="secondary" className="mt-2">
+                        {STATUS_LABELS[o.status] || o.status}
+                      </Badge>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Settings View ── */}
+      {activeView === "settings" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Налаштування представників</CardTitle>
+            <CardDescription>Комісійний відсоток та текст запрошення</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="commission-percent">Комісійний відсоток (%)</Label>
+              <Input
+                id="commission-percent"
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                value={commissionPercent}
+                onChange={(e) => setCommissionPercent(e.target.value)}
+                className="max-w-[200px]"
+              />
+              <p className="text-xs text-muted-foreground">
+                Відсоток від суми замовлення, який отримує представник
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="invite-text">Текст запрошення</Label>
+              <Textarea
+                id="invite-text"
+                value={inviteText}
+                onChange={(e) => setInviteText(e.target.value)}
+                rows={4}
+                placeholder="Текст, який побачить запрошений користувач"
+              />
+              <p className="text-xs text-muted-foreground">
+                Цей текст відображається в запрошенні для нових представників
+              </p>
+            </div>
+
+            <Button onClick={saveSettings} disabled={settingsLoading}>
+              <Save className="h-4 w-4 mr-1" />
+              Зберегти налаштування
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ── Tree Node Component ──
+function TreeNode({
+  node,
+  depth,
+  onToggleBlock,
+}: {
+  node: RepNode;
+  depth: number;
+  onToggleBlock: (userId: string, isActive: boolean) => void;
+}) {
+  const [expanded, setExpanded] = useState(depth < 2);
+
+  return (
+    <div>
+      <div
+        className={`flex items-center gap-2 py-2 px-3 rounded-md hover:bg-muted/50 transition-colors ${
+          !node.isActive ? "opacity-50" : ""
+        }`}
+        style={{ paddingLeft: `${depth * 24 + 12}px` }}
+      >
+        {node.children.length > 0 ? (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="p-0.5 hover:bg-muted rounded"
+          >
+            {expanded ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            )}
+          </button>
+        ) : (
+          <span className="w-5" />
+        )}
+
+        {node.avatarUrl ? (
+          <img
+            src={node.avatarUrl}
+            alt=""
+            className="h-7 w-7 rounded-full object-cover"
+          />
+        ) : (
+          <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+            {node.fullName.charAt(0)}
+          </div>
+        )}
+
+        <span className="font-medium text-sm flex-1 min-w-0 truncate">{node.fullName}</span>
+
+        <Badge className={`text-xs ${ROLE_COLORS[node.role] || ""}`} variant="secondary">
+          {ROLE_LABELS[node.role] || node.role}
+        </Badge>
+
+        {!node.isActive && (
+          <Badge variant="destructive" className="text-xs">
+            Заблоковано
+          </Badge>
+        )}
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0"
+          title={node.isActive ? "Заблокувати" : "Розблокувати"}
+          onClick={() => onToggleBlock(node.userId, node.isActive)}
+        >
+          <UserX className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      {expanded &&
+        node.children.map((child) => (
+          <TreeNode key={child.id} node={child} depth={depth + 1} onToggleBlock={onToggleBlock} />
+        ))}
+    </div>
+  );
+}
