@@ -1667,6 +1667,16 @@ export type Database = {
           title: string
         }[]
       }
+      get_conversion_stats: {
+        Args: never
+        Returns: {
+          confirmed_orders: number
+          conversion_rate: number
+          total_orders: number
+          total_profit: number
+          total_revenue: number
+        }[]
+      }
       get_detailed_profile: {
         Args: { target_user_id: string }
         Returns: {
@@ -1804,6 +1814,16 @@ export type Database = {
       get_title_by_share_percent: {
         Args: { _percent: number }
         Returns: string
+      }
+      get_top_representatives: {
+        Args: { _period?: string }
+        Returns: {
+          avatar_url: string
+          earnings: number
+          full_name: string
+          orders_count: number
+          user_id: string
+        }[]
       }
       get_user_by_phone: {
         Args: { _phone_number: string }
