@@ -183,9 +183,9 @@ export function ProfitPreviewBlock({
       shares: s.shares,
     }));
 
-    const dist = calcFullProfitDistribution(orderAmount, orderExpenses, inputs, totalShares);
+    const dist = calcFullProfitDistribution(orderAmount, orderExpenses, inputs, totalShares, distConfig);
     setDistribution(dist);
-  }, [orderAmount, orderExpenses, shareholders, totalShares, loading]);
+  }, [orderAmount, orderExpenses, shareholders, totalShares, loading, distConfig, distConfigLoading]);
 
   // ── Перевірки готовності ─────────────────────────────────────────────────────
 

@@ -182,7 +182,8 @@ export function ShareholderProfitForecast({ userId }: Props) {
         order.order_amount,
         order.order_expenses,
         allShareholderInputs,
-        totalShares
+        totalShares,
+        distConfig,
       );
       const me = dist.shareholders.find((s) => s.userId === userId);
       return {

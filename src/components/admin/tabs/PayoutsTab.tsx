@@ -215,6 +215,7 @@ export function PayoutsTab() {
             order.order_expenses,
             shareholders.map(s => s.input),
             totalShares,
+            distConfig,
           );
           const shResult = dist.shareholders.find(r => r.userId === sh.userId);
           if (shResult) {

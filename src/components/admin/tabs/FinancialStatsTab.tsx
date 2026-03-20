@@ -438,6 +438,7 @@ export function FinancialStatsTab() {
         order.order_expenses,
         shareholderInputs,
         totalShares,
+        distConfig,
       );
       for (const sh of dist.shareholders) {
         if (!totals[sh.userId]) totals[sh.userId] = { baseIncome: 0, titleBonus: 0, totalIncome: 0 };
