@@ -156,17 +156,26 @@ export interface FullDistributionWithReps extends ProfitDistribution {
   representativePool: RepresentativePoolResult;
   /** Оригінальний net profit (до відрахування представників) */
   originalNetProfit: number;
+  /** Скільки витрат покрито з unallocated_funds */
+  coveredFromFund: number;
+  /** Залишок витрат (покрито з прибутку) */
+  remainingExpenses: number;
+  /** Баланс unallocated_funds після операції */
+  unallocatedFundsAfter: number;
 }
 
 /**
- * Повний розподіл прибутку з урахуванням представників.
+ * Повний розподіл прибутку з урахуванням unallocated_funds та представників.
  *
  * Порядок:
- *   1. net_profit = order_amount - expenses
- *   2. Відрахування представників (5%/3%/2% по ланцюгу)
- *   3. Залишок → існуюча формула (50/20/17.5/12.5)
+ *   1. Витрати покриваються з unallocated_funds
+ *   2. Якщо не вистачає — різниця з order_amount
+ *   3. Відрахування представників (5%/3%/2% по ланцюгу)
+ *   4. Залишок → існуюча формула (50/20/17.5/12.5)
+ *   5. admin_fund (12.5%) повертається в unallocated_funds
  *
- * Якщо chain порожній, поведінка ідентична calcFullProfitDistribution.
+ * Це КЛІЄНТСЬКИЙ preview — реальний розрахунок виконується серверною
+ * функцією process_order_profit().
  */
 export function calcFullDistributionWithReps(
   orderAmount: number,
@@ -174,18 +183,32 @@ export function calcFullDistributionWithReps(
   shareholders: ShareholderInput[],
   totalShares: number,
   repChain: RepresentativeChainNode[],
+  unallocatedFunds: number = 0,
 ): FullDistributionWithReps {
-  const originalNetProfit = calcNetProfit(orderAmount, expenses);
+  // STEP 1: Cover expenses from unallocated_funds
+  const coveredFromFund = Math.min(unallocatedFunds, expenses);
+  const remainingExpenses = expenses - coveredFromFund;
+  let fundBalance = unallocatedFunds - coveredFromFund;
+
+  // STEP 2: Net profit with adjusted expenses
+  const originalNetProfit = Math.max(0, orderAmount - remainingExpenses);
+
+  // STEP 3: Representative pool
   const repPool = calcRepresentativePool(originalNetProfit, repChain);
 
-  // Pass the reduced profit to the existing shareholder formula
-  // We recalculate using the adjusted amounts so the existing function works unchanged
-  const adjustedOrderAmount = repPool.netProfitAfterReps + expenses;
-  const shareholderDist = calcFullProfitDistribution(adjustedOrderAmount, expenses, shareholders, totalShares);
+  // STEP 4: Shareholder distribution (UNCHANGED formula)
+  const adjustedOrderAmount = repPool.netProfitAfterReps + remainingExpenses;
+  const shareholderDist = calcFullProfitDistribution(adjustedOrderAmount, remainingExpenses, shareholders, totalShares);
+
+  // STEP 5: admin_fund goes back to unallocated_funds
+  fundBalance += shareholderDist.adminFund;
 
   return {
     ...shareholderDist,
     representativePool: repPool,
     originalNetProfit,
+    coveredFromFund,
+    remainingExpenses,
+    unallocatedFundsAfter: fundBalance,
   };
 }
