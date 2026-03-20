@@ -191,8 +191,43 @@ export function ShareholdersTab() {
   };
 
   const availableShares = Math.max(0, dbTotalShares - issuedShares);
-  // System is in setup state if total shares is 0 (not yet configured by admin)
   const systemNotConfigured = !settingsLoading && dbTotalShares <= 0;
+
+  // Dist config validation
+  const distSum = useMemo(() => {
+    return [distInputs.specialists, distInputs.shares, distInputs.titleBonus, distInputs.adminFund]
+      .reduce((s, v) => s + (parseFloat(v) || 0), 0);
+  }, [distInputs]);
+  const distSumValid = Math.abs(distSum - 100) < 0.01;
+
+  const saveDistConfig = async () => {
+    if (!distSumValid) {
+      toast.error('Сума відсотків повинна дорівнювати 100%');
+      return;
+    }
+    setDistSaving(true);
+    try {
+      const updates = [
+        { id: 'profit-specialists-percent', value: distInputs.specialists },
+        { id: 'profit-shares-percent', value: distInputs.shares },
+        { id: 'profit-title-bonus-percent', value: distInputs.titleBonus },
+        { id: 'profit-admin-fund-percent', value: distInputs.adminFund },
+      ];
+      for (const u of updates) {
+        const { error } = await supabase
+          .from('site_settings')
+          .update({ value: u.value, updated_at: new Date().toISOString() })
+          .eq('id', u.id);
+        if (error) throw error;
+      }
+      toast.success('Відсотки розподілу прибутку збережено');
+      setEditingDist(false);
+      reloadDistConfig();
+    } catch (err: any) {
+      toast.error('Помилка збереження: ' + (err.message || ''));
+    }
+    setDistSaving(false);
+  };
 
   // Calculate profit forecasts for all shareholders based on confirmed orders
   const profitForecasts = useMemo(() => {
@@ -205,7 +240,6 @@ export function ShareholdersTab() {
       shares: sh.shares,
     }));
 
-    // Sum up forecasts from all confirmed orders
     const totals: Record<string, number> = {};
     
     for (const order of confirmedOrders) {
@@ -213,7 +247,8 @@ export function ShareholdersTab() {
         Number(order.order_amount),
         Number(order.order_expenses),
         shareholderInputs,
-        dbTotalShares
+        dbTotalShares,
+        distConfig,
       );
       
       for (const sh of dist.shareholders) {
@@ -222,8 +257,7 @@ export function ShareholdersTab() {
     }
     
     return totals;
-  }, [shareholders, confirmedOrders, dbTotalShares]);
-
+  }, [shareholders, confirmedOrders, dbTotalShares, distConfig]);
   const getProfitDisplay = (userId: string, shares: number) => {
     if (dbTotalShares <= 0) return "—";
     if (shares <= 0) return "Акції не призначено";
