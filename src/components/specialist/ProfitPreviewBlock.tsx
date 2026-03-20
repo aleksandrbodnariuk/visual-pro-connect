@@ -89,6 +89,7 @@ export function ProfitPreviewBlock({
   const [shareholders, setShareholders] = useState<ShareholderInfo[]>([]);
   const [distribution, setDistribution] = useState<ProfitDistribution | null>(null);
   const [repConfig, setRepConfig] = useState<RepCommissionConfig>(DEFAULT_REP_CONFIG);
+  const { config: distConfig, loading: distConfigLoading } = useProfitDistConfig();
 
   // ── Завантаження реальних даних ─────────────────────────────────────────────
   useEffect(() => {

@@ -101,6 +101,7 @@ function InfoAlert({
 
 export function ShareholderProfitForecast({ userId }: Props) {
   const { totalShares, loading: settingsLoading } = useCompanySettings();
+  const { config: distConfig, loading: distConfigLoading } = useProfitDistConfig();
 
   const [userShares, setUserShares]       = useState<number>(0);
   const [allShareholderInputs, setAllShareholderInputs] = useState<ShareholderInput[]>([]);

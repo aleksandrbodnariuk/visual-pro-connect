@@ -86,7 +86,7 @@ function statusVariant(s: string): 'default' | 'secondary' | 'outline' | 'destru
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function PayoutsTab() {
-  const [payouts, setPayouts] = useState<PayoutRow[]>([]);
+  const { config: distConfig } = useProfitDistConfig();
   const [names, setNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);

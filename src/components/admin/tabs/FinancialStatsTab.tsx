@@ -202,7 +202,7 @@ function InfoAlert({ message, sub }: { message: string; sub?: string }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function FinancialStatsTab() {
-  const { totalShares, sharePriceUsd, loading: settingsLoading } = useCompanySettings();
+  const { config: distConfig, loading: distConfigLoading } = useProfitDistConfig();
 
   const [orders, setOrders] = useState<ConfirmedOrder[]>([]);
   const [shareholderInputs, setShareholderInputs] = useState<ShareholderInput[]>([]);
