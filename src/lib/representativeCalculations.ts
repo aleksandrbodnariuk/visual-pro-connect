@@ -172,7 +172,7 @@ export interface FullDistributionWithReps extends ProfitDistribution {
  *   2. Якщо не вистачає — різниця з order_amount
  *   3. Відрахування представників (5%/3%/2% по ланцюгу)
  *   4. Залишок → існуюча формула (50/20/17.5/12.5)
- *   5. admin_fund (12.5%) повертається в unallocated_funds
+ *   5. Unclaimed title bonuses → unallocated_funds
  *
  * Це КЛІЄНТСЬКИЙ preview — реальний розрахунок виконується серверною
  * функцією process_order_profit().
