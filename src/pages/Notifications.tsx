@@ -206,7 +206,6 @@ export default function Notifications() {
     return link.replace('/accept-invite/', '');
   };
 
-  const [acceptingInvite, setAcceptingInvite] = useState<string | null>(null);
 
   const handleAcceptInvite = async (notificationId: string, inviteId: string) => {
     setAcceptingInvite(notificationId);
