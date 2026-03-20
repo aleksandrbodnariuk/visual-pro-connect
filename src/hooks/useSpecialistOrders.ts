@@ -85,11 +85,15 @@ export function useSpecialistOrders(statusFilter: OrderStatus) {
     order_type: string;
     order_date: string;
     notes?: string;
+    representative_id?: string;
   }) => {
     if (!user) return;
+    const insertData: any = { ...order, created_by: user.id, status: 'pending' };
+    if (!insertData.representative_id) delete insertData.representative_id;
+
     const { data, error } = await (supabase as any)
       .from('specialist_orders')
-      .insert({ ...order, created_by: user.id, status: 'pending' })
+      .insert(insertData)
       .select()
       .single();
 

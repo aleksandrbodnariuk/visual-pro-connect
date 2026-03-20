@@ -1132,6 +1132,7 @@ export type Database = {
           order_expenses: number | null
           order_type: string
           price: number | null
+          representative_id: string | null
           status: string
           title: string
           updated_at: string
@@ -1149,6 +1150,7 @@ export type Database = {
           order_expenses?: number | null
           order_type?: string
           price?: number | null
+          representative_id?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -1166,11 +1168,20 @@ export type Database = {
           order_expenses?: number | null
           order_type?: string
           price?: number | null
+          representative_id?: string | null
           status?: string
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "specialist_orders_representative_id_fkey"
+            columns: ["representative_id"]
+            isOneToOne: false
+            referencedRelation: "representatives"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {
