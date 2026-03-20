@@ -20,6 +20,11 @@ import {
   type ShareholderProfitResult,
   type ShareholderInput,
 } from '@/lib/shareholderCalculations';
+import {
+  calcRepresentativePool,
+  type RepCommissionConfig,
+  DEFAULT_REP_CONFIG,
+} from '@/lib/representativeCalculations';
 import { OrderParticipant, ORDER_TYPE_LABELS } from './types';
 
 // ─── Типи ─────────────────────────────────────────────────────────────────────
