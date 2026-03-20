@@ -14,6 +14,24 @@ import {
   type TitleThreshold,
 } from './shareholderRules';
 
+// ─── Конфігурація розподілу ───────────────────────────────────────────────────
+
+/** Налаштовувані відсотки розподілу прибутку */
+export interface ShareholderDistConfig {
+  specialistsPercent: number; // 0..1
+  sharesPercent: number;      // 0..1
+  titleBonusPercent: number;  // 0..1
+  adminFundPercent: number;   // 0..1
+}
+
+/** Значення за замовчуванням (збігаються з хардкодом) */
+export const DEFAULT_DIST_CONFIG: ShareholderDistConfig = {
+  specialistsPercent: PROFIT_SHARE_SPECIALISTS,
+  sharesPercent: PROFIT_SHARE_ALL_SHARES,
+  titleBonusPercent: PROFIT_SHARE_TITLE_BONUSES,
+  adminFundPercent: PROFIT_SHARE_ADMIN_FUND,
+};
+
 // ─── Типи ────────────────────────────────────────────────────────────────────
 
 export interface ShareholderInput {
@@ -27,7 +45,7 @@ export interface ShareholderProfitResult {
   percent: number;
   /** null якщо у акціонера 0 акцій або система ще не налаштована */
   title: TitleThreshold | null;
-  /** Базовий дохід з 20 %-пулу (пропорційно до кількості акцій) */
+  /** Базовий дохід з пулу акціонерів (пропорційно до кількості акцій) */
   baseIncome: number;
   /** Сума титульних бонусів */
   titleBonus: number;
@@ -38,13 +56,13 @@ export interface ShareholderProfitResult {
 export interface ProfitDistribution {
   /** Чистий прибуток */
   netProfit: number;
-  /** 50 % — фахівцям */
+  /** Фахівцям */
   specialistsPool: number;
-  /** 20 % — на всі акції */
+  /** На всі акції */
   sharesPool: number;
-  /** 17.5 % — титульні бонуси */
+  /** Титульні бонуси */
   titleBonusPool: number;
-  /** 12.5 % — адмін-фонд */
+  /** Адмін-фонд */
   adminFund: number;
   /** Сума титульних бонусів, які не розподілені (відсутні вищі титули) */
   unclaimedTitleBonus: number;
@@ -60,15 +78,15 @@ export function calcNetProfit(orderAmount: number, expenses: number): number {
 }
 
 /** Розподіл чистого прибутку на 4 пули */
-export function calcProfitPools(netProfit: number) {
+export function calcProfitPools(netProfit: number, config?: ShareholderDistConfig) {
+  const cfg = config ?? DEFAULT_DIST_CONFIG;
   return {
-    specialistsPool: netProfit * PROFIT_SHARE_SPECIALISTS,
-    sharesPool: netProfit * PROFIT_SHARE_ALL_SHARES,
-    titleBonusPool: netProfit * PROFIT_SHARE_TITLE_BONUSES,
-    adminFund: netProfit * PROFIT_SHARE_ADMIN_FUND,
+    specialistsPool: netProfit * cfg.specialistsPercent,
+    sharesPool: netProfit * cfg.sharesPercent,
+    titleBonusPool: netProfit * cfg.titleBonusPercent,
+    adminFund: netProfit * cfg.adminFundPercent,
   };
 }
-
 /** Відсоток акцій конкретного акціонера. Повертає 0 якщо totalShares = 0. */
 export function calcSharePercent(userShares: number, totalShares: number): number {
   if (totalShares <= 0 || userShares <= 0) return 0;
