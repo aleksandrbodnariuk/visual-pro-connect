@@ -6,13 +6,16 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, UserPlus, CalendarPlus, Loader2, BookOpen, Briefcase } from 'lucide-react';
+import { Users, UserPlus, CalendarPlus, Loader2 } from 'lucide-react';
 import { InviteFriendDialog } from '@/components/representative/InviteFriendDialog';
 import { InvitesList } from '@/components/representative/InvitesList';
 import { TeamTree } from '@/components/representative/TeamTree';
 import { RepBookingCalendar } from '@/components/representative/RepBookingCalendar';
 import { CreateBookingDialog } from '@/components/representative/CreateBookingDialog';
 import { EarningsBlock } from '@/components/representative/EarningsBlock';
+import { ServiceCalculator } from '@/components/representative/ServiceCalculator';
+import { PortfolioBlock } from '@/components/representative/PortfolioBlock';
+import { ShareInviteBlock } from '@/components/representative/ShareInviteBlock';
 
 interface RepresentativeRecord {
   id: string;
