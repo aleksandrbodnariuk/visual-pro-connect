@@ -706,6 +706,7 @@ export function UsersTab() {
                       onToggle={() => toggleRepresentativeStatus(user.id)}
                       disabled={Boolean(user.founder_admin)}
                     />
+                  </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="h-3 w-3" />
                     <span>{formatLastSeen(user.last_seen)}</span>
