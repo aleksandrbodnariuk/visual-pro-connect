@@ -1706,6 +1706,16 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_financial_stats: {
+        Args: { _period?: string }
+        Returns: {
+          total_orders: number
+          total_profit: number
+          total_representatives_paid: number
+          total_shareholders_paid: number
+          total_unallocated: number
+        }[]
+      }
       get_issued_shares_count: { Args: never; Returns: number }
       get_minimal_public_profiles: {
         Args: never
@@ -1739,6 +1749,15 @@ export type Database = {
           title: string
           viber: string
           website: string
+        }[]
+      }
+      get_representative_stats: {
+        Args: { _user_id: string }
+        Returns: {
+          avg_check: number
+          orders_count: number
+          team_size: number
+          total_earnings: number
         }[]
       }
       get_safe_public_profiles: {
