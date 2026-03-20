@@ -108,6 +108,16 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
           Кабінет
         </Link>
       )}
+      {(isRepresentative || isAdmin) && (
+        <Link
+          to="/representative-panel"
+          className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
+            isActive("/representative-panel") ? "text-foreground" : "text-foreground/60"
+          }`}
+        >
+          Представники
+        </Link>
+      )}
       {isAdmin && (
         <Link
           to="/admin"
