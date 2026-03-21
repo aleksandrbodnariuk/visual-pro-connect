@@ -19,6 +19,8 @@ export interface SpecialistOrder {
   order_expenses: number | null;
   financial_notes: string | null;
   financials_updated_at: string | null;
+  // Представник, який створив замовлення
+  representative_id: string | null;
 }
 
 export interface OrderParticipant {

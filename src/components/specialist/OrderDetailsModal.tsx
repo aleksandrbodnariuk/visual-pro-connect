@@ -434,6 +434,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                 orderExpenses={savedExpenses}
                 participants={participants}
                 participantInfos={participantInfos}
+                representativeId={order.representative_id}
               />
             </>
           )}
