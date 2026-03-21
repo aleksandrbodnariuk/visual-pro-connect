@@ -1,63 +1,46 @@
 
 
-## Plan: Configurable Shareholder Profit Distribution Percentages
+## Plan: Fix ProfitPreviewBlock — Add Representatives Section & Unallocated Funds Flow
 
-### Feasibility Assessment
+### Issues Found
 
-**Verdict: МОЖЛИВО виконати безпечно.** Архітектура вже побудована за тим самим паттерном, що й для представників. Ризики мінімальні, бо:
-- Всі клієнтські розрахунки — read-only preview (не мутують дані)
-- Серверна логіка (`process_order_profit`) — єдине місце мутацій, оновлюється атомарно
-- Формула акціонерів ізольована від формули представників (представники вираховуються ДО розподілу)
-- Сума 4 пулів завжди валідується на 100%
+**Issue 1: No "Представники" section in preview**
+`ProfitPreviewBlock` doesn't know the order's `representative_id`. It uses `calcFullProfitDistribution` (shareholder-only) instead of `calcFullDistributionWithReps` (which includes representatives). The `SpecialistOrder` TypeScript interface also lacks `representative_id`.
 
-### Problem
-The 50/20/17.5/12.5 profit distribution is hardcoded everywhere. Admin founder should be able to adjust these from the Shareholders tab.
+**Issue 2: "Не засвоєні" not shown flowing to unallocated_funds**
+The preview uses `calcFullProfitDistribution` which doesn't model the `unallocated_funds` flow. `calcFullDistributionWithReps` already handles this — it covers expenses from fund and adds unclaimed bonuses back.
+
+### Root Cause
+Both issues stem from the same gap: `ProfitPreviewBlock` doesn't use `calcFullDistributionWithReps` and doesn't receive the order's `representative_id`.
 
 ### Changes
 
-#### 1. Database: Seed 4 new `site_settings` keys
-- `profit-specialists-percent` (default: `50`)
-- `profit-shares-percent` (default: `20`)
-- `profit-title-bonus-percent` (default: `17.5`)
-- `profit-admin-fund-percent` (default: `12.5`)
+#### 1. `src/components/specialist/types.ts`
+Add `representative_id: string | null` to `SpecialistOrder` interface.
 
-#### 2. Database: Update `process_order_profit`
-Replace hardcoded `0.50, 0.20, 0.175, 0.125` with values read from `site_settings` at execution time. Title bonus per level = `titleBonusPool / 7` (derived from the configurable pool).
+#### 2. `src/components/specialist/ProfitPreviewBlock.tsx`
+- Accept new prop: `representativeId: string | null`
+- Load `unallocated_funds` from `company_settings`
+- When `representativeId` exists, load the rep chain from `representatives` table (rep → parent → grandparent)
+- Switch from `calcFullProfitDistribution` to `calcFullDistributionWithReps`
+- Add a "Представники" section showing each chain node with role, percent, amount
+- Show "Не засвоєні → фонд витрат" flow under title bonuses (unclaimed → unallocated_funds)
+- Show expenses coverage from fund if applicable
 
-#### 3. Client: Parameterize `shareholderCalculations.ts`
-- Add `ShareholderDistConfig` interface with 4 pool percentages
-- Make `calcProfitPools` and `calcFullProfitDistribution` accept optional config
-- `calcTitleBonus` will use `titleBonusPercent / 7` instead of hardcoded `TITLE_BONUS_PERCENT_PER_LEVEL`
-- Default values match current hardcoded constants (backward compatible)
+#### 3. `src/components/specialist/OrderDetailsModal.tsx`
+- Pass `order.representative_id` to `ProfitPreviewBlock` as `representativeId` prop
 
-#### 4. Admin UI: Add settings section in `ShareholdersTab.tsx`
-Add a card with 4 inputs:
-- Фахівці (%) — default 50
-- Акціонери (%) — default 20
-- Титульні бонуси (%) — default 17.5
-- Адмін-фонд (%) — default 12.5
+#### 4. No database changes needed
+The server-side `process_order_profit` already handles both correctly. This is purely a client-side preview fix.
 
-Validation: sum must equal 100%. Info text explaining title bonus recalculation (per level = total / 7).
-
-#### 5. Update all call sites to load config
-- `FinancialStatsTab.tsx` — load settings, pass to calculations
-- `PayoutsTab.tsx` — load settings, pass to calculations
-- `ProfitPreviewBlock.tsx` — load settings, pass to calculations
-- `ShareholderProfitForecast.tsx` — load settings, pass to calculations
-
-### What Stays Unchanged
-- Representative commission system (completely independent)
-- Title thresholds (1%/5%/10%/20%/30%/40%/50%/100%)
-- Unallocated funds logic
-- Representative hierarchy
+### Safety
+- No mutations — preview is read-only
+- `calcFullDistributionWithReps` already exists and is tested
+- Falls back gracefully when `representative_id` is null (no rep section shown)
+- All existing calculations remain unchanged
 
 ### Files to Change
-- `supabase/migrations/` — seed settings + update `process_order_profit`
-- `src/lib/shareholderRules.ts` — keep constants as defaults, no breaking changes
-- `src/lib/shareholderCalculations.ts` — add config parameter
-- `src/components/admin/tabs/ShareholdersTab.tsx` — add settings UI
-- `src/components/admin/tabs/FinancialStatsTab.tsx` — pass config
-- `src/components/admin/tabs/PayoutsTab.tsx` — pass config
-- `src/components/specialist/ProfitPreviewBlock.tsx` — pass config
-- `src/components/profile/ShareholderProfitForecast.tsx` — pass config
+- `src/components/specialist/types.ts` — add field
+- `src/components/specialist/ProfitPreviewBlock.tsx` — main fix
+- `src/components/specialist/OrderDetailsModal.tsx` — pass prop
 
