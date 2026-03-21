@@ -5,25 +5,25 @@
  * ВАЖЛИВО:
  * - Нічого НЕ записується в БД.
  * - Лише візуальний preview.
- * - Використовує реальні дані: shares, company_settings, users.
- * - Усі формули з централізованого модуля shareholderCalculations.
+ * - Використовує реальні дані: shares, company_settings, users, representatives.
+ * - Усі формули з централізованих модулів shareholderCalculations + representativeCalculations.
  */
 
 import { useEffect, useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Users, TrendingUp, Crown, AlertCircle, Loader2 } from 'lucide-react';
+import { Users, TrendingUp, Crown, AlertCircle, Loader2, UserCheck, Wallet } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  calcFullProfitDistribution,
-  type ProfitDistribution,
-  type ShareholderProfitResult,
   type ShareholderInput,
 } from '@/lib/shareholderCalculations';
 import { useProfitDistConfig } from '@/hooks/useProfitDistConfig';
 import {
+  calcFullDistributionWithReps,
   calcRepresentativePool,
   type RepCommissionConfig,
+  type RepresentativeChainNode,
+  type FullDistributionWithReps,
   DEFAULT_REP_CONFIG,
 } from '@/lib/representativeCalculations';
 import { OrderParticipant, ORDER_TYPE_LABELS } from './types';
@@ -42,14 +42,11 @@ interface ShareholderInfo {
 }
 
 interface Props {
-  /** Сума замовлення (null = не задана) */
   orderAmount: number | null;
-  /** Витрати замовлення (null = не задані) */
   orderExpenses: number | null;
-  /** Учасники замовлення (фахівці) */
   participants: OrderParticipant[];
-  /** Імена фахівців (вже завантажені в батьківському компоненті) */
   participantInfos: Record<string, SpecialistInfo>;
+  representativeId?: string | null;
 }
 
 // ─── Допоміжні компоненти ─────────────────────────────────────────────────────
@@ -76,6 +73,12 @@ function fmt(n: number) {
   return n.toFixed(2) + ' $';
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  representative: 'Представник',
+  manager: 'Менеджер',
+  director: 'Директор',
+};
+
 // ─── Основний компонент ───────────────────────────────────────────────────────
 
 export function ProfitPreviewBlock({
@@ -83,12 +86,16 @@ export function ProfitPreviewBlock({
   orderExpenses,
   participants,
   participantInfos,
+  representativeId,
 }: Props) {
   const [loading, setLoading] = useState(true);
   const [totalShares, setTotalShares] = useState<number>(0);
   const [shareholders, setShareholders] = useState<ShareholderInfo[]>([]);
-  const [distribution, setDistribution] = useState<ProfitDistribution | null>(null);
+  const [distribution, setDistribution] = useState<FullDistributionWithReps | null>(null);
   const [repConfig, setRepConfig] = useState<RepCommissionConfig>(DEFAULT_REP_CONFIG);
+  const [repChain, setRepChain] = useState<RepresentativeChainNode[]>([]);
+  const [repNames, setRepNames] = useState<Record<string, string>>({});
+  const [unallocatedFunds, setUnallocatedFunds] = useState(0);
   const { config: distConfig, loading: distConfigLoading } = useProfitDistConfig();
 
   // ── Завантаження реальних даних ─────────────────────────────────────────────
@@ -98,49 +105,44 @@ export function ProfitPreviewBlock({
     async function load() {
       setLoading(true);
 
-      // 1. company_settings — загальна кількість акцій
+      // 1. company_settings
       const { data: cs } = await supabase
         .from('company_settings')
-        .select('total_shares')
+        .select('total_shares, unallocated_funds')
         .limit(1)
         .single();
 
       const total = cs?.total_shares ?? 0;
+      const fundBalance = cs?.unallocated_funds ?? 0;
 
-      // 2. Всі акціонери з кількістю акцій > 0
+      // 2. Акціонери з акціями > 0
       const { data: sharesData } = await supabase
         .from('shares')
         .select('user_id, quantity')
         .gt('quantity', 0);
 
-      if (!sharesData || sharesData.length === 0 || cancelled) {
-        if (!cancelled) {
-          setTotalShares(total);
-          setShareholders([]);
-          setLoading(false);
-        }
-        return;
-      }
-
       // 3. Імена акціонерів
-      const ids = sharesData.map((r) => r.user_id).filter(Boolean) as string[];
-      const { data: profiles } = await supabase
-        .rpc('get_safe_public_profiles_by_ids', { _ids: ids });
+      let shList: ShareholderInfo[] = [];
+      if (sharesData && sharesData.length > 0) {
+        const ids = sharesData.map((r) => r.user_id).filter(Boolean) as string[];
+        const { data: profiles } = await supabase
+          .rpc('get_safe_public_profiles_by_ids', { _ids: ids });
 
-      const nameMap: Record<string, string> = {};
-      if (profiles) {
-        (profiles as any[]).forEach((p) => { nameMap[p.id] = p.full_name || 'Невідомий'; });
+        const nameMap: Record<string, string> = {};
+        if (profiles) {
+          (profiles as any[]).forEach((p) => { nameMap[p.id] = p.full_name || 'Невідомий'; });
+        }
+
+        shList = sharesData
+          .filter((r) => r.user_id && r.quantity > 0)
+          .map((r) => ({
+            userId: r.user_id as string,
+            fullName: nameMap[r.user_id as string] || 'Невідомий',
+            shares: r.quantity,
+          }));
       }
 
-      const shList: ShareholderInfo[] = sharesData
-        .filter((r) => r.user_id && r.quantity > 0)
-        .map((r) => ({
-          userId: r.user_id as string,
-          fullName: nameMap[r.user_id as string] || 'Невідомий',
-          shares: r.quantity,
-        }));
-
-      // 4. Load rep commission config from site_settings
+      // 4. Rep commission config
       const { data: repSettings } = await supabase
         .from('site_settings')
         .select('id, value')
@@ -155,25 +157,76 @@ export function ProfitPreviewBlock({
         if (s.id === 'rep-director-percent') cfg.directorPercent = v;
       });
 
+      // 5. Rep chain (representative → parent → grandparent)
+      let chain: RepresentativeChainNode[] = [];
+      const names: Record<string, string> = {};
+
+      if (representativeId) {
+        const { data: repData } = await supabase
+          .from('representatives')
+          .select('id, user_id, role, parent_id')
+          .or(`id.eq.${representativeId}`);
+
+        if (repData && repData.length > 0) {
+          const rep = repData[0];
+          chain.push({ representativeId: rep.id, userId: rep.user_id, role: rep.role });
+
+          // Load parent
+          if (rep.parent_id) {
+            const { data: parentData } = await supabase
+              .from('representatives')
+              .select('id, user_id, role, parent_id')
+              .eq('id', rep.parent_id)
+              .single();
+
+            if (parentData) {
+              chain.push({ representativeId: parentData.id, userId: parentData.user_id, role: parentData.role });
+
+              // Load grandparent
+              if (parentData.parent_id) {
+                const { data: gpData } = await supabase
+                  .from('representatives')
+                  .select('id, user_id, role')
+                  .eq('id', parentData.parent_id)
+                  .single();
+
+                if (gpData) {
+                  chain.push({ representativeId: gpData.id, userId: gpData.user_id, role: gpData.role });
+                }
+              }
+            }
+          }
+
+          // Load names for chain
+          const chainUserIds = chain.map(n => n.userId);
+          if (chainUserIds.length > 0) {
+            const { data: chainProfiles } = await supabase
+              .rpc('get_safe_public_profiles_by_ids', { _ids: chainUserIds });
+            if (chainProfiles) {
+              (chainProfiles as any[]).forEach(p => { names[p.id] = p.full_name || 'Невідомий'; });
+            }
+          }
+        }
+      }
+
       if (!cancelled) {
         setTotalShares(total);
         setShareholders(shList);
         setRepConfig(cfg);
+        setRepChain(chain);
+        setRepNames(names);
+        setUnallocatedFunds(fundBalance);
         setLoading(false);
       }
     }
 
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [representativeId]);
 
   // ── Розрахунок при зміні вхідних даних ─────────────────────────────────────
   useEffect(() => {
-    if (
-      orderAmount == null ||
-      orderExpenses == null ||
-      loading
-    ) {
+    if (orderAmount == null || orderExpenses == null || loading || distConfigLoading) {
       setDistribution(null);
       return;
     }
@@ -183,15 +236,21 @@ export function ProfitPreviewBlock({
       shares: s.shares,
     }));
 
-    const dist = calcFullProfitDistribution(orderAmount, orderExpenses, inputs, totalShares, distConfig);
+    const dist = calcFullDistributionWithReps(
+      orderAmount,
+      orderExpenses,
+      inputs,
+      totalShares,
+      repChain,
+      unallocatedFunds,
+      repConfig,
+    );
     setDistribution(dist);
-  }, [orderAmount, orderExpenses, shareholders, totalShares, loading, distConfig, distConfigLoading]);
+  }, [orderAmount, orderExpenses, shareholders, totalShares, loading, distConfig, distConfigLoading, repChain, repConfig, unallocatedFunds]);
 
-  // ── Перевірки готовності ─────────────────────────────────────────────────────
-
-  // Розрахунок частки фахівця
+  // ── Розрахунок частки фахівця ───────────────────────────────────────────────
   const specialistCount = participants.length;
-  const getSpecialistShare = (dist: ProfitDistribution) =>
+  const getSpecialistShare = (dist: FullDistributionWithReps) =>
     specialistCount > 0 ? dist.specialistsPool / specialistCount : 0;
 
   // ── Рендер ──────────────────────────────────────────────────────────────────
@@ -217,19 +276,102 @@ export function ProfitPreviewBlock({
         <EmptyState message="Чистий прибуток ≤ 0 — розподіл не виконується" />
       ) : (
         <div className="rounded-lg border p-3 space-y-2 text-sm bg-muted/20">
-          <Row label="Чистий прибуток" value={fmt(distribution.netProfit)} bold />
+          {/* Покриття витрат з фонду */}
+          {distribution.coveredFromFund > 0.005 && (
+            <>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <Wallet className="h-3 w-3" />
+                  Покрито з фонду витрат
+                </span>
+                <span className="text-green-600 dark:text-green-400">{fmt(distribution.coveredFromFund)}</span>
+              </div>
+              {distribution.remainingExpenses > 0.005 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground pl-4 text-xs">↳ залишок витрат (з прибутку)</span>
+                  <span className="text-xs">{fmt(distribution.remainingExpenses)}</span>
+                </div>
+              )}
+              <Separator />
+            </>
+          )}
+
+          <Row label="Чистий прибуток" value={fmt(distribution.originalNetProfit)} bold />
+
+          {/* Представники */}
+          {distribution.representativePool.deductions.length > 0 && (
+            <>
+              <Separator />
+              <div className="flex justify-between text-sm font-medium">
+                <span className="text-muted-foreground">Представники ({(distribution.representativePool.totalPercent * 100).toFixed(1)}%)</span>
+                <span>{fmt(distribution.representativePool.totalAmount)}</span>
+              </div>
+              {distribution.representativePool.deductions.map((d) => (
+                <div key={d.representativeId} className="flex justify-between text-xs pl-3">
+                  <span className="text-muted-foreground">
+                    {repNames[d.userId] || 'Невідомий'} ({ROLE_LABELS[d.role] || d.role}, {(d.percent * 100).toFixed(1)}%)
+                  </span>
+                  <span>{fmt(d.amount)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Прибуток після представників</span>
+                <span className="font-medium">{fmt(distribution.representativePool.netProfitAfterReps)}</span>
+              </div>
+            </>
+          )}
+
           <Separator />
           <Row label={`${(distConfig.specialistsPercent * 100).toFixed(1)}% — фахівцям`} value={fmt(distribution.specialistsPool)} />
           <Row label={`${(distConfig.sharesPercent * 100).toFixed(1)}% — акціонерам (за акціями)`} value={fmt(distribution.sharesPool)} />
           <Row label={`${(distConfig.titleBonusPercent * 100).toFixed(1)}% — титульні бонуси`} value={fmt(distribution.titleBonusPool)} />
           {distribution.unclaimedTitleBonus > 0.005 && (
             <div className="flex justify-between text-sm text-amber-500">
-              <span className="pl-3 text-xs">↳ не засвоєні</span>
+              <span className="pl-3 text-xs">↳ не засвоєні → фонд витрат</span>
               <span className="text-xs">{fmt(distribution.unclaimedTitleBonus)}</span>
             </div>
           )}
           <Row label={`${(distConfig.adminFundPercent * 100).toFixed(1)}% — адміністративний фонд`} value={fmt(distribution.adminFund)} />
+
+          {/* Баланс фонду після операції */}
+          {(distribution.coveredFromFund > 0.005 || distribution.unclaimedTitleBonus > 0.005) && (
+            <>
+              <Separator />
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <Wallet className="h-3 w-3" />
+                  Баланс фонду після операції
+                </span>
+                <span className="font-medium">{fmt(distribution.unallocatedFundsAfter)}</span>
+              </div>
+            </>
+          )}
         </div>
+      )}
+
+      {/* ── Представники замовлення ────────────────────────────────────────── */}
+      {distribution && distribution.netProfit > 0 && distribution.representativePool.deductions.length > 0 && (
+        <>
+          <div className="flex items-center gap-1.5 pt-1">
+            <UserCheck className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Представники
+            </span>
+          </div>
+          <div className="rounded-lg border divide-y text-sm">
+            {distribution.representativePool.deductions.map((d) => (
+              <div key={d.representativeId} className="flex items-center justify-between px-3 py-2">
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-medium text-xs">{repNames[d.userId] || 'Невідомий'}</span>
+                  <Badge variant="outline" className="text-xs w-fit">
+                    {ROLE_LABELS[d.role] || d.role} — {(d.percent * 100).toFixed(1)}%
+                  </Badge>
+                </div>
+                <span className="text-primary font-semibold text-sm">{fmt(d.amount)}</span>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* ── Фахівці замовлення ────────────────────────────────────────────── */}
