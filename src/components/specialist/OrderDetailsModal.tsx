@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon, Check, X, Archive, UserPlus, Trash2, TrendingUp } from 'lucide-react';
+import { CalendarIcon, Check, X, Archive, UserPlus, Trash2, TrendingUp, Banknote, Loader2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Separator } from '@/components/ui/separator';
 import { calcNetProfit } from '@/lib/shareholderCalculations';
 import { ProfitPreviewBlock } from './ProfitPreviewBlock';
+import { toast } from 'sonner';
 
 interface SpecialistInfo {
   id: string;
@@ -60,6 +61,8 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
   const [participantInfos, setParticipantInfos] = useState<Record<string, SpecialistInfo>>({});
   const [addSpecId, setAddSpecId] = useState('');
   const [addSpecRole, setAddSpecRole] = useState<OrderType>('photo');
+  const [profitDistributed, setProfitDistributed] = useState<boolean | null>(null);
+  const [distributing, setDistributing] = useState(false);
 
   useEffect(() => {
     if (order) {
@@ -106,6 +109,22 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
       }
     });
   }, [participants]);
+
+  // Check if profit was already distributed
+  useEffect(() => {
+    if (!order || !isAdmin || !open) {
+      setProfitDistributed(null);
+      return;
+    }
+    (supabase as any)
+      .from('financial_audit_log')
+      .select('id')
+      .eq('order_id', order.id)
+      .limit(1)
+      .then(({ data }: any) => {
+        setProfitDistributed(data && data.length > 0);
+      });
+  }, [order?.id, isAdmin, open]);
 
   if (!order) return null;
 
@@ -443,6 +462,51 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
           {isAdmin && !editing && !editingFinancials && (
             <>
               <Separator />
+
+              {/* Distribute profit button */}
+              {order.status === 'confirmed' && hasFinancials && savedAmount != null && savedAmount > 0 && (
+                <div className="rounded-lg border p-3 space-y-2">
+                  {profitDistributed === true ? (
+                    <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
+                      <Check className="h-4 w-4" />
+                      <span className="font-medium">Прибуток вже розподілено</span>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-xs text-muted-foreground">
+                        Натисніть, щоб розподілити прибуток між представниками, акціонерами та фондами.
+                      </p>
+                      <Button
+                        size="sm"
+                        disabled={distributing}
+                        className="w-full"
+                        onClick={async () => {
+                          setDistributing(true);
+                          try {
+                            const { data, error } = await supabase.rpc('process_order_profit', { _order_id: order.id });
+                            if (error) throw error;
+                            toast.success('Прибуток успішно розподілено');
+                            setProfitDistributed(true);
+                          } catch (err: any) {
+                            console.error('process_order_profit error:', err);
+                            toast.error(err.message || 'Помилка розподілу прибутку');
+                          } finally {
+                            setDistributing(false);
+                          }
+                        }}
+                      >
+                        {distributing ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Banknote className="h-4 w-4 mr-2" />
+                        )}
+                        Розподілити прибуток
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" onClick={() => { setEditing(true); setEditingFinancials(false); }}>
                   Редагувати
