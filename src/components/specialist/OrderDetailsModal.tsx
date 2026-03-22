@@ -110,6 +110,22 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
     });
   }, [participants]);
 
+  // Check if profit was already distributed
+  useEffect(() => {
+    if (!order || !isAdmin || !open) {
+      setProfitDistributed(null);
+      return;
+    }
+    (supabase as any)
+      .from('financial_audit_log')
+      .select('id')
+      .eq('order_id', order.id)
+      .limit(1)
+      .then(({ data }: any) => {
+        setProfitDistributed(data && data.length > 0);
+      });
+  }, [order?.id, isAdmin, open]);
+
   if (!order) return null;
 
   const handleSave = async () => {
