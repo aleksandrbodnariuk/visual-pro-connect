@@ -33,6 +33,7 @@ interface Booking {
   order_date: string;
   status: string;
   description: string | null;
+  isOwn?: boolean;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -94,12 +95,15 @@ export default function RepresentativePanel() {
     try {
       const { data, error } = await supabase
         .from('specialist_orders')
-        .select('id, title, order_date, status, description')
-        .eq('representative_id', repRecord.id)
+        .select('id, title, order_date, status, description, representative_id')
+        .in('status', ['pending', 'confirmed'])
         .order('order_date', { ascending: true });
 
       if (error) throw error;
-      setBookings((data || []) as Booking[]);
+      setBookings((data || []).map((b: any) => ({
+        ...b,
+        isOwn: b.representative_id === repRecord.id,
+      })) as Booking[]);
     } catch (err) {
       console.error('Error loading bookings:', err);
     }
