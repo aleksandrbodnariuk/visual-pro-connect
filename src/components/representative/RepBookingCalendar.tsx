@@ -117,21 +117,27 @@ export function RepBookingCalendar({ bookings, selectedDate, onSelectDate }: Pro
             </p>
           ) : (
             <div className="space-y-2 mt-2">
-              {selectedBookings.map((b) => (
-                <div key={b.id} className="flex items-center justify-between text-sm gap-2">
-                  <span className="truncate flex-1 min-w-0">{b.title}</span>
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      "shrink-0 text-xs",
-                      b.status === "pending" && "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
-                      b.status === "confirmed" && "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
-                    )}
-                  >
-                    {STATUS_LABELS[b.status] || b.status}
-                  </Badge>
-                </div>
-              ))}
+              {selectedBookings.some(b => b.isOwn) ? (
+                selectedBookings.filter(b => b.isOwn).map((b) => (
+                  <div key={b.id} className="flex items-center justify-between text-sm gap-2">
+                    <span className="truncate flex-1 min-w-0">{b.title}</span>
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        "shrink-0 text-xs",
+                        b.status === "pending" && "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+                        b.status === "confirmed" && "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                      )}
+                    >
+                      {STATUS_LABELS[b.status] || b.status}
+                    </Badge>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-amber-600 dark:text-amber-400">
+                  Дата зайнята
+                </p>
+              )}
             </div>
           )}
         </div>
