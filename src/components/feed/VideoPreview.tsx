@@ -121,18 +121,23 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
   }
 
   if (embed.platform === 'facebook') {
+    const fbWidth = isVertical ? 320 : 560;
+    const fbHeight = isVertical ? 568 : 315;
+    const embedSrc = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(embed.originalUrl)}&show_text=false&width=${fbWidth}&height=${fbHeight}`;
+    
     return (
       <div className={`rounded-lg overflow-hidden border bg-muted ${isVertical ? 'max-w-[320px] mx-auto' : ''}`}>
-        <div className={aspectClass}>
-          <iframe
-            src={embed.embedUrl}
-            className="w-full h-full border-0"
-            allowFullScreen
-            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-            scrolling="no"
-            title={isVertical ? "Facebook Reel" : "Facebook відео"}
-          />
-        </div>
+        <iframe
+          src={embedSrc}
+          width={fbWidth}
+          height={fbHeight}
+          className="w-full border-0"
+          style={{ aspectRatio: isVertical ? '9/16' : '16/9' }}
+          allowFullScreen
+          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+          scrolling="no"
+          title={isVertical ? "Facebook Reel" : "Facebook відео"}
+        />
         <div className="p-2 flex items-center gap-2 text-xs text-muted-foreground">
           <span className="font-medium">
             {isVertical ? 'FACEBOOK REELS' : 'FACEBOOK.COM'}
