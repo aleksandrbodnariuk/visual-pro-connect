@@ -33,6 +33,7 @@ interface Booking {
   order_date: string;
   status: string;
   description: string | null;
+  isOwn?: boolean;
 }
 
 const ROLE_LABELS: Record<string, string> = {

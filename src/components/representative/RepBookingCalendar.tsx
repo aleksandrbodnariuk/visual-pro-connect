@@ -11,6 +11,7 @@ interface Booking {
   order_date: string;
   status: string;
   description: string | null;
+  isOwn?: boolean;
 }
 
 interface Props {
