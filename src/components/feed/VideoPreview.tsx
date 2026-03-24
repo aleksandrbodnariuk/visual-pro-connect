@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { VideoEmbed } from "@/lib/videoEmbed";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Play } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { LinkPreview } from "./LinkPreview";
 
@@ -9,6 +9,11 @@ interface VideoPreviewProps {
 }
 
 interface FacebookPreviewMeta {
+  title?: string | null;
+  description?: string | null;
+  image?: string | null;
+  siteName?: string | null;
+  favicon?: string | null;
   imageWidth?: number | null;
   imageHeight?: number | null;
   videoWidth?: number | null;
@@ -29,6 +34,7 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
         }
       : null,
   );
+  const [facebookPreview, setFacebookPreview] = useState<FacebookPreviewMeta | null>(null);
 
   useEffect(() => {
     if (embed.platform !== "facebook") return;
@@ -44,6 +50,7 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
         if (error || !data?.success || !isMounted) return;
 
         const preview = (data.data ?? {}) as FacebookPreviewMeta;
+        setFacebookPreview(preview);
         const width = preview.videoWidth ?? preview.imageWidth ?? null;
         const height = preview.videoHeight ?? preview.imageHeight ?? null;
 
@@ -138,35 +145,58 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
   }
 
   if (embed.platform === 'facebook') {
-    const embedSrc = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(embed.originalUrl)}&show_text=false`;
+    if (!facebookPreview?.image) {
+      return <LinkPreview url={embed.originalUrl} />;
+    }
     
     return (
-      <div className={`rounded-lg overflow-hidden border bg-muted ${isVertical ? 'max-w-[420px] mx-auto' : ''}`}>
+      <a
+        href={embed.originalUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`block rounded-lg overflow-hidden border bg-muted hover:bg-muted/80 transition-colors group ${isVertical ? 'max-w-[420px] mx-auto' : ''}`}
+      >
         <div
-          className="w-full bg-black"
-          style={{
-            position: 'relative',
-            aspectRatio: `${facebookAspectRatio}`,
-            minHeight: isVertical ? '560px' : '315px',
-            overflow: 'hidden',
-          }}
+          className="relative w-full bg-black"
+          style={{ aspectRatio: `${facebookAspectRatio}` }}
         >
-          <iframe
-            src={embedSrc}
-            className="border-0"
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-            allowFullScreen
-            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-            scrolling="no"
-            title={isVertical ? "Facebook Reel" : "Facebook відео"}
+          <img
+            src={facebookPreview.image}
+            alt={facebookPreview.title || (isVertical ? "Facebook Reel" : "Facebook відео")}
+            loading="lazy"
+            className="h-full w-full object-contain"
           />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-background/90 text-foreground shadow-sm">
+              <Play className="ml-1 h-7 w-7 fill-current" />
+            </div>
+          </div>
+          <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-background/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm">
+            <ExternalLink className="h-3.5 w-3.5" />
+            Facebook
+          </div>
         </div>
-        <div className="p-2 flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-medium">
-            {isVertical ? 'FACEBOOK REELS' : 'FACEBOOK.COM'}
-          </span>
+        <div className="p-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="font-medium">
+              {isVertical ? 'FACEBOOK REELS' : 'FACEBOOK.COM'}
+            </span>
+          </div>
+          {facebookPreview.title && (
+            <p className="mt-1 line-clamp-2 text-sm font-medium text-foreground">
+              {facebookPreview.title}
+            </p>
+          )}
+          {facebookPreview.description && (
+            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+              {facebookPreview.description}
+            </p>
+          )}
+          <p className="mt-2 text-xs text-muted-foreground">
+            Відкрити відео у Facebook
+          </p>
         </div>
-      </div>
+      </a>
     );
   }
   
