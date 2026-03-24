@@ -15,8 +15,20 @@ interface FacebookPreviewMeta {
   videoHeight?: number | null;
 }
 
+interface FacebookLayout {
+  isVertical: boolean;
+  aspectRatio: number;
+}
+
 export function VideoPreview({ embed }: VideoPreviewProps) {
-  const [facebookIsVertical, setFacebookIsVertical] = useState<boolean | null>(embed.isVertical ?? null);
+  const [facebookLayout, setFacebookLayout] = useState<FacebookLayout | null>(
+    embed.platform === "facebook"
+      ? {
+          isVertical: !!embed.isVertical,
+          aspectRatio: embed.isVertical ? 9 / 16 : 16 / 9,
+        }
+      : null,
+  );
 
   useEffect(() => {
     if (embed.platform !== "facebook") return;
@@ -36,7 +48,10 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
         const height = preview.videoHeight ?? preview.imageHeight ?? null;
 
         if (width && height) {
-          setFacebookIsVertical(height > width);
+          setFacebookLayout({
+            isVertical: height > width,
+            aspectRatio: width / height,
+          });
         }
       } catch {
         // fallback to URL-based/default layout
@@ -51,8 +66,10 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
   }, [embed.originalUrl, embed.platform]);
 
   const isVertical = embed.platform === "facebook"
-    ? (facebookIsVertical ?? false)
+    ? (facebookLayout?.isVertical ?? false)
     : !!embed.isVertical;
+
+  const facebookAspectRatio = facebookLayout?.aspectRatio ?? (isVertical ? 9 / 16 : 16 / 9);
 
   const aspectClass = useMemo(
     () => (isVertical ? "aspect-[9/16] max-w-[320px] mx-auto" : "aspect-video w-full"),
@@ -124,8 +141,16 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
     const embedSrc = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(embed.originalUrl)}&show_text=false`;
     
     return (
-      <div className={`rounded-lg overflow-hidden border bg-muted ${isVertical ? 'max-w-[360px] mx-auto' : ''}`}>
-        <div style={{ position: 'relative', paddingBottom: isVertical ? '177.78%' : '56.25%', height: 0, overflow: 'hidden' }}>
+      <div className={`rounded-lg overflow-hidden border bg-muted ${isVertical ? 'max-w-[420px] mx-auto' : ''}`}>
+        <div
+          className="w-full bg-black"
+          style={{
+            position: 'relative',
+            aspectRatio: `${facebookAspectRatio}`,
+            minHeight: isVertical ? '560px' : '315px',
+            overflow: 'hidden',
+          }}
+        >
           <iframe
             src={embedSrc}
             className="border-0"
