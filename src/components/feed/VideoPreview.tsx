@@ -35,6 +35,7 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
       : null,
   );
   const [facebookPreview, setFacebookPreview] = useState<FacebookPreviewMeta | null>(null);
+  const [facebookPlaying, setFacebookPlaying] = useState(false);
 
   useEffect(() => {
     if (embed.platform !== "facebook") return;
