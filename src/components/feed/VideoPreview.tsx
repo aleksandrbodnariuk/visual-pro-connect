@@ -148,13 +148,49 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
     if (!facebookPreview?.image) {
       return <LinkPreview url={embed.originalUrl} />;
     }
+
+    if (facebookPlaying) {
+      const iframeSrc = isVertical
+        ? `https://www.facebook.com/plugins/post.php?href=${encodeURIComponent(embed.originalUrl)}&show_text=false&width=320`
+        : `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(embed.originalUrl)}&show_text=false&autoplay=true`;
+
+      return (
+        <div className={`rounded-lg overflow-hidden border bg-black ${isVertical ? 'max-w-[420px] mx-auto' : ''}`}>
+          <div className="relative w-full" style={{ aspectRatio: `${facebookAspectRatio}` }}>
+            <iframe
+              src={iframeSrc}
+              className="w-full h-full"
+              allowFullScreen
+              allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+              title="Facebook відео"
+              style={{ border: 'none' }}
+            />
+          </div>
+          <div className="p-2 flex items-center justify-between bg-muted">
+            <span className="text-xs font-medium text-muted-foreground">
+              {isVertical ? 'FACEBOOK REELS' : 'FACEBOOK.COM'}
+            </span>
+            <a
+              href={embed.originalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Facebook
+            </a>
+          </div>
+        </div>
+      );
+    }
     
     return (
-      <a
-        href={embed.originalUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={`block rounded-lg overflow-hidden border bg-muted hover:bg-muted/80 transition-colors group ${isVertical ? 'max-w-[420px] mx-auto' : ''}`}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setFacebookPlaying(true)}
+        onKeyDown={(e) => e.key === 'Enter' && setFacebookPlaying(true)}
+        className={`block rounded-lg overflow-hidden border bg-muted hover:bg-muted/80 transition-colors group cursor-pointer ${isVertical ? 'max-w-[420px] mx-auto' : ''}`}
       >
         <div
           className="relative w-full bg-black"
@@ -171,32 +207,30 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
               <Play className="ml-1 h-7 w-7 fill-current" />
             </div>
           </div>
-          <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-background/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm">
-            <ExternalLink className="h-3.5 w-3.5" />
-            Facebook
-          </div>
         </div>
         <div className="p-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span className="font-medium">
               {isVertical ? 'FACEBOOK REELS' : 'FACEBOOK.COM'}
             </span>
+            <a
+              href={embed.originalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Відкрити у Facebook
+            </a>
           </div>
           {facebookPreview.title && (
             <p className="mt-1 line-clamp-2 text-sm font-medium text-foreground">
               {facebookPreview.title}
             </p>
           )}
-          {facebookPreview.description && (
-            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-              {facebookPreview.description}
-            </p>
-          )}
-          <p className="mt-2 text-xs text-muted-foreground">
-            Відкрити відео у Facebook
-          </p>
         </div>
-      </a>
+      </div>
     );
   }
   
