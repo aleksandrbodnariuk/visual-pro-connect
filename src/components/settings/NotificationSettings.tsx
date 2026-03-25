@@ -50,7 +50,7 @@ export function NotificationSettings() {
           return;
         }
         try {
-          const sub = await subscribeToPush();
+          const sub = await subscribeToPush(undefined, { forceRefresh: true });
           if (sub) {
             setIsSubscribed(true);
             toast.success('Push сповіщення увімкнено');

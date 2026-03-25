@@ -100,13 +100,14 @@ export async function subscribeToPush(
     }
 
     const appServerKey = urlBase64ToUint8Array(key);
+    const applicationServerKey = toPushApplicationServerKey(appServerKey);
     console.log('[Push] applicationServerKey length:', appServerKey.length);
 
     let subscription: PushSubscription;
     try {
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: appServerKey,
+        applicationServerKey,
       });
     } catch (subscribeError) {
       console.warn('[Push] Initial subscribe attempt failed, retrying with clean state:', subscribeError);
@@ -122,7 +123,7 @@ export async function subscribeToPush(
 
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: appServerKey,
+        applicationServerKey,
       });
     }
 
@@ -201,4 +202,10 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
     outputArray[i] = rawData.charCodeAt(i);
   }
   return outputArray;
+}
+
+function toPushApplicationServerKey(key: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(key.byteLength);
+  new Uint8Array(buffer).set(key);
+  return buffer;
 }

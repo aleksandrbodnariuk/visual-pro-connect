@@ -36,7 +36,7 @@ export function PushOnboarding() {
     try {
       const permission = await requestNotificationPermission();
       if (permission === "granted") {
-        await subscribeToPush();
+        await subscribeToPush(undefined, { forceRefresh: true });
         toast({ title: "Сповіщення увімкнено ✓", description: "Ви будете отримувати push-сповіщення." });
       }
     } catch (err) {
