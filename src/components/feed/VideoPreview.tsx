@@ -29,8 +29,8 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
   const [facebookLayout, setFacebookLayout] = useState<FacebookLayout | null>(
     embed.platform === "facebook"
       ? {
-          isVertical: !!embed.isVertical,
-          aspectRatio: embed.isVertical ? 9 / 16 : 16 / 9,
+          isVertical: embed.isVertical !== false,
+          aspectRatio: embed.isVertical !== false ? 9 / 16 : 16 / 9,
         }
       : null,
   );
