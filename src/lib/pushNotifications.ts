@@ -58,7 +58,10 @@ export async function getVapidPublicKey(): Promise<string> {
  * Subscribe to push notifications and save subscription to Supabase.
  * Returns the PushSubscription or null on failure.
  */
-export async function subscribeToPush(vapidPublicKey?: string): Promise<PushSubscription | null> {
+export async function subscribeToPush(
+  vapidPublicKey?: string,
+  options: { forceRefresh?: boolean } = {}
+): Promise<PushSubscription | null> {
   try {
     console.log('[Push] subscribeToPush started');
     console.log('[Push] Notification.permission:', Notification.permission);
@@ -77,17 +80,52 @@ export async function subscribeToPush(vapidPublicKey?: string): Promise<PushSubs
     const existing = await registration.pushManager.getSubscription();
     console.log('[Push] Existing subscription:', existing ? 'yes' : 'no');
     if (existing) {
-      await saveSubscription(existing);
-      return existing;
+      if (options.forceRefresh) {
+        console.log('[Push] Force refreshing existing subscription');
+        try {
+          await removeSubscription(existing);
+        } catch (cleanupError) {
+          console.warn('[Push] Failed to remove old subscription from DB:', cleanupError);
+        }
+
+        try {
+          await existing.unsubscribe();
+        } catch (unsubscribeError) {
+          console.warn('[Push] Failed to unsubscribe existing push subscription:', unsubscribeError);
+        }
+      } else {
+        await saveSubscription(existing);
+        return existing;
+      }
     }
 
     const appServerKey = urlBase64ToUint8Array(key);
+    const applicationServerKey = toPushApplicationServerKey(appServerKey);
     console.log('[Push] applicationServerKey length:', appServerKey.length);
 
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: appServerKey.buffer as ArrayBuffer,
-    });
+    let subscription: PushSubscription;
+    try {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
+    } catch (subscribeError) {
+      console.warn('[Push] Initial subscribe attempt failed, retrying with clean state:', subscribeError);
+
+      const staleSubscription = await registration.pushManager.getSubscription();
+      if (staleSubscription) {
+        try {
+          await staleSubscription.unsubscribe();
+        } catch (unsubscribeError) {
+          console.warn('[Push] Failed to clear stale subscription before retry:', unsubscribeError);
+        }
+      }
+
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
+    }
 
     console.log('[Push] Subscription created:', subscription.endpoint);
     await saveSubscription(subscription);
@@ -128,7 +166,7 @@ async function saveSubscription(subscription: PushSubscription) {
 
   const sub = subscription.toJSON();
 
-  await supabase.from("push_subscriptions" as any).upsert(
+  const { error } = await supabase.from("push_subscriptions" as any).upsert(
     {
       user_id: user.id,
       endpoint: sub.endpoint,
@@ -138,11 +176,21 @@ async function saveSubscription(subscription: PushSubscription) {
     },
     { onConflict: "endpoint" }
   );
+
+  if (error) {
+    console.error('[Push] Failed to save subscription:', error);
+    throw error;
+  }
 }
 
 async function removeSubscription(subscription: PushSubscription) {
   const sub = subscription.toJSON();
-  await supabase.from("push_subscriptions" as any).delete().eq("endpoint", sub.endpoint);
+  const { error } = await supabase.from("push_subscriptions" as any).delete().eq("endpoint", sub.endpoint);
+
+  if (error) {
+    console.error('[Push] Failed to remove subscription:', error);
+    throw error;
+  }
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -154,4 +202,10 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
     outputArray[i] = rawData.charCodeAt(i);
   }
   return outputArray;
+}
+
+function toPushApplicationServerKey(key: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(key.byteLength);
+  new Uint8Array(buffer).set(key);
+  return buffer;
 }
