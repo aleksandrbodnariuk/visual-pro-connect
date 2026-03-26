@@ -23,6 +23,7 @@ export function Sidebar({ className }: SidebarProps) {
   const navigate = useNavigate();
   const { getCurrentUser } = useAuthState();
   const { unreadCount } = useUnreadMessages();
+  const { unreadCount: unreadNotifCount } = useUnreadNotifications();
   const { categories } = useDynamicCategories();
   
   const currentUser = getCurrentUser();
