@@ -14,6 +14,7 @@ import { FinancialStatsTab } from "./tabs/FinancialStatsTab";
 import { CalculationHistoryTab } from "./tabs/CalculationHistoryTab";
 import { AssetValuationTab } from "./tabs/AssetValuationTab";
 import { PayoutsTab } from "./tabs/PayoutsTab";
+import { NotificationsTab } from "./tabs/NotificationsTab";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -47,6 +48,7 @@ export function AdminTabs() {
         <TabsTrigger value="posts">Публікації</TabsTrigger>
         <TabsTrigger value="categories">Категорії</TabsTrigger>
         <TabsTrigger value="analytics">Аналітика</TabsTrigger>
+        <TabsTrigger value="notifications-admin">Сповіщення</TabsTrigger>
         <TabsTrigger value="settings">Налаштування</TabsTrigger>
 
         <div className="w-px self-stretch bg-border mx-1 shrink-0" />
@@ -96,6 +98,10 @@ export function AdminTabs() {
       
       <TabsContent value="settings">
         <SettingsTab />
+      </TabsContent>
+
+      <TabsContent value="notifications-admin">
+        <NotificationsTab />
       </TabsContent>
 
       <TabsContent value="analytics">
