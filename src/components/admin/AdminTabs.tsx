@@ -100,6 +100,10 @@ export function AdminTabs() {
         <SettingsTab />
       </TabsContent>
 
+      <TabsContent value="notifications-admin">
+        <NotificationsTab />
+      </TabsContent>
+
       <TabsContent value="analytics">
         <AnalyticsTab />
       </TabsContent>
