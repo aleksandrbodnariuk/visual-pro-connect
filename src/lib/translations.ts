@@ -98,7 +98,7 @@ export const translations: Record<Language, Record<string, string>> = {
     // Auth page
     loginToApp: "Login to Platform",
     register: "Register",
-    appDescription: "Visual Pro Connect - social network for creative professionals",
+    appDescription: "The first Ukrainian social network",
     fillAllFields: "Please fill in all required fields",
     phoneNumber: "Phone Number",
     password: "Password",
