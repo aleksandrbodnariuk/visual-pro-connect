@@ -78,8 +78,13 @@ export function Sidebar({ className }: SidebarProps) {
           <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/search')} data-active={location.pathname === "/search"}>
             <Search className="mr-2 h-4 w-4" /> {t.search}
           </Button>
-          <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/notifications')} data-active={location.pathname === "/notifications"}>
+          <Button variant="ghost" className="w-full justify-start relative" onClick={() => handleNavigate('/notifications')} data-active={location.pathname === "/notifications"}>
             <Bell className="mr-2 h-4 w-4" /> {t.notifications}
+            {unreadNotifCount > 0 && (
+              <span className="absolute right-2 bg-destructive text-destructive-foreground text-xs rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
+                {unreadNotifCount > 9 ? "9+" : unreadNotifCount}
+              </span>
+            )}
           </Button>
           <Button variant="ghost" className="w-full justify-start relative" onClick={() => handleNavigate('/messages')} data-active={location.pathname === "/messages"}>
             <MessageSquare className="mr-2 h-4 w-4" /> {t.messages}
