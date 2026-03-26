@@ -6,7 +6,7 @@ export const translations: Record<Language, Record<string, string>> = {
     // Auth page
     loginToApp: "Увійти на платформу",
     register: "Зареєструватися",
-    appDescription: "Visual Pro Connect - соціальна мережа для творчих професіоналів",
+    appDescription: "Перша українська соціальна мережа",
     fillAllFields: "Заповніть усі обовʼязкові поля",
     phoneNumber: "Номер телефону",
     password: "Пароль",
@@ -98,7 +98,7 @@ export const translations: Record<Language, Record<string, string>> = {
     // Auth page
     loginToApp: "Login to Platform",
     register: "Register",
-    appDescription: "Visual Pro Connect - social network for creative professionals",
+    appDescription: "The first Ukrainian social network",
     fillAllFields: "Please fill in all required fields",
     phoneNumber: "Phone Number",
     password: "Password",
@@ -190,7 +190,7 @@ export const translations: Record<Language, Record<string, string>> = {
     // Auth page
     loginToApp: "Zaloguj się do platformy",
     register: "Zarejestruj się",
-    appDescription: "Visual Pro Connect - sieć społecznościowa dla profesjonalistów kreatywnych",
+    appDescription: "Pierwsza ukraińska sieć społecznościowa",
     fillAllFields: "Proszę wypełnić wszystkie wymagane pola",
     phoneNumber: "Numer telefonu",
     password: "Hasło",
@@ -280,7 +280,7 @@ export const translations: Record<Language, Record<string, string>> = {
     // Auth page
     loginToApp: "Bei der Plattform anmelden",
     register: "Registrieren",
-    appDescription: "Visual Pro Connect - soziales Netzwerk für kreative Profis",
+    appDescription: "Das erste ukrainische soziale Netzwerk",
     fillAllFields: "Bitte füllen Sie alle erforderlichen Felder aus",
     phoneNumber: "Telefonnummer",
     password: "Passwort",
@@ -370,7 +370,7 @@ export const translations: Record<Language, Record<string, string>> = {
     // Auth page
     loginToApp: "Conectare la platformă",
     register: "Înregistrare",
-    appDescription: "Visual Pro Connect - rețea socială pentru profesioniști creativi",
+    appDescription: "Prima rețea socială ucraineană",
     fillAllFields: "Vă rugăm să completați toate câmpurile obligatorii",
     phoneNumber: "Număr de telefon",
     password: "Parolă",
