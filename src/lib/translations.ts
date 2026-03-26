@@ -280,7 +280,7 @@ export const translations: Record<Language, Record<string, string>> = {
     // Auth page
     loginToApp: "Bei der Plattform anmelden",
     register: "Registrieren",
-    appDescription: "Visual Pro Connect - soziales Netzwerk für kreative Profis",
+    appDescription: "Das erste ukrainische soziale Netzwerk",
     fillAllFields: "Bitte füllen Sie alle erforderlichen Felder aus",
     phoneNumber: "Telefonnummer",
     password: "Passwort",
