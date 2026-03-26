@@ -8,6 +8,7 @@ import { translations } from '@/lib/translations';
 import { useAuthState } from "@/hooks/auth/useAuthState";
 import { toast } from "sonner";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 import { useDynamicCategories, getIconComponent } from "@/hooks/useDynamicCategories";
 import { supabase } from "@/integrations/supabase/client";
 
