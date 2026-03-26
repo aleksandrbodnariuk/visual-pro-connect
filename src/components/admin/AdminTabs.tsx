@@ -48,6 +48,7 @@ export function AdminTabs() {
         <TabsTrigger value="posts">Публікації</TabsTrigger>
         <TabsTrigger value="categories">Категорії</TabsTrigger>
         <TabsTrigger value="analytics">Аналітика</TabsTrigger>
+        <TabsTrigger value="notifications-admin">Сповіщення</TabsTrigger>
         <TabsTrigger value="settings">Налаштування</TabsTrigger>
 
         <div className="w-px self-stretch bg-border mx-1 shrink-0" />
