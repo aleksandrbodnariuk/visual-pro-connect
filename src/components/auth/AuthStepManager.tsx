@@ -60,7 +60,8 @@ export function AuthStepManager({
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold">{isLogin ? t.loginToApp : t.register}</h1>
-          <p className="mt-2 text-muted-foreground">{t.appDescription}</p>
+          <p className="mt-1 text-lg font-semibold">Спільнота B&C</p>
+          <p className="mt-1 text-muted-foreground">{t.appDescription}</p>
         </div>
         
         <Tabs value={isLogin ? "login" : "register"} className="w-full" onValueChange={(value) => setIsLogin(value === "login")}>
