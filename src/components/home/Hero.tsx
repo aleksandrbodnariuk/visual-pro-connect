@@ -28,12 +28,13 @@ export function Hero({ onLogin }: HeroProps) {
         <div className="flex flex-col items-center justify-center text-center space-y-4 md:space-y-6">
           <div className="space-y-2 md:space-y-4">
             <h1 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-6xl 3xl:text-7xl font-bold tracking-tighter">
-              Вітаємо у Спільноті B&C
+              Вітаємо у спільноті B&C
             </h1>
+            <p className="mx-auto max-w-[90%] sm:max-w-[700px] 3xl:max-w-[900px] text-base sm:text-lg md:text-xl lg:text-2xl 3xl:text-3xl font-semibold">
+              Єдиний простір де зібрані всі послуги для створення подій.
+            </p>
             <p className="mx-auto max-w-[90%] sm:max-w-[700px] 3xl:max-w-[900px] text-sm sm:text-base md:text-lg lg:text-xl 3xl:text-2xl text-muted-foreground">
-              Соціальна платформа для фотографів, відеографів, музикантів, 
-              ведучих заходів та піротехніків. Знаходьте нових клієнтів, 
-              публікуйте своє портфоліо та розвивайте власний бренд.
+              Фото, відео та музика від B&C Studio, а також добірні сервіси від перевірених партнерів — усе в одному місці.
             </p>
           </div>
           <div className="flex flex-col xs:flex-row gap-3 xs:gap-4">
