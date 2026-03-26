@@ -6,7 +6,7 @@ export const translations: Record<Language, Record<string, string>> = {
     // Auth page
     loginToApp: "Увійти на платформу",
     register: "Зареєструватися",
-    appDescription: "Visual Pro Connect - соціальна мережа для творчих професіоналів",
+    appDescription: "Перша українська соціальна мережа",
     fillAllFields: "Заповніть усі обовʼязкові поля",
     phoneNumber: "Номер телефону",
     password: "Пароль",
