@@ -56,9 +56,12 @@ export function PostMenu({ postId, isAuthor, onEdit, onDelete, caption }: PostMe
     setShowDeleteDialog(false);
   };
 
+  // OG-friendly share URL for social media previews
+  const shareUrl = `${window.location.origin}/share/post/${postId}`;
+
   const handleCopyLink = () => {
     try {
-      navigator.clipboard.writeText(`${window.location.origin}/post/${postId}`);
+      navigator.clipboard.writeText(shareUrl);
       toast.success("Посилання скопійовано");
     } catch (error) {
       console.error("Copy error:", error);
@@ -74,7 +77,7 @@ export function PostMenu({ postId, isAuthor, onEdit, onDelete, caption }: PostMe
     if (navigator.share) {
       navigator.share({
         title: 'Поділитися публікацією',
-        url: `${window.location.origin}/post/${postId}`
+        url: shareUrl
       })
       .then(() => console.log('Shared successfully'))
       .catch((error) => console.error('Share error:', error));
