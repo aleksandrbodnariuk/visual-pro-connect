@@ -3,7 +3,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SITE_URL = 'https://community-b-c.lovable.app';
+const SITE_URL = 'https://bcsocial.org';
 const SITE_NAME = 'Спільнота B&C';
 const DEFAULT_IMAGE = `${SITE_URL}/lovable-uploads/4c2129b2-6d63-43a9-9c10-18cf11008adb.png`;
 
@@ -14,6 +14,10 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function stripNewlines(str: string): string {
+  return str.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function truncate(str: string, max: number): string {
@@ -82,7 +86,7 @@ Deno.serve(async (req) => {
 
     // Build OG data
     const contentText = post.content
-      ? post.content.replace(/(https?:\/\/[^\s]+)/g, '').trim()
+      ? stripNewlines(post.content.replace(/(https?:\/\/[^\s]+)/g, ''))
       : '';
     
     const ogTitle = escapeHtml(
