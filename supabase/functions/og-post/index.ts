@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
 
     // Build OG data
     const contentText = post.content
-      ? post.content.replace(/(https?:\/\/[^\s]+)/g, '').trim()
+      ? stripNewlines(post.content.replace(/(https?:\/\/[^\s]+)/g, ''))
       : '';
     
     const ogTitle = escapeHtml(
