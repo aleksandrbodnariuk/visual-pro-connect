@@ -41,12 +41,10 @@ export default function Auth() {
             {/* Ліва частина - привітальний текст */}
             <div className="text-center lg:text-left space-y-6">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
-                Вітаємо у Спільноті B&C
+                Вітаємо у Спільноті B&C!
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-2xl">
-                Соціальна платформа для фотографів, відеографів, музикантів, 
-                ведучих заходів та піротехніків. Знаходьте нових клієнтів, 
-                публікуйте своє портфоліо та розвивайте власний бренд.
+                Соціальна платформа творчих людей!
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Button size="lg" onClick={() => navigate("/search")}>
