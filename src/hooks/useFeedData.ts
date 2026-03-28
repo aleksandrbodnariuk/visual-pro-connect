@@ -20,6 +20,7 @@ export interface CommentLikesData {
   likesCount: number;
   userReaction: ReactionType | null;
   topReactions: string[];
+  likerNames: string[];
 }
 
 export interface PostLikesData {
@@ -126,7 +127,8 @@ export function useFeedData(postIds: string[]) {
 
       // 4) Load ALL profiles in ONE RPC call (comment users + liker users)
       const likerUserIds = allPostLikes ? [...new Set((allPostLikes).map((l: any) => l.user_id))] : [];
-      const allUserIds = [...new Set([...commentUserIds, ...likerUserIds])];
+      const commentLikerUserIds = [...new Set(allCommentLikes.map(l => l.user_id))];
+      const allUserIds = [...new Set([...commentUserIds, ...likerUserIds, ...commentLikerUserIds])];
       let profiles: ProfileData[] = [];
       if (allUserIds.length > 0) {
         const { data: profData } = await supabase.rpc('get_safe_public_profiles_by_ids', {
@@ -165,7 +167,7 @@ export function useFeedData(postIds: string[]) {
 
       // ---- Build comment_likes map ----
       const clMap = new Map<string, CommentLikesData>();
-      commentIds.forEach(cid => clMap.set(cid, { likesCount: 0, userReaction: null, topReactions: [] }));
+      commentIds.forEach(cid => clMap.set(cid, { likesCount: 0, userReaction: null, topReactions: [], likerNames: [] }));
       if (allCommentLikes.length > 0) {
         const grouped: Record<string, typeof allCommentLikes> = {};
         allCommentLikes.forEach(l => {
@@ -177,6 +179,7 @@ export function useFeedData(postIds: string[]) {
             likesCount: likes.length,
             userReaction: null,
             topReactions: [],
+            likerNames: likes.map(l => pMap.get(l.user_id)?.full_name || '').filter(Boolean),
           };
           if (userId) {
             const my = likes.find(l => l.user_id === userId);
@@ -216,10 +219,9 @@ export function useFeedData(postIds: string[]) {
               entry.reactionType = (my.reaction_type || 'like') as ReactionType;
             }
           }
-          // Get up to 2 liker names (excluding current user)
+          // Get ALL liker names (excluding current user) for tooltip; summary shows first 2
           const otherLikers = likes.filter(l => l.user_id !== userId);
           entry.likerNames = otherLikers
-            .slice(0, 2)
             .map(l => pMap.get(l.user_id)?.full_name || '')
             .filter(Boolean);
           
@@ -342,7 +344,7 @@ export function useFeedData(postIds: string[]) {
     if (!userId || commentLikeLoading.has(commentId)) return;
     setCommentLikeLoading(prev => new Set(prev).add(commentId));
     try {
-      const current = commentLikesMap.get(commentId) || { likesCount: 0, userReaction: null, topReactions: [] };
+      const current = commentLikesMap.get(commentId) || { likesCount: 0, userReaction: null, topReactions: [], likerNames: [] };
 
       if (current.userReaction === reactionType) {
         // Remove reaction — optimistic
@@ -450,7 +452,7 @@ export function useFeedData(postIds: string[]) {
   }, [commentsMap]);
 
   const getCommentLikes = useCallback((commentId: string): CommentLikesData => {
-    return commentLikesMap.get(commentId) || { likesCount: 0, userReaction: null, topReactions: [] };
+    return commentLikesMap.get(commentId) || { likesCount: 0, userReaction: null, topReactions: [], likerNames: [] };
   }, [commentLikesMap]);
 
   const getPostLikes = useCallback((postId: string): PostLikesData => {

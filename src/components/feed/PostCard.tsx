@@ -2,6 +2,7 @@
 import { useState, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { MessageCircle, Share2, Bookmark, X } from "lucide-react";
+import { LikersTooltip } from "./LikersTooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -121,7 +122,7 @@ export function PostCard({
   const displayedComments = showAllComments ? groupedComments : groupedComments.slice(-2);
   const totalRootComments = groupedComments.length;
 
-  const defaultGetCommentLikes = (cid: string): CommentLikesData => ({ likesCount: 0, userReaction: null, topReactions: [] });
+  const defaultGetCommentLikes = (cid: string): CommentLikesData => ({ likesCount: 0, userReaction: null, topReactions: [], likerNames: [] });
   const actualGetCommentLikes = getCommentLikes || defaultGetCommentLikes;
   const actualToggleCommentReaction = onToggleCommentReaction || (() => {});
 
@@ -244,23 +245,30 @@ export function PostCard({
           <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground">
             {/* Left: reactions + who liked */}
             {likesCount > 0 ? (
-              <div className="flex items-center gap-1 min-w-0 flex-1">
-                {topReactions.length > 0 && topReactions.map((type, i) => (
-                  <span key={i} className="text-sm -ml-0.5 first:ml-0">{getReactionEmoji(type as ReactionType)}</span>
-                ))}
-                <span className="truncate ml-0.5">
-                  {(() => {
-                    const parts: string[] = [];
-                    if (currentUserLiked) parts.push('Ви');
-                    likerNames.forEach(n => parts.push(n));
-                    const shown = parts.length;
-                    const remaining = likesCount - shown;
-                    if (shown === 0 && remaining > 0) return `${remaining}`;
-                    if (remaining > 0) return `${parts.join(', ')} та ще ${remaining}`;
-                    return parts.join(', ');
-                  })()}
-                </span>
-              </div>
+              <LikersTooltip names={(() => {
+                const all: string[] = [];
+                if (currentUserLiked) all.push('Ви');
+                likerNames.forEach(n => all.push(n));
+                return all;
+              })()}>
+                <div className="flex items-center gap-1 min-w-0 flex-1 cursor-pointer">
+                  {topReactions.length > 0 && topReactions.map((type, i) => (
+                    <span key={i} className="text-sm -ml-0.5 first:ml-0">{getReactionEmoji(type as ReactionType)}</span>
+                  ))}
+                  <span className="truncate ml-0.5">
+                    {(() => {
+                      const parts: string[] = [];
+                      if (currentUserLiked) parts.push('Ви');
+                      likerNames.slice(0, 2).forEach(n => parts.push(n));
+                      const shown = parts.length;
+                      const remaining = likesCount - shown;
+                      if (shown === 0 && remaining > 0) return `${remaining}`;
+                      if (remaining > 0) return `${parts.join(', ')} та ще ${remaining}`;
+                      return parts.join(', ');
+                    })()}
+                  </span>
+                </div>
+              </LikersTooltip>
             ) : <div />}
             {/* Right: comments + shares count */}
             <div className="flex items-center gap-3 shrink-0 ml-2">

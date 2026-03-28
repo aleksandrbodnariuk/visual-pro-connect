@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ReactionPicker, ReactionType, getReactionEmoji, getReactionLabel, getReactionColor } from "./ReactionPicker";
 import { CommentLikesData } from "@/hooks/useFeedData";
+import { LikersTooltip } from "./LikersTooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -70,7 +71,7 @@ export function CommentItem({ comment, depth = 0, postAuthorId, currentUserId, o
   const [editText, setEditText] = useState(comment.content);
   const [showFullComment, setShowFullComment] = useState(false);
 
-  const { userReaction, likesCount, topReactions } = getLikes(comment.id);
+  const { userReaction, likesCount, topReactions, likerNames } = getLikes(comment.id);
   
   const isLongComment = comment.content.length > COMMENT_TRUNCATE_LENGTH;
   const displayedContent = isLongComment && !showFullComment
@@ -197,12 +198,14 @@ export function CommentItem({ comment, depth = 0, postAuthorId, currentUserId, o
             </button>
           </ReactionPicker>
           {likesCount > 0 && (
-            <span className="flex items-center gap-0.5">
-              {topReactions.map((type, i) => (
-                <span key={i} className="text-sm -ml-0.5 first:ml-0">{getReactionEmoji(type)}</span>
-              ))}
-              <span className="ml-0.5 text-muted-foreground">{likesCount}</span>
-            </span>
+            <LikersTooltip names={likerNames}>
+              <span className="flex items-center gap-0.5 cursor-pointer">
+                {topReactions.map((type, i) => (
+                  <span key={i} className="text-sm -ml-0.5 first:ml-0">{getReactionEmoji(type)}</span>
+                ))}
+                <span className="ml-0.5 text-muted-foreground">{likesCount}</span>
+              </span>
+            </LikersTooltip>
           )}
           <button 
             onClick={() => onReply(comment.id, comment.user?.full_name || 'Користувач')}
