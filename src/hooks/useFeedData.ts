@@ -462,8 +462,8 @@ export function useFeedData(postIds: string[]) {
   }, [profilesMap]);
 
   const getPostShare = useCallback((postId: string): PostShareData => {
-    return { shared: postSharesMap.get(postId) || false, isLoading: shareLoading.has(postId) };
-  }, [postSharesMap, shareLoading]);
+    return { shared: postSharesMap.get(postId) || false, isLoading: shareLoading.has(postId), sharesCount: shareCountsMap.get(postId) || 0 };
+  }, [postSharesMap, shareLoading, shareCountsMap]);
 
   return {
     isLoading,
