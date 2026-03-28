@@ -104,6 +104,7 @@ export function PostCard({
 
   const shared = postShareData?.shared || false;
   const sharesLoading = postShareData?.isLoading || false;
+  const sharesCount = postShareData?.sharesCount || 0;
   const handleToggleShare = () => { if (onToggleShare) onToggleShare(id); };
 
   const removeUrls = (text: string | null | undefined): string => {
