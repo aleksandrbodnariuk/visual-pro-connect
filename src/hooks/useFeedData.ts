@@ -111,16 +111,18 @@ export function useFeedData(postIds: string[]) {
         .select('post_id, user_id, reaction_type')
         .in('post_id', postIds);
 
-      // 3b) Load ALL post_shares for current user in ONE query
+      // 3b) Load ALL post_shares (all users for counts + current user check)
+      const { data: allSharesData } = await supabase
+        .from('post_shares')
+        .select('post_id, user_id')
+        .in('post_id', postIds);
+      const allShares = allSharesData || [];
       let userSharePostIds: Set<string> = new Set();
-      if (userId) {
-        const { data: sharesData } = await supabase
-          .from('post_shares')
-          .select('post_id')
-          .eq('user_id', userId)
-          .in('post_id', postIds);
-        (sharesData || []).forEach(s => userSharePostIds.add(s.post_id));
-      }
+      const shareCountsByPost: Record<string, number> = {};
+      allShares.forEach(s => {
+        shareCountsByPost[s.post_id] = (shareCountsByPost[s.post_id] || 0) + 1;
+        if (s.user_id === userId) userSharePostIds.add(s.post_id);
+      });
 
       // 4) Load ALL profiles in ONE RPC call
       const allUserIds = [...new Set([...commentUserIds])];
