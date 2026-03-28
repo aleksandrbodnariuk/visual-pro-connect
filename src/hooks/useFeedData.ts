@@ -192,7 +192,7 @@ export function useFeedData(postIds: string[]) {
 
       // ---- Build post_likes map ----
       const plMap = new Map<string, PostLikesData>();
-      postIds.forEach(pid => plMap.set(pid, { liked: false, likesCount: 0, reactionType: null, topReactions: [] }));
+      postIds.forEach(pid => plMap.set(pid, { liked: false, likesCount: 0, reactionType: null, topReactions: [], likerNames: [], currentUserLiked: false }));
       if (allPostLikes && allPostLikes.length > 0) {
         const grouped: Record<string, typeof allPostLikes> = {};
         (allPostLikes).forEach(l => {
@@ -205,14 +205,24 @@ export function useFeedData(postIds: string[]) {
             likesCount: likes.length,
             reactionType: null,
             topReactions: [],
+            likerNames: [],
+            currentUserLiked: false,
           };
           if (userId) {
             const my = likes.find(l => l.user_id === userId);
             if (my) {
               entry.liked = true;
+              entry.currentUserLiked = true;
               entry.reactionType = (my.reaction_type || 'like') as ReactionType;
             }
           }
+          // Get up to 2 liker names (excluding current user)
+          const otherLikers = likes.filter(l => l.user_id !== userId);
+          entry.likerNames = otherLikers
+            .slice(0, 2)
+            .map(l => pMap.get(l.user_id)?.full_name || '')
+            .filter(Boolean);
+          
           const counts: Record<string, number> = {};
           likes.forEach(l => { const rt = l.reaction_type || 'like'; counts[rt] = (counts[rt] || 0) + 1; });
           entry.topReactions = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t]) => t);
