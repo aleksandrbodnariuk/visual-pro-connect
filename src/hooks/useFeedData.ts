@@ -454,7 +454,7 @@ export function useFeedData(postIds: string[]) {
   }, [commentLikesMap]);
 
   const getPostLikes = useCallback((postId: string): PostLikesData => {
-    return postLikesMap.get(postId) || { liked: false, likesCount: 0, reactionType: null, topReactions: [] };
+    return postLikesMap.get(postId) || { liked: false, likesCount: 0, reactionType: null, topReactions: [], likerNames: [], currentUserLiked: false };
   }, [postLikesMap]);
 
   const getProfile = useCallback((userId: string): ProfileData | undefined => {
