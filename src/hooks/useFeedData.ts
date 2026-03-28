@@ -324,8 +324,8 @@ export function useFeedData(postIds: string[]) {
         await supabase.from('post_likes').insert([{ post_id: postId, user_id: userId, reaction_type: newReaction }]);
         setPostLikesMap(prev => {
           const m = new Map(prev);
-          const c = prev.get(postId) || { liked: false, likesCount: 0, reactionType: null, topReactions: [] };
-          m.set(postId, { ...c, liked: true, reactionType: newReaction, likesCount: c.likesCount + 1 });
+          const c = prev.get(postId) || { liked: false, likesCount: 0, reactionType: null, topReactions: [], likerNames: [], currentUserLiked: false };
+          m.set(postId, { ...c, liked: true, currentUserLiked: true, reactionType: newReaction, likesCount: c.likesCount + 1 });
           return m;
         });
       }
