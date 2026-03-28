@@ -2,6 +2,7 @@
 import { useState, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { MessageCircle, Share2, Bookmark, X } from "lucide-react";
+import { LikersTooltip } from "./LikersTooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
