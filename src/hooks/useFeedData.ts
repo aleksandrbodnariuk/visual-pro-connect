@@ -233,8 +233,13 @@ export function useFeedData(postIds: string[]) {
 
       // ---- Build post_shares map ----
       const psMap = new Map<string, boolean>();
-      postIds.forEach(pid => psMap.set(pid, userSharePostIds.has(pid)));
+      const scMap = new Map<string, number>();
+      postIds.forEach(pid => {
+        psMap.set(pid, userSharePostIds.has(pid));
+        scMap.set(pid, shareCountsByPost[pid] || 0);
+      });
       setPostSharesMap(psMap);
+      setShareCountsMap(scMap);
     } catch (error) {
       console.error('Error loading feed data:', error);
     } finally {
