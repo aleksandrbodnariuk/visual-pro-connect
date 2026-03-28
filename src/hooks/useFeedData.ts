@@ -20,6 +20,7 @@ export interface CommentLikesData {
   likesCount: number;
   userReaction: ReactionType | null;
   topReactions: string[];
+  likerNames: string[];
 }
 
 export interface PostLikesData {
