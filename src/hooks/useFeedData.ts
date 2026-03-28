@@ -127,7 +127,8 @@ export function useFeedData(postIds: string[]) {
 
       // 4) Load ALL profiles in ONE RPC call (comment users + liker users)
       const likerUserIds = allPostLikes ? [...new Set((allPostLikes).map((l: any) => l.user_id))] : [];
-      const allUserIds = [...new Set([...commentUserIds, ...likerUserIds])];
+      const commentLikerUserIds = [...new Set(allCommentLikes.map(l => l.user_id))];
+      const allUserIds = [...new Set([...commentUserIds, ...likerUserIds, ...commentLikerUserIds])];
       let profiles: ProfileData[] = [];
       if (allUserIds.length > 0) {
         const { data: profData } = await supabase.rpc('get_safe_public_profiles_by_ids', {
