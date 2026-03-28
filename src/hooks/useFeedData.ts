@@ -60,6 +60,7 @@ export function useFeedData(postIds: string[]) {
   const [commentLikesMap, setCommentLikesMap] = useState<Map<string, CommentLikesData>>(new Map());
   const [postLikesMap, setPostLikesMap] = useState<Map<string, PostLikesData>>(new Map());
   const [postSharesMap, setPostSharesMap] = useState<Map<string, boolean>>(new Map());
+  const [shareCountsMap, setShareCountsMap] = useState<Map<string, number>>(new Map());
   const [profilesMap, setProfilesMap] = useState<Map<string, ProfileData>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [shareLoading, setShareLoading] = useState<Set<string>>(new Set());
