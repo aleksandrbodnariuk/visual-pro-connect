@@ -259,7 +259,7 @@ export function PostCard({
                     {(() => {
                       const parts: string[] = [];
                       if (currentUserLiked) parts.push('Ви');
-                      likerNames.forEach(n => parts.push(n));
+                      likerNames.slice(0, 2).forEach(n => parts.push(n));
                       const shown = parts.length;
                       const remaining = likesCount - shown;
                       if (shown === 0 && remaining > 0) return `${remaining}`;
