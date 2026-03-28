@@ -219,10 +219,9 @@ export function useFeedData(postIds: string[]) {
               entry.reactionType = (my.reaction_type || 'like') as ReactionType;
             }
           }
-          // Get up to 2 liker names (excluding current user)
+          // Get ALL liker names (excluding current user) for tooltip; summary shows first 2
           const otherLikers = likes.filter(l => l.user_id !== userId);
           entry.likerNames = otherLikers
-            .slice(0, 2)
             .map(l => pMap.get(l.user_id)?.full_name || '')
             .filter(Boolean);
           
