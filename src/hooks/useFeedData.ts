@@ -43,6 +43,7 @@ export interface ProfileData {
 export interface PostShareData {
   shared: boolean;
   isLoading: boolean;
+  sharesCount: number;
 }
 
 /**
