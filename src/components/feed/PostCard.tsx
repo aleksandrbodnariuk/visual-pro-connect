@@ -99,6 +99,8 @@ export function PostCard({
   const likesCount = postLikesData?.likesCount ?? likes;
   const reactionType = postLikesData?.reactionType || null;
   const topReactions = postLikesData?.topReactions || [];
+  const likerNames = postLikesData?.likerNames || [];
+  const currentUserLiked = postLikesData?.currentUserLiked || false;
 
   const shared = postShareData?.shared || false;
   const sharesLoading = postShareData?.isLoading || false;
