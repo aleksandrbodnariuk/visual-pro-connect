@@ -27,6 +27,8 @@ export interface PostLikesData {
   likesCount: number;
   reactionType: ReactionType | null;
   topReactions: string[];
+  likerNames: string[];
+  currentUserLiked: boolean;
 }
 
 export interface ProfileData {
@@ -41,6 +43,7 @@ export interface ProfileData {
 export interface PostShareData {
   shared: boolean;
   isLoading: boolean;
+  sharesCount: number;
 }
 
 /**
@@ -57,6 +60,7 @@ export function useFeedData(postIds: string[]) {
   const [commentLikesMap, setCommentLikesMap] = useState<Map<string, CommentLikesData>>(new Map());
   const [postLikesMap, setPostLikesMap] = useState<Map<string, PostLikesData>>(new Map());
   const [postSharesMap, setPostSharesMap] = useState<Map<string, boolean>>(new Map());
+  const [shareCountsMap, setShareCountsMap] = useState<Map<string, number>>(new Map());
   const [profilesMap, setProfilesMap] = useState<Map<string, ProfileData>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [shareLoading, setShareLoading] = useState<Set<string>>(new Set());
@@ -107,19 +111,22 @@ export function useFeedData(postIds: string[]) {
         .select('post_id, user_id, reaction_type')
         .in('post_id', postIds);
 
-      // 3b) Load ALL post_shares for current user in ONE query
+      // 3b) Load ALL post_shares (all users for counts + current user check)
+      const { data: allSharesData } = await supabase
+        .from('post_shares')
+        .select('post_id, user_id')
+        .in('post_id', postIds);
+      const allShares = allSharesData || [];
       let userSharePostIds: Set<string> = new Set();
-      if (userId) {
-        const { data: sharesData } = await supabase
-          .from('post_shares')
-          .select('post_id')
-          .eq('user_id', userId)
-          .in('post_id', postIds);
-        (sharesData || []).forEach(s => userSharePostIds.add(s.post_id));
-      }
+      const shareCountsByPost: Record<string, number> = {};
+      allShares.forEach(s => {
+        shareCountsByPost[s.post_id] = (shareCountsByPost[s.post_id] || 0) + 1;
+        if (s.user_id === userId) userSharePostIds.add(s.post_id);
+      });
 
-      // 4) Load ALL profiles in ONE RPC call
-      const allUserIds = [...new Set([...commentUserIds])];
+      // 4) Load ALL profiles in ONE RPC call (comment users + liker users)
+      const likerUserIds = allPostLikes ? [...new Set((allPostLikes).map((l: any) => l.user_id))] : [];
+      const allUserIds = [...new Set([...commentUserIds, ...likerUserIds])];
       let profiles: ProfileData[] = [];
       if (allUserIds.length > 0) {
         const { data: profData } = await supabase.rpc('get_safe_public_profiles_by_ids', {
@@ -185,7 +192,7 @@ export function useFeedData(postIds: string[]) {
 
       // ---- Build post_likes map ----
       const plMap = new Map<string, PostLikesData>();
-      postIds.forEach(pid => plMap.set(pid, { liked: false, likesCount: 0, reactionType: null, topReactions: [] }));
+      postIds.forEach(pid => plMap.set(pid, { liked: false, likesCount: 0, reactionType: null, topReactions: [], likerNames: [], currentUserLiked: false }));
       if (allPostLikes && allPostLikes.length > 0) {
         const grouped: Record<string, typeof allPostLikes> = {};
         (allPostLikes).forEach(l => {
@@ -198,14 +205,24 @@ export function useFeedData(postIds: string[]) {
             likesCount: likes.length,
             reactionType: null,
             topReactions: [],
+            likerNames: [],
+            currentUserLiked: false,
           };
           if (userId) {
             const my = likes.find(l => l.user_id === userId);
             if (my) {
               entry.liked = true;
+              entry.currentUserLiked = true;
               entry.reactionType = (my.reaction_type || 'like') as ReactionType;
             }
           }
+          // Get up to 2 liker names (excluding current user)
+          const otherLikers = likes.filter(l => l.user_id !== userId);
+          entry.likerNames = otherLikers
+            .slice(0, 2)
+            .map(l => pMap.get(l.user_id)?.full_name || '')
+            .filter(Boolean);
+          
           const counts: Record<string, number> = {};
           likes.forEach(l => { const rt = l.reaction_type || 'like'; counts[rt] = (counts[rt] || 0) + 1; });
           entry.topReactions = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t]) => t);
@@ -216,8 +233,13 @@ export function useFeedData(postIds: string[]) {
 
       // ---- Build post_shares map ----
       const psMap = new Map<string, boolean>();
-      postIds.forEach(pid => psMap.set(pid, userSharePostIds.has(pid)));
+      const scMap = new Map<string, number>();
+      postIds.forEach(pid => {
+        psMap.set(pid, userSharePostIds.has(pid));
+        scMap.set(pid, shareCountsByPost[pid] || 0);
+      });
       setPostSharesMap(psMap);
+      setShareCountsMap(scMap);
     } catch (error) {
       console.error('Error loading feed data:', error);
     } finally {
@@ -302,8 +324,8 @@ export function useFeedData(postIds: string[]) {
         await supabase.from('post_likes').insert([{ post_id: postId, user_id: userId, reaction_type: newReaction }]);
         setPostLikesMap(prev => {
           const m = new Map(prev);
-          const c = prev.get(postId) || { liked: false, likesCount: 0, reactionType: null, topReactions: [] };
-          m.set(postId, { ...c, liked: true, reactionType: newReaction, likesCount: c.likesCount + 1 });
+          const c = prev.get(postId) || { liked: false, likesCount: 0, reactionType: null, topReactions: [], likerNames: [], currentUserLiked: false };
+          m.set(postId, { ...c, liked: true, currentUserLiked: true, reactionType: newReaction, likesCount: c.likesCount + 1 });
           return m;
         });
       }
@@ -432,7 +454,7 @@ export function useFeedData(postIds: string[]) {
   }, [commentLikesMap]);
 
   const getPostLikes = useCallback((postId: string): PostLikesData => {
-    return postLikesMap.get(postId) || { liked: false, likesCount: 0, reactionType: null, topReactions: [] };
+    return postLikesMap.get(postId) || { liked: false, likesCount: 0, reactionType: null, topReactions: [], likerNames: [], currentUserLiked: false };
   }, [postLikesMap]);
 
   const getProfile = useCallback((userId: string): ProfileData | undefined => {
@@ -440,8 +462,8 @@ export function useFeedData(postIds: string[]) {
   }, [profilesMap]);
 
   const getPostShare = useCallback((postId: string): PostShareData => {
-    return { shared: postSharesMap.get(postId) || false, isLoading: shareLoading.has(postId) };
-  }, [postSharesMap, shareLoading]);
+    return { shared: postSharesMap.get(postId) || false, isLoading: shareLoading.has(postId), sharesCount: shareCountsMap.get(postId) || 0 };
+  }, [postSharesMap, shareLoading, shareCountsMap]);
 
   return {
     isLoading,

@@ -99,9 +99,12 @@ export function PostCard({
   const likesCount = postLikesData?.likesCount ?? likes;
   const reactionType = postLikesData?.reactionType || null;
   const topReactions = postLikesData?.topReactions || [];
+  const likerNames = postLikesData?.likerNames || [];
+  const currentUserLiked = postLikesData?.currentUserLiked || false;
 
   const shared = postShareData?.shared || false;
   const sharesLoading = postShareData?.isLoading || false;
+  const sharesCount = postShareData?.sharesCount || 0;
   const handleToggleShare = () => { if (onToggleShare) onToggleShare(id); };
 
   const removeUrls = (text: string | null | undefined): string => {
@@ -236,18 +239,40 @@ export function PostCard({
           </Button>
         </div>
 
-        <div className="mt-2 flex items-center gap-1">
-          {topReactions.length > 0 && topReactions.map((type, i) => (
-            <span key={i} className="text-sm -ml-0.5 first:ml-0">{getReactionEmoji(type as ReactionType)}</span>
-          ))}
-          <span className="text-sm font-semibold ml-0.5">{likesCount} вподобань</span>
-        </div>
-
-        <div className="mt-1">
-          <p className="text-sm">
-            <Link to={`/profile/${author.id}`} className="font-semibold">{author.name}</Link>
-          </p>
-        </div>
+        {/* Facebook-style summary bar */}
+        {(likesCount > 0 || totalRootComments > 0 || sharesCount > 0) && (
+          <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground">
+            {/* Left: reactions + who liked */}
+            {likesCount > 0 ? (
+              <div className="flex items-center gap-1 min-w-0 flex-1">
+                {topReactions.length > 0 && topReactions.map((type, i) => (
+                  <span key={i} className="text-sm -ml-0.5 first:ml-0">{getReactionEmoji(type as ReactionType)}</span>
+                ))}
+                <span className="truncate ml-0.5">
+                  {(() => {
+                    const parts: string[] = [];
+                    if (currentUserLiked) parts.push('Ви');
+                    likerNames.forEach(n => parts.push(n));
+                    const shown = parts.length;
+                    const remaining = likesCount - shown;
+                    if (shown === 0 && remaining > 0) return `${remaining}`;
+                    if (remaining > 0) return `${parts.join(', ')} та ще ${remaining}`;
+                    return parts.join(', ');
+                  })()}
+                </span>
+              </div>
+            ) : <div />}
+            {/* Right: comments + shares count */}
+            <div className="flex items-center gap-3 shrink-0 ml-2">
+              {totalRootComments > 0 && (
+                <span>{totalRootComments} коментарів</span>
+              )}
+              {sharesCount > 0 && (
+                <span>{sharesCount} поширень</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Comments */}
         {displayedComments.length > 0 && (
