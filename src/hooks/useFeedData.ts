@@ -345,7 +345,7 @@ export function useFeedData(postIds: string[]) {
     if (!userId || commentLikeLoading.has(commentId)) return;
     setCommentLikeLoading(prev => new Set(prev).add(commentId));
     try {
-      const current = commentLikesMap.get(commentId) || { likesCount: 0, userReaction: null, topReactions: [] };
+      const current = commentLikesMap.get(commentId) || { likesCount: 0, userReaction: null, topReactions: [], likerNames: [] };
 
       if (current.userReaction === reactionType) {
         // Remove reaction — optimistic
