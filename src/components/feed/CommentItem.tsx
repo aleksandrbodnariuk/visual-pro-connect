@@ -71,7 +71,7 @@ export function CommentItem({ comment, depth = 0, postAuthorId, currentUserId, o
   const [editText, setEditText] = useState(comment.content);
   const [showFullComment, setShowFullComment] = useState(false);
 
-  const { userReaction, likesCount, topReactions } = getLikes(comment.id);
+  const { userReaction, likesCount, topReactions, likerNames } = getLikes(comment.id);
   
   const isLongComment = comment.content.length > COMMENT_TRUNCATE_LENGTH;
   const displayedContent = isLongComment && !showFullComment
