@@ -124,8 +124,9 @@ export function useFeedData(postIds: string[]) {
         if (s.user_id === userId) userSharePostIds.add(s.post_id);
       });
 
-      // 4) Load ALL profiles in ONE RPC call
-      const allUserIds = [...new Set([...commentUserIds])];
+      // 4) Load ALL profiles in ONE RPC call (comment users + liker users)
+      const likerUserIds = allPostLikes ? [...new Set((allPostLikes).map((l: any) => l.user_id))] : [];
+      const allUserIds = [...new Set([...commentUserIds, ...likerUserIds])];
       let profiles: ProfileData[] = [];
       if (allUserIds.length > 0) {
         const { data: profData } = await supabase.rpc('get_safe_public_profiles_by_ids', {
