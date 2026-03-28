@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ReactionPicker, ReactionType, getReactionEmoji, getReactionLabel, getReactionColor } from "./ReactionPicker";
 import { CommentLikesData } from "@/hooks/useFeedData";
+import { LikersTooltip } from "./LikersTooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
