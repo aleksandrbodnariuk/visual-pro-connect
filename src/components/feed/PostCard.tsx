@@ -121,7 +121,7 @@ export function PostCard({
   const displayedComments = showAllComments ? groupedComments : groupedComments.slice(-2);
   const totalRootComments = groupedComments.length;
 
-  const defaultGetCommentLikes = (cid: string): CommentLikesData => ({ likesCount: 0, userReaction: null, topReactions: [] });
+  const defaultGetCommentLikes = (cid: string): CommentLikesData => ({ likesCount: 0, userReaction: null, topReactions: [], likerNames: [] });
   const actualGetCommentLikes = getCommentLikes || defaultGetCommentLikes;
   const actualToggleCommentReaction = onToggleCommentReaction || (() => {});
 
