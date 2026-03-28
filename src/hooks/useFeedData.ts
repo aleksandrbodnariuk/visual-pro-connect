@@ -27,6 +27,8 @@ export interface PostLikesData {
   likesCount: number;
   reactionType: ReactionType | null;
   topReactions: string[];
+  likerNames: string[];
+  currentUserLiked: boolean;
 }
 
 export interface ProfileData {
