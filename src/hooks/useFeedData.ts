@@ -167,7 +167,7 @@ export function useFeedData(postIds: string[]) {
 
       // ---- Build comment_likes map ----
       const clMap = new Map<string, CommentLikesData>();
-      commentIds.forEach(cid => clMap.set(cid, { likesCount: 0, userReaction: null, topReactions: [] }));
+      commentIds.forEach(cid => clMap.set(cid, { likesCount: 0, userReaction: null, topReactions: [], likerNames: [] }));
       if (allCommentLikes.length > 0) {
         const grouped: Record<string, typeof allCommentLikes> = {};
         allCommentLikes.forEach(l => {
@@ -179,6 +179,7 @@ export function useFeedData(postIds: string[]) {
             likesCount: likes.length,
             userReaction: null,
             topReactions: [],
+            likerNames: likes.map(l => pMap.get(l.user_id)?.full_name || '').filter(Boolean),
           };
           if (userId) {
             const my = likes.find(l => l.user_id === userId);
