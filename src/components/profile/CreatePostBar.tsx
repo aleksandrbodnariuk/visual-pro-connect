@@ -34,7 +34,9 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
   const audioInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoClick = () => photoInputRef.current?.click();
-  const handleVideoClick = () => videoInputRef.current?.click();
+  const handleVideoClick = () => {
+    toast.info('Завантаження відео наразі в розробці. Використовуйте посилання на YouTube, Facebook, TikTok тощо.');
+  };
   const handleAudioClick = () => audioInputRef.current?.click();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'photo' | 'video' | 'audio') => {
@@ -53,6 +55,13 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
       return;
     }
 
+    // Block all video uploads regardless of how they were selected
+    if (file.type.startsWith('video/')) {
+      toast.info('Завантаження відео наразі в розробці. Використовуйте посилання на YouTube, Facebook, TikTok тощо.');
+      e.target.value = '';
+      return;
+    }
+
     // Розгортаємо форму при додаванні медіа
     setIsExpanded(true);
 
@@ -63,11 +72,10 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
         setShowImageEditor(true);
       };
       reader.readAsDataURL(file);
-    } else if (type === 'video') {
-      setMediaFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setMediaPreview(reader.result as string);
-      reader.readAsDataURL(file);
+    } else if (type === 'video' || file.type.startsWith('video/')) {
+      toast.info('Завантаження відео наразі в розробці. Використовуйте посилання на YouTube, Facebook, TikTok тощо.');
+      e.target.value = '';
+      return;
     } else if (type === 'audio') {
       setMediaFile(file);
       setMediaPreview(URL.createObjectURL(file));
