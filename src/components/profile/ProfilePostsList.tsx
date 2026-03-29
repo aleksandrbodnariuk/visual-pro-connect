@@ -33,7 +33,7 @@ export function ProfilePostsList({
   onEditPost, 
   onDeletePost 
 }: ProfilePostsListProps) {
-  const { user } = useAuth();
+  const { user, appUser } = useAuth();
   const postIds = useMemo(() => posts.map(p => p.id), [posts]);
   
   const {
