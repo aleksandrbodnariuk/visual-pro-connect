@@ -55,6 +55,13 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
       return;
     }
 
+    // Block all video uploads regardless of how they were selected
+    if (file.type.startsWith('video/')) {
+      toast.info('Завантаження відео наразі в розробці. Використовуйте посилання на YouTube, Facebook, TikTok тощо.');
+      e.target.value = '';
+      return;
+    }
+
     // Розгортаємо форму при додаванні медіа
     setIsExpanded(true);
 
