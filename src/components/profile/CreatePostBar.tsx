@@ -34,7 +34,9 @@ export function CreatePostBar({ user, onSuccess }: CreatePostBarProps) {
   const audioInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoClick = () => photoInputRef.current?.click();
-  const handleVideoClick = () => videoInputRef.current?.click();
+  const handleVideoClick = () => {
+    toast.info('Завантаження відео наразі в розробці. Використовуйте посилання на YouTube, Facebook, TikTok тощо.');
+  };
   const handleAudioClick = () => audioInputRef.current?.click();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'photo' | 'video' | 'audio') => {
