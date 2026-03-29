@@ -50,7 +50,7 @@ export function ProfilePostsList({
     commentLikeLoading,
   } = useFeedData(postIds);
 
-  const currentUser = user ? { id: user.id, full_name: user.name, avatar_url: user.avatarUrl } : null;
+  const currentUser = appUser ? { id: appUser.id, full_name: appUser.firstName + ' ' + appUser.lastName, avatar_url: appUser.avatarUrl } : null;
 
   return (
     <div className="space-y-6">
