@@ -216,9 +216,9 @@ export default function PostPage() {
   const isAuthor = currentUser?.id === post.user_id;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
       <Navbar />
-      <div className="container max-w-2xl mx-auto py-8 px-4">
+      <div className="container max-w-2xl mx-auto py-8 px-4 pb-24 sm:pb-8">
         {/* Header */}
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
