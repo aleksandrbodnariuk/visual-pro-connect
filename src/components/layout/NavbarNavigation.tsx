@@ -35,10 +35,12 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
       supabase.rpc('has_role', { _user_id: user.id, _role: 'specialist' as any }),
       supabase.rpc('has_stock_market_access', { _user_id: user.id }),
       checkRepAccess(),
-    ]).then(([specRes, stockRes, repAccess]) => {
+      supabase.rpc('has_role', { _user_id: user.id, _role: 'moderator' as any }),
+    ]).then(([specRes, stockRes, repAccess, modRes]) => {
       setIsSpecialist(specRes.data === true);
       setHasStockAccess(stockRes.data === true);
       setIsRepresentative(repAccess);
+      setIsModerator(modRes.data === true);
     });
   }, [user]);
 
