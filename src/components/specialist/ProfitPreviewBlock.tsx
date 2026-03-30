@@ -9,7 +9,9 @@
  * - Усі формули з централізованих модулів shareholderCalculations + representativeCalculations.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { getVisibleTitle } from '@/lib/shareholderRules';
+import { useViewerTitleLevel } from '@/hooks/useViewerTitleLevel';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Users, TrendingUp, Crown, AlertCircle, Loader2, UserCheck, Wallet } from 'lucide-react';
