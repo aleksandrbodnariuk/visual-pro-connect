@@ -98,6 +98,7 @@ export function ProfitPreviewBlock({
   const [repChain, setRepChain] = useState<RepresentativeChainNode[]>([]);
   const [repNames, setRepNames] = useState<Record<string, string>>({});
   const [unallocatedFunds, setUnallocatedFunds] = useState(0);
+  const { viewerLevel, isAdmin: viewerIsAdmin } = useViewerTitleLevel();
   const { config: distConfig, loading: distConfigLoading } = useProfitDistConfig();
 
   // ── Завантаження реальних даних ─────────────────────────────────────────────
