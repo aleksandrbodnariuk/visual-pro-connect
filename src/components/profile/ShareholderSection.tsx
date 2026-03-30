@@ -192,28 +192,36 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
               20% чистого прибутку розподіляється на всі акції пропорційно.
             </p>
 
-            <div className="mt-4 border-t pt-4">
-              <h4 className="font-medium mb-2">Система титулів</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                {[
-                  { range: '1–4%',   title: 'Акціонер' },
-                  { range: '5–9%',   title: 'Магнат'   },
-                  { range: '10–19%', title: 'Барон'    },
-                  { range: '20–29%', title: 'Граф'     },
-                  { range: '30–39%', title: 'Маркіз'   },
-                  { range: '40–49%', title: 'Лорд'     },
-                  { range: '50–99%', title: 'Герцог'   },
-                  { range: '100%',   title: 'Імператор'},
-                ].map(({ range, title }) => (
-                  <div
-                    key={title}
-                    className={`bg-muted p-2 rounded ${titleName === title ? 'ring-2 ring-primary font-bold' : ''}`}
-                  >
-                    <span className="font-semibold">{range}:</span> {title}
-                  </div>
-                ))}
+            {titleObj && titleObj.level >= 2 ? (
+              <div className="mt-4 border-t pt-4">
+                <h4 className="font-medium mb-2">Система титулів</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                  {[
+                    { range: '1–4%',   title: 'Акціонер' },
+                    { range: '5–9%',   title: 'Магнат'   },
+                    { range: '10–19%', title: 'Барон'    },
+                    { range: '20–29%', title: 'Граф'     },
+                    { range: '30–39%', title: 'Маркіз'   },
+                    { range: '40–49%', title: 'Лорд'     },
+                    { range: '50–99%', title: 'Герцог'   },
+                    { range: '100%',   title: 'Імператор'},
+                  ].map(({ range, title }) => (
+                    <div
+                      key={title}
+                      className={`bg-muted p-2 rounded ${titleName === title ? 'ring-2 ring-primary font-bold' : ''}`}
+                    >
+                      <span className="font-semibold">{range}:</span> {title}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="mt-4 border-t pt-4">
+                <p className="text-xs text-muted-foreground">
+                  Детальна інформація про систему титулів доступна для акціонерів рівня «Барон» і вище.
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
