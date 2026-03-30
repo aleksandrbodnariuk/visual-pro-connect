@@ -19,7 +19,7 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
   const [isModerator, setIsModerator] = useState(false);
 
   useEffect(() => {
-    if (!user) { setIsSpecialist(false); setHasStockAccess(false); setIsRepresentative(false); return; }
+    if (!user) { setIsSpecialist(false); setHasStockAccess(false); setIsRepresentative(false); setIsModerator(false); return; }
 
     const checkRepAccess = async () => {
       try {
