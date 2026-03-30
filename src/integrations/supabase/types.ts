@@ -619,6 +619,54 @@ export type Database = {
         }
         Relationships: []
       }
+      moderation_actions: {
+        Row: {
+          action_type: string
+          comment_id: string | null
+          created_at: string
+          id: string
+          moderator_id: string
+          post_id: string | null
+          reason: string
+          target_user_id: string
+        }
+        Insert: {
+          action_type?: string
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          moderator_id: string
+          post_id?: string | null
+          reason: string
+          target_user_id: string
+        }
+        Update: {
+          action_type?: string
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          moderator_id?: string
+          post_id?: string | null
+          reason?: string
+          target_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moderation_actions_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moderation_actions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null
