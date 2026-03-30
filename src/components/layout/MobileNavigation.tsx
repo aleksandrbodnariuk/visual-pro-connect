@@ -56,12 +56,14 @@ export function MobileNavigation() {
       supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'shareholder' as any }),
       supabase.rpc('has_stock_market_access', { _user_id: currentUser.id }),
       checkRepAccess(),
-    ]).then(([specRes, adminRes, shareholderRes, stockRes, repAccess]) => {
+      supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'moderator' as any }),
+    ]).then(([specRes, adminRes, shareholderRes, stockRes, repAccess, modRes]) => {
       setIsSpecialist(specRes.data === true);
       setIsAdmin(adminRes.data === true || currentUser.founder_admin === true);
       setIsShareholder(shareholderRes.data === true || currentUser.founder_admin === true);
       setHasStockAccess(stockRes.data === true || currentUser.founder_admin === true);
       setIsRepresentative(repAccess);
+      setIsModerator(modRes.data === true);
     });
   }, [currentUser?.id]);
 
