@@ -35,6 +35,7 @@ export function MobileNavigation() {
   const [isShareholder, setIsShareholder] = useState(false);
   const [hasStockAccess, setHasStockAccess] = useState(false);
   const [isRepresentative, setIsRepresentative] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
 
   useEffect(() => {
     if (!currentUser?.id) { setIsSpecialist(false); setIsAdmin(false); setIsShareholder(false); setHasStockAccess(false); setIsRepresentative(false); return; }
