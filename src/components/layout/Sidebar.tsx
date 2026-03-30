@@ -136,8 +136,7 @@ export function Sidebar({ className }: SidebarProps) {
 
       <div className="border-t p-4">
         <div className="rounded-lg bg-muted p-4">
-          <h3 className="font-medium mb-2">{t.expandNetwork}</h3>
-          <p className="text-sm text-muted-foreground mb-3">{t.findClientsPartners}</p>
+          <h3 className="font-medium mb-2">Знаходьте нових друзів</h3>
           <Button size="sm" className="w-full" onClick={() => handleNavigate('/connect')}>{t.findContacts}</Button>
         </div>
       </div>
