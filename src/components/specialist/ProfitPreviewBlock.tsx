@@ -436,11 +436,14 @@ export function ProfitPreviewBlock({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-xs">{shInfo?.fullName || 'Невідомий'}</span>
-                        {sh.title && (
-                          <Badge variant="secondary" className="text-xs">
-                            {sh.title.title}
-                          </Badge>
-                        )}
+                        {sh.title && (() => {
+                          const visible = getVisibleTitle(viewerLevel, sh.title.title, viewerIsAdmin);
+                          return visible ? (
+                            <Badge variant="secondary" className="text-xs">
+                              {visible}
+                            </Badge>
+                          ) : null;
+                        })()}
                       </div>
                       <span className="text-xs text-muted-foreground">
                         {sh.shares} акц. ({sh.percent.toFixed(1)}%)
