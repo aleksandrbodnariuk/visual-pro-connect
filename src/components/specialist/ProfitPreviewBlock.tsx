@@ -9,7 +9,9 @@
  * - Усі формули з централізованих модулів shareholderCalculations + representativeCalculations.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { getVisibleTitle } from '@/lib/shareholderRules';
+import { useViewerTitleLevel } from '@/hooks/useViewerTitleLevel';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Users, TrendingUp, Crown, AlertCircle, Loader2, UserCheck, Wallet } from 'lucide-react';
@@ -96,6 +98,7 @@ export function ProfitPreviewBlock({
   const [repChain, setRepChain] = useState<RepresentativeChainNode[]>([]);
   const [repNames, setRepNames] = useState<Record<string, string>>({});
   const [unallocatedFunds, setUnallocatedFunds] = useState(0);
+  const { viewerLevel, isAdmin: viewerIsAdmin } = useViewerTitleLevel();
   const { config: distConfig, loading: distConfigLoading } = useProfitDistConfig();
 
   // ── Завантаження реальних даних ─────────────────────────────────────────────
@@ -433,11 +436,14 @@ export function ProfitPreviewBlock({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-xs">{shInfo?.fullName || 'Невідомий'}</span>
-                        {sh.title && (
-                          <Badge variant="secondary" className="text-xs">
-                            {sh.title.title}
-                          </Badge>
-                        )}
+                        {sh.title && (() => {
+                          const visible = getVisibleTitle(viewerLevel, sh.title.title, viewerIsAdmin);
+                          return visible ? (
+                            <Badge variant="secondary" className="text-xs">
+                              {visible}
+                            </Badge>
+                          ) : null;
+                        })()}
                       </div>
                       <span className="text-xs text-muted-foreground">
                         {sh.shares} акц. ({sh.percent.toFixed(1)}%)

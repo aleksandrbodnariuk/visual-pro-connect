@@ -132,3 +132,37 @@ export function getTitleByPercent(percent: number): TitleThreshold | null {
 export function getTitleName(percent: number): string {
   return getTitleByPercent(percent)?.title ?? '';
 }
+
+// ─── Видимість титулів ───────────────────────────────────────────────────────
+
+/**
+ * Правила видимості титулів:
+ * - Звичайні користувачі (не акціонери): не бачать жодних титулів → null
+ * - Акціонери рівня 0 (Акціонер) та 1 (Магнат): бачать усіх титулованих як «Магнат»
+ * - Акціонери рівня ≥ 2 (Барон і вище): бачать справжні титули
+ * - Адміністратори: бачать справжні титули завжди
+ *
+ * @param viewerLevel — рівень титулу поточного користувача (null якщо не акціонер)
+ * @param targetTitle — справжній титул цільового акціонера (null якщо без титулу)
+ * @param isAdmin — чи є поточний користувач адміністратором
+ */
+export function getVisibleTitle(
+  viewerLevel: number | null,
+  targetTitle: string | null,
+  isAdmin = false,
+): string | null {
+  // Адміністратори бачать все
+  if (isAdmin) return targetTitle;
+
+  // Не акціонер — не бачить титулів
+  if (viewerLevel === null) return null;
+
+  // Якщо цільовий акціонер без титулу — нічого показувати
+  if (!targetTitle) return null;
+
+  // Барон і вище (level ≥ 2) — бачить справжні титули
+  if (viewerLevel >= 2) return targetTitle;
+
+  // Акціонер (0) або Магнат (1) — бачить усіх як «Магнат»
+  return 'Магнат';
+}

@@ -36,7 +36,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSupabaseAuth } from "@/hooks/auth/useSupabaseAuth";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { supabase } from "@/integrations/supabase/client";
-import { getTitleByPercent } from "@/lib/shareholderRules";
+import { getTitleByPercent, getVisibleTitle } from "@/lib/shareholderRules";
 
 /* ────────────── Types ────────────── */
 
@@ -564,6 +564,10 @@ export default function StockMarket() {
   };
 
   /* ── derived data ── */
+  const viewerPercent = totalShares > 0 ? (myShares / totalShares) * 100 : 0;
+  const viewerTitleObj = getTitleByPercent(viewerPercent);
+  const viewerLevel: number | null = viewerTitleObj ? viewerTitleObj.level : (myShares > 0 ? 0 : null);
+
   const activeListings = allListings.filter(
     (l) => (l.status === "active" || l.status === "partially_filled") && l.seller_id !== currentUser?.id && l.remaining_qty > 0
   );
@@ -1337,7 +1341,7 @@ export default function StockMarket() {
                             </td>
                             <td className="p-2">{sh.shares}</td>
                             <td className="p-2">{sh.percentage}%</td>
-                            <td className="p-2">{sh.title || "—"}</td>
+                            <td className="p-2">{getVisibleTitle(viewerLevel, sh.title || null, !!isAdmin) || "—"}</td>
                           </tr>
                         ))}
                       </tbody>
