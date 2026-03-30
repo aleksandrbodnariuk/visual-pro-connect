@@ -38,7 +38,7 @@ export function MobileNavigation() {
   const [isModerator, setIsModerator] = useState(false);
 
   useEffect(() => {
-    if (!currentUser?.id) { setIsSpecialist(false); setIsAdmin(false); setIsShareholder(false); setHasStockAccess(false); setIsRepresentative(false); return; }
+    if (!currentUser?.id) { setIsSpecialist(false); setIsAdmin(false); setIsShareholder(false); setHasStockAccess(false); setIsRepresentative(false); setIsModerator(false); return; }
 
     const checkRepAccess = async () => {
       try {
