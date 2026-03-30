@@ -8,6 +8,18 @@ import { useAuth } from "@/context/AuthContext";
 
 const Index = () => {
   const { isAuthenticated, loading, appUser } = useAuth();
+
+  // Prevent page-level scroll on authenticated home (Facebook-style fixed layout)
+  useEffect(() => {
+    if (isAuthenticated && !loading) {
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isAuthenticated, loading]);
   
   if (loading) {
     return (
