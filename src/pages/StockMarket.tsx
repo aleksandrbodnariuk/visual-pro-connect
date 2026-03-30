@@ -1341,7 +1341,7 @@ export default function StockMarket() {
                             </td>
                             <td className="p-2">{sh.shares}</td>
                             <td className="p-2">{sh.percentage}%</td>
-                            <td className="p-2">{sh.title || "—"}</td>
+                            <td className="p-2">{getVisibleTitle(viewerLevel, sh.title || null, !!isAdmin) || "—"}</td>
                           </tr>
                         ))}
                       </tbody>
