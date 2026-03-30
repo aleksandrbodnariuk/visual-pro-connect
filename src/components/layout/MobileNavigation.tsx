@@ -209,6 +209,17 @@ export function MobileNavigation() {
                           <span>Кабінет представника</span>
                         </Link>
                       )}
+                      {/* Панель модератора */}
+                      {(isModerator || isAdmin) && (
+                        <Link
+                          to="/moderator-panel"
+                          onClick={() => setIsMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <Shield className="h-5 w-5" />
+                          <span>Панель модератора</span>
+                        </Link>
+                      )}
                       {hasStockAccess && (
                         <Link
                           to="/stock-market"
