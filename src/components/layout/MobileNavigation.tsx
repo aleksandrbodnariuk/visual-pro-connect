@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Users, Plus, MessageSquare, Menu, User, Bell, Search, Settings, LogOut, Camera, Video, Music, Mic, Sparkles, UtensilsCrossed, Car, Flower2, UserPlus, FolderOpen, Image, Briefcase, Crown, TrendingUp, UsersRound } from "lucide-react";
+import { Home, Users, Plus, MessageSquare, Menu, User, Bell, Search, Settings, LogOut, Camera, Video, Music, Mic, Sparkles, UtensilsCrossed, Car, Flower2, UserPlus, FolderOpen, Image, Briefcase, Crown, TrendingUp, UsersRound, Shield } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -35,9 +35,10 @@ export function MobileNavigation() {
   const [isShareholder, setIsShareholder] = useState(false);
   const [hasStockAccess, setHasStockAccess] = useState(false);
   const [isRepresentative, setIsRepresentative] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
 
   useEffect(() => {
-    if (!currentUser?.id) { setIsSpecialist(false); setIsAdmin(false); setIsShareholder(false); setHasStockAccess(false); setIsRepresentative(false); return; }
+    if (!currentUser?.id) { setIsSpecialist(false); setIsAdmin(false); setIsShareholder(false); setHasStockAccess(false); setIsRepresentative(false); setIsModerator(false); return; }
 
     const checkRepAccess = async () => {
       try {
@@ -55,12 +56,14 @@ export function MobileNavigation() {
       supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'shareholder' as any }),
       supabase.rpc('has_stock_market_access', { _user_id: currentUser.id }),
       checkRepAccess(),
-    ]).then(([specRes, adminRes, shareholderRes, stockRes, repAccess]) => {
+      supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'moderator' as any }),
+    ]).then(([specRes, adminRes, shareholderRes, stockRes, repAccess, modRes]) => {
       setIsSpecialist(specRes.data === true);
       setIsAdmin(adminRes.data === true || currentUser.founder_admin === true);
       setIsShareholder(shareholderRes.data === true || currentUser.founder_admin === true);
       setHasStockAccess(stockRes.data === true || currentUser.founder_admin === true);
       setIsRepresentative(repAccess);
+      setIsModerator(modRes.data === true);
     });
   }, [currentUser?.id]);
 
@@ -204,6 +207,17 @@ export function MobileNavigation() {
                         >
                           <UsersRound className="h-5 w-5" />
                           <span>Кабінет представника</span>
+                        </Link>
+                      )}
+                      {/* Панель модератора */}
+                      {(isModerator || isAdmin) && (
+                        <Link
+                          to="/moderator-panel"
+                          onClick={() => setIsMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <Shield className="h-5 w-5" />
+                          <span>Панель модератора</span>
                         </Link>
                       )}
                       {hasStockAccess && (
