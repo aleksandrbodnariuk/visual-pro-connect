@@ -123,6 +123,16 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
           Представники
         </Link>
       )}
+      {(isModerator || isAdmin) && (
+        <Link
+          to="/moderator-panel"
+          className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
+            isActive("/moderator-panel") ? "text-foreground" : "text-foreground/60"
+          }`}
+        >
+          Модерація
+        </Link>
+      )}
       {isAdmin && (
         <Link
           to="/admin"
