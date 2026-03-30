@@ -36,7 +36,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSupabaseAuth } from "@/hooks/auth/useSupabaseAuth";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { supabase } from "@/integrations/supabase/client";
-import { getTitleByPercent } from "@/lib/shareholderRules";
+import { getTitleByPercent, getVisibleTitle } from "@/lib/shareholderRules";
 
 /* ────────────── Types ────────────── */
 
