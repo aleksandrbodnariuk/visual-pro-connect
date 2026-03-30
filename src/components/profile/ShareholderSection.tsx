@@ -5,7 +5,7 @@ import { Crown, PiggyBank, DollarSign, Settings } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
-import { getTitleByPercent } from "@/lib/shareholderRules";
+import { getTitleByPercent, getVisibleTitle } from "@/lib/shareholderRules";
 import { ShareholderProfitForecast } from "./ShareholderProfitForecast";
 import { ShareholderPayouts } from "./ShareholderPayouts";
 
