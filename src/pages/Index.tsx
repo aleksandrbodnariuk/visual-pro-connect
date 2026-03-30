@@ -1,4 +1,4 @@
-
+import { useEffect } from "react";
 import { NewsFeed } from "@/components/feed/NewsFeed";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RightSidebar } from "@/components/layout/RightSidebar";
