@@ -140,10 +140,7 @@ export default function Connect() {
         
         <main className="col-span-12 md:col-span-8 lg:col-span-9">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold mb-2">Знайти друзів</h1>
-            <p className="text-muted-foreground">
-              Знаходьте колег, партнерів та клієнтів для співпраці
-            </p>
+            <h1 className="text-3xl font-bold mb-2">Знаходьте нових друзів</h1>
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
