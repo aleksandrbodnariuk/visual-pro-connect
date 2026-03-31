@@ -220,6 +220,9 @@ export default function StockMarket() {
   useEffect(() => {
     localStorage.setItem('stock_deleted_transfers', JSON.stringify([...transferDeletedIds]));
   }, [transferDeletedIds]);
+  useEffect(() => {
+    localStorage.setItem('stock_archived_transfers', JSON.stringify([...archivedTransferIds]));
+  }, [archivedTransferIds]);
 
   const isAdmin = currentUser?.isAdmin || currentUser?.founder_admin;
   const isShareholder = currentUser?.isShareHolder;
