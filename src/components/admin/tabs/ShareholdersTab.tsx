@@ -42,7 +42,39 @@ export function ShareholdersTab() {
     adminFund: '12.5',
   });
   const [distSaving, setDistSaving] = useState(false);
-  // Sync input with DB value once loaded
+
+  // Title approvals: { [userId]: approvedLevel }
+  const [titleApprovals, setTitleApprovals] = useState<Record<string, number>>({});
+
+  const loadTitleApprovals = useCallback(async () => {
+    const { data } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('id', 'title-approvals')
+      .maybeSingle();
+    if (data?.value) {
+      try { setTitleApprovals(JSON.parse(data.value)); } catch {}
+    }
+  }, []);
+
+  const saveTitleApproval = async (userId: string, level: number) => {
+    const updated = { ...titleApprovals, [userId]: level };
+    // Remove entries at level 1 or below (auto-levels don't need approval)
+    if (level <= 1) delete updated[userId];
+    setTitleApprovals(updated);
+
+    const value = JSON.stringify(updated);
+    const { error } = await supabase
+      .from('site_settings')
+      .upsert({ id: 'title-approvals', value, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    if (error) {
+      toast.error('Помилка збереження дозволу');
+      return;
+    }
+    toast.success(level <= 1 ? 'Дозвіл скасовано' : `Дозволено перехід на рівень ${level}`);
+    // Refresh shareholders to update displayed titles
+    setTimeout(() => fetchShareholders(), 300);
+  };
   useEffect(() => {
     if (!settingsLoading) {
       setTotalSharesInput(dbTotalShares);
