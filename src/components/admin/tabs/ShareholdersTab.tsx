@@ -159,8 +159,9 @@ export function ShareholdersTab() {
   useEffect(() => {
     if (!settingsLoading) {
       fetchShareholders();
+      loadTitleApprovals();
     }
-  }, [fetchShareholders, settingsLoading]);
+  }, [fetchShareholders, settingsLoading, loadTitleApprovals]);
 
   const recalcPercentages = (list: any[], total: number) =>
     list.map(sh => ({
