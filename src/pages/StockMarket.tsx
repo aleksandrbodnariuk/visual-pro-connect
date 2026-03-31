@@ -1224,16 +1224,15 @@ export default function StockMarket() {
                               <td className="p-2 text-right">{log.price_per_share_usd.toFixed(2)} USD</td>
                               <td className="p-2 text-right">{log.total_amount_usd.toFixed(2)} USD</td>
                               <td className="p-2">{log.confirmed_by_name || "—"}</td>
-                              {isAdmin && (
-                                <td className="p-2">
+                              <td className="p-2">
                                   <Button size="sm" variant="ghost" onClick={() => {
                                     setArchivedTransferIds(prev => new Set(prev).add(log.id));
                                     toast.success("Переміщено в архів");
                                   }}>
+                                    <Archive className="h-3.5 w-3.5 mr-1" />
                                     В архів
                                   </Button>
                                 </td>
-                              )}
                             </tr>
                           ))}
                         </tbody>
