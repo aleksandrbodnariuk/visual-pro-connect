@@ -160,7 +160,12 @@ export default function StockMarket() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   // Archive & delete for transfer history
-  const [archivedTransferIds, setArchivedTransferIds] = useState<Set<string>>(new Set());
+  const [archivedTransferIds, setArchivedTransferIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('stock_archived_transfers');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
   const [transferDeleteTarget, setTransferDeleteTarget] = useState<string | null>(null);
 
   // Archive for My Offers & My Transactions (persisted in localStorage)
