@@ -12,8 +12,9 @@ import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { SharePriceControl } from "@/components/admin/SharePriceControl";
 import { calcFullProfitDistribution, type ShareholderInput, type ShareholderDistConfig, DEFAULT_DIST_CONFIG } from "@/lib/shareholderCalculations";
 import { useProfitDistConfig } from "@/hooks/useProfitDistConfig";
-import { getTitleName } from "@/lib/shareholderRules";
+import { getTitleName, getTitleByPercent, getEffectiveTitle } from "@/lib/shareholderRules";
 import { useAuth } from "@/context/AuthContext";
+import { TitleApprovalDropdown } from "@/components/admin/TitleApprovalDropdown";
 export function ShareholdersTab() {
   const { user } = useAuth();
   const {
@@ -41,7 +42,39 @@ export function ShareholdersTab() {
     adminFund: '12.5',
   });
   const [distSaving, setDistSaving] = useState(false);
-  // Sync input with DB value once loaded
+
+  // Title approvals: { [userId]: approvedLevel }
+  const [titleApprovals, setTitleApprovals] = useState<Record<string, number>>({});
+
+  const loadTitleApprovals = useCallback(async () => {
+    const { data } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('id', 'title-approvals')
+      .maybeSingle();
+    if (data?.value) {
+      try { setTitleApprovals(JSON.parse(data.value)); } catch {}
+    }
+  }, []);
+
+  const saveTitleApproval = async (userId: string, level: number) => {
+    const updated = { ...titleApprovals, [userId]: level };
+    // Remove entries at level 1 or below (auto-levels don't need approval)
+    if (level <= 1) delete updated[userId];
+    setTitleApprovals(updated);
+
+    const value = JSON.stringify(updated);
+    const { error } = await supabase
+      .from('site_settings')
+      .upsert({ id: 'title-approvals', value, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    if (error) {
+      toast.error('Помилка збереження дозволу');
+      return;
+    }
+    toast.success(level <= 1 ? 'Дозвіл скасовано' : `Дозволено перехід на рівень ${level}`);
+    // Refresh shareholders to update displayed titles
+    setTimeout(() => fetchShareholders(), 300);
+  };
   useEffect(() => {
     if (!settingsLoading) {
       setTotalSharesInput(dbTotalShares);
@@ -126,8 +159,9 @@ export function ShareholdersTab() {
   useEffect(() => {
     if (!settingsLoading) {
       fetchShareholders();
+      loadTitleApprovals();
     }
-  }, [fetchShareholders, settingsLoading]);
+  }, [fetchShareholders, settingsLoading, loadTitleApprovals]);
 
   const recalcPercentages = (list: any[], total: number) =>
     list.map(sh => ({
@@ -528,6 +562,7 @@ export function ShareholdersTab() {
                       <th className="text-left p-2">Кількість акцій</th>
                       <th className="text-left p-2">Відсоток (%)</th>
                       <th className="text-left p-2">Прибуток (USD)</th>
+                      <th className="text-left p-2">Перехід</th>
                       <th className="text-left p-2">Дії</th>
                     </tr>
                   </thead>
@@ -537,7 +572,7 @@ export function ShareholdersTab() {
                         <td className="p-2">{shareholder.firstName} {shareholder.lastName}</td>
                         <td className="p-2">
                           <Badge variant="secondary">
-                            {shareholder.title || getTitleName(parseFloat(shareholder.percentage)) || '—'}
+                            {getEffectiveTitle(parseFloat(shareholder.percentage), titleApprovals[shareholder.id] ?? 1)?.title || '—'}
                           </Badge>
                         </td>
                         <td className="p-2">
@@ -570,6 +605,14 @@ export function ShareholdersTab() {
                           {getProfitDisplay(shareholder.id, shareholder.shares)}
                         </td>
                         <td className="p-2">
+                          <TitleApprovalDropdown
+                            userId={shareholder.id}
+                            approvedLevel={titleApprovals[shareholder.id] ?? 1}
+                            currentShareLevel={getTitleByPercent(parseFloat(shareholder.percentage))?.level ?? 0}
+                            onApprove={saveTitleApproval}
+                          />
+                        </td>
+                        <td className="p-2">
                           <Button variant="outline" size="sm">
                             <PenLine className="h-4 w-4 mr-1" /> Деталі
                           </Button>
@@ -589,7 +632,7 @@ export function ShareholdersTab() {
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Титул:</span>
                         <Badge variant="secondary">
-                          {shareholder.title || getTitleName(parseFloat(shareholder.percentage)) || '—'}
+                          {getEffectiveTitle(parseFloat(shareholder.percentage), titleApprovals[shareholder.id] ?? 1)?.title || '—'}
                         </Badge>
                       </div>
                       <div className="flex justify-between items-center">
@@ -625,6 +668,15 @@ export function ShareholdersTab() {
                         <span className="text-sm font-medium">
                           {getProfitDisplay(shareholder.id, shareholder.shares)}
                         </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Перехід:</span>
+                        <TitleApprovalDropdown
+                          userId={shareholder.id}
+                          approvedLevel={titleApprovals[shareholder.id] ?? 1}
+                          currentShareLevel={getTitleByPercent(parseFloat(shareholder.percentage))?.level ?? 0}
+                          onApprove={saveTitleApproval}
+                        />
                       </div>
                       <Button variant="outline" size="sm" className="w-full">
                         <PenLine className="h-4 w-4 mr-1" /> Деталі

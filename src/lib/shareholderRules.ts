@@ -126,6 +126,32 @@ export function getTitleByPercent(percent: number): TitleThreshold | null {
 }
 
 /**
+ * Визначити ефективний титул з урахуванням дозволеного рівня.
+ * Рівні 0 (Акціонер) та 1 (Магнат) — автоматичні, не потребують дозволу.
+ * Від рівня 2 (Барон) — потрібен дозвіл адміна.
+ *
+ * @param percent — відсоток акцій
+ * @param approvedLevel — максимальний дозволений рівень (default 1 = Магнат)
+ */
+export function getEffectiveTitle(percent: number, approvedLevel: number = 1): TitleThreshold | null {
+  const shareTitle = getTitleByPercent(percent);
+  if (!shareTitle) return null;
+
+  // Auto levels (0, 1) don't need approval
+  if (shareTitle.level <= 1) return shareTitle;
+
+  // Effective level = min(share level, approved level)
+  const effectiveLevel = Math.min(shareTitle.level, approvedLevel);
+
+  // Find the title for the effective level
+  for (const t of TITLE_THRESHOLDS) {
+    if (t.level === effectiveLevel) return t;
+  }
+
+  return shareTitle;
+}
+
+/**
  * Текстова назва титулу або порожній рядок, якщо титулу немає.
  * Зручний helper для UI, щоб не перевіряти null скрізь.
  */
