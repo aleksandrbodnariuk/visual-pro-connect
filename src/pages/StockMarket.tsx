@@ -1180,7 +1180,7 @@ export default function StockMarket() {
                       </CardTitle>
                       <CardDescription>Журнал усіх підтверджених передач</CardDescription>
                     </div>
-                    {isAdmin && transferLogs.some(l => !archivedTransferIds.has(l.id) && !transferDeletedIds.has(l.id)) && (
+                    {transferLogs.some(l => !archivedTransferIds.has(l.id) && !transferDeletedIds.has(l.id)) && (
                       <Button size="sm" variant="outline" onClick={() => {
                         const visibleIds = transferLogs.filter(l => !archivedTransferIds.has(l.id) && !transferDeletedIds.has(l.id)).map(l => l.id);
                         setArchivedTransferIds(prev => {
@@ -1190,6 +1190,7 @@ export default function StockMarket() {
                         });
                         toast.success("Усі записи переміщено в архів");
                       }}>
+                        <Archive className="h-4 w-4 mr-1" />
                         Архівувати все
                       </Button>
                     )}
