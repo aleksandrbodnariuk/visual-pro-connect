@@ -1211,7 +1211,7 @@ export default function StockMarket() {
                             <th className="text-right p-2">Ціна / акцію</th>
                             <th className="text-right p-2">Загалом</th>
                             <th className="text-left p-2">Підтвердив</th>
-                            {isAdmin && <th className="text-left p-2"></th>}
+                            <th className="text-left p-2"></th>
                           </tr>
                         </thead>
                         <tbody>
