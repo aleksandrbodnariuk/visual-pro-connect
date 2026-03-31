@@ -562,6 +562,7 @@ export function ShareholdersTab() {
                       <th className="text-left p-2">Кількість акцій</th>
                       <th className="text-left p-2">Відсоток (%)</th>
                       <th className="text-left p-2">Прибуток (USD)</th>
+                      <th className="text-left p-2">Перехід</th>
                       <th className="text-left p-2">Дії</th>
                     </tr>
                   </thead>
