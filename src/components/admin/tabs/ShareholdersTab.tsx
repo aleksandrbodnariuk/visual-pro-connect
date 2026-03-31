@@ -632,7 +632,7 @@ export function ShareholdersTab() {
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Титул:</span>
                         <Badge variant="secondary">
-                          {shareholder.title || getTitleName(parseFloat(shareholder.percentage)) || '—'}
+                          {getEffectiveTitle(parseFloat(shareholder.percentage), titleApprovals[shareholder.id] ?? 1)?.title || '—'}
                         </Badge>
                       </div>
                       <div className="flex justify-between items-center">
