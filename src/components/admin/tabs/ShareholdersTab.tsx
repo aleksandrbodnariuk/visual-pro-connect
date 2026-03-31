@@ -669,6 +669,15 @@ export function ShareholdersTab() {
                           {getProfitDisplay(shareholder.id, shareholder.shares)}
                         </span>
                       </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Перехід:</span>
+                        <TitleApprovalDropdown
+                          userId={shareholder.id}
+                          approvedLevel={titleApprovals[shareholder.id] ?? 1}
+                          currentShareLevel={getTitleByPercent(parseFloat(shareholder.percentage))?.level ?? 0}
+                          onApprove={saveTitleApproval}
+                        />
+                      </div>
                       <Button variant="outline" size="sm" className="w-full">
                         <PenLine className="h-4 w-4 mr-1" /> Деталі
                       </Button>
