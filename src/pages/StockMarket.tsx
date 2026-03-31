@@ -160,7 +160,12 @@ export default function StockMarket() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   // Archive & delete for transfer history
-  const [archivedTransferIds, setArchivedTransferIds] = useState<Set<string>>(new Set());
+  const [archivedTransferIds, setArchivedTransferIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('stock_archived_transfers');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
   const [transferDeleteTarget, setTransferDeleteTarget] = useState<string | null>(null);
 
   // Archive for My Offers & My Transactions (persisted in localStorage)
@@ -215,6 +220,9 @@ export default function StockMarket() {
   useEffect(() => {
     localStorage.setItem('stock_deleted_transfers', JSON.stringify([...transferDeletedIds]));
   }, [transferDeletedIds]);
+  useEffect(() => {
+    localStorage.setItem('stock_archived_transfers', JSON.stringify([...archivedTransferIds]));
+  }, [archivedTransferIds]);
 
   const isAdmin = currentUser?.isAdmin || currentUser?.founder_admin;
   const isShareholder = currentUser?.isShareHolder;
