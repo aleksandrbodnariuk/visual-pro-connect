@@ -572,7 +572,7 @@ export function ShareholdersTab() {
                         <td className="p-2">{shareholder.firstName} {shareholder.lastName}</td>
                         <td className="p-2">
                           <Badge variant="secondary">
-                            {shareholder.title || getTitleName(parseFloat(shareholder.percentage)) || '—'}
+                            {getEffectiveTitle(parseFloat(shareholder.percentage), titleApprovals[shareholder.id] ?? 1)?.title || '—'}
                           </Badge>
                         </td>
                         <td className="p-2">
