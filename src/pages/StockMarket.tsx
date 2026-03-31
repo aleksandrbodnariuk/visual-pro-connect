@@ -1180,7 +1180,7 @@ export default function StockMarket() {
                       </CardTitle>
                       <CardDescription>Журнал усіх підтверджених передач</CardDescription>
                     </div>
-                    {isAdmin && transferLogs.some(l => !archivedTransferIds.has(l.id) && !transferDeletedIds.has(l.id)) && (
+                    {transferLogs.some(l => !archivedTransferIds.has(l.id) && !transferDeletedIds.has(l.id)) && (
                       <Button size="sm" variant="outline" onClick={() => {
                         const visibleIds = transferLogs.filter(l => !archivedTransferIds.has(l.id) && !transferDeletedIds.has(l.id)).map(l => l.id);
                         setArchivedTransferIds(prev => {
@@ -1190,6 +1190,7 @@ export default function StockMarket() {
                         });
                         toast.success("Усі записи переміщено в архів");
                       }}>
+                        <Archive className="h-4 w-4 mr-1" />
                         Архівувати все
                       </Button>
                     )}
@@ -1210,7 +1211,7 @@ export default function StockMarket() {
                             <th className="text-right p-2">Ціна / акцію</th>
                             <th className="text-right p-2">Загалом</th>
                             <th className="text-left p-2">Підтвердив</th>
-                            {isAdmin && <th className="text-left p-2"></th>}
+                            <th className="text-left p-2"></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1223,16 +1224,15 @@ export default function StockMarket() {
                               <td className="p-2 text-right">{log.price_per_share_usd.toFixed(2)} USD</td>
                               <td className="p-2 text-right">{log.total_amount_usd.toFixed(2)} USD</td>
                               <td className="p-2">{log.confirmed_by_name || "—"}</td>
-                              {isAdmin && (
-                                <td className="p-2">
+                              <td className="p-2">
                                   <Button size="sm" variant="ghost" onClick={() => {
                                     setArchivedTransferIds(prev => new Set(prev).add(log.id));
                                     toast.success("Переміщено в архів");
                                   }}>
+                                    <Archive className="h-3.5 w-3.5 mr-1" />
                                     В архів
                                   </Button>
                                 </td>
-                              )}
                             </tr>
                           ))}
                         </tbody>
@@ -1248,7 +1248,7 @@ export default function StockMarket() {
                   })()}
 
                   {/* Archived section */}
-                  {isAdmin && (() => {
+                  {(() => {
                     const archivedLogs = transferLogs.filter(l => archivedTransferIds.has(l.id) && !transferDeletedIds.has(l.id));
                     return archivedLogs.length > 0 ? (
                     <div className="mt-6 border-t pt-4">
