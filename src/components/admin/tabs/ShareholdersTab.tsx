@@ -12,8 +12,9 @@ import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { SharePriceControl } from "@/components/admin/SharePriceControl";
 import { calcFullProfitDistribution, type ShareholderInput, type ShareholderDistConfig, DEFAULT_DIST_CONFIG } from "@/lib/shareholderCalculations";
 import { useProfitDistConfig } from "@/hooks/useProfitDistConfig";
-import { getTitleName } from "@/lib/shareholderRules";
+import { getTitleName, getTitleByPercent } from "@/lib/shareholderRules";
 import { useAuth } from "@/context/AuthContext";
+import { TitleApprovalDropdown } from "@/components/admin/TitleApprovalDropdown";
 export function ShareholdersTab() {
   const { user } = useAuth();
   const {
