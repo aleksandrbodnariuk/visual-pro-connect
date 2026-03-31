@@ -1248,7 +1248,7 @@ export default function StockMarket() {
                   })()}
 
                   {/* Archived section */}
-                  {isAdmin && (() => {
+                  {(() => {
                     const archivedLogs = transferLogs.filter(l => archivedTransferIds.has(l.id) && !transferDeletedIds.has(l.id));
                     return archivedLogs.length > 0 ? (
                     <div className="mt-6 border-t pt-4">
