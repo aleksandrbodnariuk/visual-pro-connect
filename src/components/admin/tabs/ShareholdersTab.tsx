@@ -605,6 +605,14 @@ export function ShareholdersTab() {
                           {getProfitDisplay(shareholder.id, shareholder.shares)}
                         </td>
                         <td className="p-2">
+                          <TitleApprovalDropdown
+                            userId={shareholder.id}
+                            approvedLevel={titleApprovals[shareholder.id] ?? 1}
+                            currentShareLevel={getTitleByPercent(parseFloat(shareholder.percentage))?.level ?? 0}
+                            onApprove={saveTitleApproval}
+                          />
+                        </td>
+                        <td className="p-2">
                           <Button variant="outline" size="sm">
                             <PenLine className="h-4 w-4 mr-1" /> Деталі
                           </Button>
