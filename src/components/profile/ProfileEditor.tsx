@@ -519,7 +519,7 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
               </Button>
               <Button 
                 onClick={handleSaveAvatar} 
-                disabled={isUploading || (!tempAvatarFile && tempAvatarUrl === avatarUrl)}
+                disabled={isUploading || !tempAvatarUrl || !croppedAreaPixels}
               >
                 {isUploading ? "Зберігаю..." : "Зберегти аватар"}
               </Button>
