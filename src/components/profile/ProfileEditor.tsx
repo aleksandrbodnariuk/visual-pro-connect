@@ -338,8 +338,7 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
           <div className="flex flex-col items-center sm:flex-row sm:items-start gap-6">
             <div className="flex flex-col items-center">
               <Avatar className="h-24 w-24 mb-2 cursor-pointer hover:opacity-90 transition-opacity" 
-                      onClick={handleOpenAvatarDialog}
-                      style={{ transform: `scale(${avatarSize / 100})` }}>
+                      onClick={handleOpenAvatarDialog}>
                 {avatarUrl ? (
                   <AvatarImage src={avatarUrl} alt={user?.full_name || 'Користувач'} />
                 ) : (
@@ -360,16 +359,6 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
               >
                 <Camera className="h-4 w-4 mr-1" /> Змінити фото
               </Button>
-              
-              <div className="flex gap-1">
-                <Button variant="ghost" size="sm" onClick={() => setAvatarSize(Math.max(50, avatarSize - 10))}>
-                  <ChevronsDown className="h-4 w-4" />
-                </Button>
-                <span className="text-sm text-muted-foreground">{avatarSize}%</span>
-                <Button variant="ghost" size="sm" onClick={() => setAvatarSize(Math.min(150, avatarSize + 10))}>
-                  <ChevronsUp className="h-4 w-4" />
-                </Button>
-              </div>
             </div>
             
             <div className="flex-1 space-y-4 w-full">
