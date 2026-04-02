@@ -47,8 +47,37 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
   const [tempAvatarUrl, setTempAvatarUrl] = useState<string | null>(null);
   const [tempAvatarFile, setTempAvatarFile] = useState<File | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(user?.categories || []);
-  const [avatarSize, setAvatarSize] = useState<number>(100); // Default size 100%
+  const [cropPosition, setCropPosition] = useState({ x: 0, y: 0 });
+  const [cropZoom, setCropZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const onCropComplete = useCallback((_: Area, areaPixels: Area) => {
+    setCroppedAreaPixels(areaPixels);
+  }, []);
+
+  const getCroppedImg = useCallback(async (imageSrc: string, pixelCrop: Area): Promise<Blob> => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = reject;
+      image.src = imageSrc;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+    const ctx = canvas.getContext("2d")!;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(
+      image,
+      pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
+      0, 0, pixelCrop.width, pixelCrop.height
+    );
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Canvas toBlob failed")), "image/webp", 0.9);
+    });
+  }, []);
 
   useEffect(() => {
     if (user) {
