@@ -431,20 +431,30 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="flex justify-center py-4" style={{ minHeight: '160px' }}>
-              <Avatar 
-                className="h-32 w-32 transition-transform origin-center"
-                style={{ transform: `scale(${avatarSize / 100})` }}
-              >
-                {tempAvatarUrl ? (
-                  <AvatarImage src={tempAvatarUrl} alt="Новий аватар" />
-                ) : (
+            {tempAvatarUrl ? (
+              <div className="relative w-full" style={{ height: '300px' }}>
+                <Cropper
+                  image={tempAvatarUrl}
+                  crop={cropPosition}
+                  zoom={cropZoom}
+                  aspect={1}
+                  cropShape="round"
+                  showGrid={false}
+                  objectFit="contain"
+                  onCropChange={setCropPosition}
+                  onZoomChange={setCropZoom}
+                  onCropComplete={onCropComplete}
+                />
+              </div>
+            ) : (
+              <div className="flex justify-center py-8">
+                <Avatar className="h-32 w-32">
                   <AvatarFallback>
                     <UserRound className="h-16 w-16" />
                   </AvatarFallback>
-                )}
-              </Avatar>
-            </div>
+                </Avatar>
+              </div>
+            )}
             
             <div className="space-y-4">
               <div>
@@ -469,18 +479,19 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
                 </Button>
               </div>
               
-              <div>
-                <Label htmlFor="avatarSize">Розмір аватара</Label>
-                <Slider
-                  defaultValue={[100]}
-                  max={150}
-                  min={50}
-                  step={5}
-                  onValueChange={handleAvatarSizeChange}
-                  value={[avatarSize]}
-                  className="mt-2"
-                />
-              </div>
+              {tempAvatarUrl && (
+                <div>
+                  <Label>Масштаб</Label>
+                  <Slider
+                    min={1}
+                    max={3}
+                    step={0.01}
+                    value={[cropZoom]}
+                    onValueChange={([v]) => setCropZoom(v)}
+                    className="mt-2"
+                  />
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter className="flex justify-between">
