@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { UserRound, Upload, Trash2, Camera, ChevronsUp, ChevronsDown } from "lucide-react";
+import { UserRound, Upload, Trash2, Camera } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,8 @@ import { useDynamicCategories, getIconComponent } from "@/hooks/useDynamicCatego
 import { Slider } from "@/components/ui/slider";
 import { User } from "@/hooks/users/types";
 import { z } from "zod";
+import Cropper from "react-easy-crop";
+import type { Area } from "react-easy-crop";
 
 // Validation schema for profile fields
 const profileSchema = z.object({
@@ -45,8 +47,37 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
   const [tempAvatarUrl, setTempAvatarUrl] = useState<string | null>(null);
   const [tempAvatarFile, setTempAvatarFile] = useState<File | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(user?.categories || []);
-  const [avatarSize, setAvatarSize] = useState<number>(100); // Default size 100%
+  const [cropPosition, setCropPosition] = useState({ x: 0, y: 0 });
+  const [cropZoom, setCropZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const onCropComplete = useCallback((_: Area, areaPixels: Area) => {
+    setCroppedAreaPixels(areaPixels);
+  }, []);
+
+  const getCroppedImg = useCallback(async (imageSrc: string, pixelCrop: Area): Promise<Blob> => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = reject;
+      image.src = imageSrc;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+    const ctx = canvas.getContext("2d")!;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(
+      image,
+      pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
+      0, 0, pixelCrop.width, pixelCrop.height
+    );
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Canvas toBlob failed")), "image/webp", 0.9);
+    });
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -124,6 +155,9 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
   const handleOpenAvatarDialog = () => {
     setTempAvatarUrl(avatarUrl);
     setTempAvatarFile(null);
+    setCropPosition({ x: 0, y: 0 });
+    setCropZoom(1);
+    setCroppedAreaPixels(null);
     setAvatarDialogOpen(true);
   };
 
@@ -139,6 +173,8 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
     const reader = new FileReader();
     reader.onloadend = () => {
       setTempAvatarUrl(reader.result as string);
+      setCropPosition({ x: 0, y: 0 });
+      setCropZoom(1);
     };
     reader.readAsDataURL(file);
   };
@@ -153,11 +189,14 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
     try {
       setIsUploading(true);
       
-      if (tempAvatarFile) {
+      if (tempAvatarUrl && croppedAreaPixels) {
+        // Crop the image first
+        const croppedBlob = await getCroppedImg(tempAvatarUrl, croppedAreaPixels);
+        const croppedFile = new File([croppedBlob], `avatar.webp`, { type: 'image/webp' });
+        
         // Спроба завантаження в Supabase
         try {
-          const fileExt = tempAvatarFile.name.split(".").pop();
-          const filePath = `${user.id}/avatar.${fileExt}`;
+          const filePath = `${user.id}/avatar.webp`;
 
           // Видаляємо старий аватар, якщо він існує
           if (avatarUrl) {
@@ -174,9 +213,9 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
           }
 
           // Завантажуємо новий аватар
-          const { error: uploadError } = await supabase.storage
+           const { error: uploadError } = await supabase.storage
             .from("avatars")
-            .upload(filePath, tempAvatarFile, { upsert: true });
+            .upload(filePath, croppedFile, { upsert: true });
 
           if (uploadError) throw uploadError;
 
@@ -219,7 +258,7 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
             });
             localStorage.setItem("users", JSON.stringify(updatedUsers));
           };
-          reader.readAsDataURL(tempAvatarFile);
+          reader.readAsDataURL(croppedFile);
         }
       }
 
@@ -298,9 +337,7 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
     });
   };
 
-  const handleAvatarSizeChange = (value: number[]) => {
-    setAvatarSize(value[0]);
-  };
+  // removed handleAvatarSizeChange - now using react-easy-crop
 
   return (
     <div className="space-y-6">
@@ -309,8 +346,7 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
           <div className="flex flex-col items-center sm:flex-row sm:items-start gap-6">
             <div className="flex flex-col items-center">
               <Avatar className="h-24 w-24 mb-2 cursor-pointer hover:opacity-90 transition-opacity" 
-                      onClick={handleOpenAvatarDialog}
-                      style={{ transform: `scale(${avatarSize / 100})` }}>
+                      onClick={handleOpenAvatarDialog}>
                 {avatarUrl ? (
                   <AvatarImage src={avatarUrl} alt={user?.full_name || 'Користувач'} />
                 ) : (
@@ -331,16 +367,6 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
               >
                 <Camera className="h-4 w-4 mr-1" /> Змінити фото
               </Button>
-              
-              <div className="flex gap-1">
-                <Button variant="ghost" size="sm" onClick={() => setAvatarSize(Math.max(50, avatarSize - 10))}>
-                  <ChevronsDown className="h-4 w-4" />
-                </Button>
-                <span className="text-sm text-muted-foreground">{avatarSize}%</span>
-                <Button variant="ghost" size="sm" onClick={() => setAvatarSize(Math.min(150, avatarSize + 10))}>
-                  <ChevronsUp className="h-4 w-4" />
-                </Button>
-              </div>
             </div>
             
             <div className="flex-1 space-y-4 w-full">
@@ -413,20 +439,30 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="flex justify-center py-4" style={{ minHeight: '160px' }}>
-              <Avatar 
-                className="h-32 w-32 transition-transform origin-center"
-                style={{ transform: `scale(${avatarSize / 100})` }}
-              >
-                {tempAvatarUrl ? (
-                  <AvatarImage src={tempAvatarUrl} alt="Новий аватар" />
-                ) : (
+            {tempAvatarUrl ? (
+              <div className="relative w-full" style={{ height: '300px' }}>
+                <Cropper
+                  image={tempAvatarUrl}
+                  crop={cropPosition}
+                  zoom={cropZoom}
+                  aspect={1}
+                  cropShape="round"
+                  showGrid={false}
+                  objectFit="contain"
+                  onCropChange={setCropPosition}
+                  onZoomChange={setCropZoom}
+                  onCropComplete={onCropComplete}
+                />
+              </div>
+            ) : (
+              <div className="flex justify-center py-8">
+                <Avatar className="h-32 w-32">
                   <AvatarFallback>
                     <UserRound className="h-16 w-16" />
                   </AvatarFallback>
-                )}
-              </Avatar>
-            </div>
+                </Avatar>
+              </div>
+            )}
             
             <div className="space-y-4">
               <div>
@@ -451,18 +487,19 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
                 </Button>
               </div>
               
-              <div>
-                <Label htmlFor="avatarSize">Розмір аватара</Label>
-                <Slider
-                  defaultValue={[100]}
-                  max={150}
-                  min={50}
-                  step={5}
-                  onValueChange={handleAvatarSizeChange}
-                  value={[avatarSize]}
-                  className="mt-2"
-                />
-              </div>
+              {tempAvatarUrl && (
+                <div>
+                  <Label>Масштаб</Label>
+                  <Slider
+                    min={1}
+                    max={3}
+                    step={0.01}
+                    value={[cropZoom]}
+                    onValueChange={([v]) => setCropZoom(v)}
+                    className="mt-2"
+                  />
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter className="flex justify-between">
@@ -484,7 +521,7 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
               </Button>
               <Button 
                 onClick={handleSaveAvatar} 
-                disabled={isUploading || (!tempAvatarFile && tempAvatarUrl === avatarUrl)}
+                disabled={isUploading || !tempAvatarUrl || !croppedAreaPixels}
               >
                 {isUploading ? "Зберігаю..." : "Зберегти аватар"}
               </Button>
