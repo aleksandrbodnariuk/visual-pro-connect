@@ -211,9 +211,9 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
           }
 
           // Завантажуємо новий аватар
-          const { error: uploadError } = await supabase.storage
+           const { error: uploadError } = await supabase.storage
             .from("avatars")
-            .upload(filePath, tempAvatarFile, { upsert: true });
+            .upload(filePath, croppedFile, { upsert: true });
 
           if (uploadError) throw uploadError;
 
