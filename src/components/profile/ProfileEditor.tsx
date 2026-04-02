@@ -329,9 +329,7 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
     });
   };
 
-  const handleAvatarSizeChange = (value: number[]) => {
-    setAvatarSize(value[0]);
-  };
+  // removed handleAvatarSizeChange - now using react-easy-crop
 
   return (
     <div className="space-y-6">
