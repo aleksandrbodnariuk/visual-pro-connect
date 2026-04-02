@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,8 @@ import { useDynamicCategories, getIconComponent } from "@/hooks/useDynamicCatego
 import { Slider } from "@/components/ui/slider";
 import { User } from "@/hooks/users/types";
 import { z } from "zod";
+import Cropper from "react-easy-crop";
+import type { Area } from "react-easy-crop";
 
 // Validation schema for profile fields
 const profileSchema = z.object({
