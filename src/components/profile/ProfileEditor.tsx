@@ -155,6 +155,9 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
   const handleOpenAvatarDialog = () => {
     setTempAvatarUrl(avatarUrl);
     setTempAvatarFile(null);
+    setCropPosition({ x: 0, y: 0 });
+    setCropZoom(1);
+    setCroppedAreaPixels(null);
     setAvatarDialogOpen(true);
   };
 
