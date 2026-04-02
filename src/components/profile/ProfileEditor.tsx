@@ -173,6 +173,8 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
     const reader = new FileReader();
     reader.onloadend = () => {
       setTempAvatarUrl(reader.result as string);
+      setCropPosition({ x: 0, y: 0 });
+      setCropZoom(1);
     };
     reader.readAsDataURL(file);
   };
