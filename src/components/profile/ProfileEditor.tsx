@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { UserRound, Upload, Trash2, Camera, ChevronsUp, ChevronsDown } from "lucide-react";
+import { UserRound, Upload, Trash2, Camera } from "lucide-react";
 import {
   Dialog,
   DialogContent,
