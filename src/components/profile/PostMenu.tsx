@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { getPostShareUrl } from "@/lib/postShare";
 
 interface PostMenuProps {
   postId: string;
@@ -56,8 +57,7 @@ export function PostMenu({ postId, isAuthor, onEdit, onDelete, caption }: PostMe
     setShowDeleteDialog(false);
   };
 
-  // OG-friendly share URL for social media previews
-  const shareUrl = `${window.location.origin}/share/post/${postId}`;
+  const shareUrl = getPostShareUrl(postId);
 
   const handleCopyLink = () => {
     try {
