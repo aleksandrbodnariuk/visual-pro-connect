@@ -256,7 +256,7 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
             });
             localStorage.setItem("users", JSON.stringify(updatedUsers));
           };
-          reader.readAsDataURL(tempAvatarFile);
+          reader.readAsDataURL(croppedFile);
         }
       }
 
