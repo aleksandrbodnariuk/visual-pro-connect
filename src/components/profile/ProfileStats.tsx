@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Heart, MessageCircle, Share2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { getPostShareUrl } from "@/lib/postShare";
 
 interface ProfileStatsProps {
   likes: number;
@@ -53,18 +54,20 @@ export function ProfileStats({ likes, comments, postId, onLike }: ProfileStatsPr
   };
 
   const handleShareClick = () => {
-    if (navigator.share && postId) {
+    if (!postId) return;
+
+    const shareUrl = getPostShareUrl(postId);
+
+    if (navigator.share) {
       navigator.share({
         title: 'Перегляньте цей пост',
         text: 'Цікавий пост від спільноти B&C',
-        url: `${window.location.origin}/post/${postId}`,
+        url: shareUrl,
       })
         .then(() => console.log('Shared successfully'))
         .catch((error) => console.log('Error sharing:', error));
     } else {
-      // Копіюємо посилання в буфер обміну
-      const url = `${window.location.origin}/post/${postId}`;
-      navigator.clipboard.writeText(url).then(
+      navigator.clipboard.writeText(shareUrl).then(
         () => {
           toast.success("Посилання скопійовано");
         },
