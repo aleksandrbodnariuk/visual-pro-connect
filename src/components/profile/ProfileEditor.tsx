@@ -187,11 +187,14 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
     try {
       setIsUploading(true);
       
-      if (tempAvatarFile) {
+      if (tempAvatarUrl && croppedAreaPixels) {
+        // Crop the image first
+        const croppedBlob = await getCroppedImg(tempAvatarUrl, croppedAreaPixels);
+        const croppedFile = new File([croppedBlob], `avatar.webp`, { type: 'image/webp' });
+        
         // Спроба завантаження в Supabase
         try {
-          const fileExt = tempAvatarFile.name.split(".").pop();
-          const filePath = `${user.id}/avatar.${fileExt}`;
+          const filePath = `${user.id}/avatar.webp`;
 
           // Видаляємо старий аватар, якщо він існує
           if (avatarUrl) {
