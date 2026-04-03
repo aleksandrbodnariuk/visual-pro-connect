@@ -23,11 +23,9 @@ export function getPostUrl(postId: string) {
 }
 
 export function getPostShareUrl(postId: string) {
-  const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || "https://cxdkaxjeibqdmpvozirz.supabase.co").replace(/\/$/, "");
-  const params = new URLSearchParams({
-    id: postId,
-    redirect: getPostUrl(postId),
-  });
-
-  return `${supabaseUrl}/functions/v1/og-post?${params.toString()}`;
+  // Use the app's own domain with /share/post/ path.
+  // On Vercel, this is proxied to the Supabase edge function via vercel.json rewrites,
+  // avoiding Cloudflare bot-protection blocks (403) that occur when crawlers
+  // hit Supabase domains directly.
+  return `${getPublicAppOrigin()}/share/post/${postId}`;
 }
