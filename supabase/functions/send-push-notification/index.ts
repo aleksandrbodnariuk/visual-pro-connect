@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     }
 
     webpush.setVapidDetails(
-      'mailto:admin@community-b-c.lovable.app',
+      'mailto:admin@bcsocial.org',
       vapidPublicKey,
       vapidPrivateKey
     );
