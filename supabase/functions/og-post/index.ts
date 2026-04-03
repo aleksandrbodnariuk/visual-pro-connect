@@ -3,8 +3,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const DEFAULT_SITE_URL = Deno.env.get('SITE_URL')?.trim() || 'https://community-b-c.lovable.app';
-const LEGACY_SITE_URL = 'https://bcsocial.org';
+const SITE_URL = 'https://bcsocial.org';
 const SITE_NAME = 'Спільнота B&C';
 
 function escapeHtml(str: string): string {
@@ -25,10 +24,6 @@ function truncate(str: string, max: number): string {
   return str.slice(0, max - 1) + '…';
 }
 
-function getCanonicalUrl(postId: string): string {
-  return `${DEFAULT_SITE_URL}/post/${postId}`;
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -39,18 +34,16 @@ Deno.serve(async (req) => {
     const postId = url.searchParams.get('id');
 
     if (!postId) {
-      return Response.redirect(DEFAULT_SITE_URL, 302);
+      return new Response('Missing id', { status: 400, headers: corsHeaders });
     }
 
-    // Validate UUID format
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId)) {
-      return Response.redirect(DEFAULT_SITE_URL, 302);
+      return new Response('Invalid id', { status: 400, headers: corsHeaders });
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-    // Fetch post data using service role (no auth needed for public OG tags)
     const postRes = await fetch(
       `${supabaseUrl}/rest/v1/posts?id=eq.${postId}&select=id,content,media_url,user_id,created_at`,
       {
@@ -65,7 +58,7 @@ Deno.serve(async (req) => {
     const post = posts?.[0];
 
     if (!post) {
-      return Response.redirect(DEFAULT_SITE_URL, 302);
+      return new Response('Post not found', { status: 404, headers: corsHeaders });
     }
 
     // Fetch author
@@ -92,13 +85,13 @@ Deno.serve(async (req) => {
     const contentText = post.content
       ? stripNewlines(post.content.replace(/(https?:\/\/[^\s]+)/g, ''))
       : '';
-    
+
     const ogTitle = escapeHtml(
       contentText
         ? truncate(`${authorName}: ${contentText}`, 70)
         : `Публікація від ${authorName}`
     );
-    
+
     const ogDescription = escapeHtml(
       contentText
         ? truncate(contentText, 200)
@@ -106,7 +99,8 @@ Deno.serve(async (req) => {
     );
 
     const ogImage = post.media_url || authorAvatar || '';
-    const canonicalUrl = getCanonicalUrl(postId);
+    const canonicalUrl = `${SITE_URL}/post/${postId}`;
+
     const imageMetaTags = ogImage
       ? `
   <meta property="og:image" content="${escapeHtml(ogImage)}">
@@ -115,7 +109,21 @@ Deno.serve(async (req) => {
   <meta name="twitter:image" content="${escapeHtml(ogImage)}">`
       : '';
 
-    // Return HTML with OG tags + redirect for real users
+    // Detect bots by User-Agent
+    const ua = (req.headers.get('user-agent') || '').toLowerCase();
+    const isBot = /facebookexternalhit|telegrambot|twitterbot|linkedinbot|whatsapp|slackbot|discordbot|googlebot|bingbot|yandexbot|bot|crawl|spider|preview/i.test(ua);
+
+    // For bots: return OG HTML without any redirects
+    // For real users: redirect to the SPA post page
+    const redirectTags = isBot
+      ? ''
+      : `
+  <meta http-equiv="refresh" content="0;url=${escapeHtml(canonicalUrl)}">`;
+
+    const redirectScript = isBot
+      ? ''
+      : `\n  <script>window.location.replace(${JSON.stringify(canonicalUrl)});</script>`;
+
     const html = `<!DOCTYPE html>
 <html lang="uk">
 <head>
@@ -137,13 +145,11 @@ ${imageMetaTags}
   <meta name="twitter:title" content="${ogTitle}">
   <meta name="twitter:description" content="${ogDescription}">
   
-  <!-- Redirect real users to the actual page -->
-  <meta http-equiv="refresh" content="0;url=${escapeHtml(canonicalUrl)}">
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
+${redirectTags}
 </head>
 <body>
-  <p>Перенаправлення на <a href="${escapeHtml(canonicalUrl)}">${SITE_NAME}</a>...</p>
-  <script>window.location.replace(${JSON.stringify(canonicalUrl)});</script>
+  <p><a href="${escapeHtml(canonicalUrl)}">${ogTitle}</a></p>${redirectScript}
 </body>
 </html>`;
 
@@ -156,6 +162,6 @@ ${imageMetaTags}
     });
   } catch (error) {
     console.error('OG post error:', error);
-    return Response.redirect(DEFAULT_SITE_URL, 302);
+    return new Response('Internal error', { status: 500, headers: corsHeaders });
   }
 });
