@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
     );
 
     const ogImage = post.media_url || authorAvatar || '';
-    const canonicalUrl = getCanonicalUrl(postId, url);
+    const canonicalUrl = getCanonicalUrl(postId);
     const imageMetaTags = ogImage
       ? `
   <meta property="og:image" content="${escapeHtml(ogImage)}">
