@@ -5,6 +5,7 @@ const corsHeaders = {
 
 const SITE_URL = 'https://bcsocial.org';
 const SITE_NAME = 'Спільнота B&C';
+const FALLBACK_IMAGE = `${SITE_URL}/default-og.jpg`;
 
 function escapeHtml(str: string): string {
   return str
@@ -22,6 +23,12 @@ function stripNewlines(str: string): string {
 function truncate(str: string, max: number): string {
   if (str.length <= max) return str;
   return str.slice(0, max - 1) + '…';
+}
+
+function ensureAbsoluteUrl(url: string): string {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return `${SITE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
 Deno.serve(async (req) => {
@@ -61,7 +68,6 @@ Deno.serve(async (req) => {
       return new Response('Post not found', { status: 404, headers: corsHeaders });
     }
 
-    // Fetch author
     let authorName = 'Користувач';
     let authorAvatar = '';
     if (post.user_id) {
@@ -81,7 +87,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Build OG data
     const contentText = post.content
       ? stripNewlines(post.content.replace(/(https?:\/\/[^\s]+)/g, ''))
       : '';
@@ -98,31 +103,9 @@ Deno.serve(async (req) => {
         : `Дивіться публікацію від ${authorName} у Спільноті B&C`
     );
 
-    const ogImage = post.media_url || authorAvatar || '';
+    const rawImage = post.media_url || authorAvatar || '';
+    const ogImage = ensureAbsoluteUrl(rawImage) || FALLBACK_IMAGE;
     const canonicalUrl = `${SITE_URL}/post/${postId}`;
-
-    const imageMetaTags = ogImage
-      ? `
-  <meta property="og:image" content="${escapeHtml(ogImage)}">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta name="twitter:image" content="${escapeHtml(ogImage)}">`
-      : '';
-
-    // Detect bots by User-Agent
-    const ua = (req.headers.get('user-agent') || '').toLowerCase();
-    const isBot = /facebookexternalhit|telegrambot|twitterbot|linkedinbot|whatsapp|slackbot|discordbot|googlebot|bingbot|yandexbot|bot|crawl|spider|preview/i.test(ua);
-
-    // For bots: return OG HTML without any redirects
-    // For real users: redirect to the SPA post page
-    const redirectTags = isBot
-      ? ''
-      : `
-  <meta http-equiv="refresh" content="0;url=${escapeHtml(canonicalUrl)}">`;
-
-    const redirectScript = isBot
-      ? ''
-      : `\n  <script>window.location.replace(${JSON.stringify(canonicalUrl)});</script>`;
 
     const html = `<!DOCTYPE html>
 <html lang="uk">
@@ -130,26 +113,28 @@ Deno.serve(async (req) => {
   <meta charset="UTF-8">
   <title>${ogTitle} — ${SITE_NAME}</title>
   <meta name="description" content="${ogDescription}">
-  
-  <!-- Open Graph -->
+
   <meta property="og:type" content="article">
   <meta property="og:title" content="${ogTitle}">
   <meta property="og:description" content="${ogDescription}">
-${imageMetaTags}
+  <meta property="og:image" content="${escapeHtml(ogImage)}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
   <meta property="og:site_name" content="${SITE_NAME}">
   <meta property="og:locale" content="uk_UA">
-  
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="${ogImage ? 'summary_large_image' : 'summary'}">
+
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${ogTitle}">
   <meta name="twitter:description" content="${ogDescription}">
-  
+  <meta name="twitter:image" content="${escapeHtml(ogImage)}">
+
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
-${redirectTags}
 </head>
 <body>
-  <p><a href="${escapeHtml(canonicalUrl)}">${ogTitle}</a></p>${redirectScript}
+  <h1>${ogTitle}</h1>
+  <p>${ogDescription}</p>
+  <p><a href="${escapeHtml(canonicalUrl)}">Відкрити публікацію</a></p>
 </body>
 </html>`;
 
@@ -157,7 +142,7 @@ ${redirectTags}
       headers: {
         ...corsHeaders,
         'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'public, max-age=300, s-maxage=300',
+        'Cache-Control': 'public, max-age=3600, s-maxage=86400',
       },
     });
   } catch (error) {
