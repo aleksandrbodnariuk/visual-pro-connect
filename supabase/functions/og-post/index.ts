@@ -25,27 +25,7 @@ function truncate(str: string, max: number): string {
   return str.slice(0, max - 1) + '…';
 }
 
-function getCanonicalUrl(postId: string, requestUrl: URL): string {
-  const redirectUrl = requestUrl.searchParams.get('redirect');
-
-  if (!redirectUrl) {
-    return `${DEFAULT_SITE_URL}/post/${postId}`;
-  }
-
-  try {
-    const parsed = new URL(redirectUrl);
-    const defaultHost = new URL(DEFAULT_SITE_URL).host;
-    const legacyHost = new URL(LEGACY_SITE_URL).host;
-    const isAllowedHost = parsed.host === defaultHost || parsed.host === legacyHost || parsed.host.endsWith('.lovable.app');
-    const isExpectedPath = parsed.pathname === `/post/${postId}`;
-
-    if (isAllowedHost && isExpectedPath) {
-      return `${parsed.origin}${parsed.pathname}`;
-    }
-  } catch {
-    // Ignore invalid redirect values and fall back to the public post URL.
-  }
-
+function getCanonicalUrl(postId: string): string {
   return `${DEFAULT_SITE_URL}/post/${postId}`;
 }
 
