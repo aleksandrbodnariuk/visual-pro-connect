@@ -29,17 +29,24 @@ export default async function handler(request: Request): Promise<Response> {
     const ogHtml = await ogRes.text();
 
     // Extract OG meta tags, twitter meta tags, description, and canonical link
-    const ogMetaTags = (ogHtml.match(/<meta\s+(?:property|name)="(?:og:|twitter:)[^"]*"\s+content="[^"]*"\s*\/?>/g) || []);
-    const descMeta = ogHtml.match(/<meta\s+name="description"\s+content="[^"]*"\s*\/?>/);
-    const canonicalLink = ogHtml.match(/<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/);
+    const ogMetaTags = ogHtml.match(/<meta[^>]+property="og:[^"]+"[^>]*>/g) || [];
+    const twitterMetaTags = ogHtml.match(/<meta[^>]+name="twitter:[^"]+"[^>]*>/g) || [];
+    const descMeta = ogHtml.match(/<meta[^>]+name="description"[^>]*>/);
+    const canonicalLink = ogHtml.match(/<link[^>]+rel="canonical"[^>]*>/);
     const titleMatch = ogHtml.match(/<title>([^<]+)<\/title>/);
 
     const dynamicTitle = titleMatch?.[1] || '';
     const injectedTags = [
       ...(descMeta ? [descMeta[0]] : []),
       ...ogMetaTags,
+      ...twitterMetaTags,
       ...(canonicalLink ? [canonicalLink[0]] : []),
     ].join('\n    ');
+
+    // If no tags were extracted, just serve the SPA unchanged
+    if (!injectedTags.trim()) {
+      return serveSpa(url);
+    }
 
     // Fetch the SPA index.html
     const spaRes = await fetch(new URL('/index.html', url.origin));
@@ -50,12 +57,12 @@ export default async function handler(request: Request): Promise<Response> {
     let html = await spaRes.text();
 
     // Remove existing generic OG/twitter meta tags from index.html
-    html = html.replace(/<meta\s+property="og:[^"]*"\s+content="[^"]*"\s*\/?>\s*/g, '');
-    html = html.replace(/<meta\s+name="twitter:[^"]*"\s+content="[^"]*"\s*\/?>\s*/g, '');
+    html = html.replace(/<meta[^>]+property="og:[^"]+"[^>]*>\s*/g, '');
+    html = html.replace(/<meta[^>]+name="twitter:[^"]+"[^>]*>\s*/g, '');
 
     // Replace the generic description with dynamic one if available
     if (descMeta) {
-      html = html.replace(/<meta\s+name="description"\s+content="[^"]*"\s*\/?>/, '');
+      html = html.replace(/<meta[^>]+name="description"[^>]*>/, '');
     }
 
     // Replace title if we have a dynamic one
