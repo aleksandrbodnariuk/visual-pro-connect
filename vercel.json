@@ -29,6 +29,10 @@
       "destination": "https://cxdkaxjeibqdmpvozirz.supabase.co/functions/v1/og-post?id=:id"
     },
     {
+      "source": "/post/:id",
+      "destination": "/api/post/:id"
+    },
+    {
       "source": "/((?!api/|share/|manifest\\.json|sw\\.js).*)",
       "destination": "/index.html"
     }
