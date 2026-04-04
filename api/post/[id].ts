@@ -26,7 +26,13 @@ export default async function handler(request: Request): Promise<Response> {
       return serveSpa(url);
     }
 
-    const ogHtml = await ogRes.text();
+    const rawOgHtml = await ogRes.text();
+
+    // Normalize relative URLs to absolute
+    const ogHtml = rawOgHtml.replace(
+      /content="\/(?!\/)/g,
+      `content="${url.origin}/`
+    );
 
     // Extract OG meta tags, twitter meta tags, description, and canonical link
     const ogMetaTags = ogHtml.match(/<meta[^>]+property="og:[^"]+"[^>]*>/g) || [];
@@ -36,10 +42,15 @@ export default async function handler(request: Request): Promise<Response> {
     const titleMatch = ogHtml.match(/<title>([^<]+)<\/title>/);
 
     const dynamicTitle = titleMatch?.[1] || '';
+    // Fallback og:url if not returned by Supabase
+    const hasOgUrl = ogMetaTags.some(t => t.includes('og:url'));
+    const ogUrlTag = hasOgUrl ? '' : `<meta property="og:url" content="${url.origin}/post/${postId}">`;
+
     const injectedTags = [
       ...(descMeta ? [descMeta[0]] : []),
       ...ogMetaTags,
       ...twitterMetaTags,
+      ...(ogUrlTag ? [ogUrlTag] : []),
       ...(canonicalLink ? [canonicalLink[0]] : []),
     ].join('\n    ');
 
