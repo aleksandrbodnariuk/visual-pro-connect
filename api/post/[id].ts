@@ -57,12 +57,12 @@ export default async function handler(request: Request): Promise<Response> {
     let html = await spaRes.text();
 
     // Remove existing generic OG/twitter meta tags from index.html
-    html = html.replace(/<meta\s+property="og:[^"]*"\s+content="[^"]*"\s*\/?>\s*/g, '');
-    html = html.replace(/<meta\s+name="twitter:[^"]*"\s+content="[^"]*"\s*\/?>\s*/g, '');
+    html = html.replace(/<meta[^>]+property="og:[^"]+"[^>]*>\s*/g, '');
+    html = html.replace(/<meta[^>]+name="twitter:[^"]+"[^>]*>\s*/g, '');
 
     // Replace the generic description with dynamic one if available
     if (descMeta) {
-      html = html.replace(/<meta\s+name="description"\s+content="[^"]*"\s*\/?>/, '');
+      html = html.replace(/<meta[^>]+name="description"[^>]*>/, '');
     }
 
     // Replace title if we have a dynamic one
