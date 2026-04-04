@@ -26,7 +26,13 @@ export default async function handler(request: Request): Promise<Response> {
       return serveSpa(url);
     }
 
-    const ogHtml = await ogRes.text();
+    const rawOgHtml = await ogRes.text();
+
+    // Normalize relative URLs to absolute
+    const ogHtml = rawOgHtml.replace(
+      /content="\/(?!\/)/g,
+      `content="${url.origin}/`
+    );
 
     // Extract OG meta tags, twitter meta tags, description, and canonical link
     const ogMetaTags = ogHtml.match(/<meta[^>]+property="og:[^"]+"[^>]*>/g) || [];
@@ -36,10 +42,15 @@ export default async function handler(request: Request): Promise<Response> {
     const titleMatch = ogHtml.match(/<title>([^<]+)<\/title>/);
 
     const dynamicTitle = titleMatch?.[1] || '';
+    // Fallback og:url if not returned by Supabase
+    const hasOgUrl = ogMetaTags.some(t => t.includes('og:url'));
+    const ogUrlTag = hasOgUrl ? '' : `<meta property="og:url" content="${url.origin}/post/${postId}">`;
+
     const injectedTags = [
       ...(descMeta ? [descMeta[0]] : []),
       ...ogMetaTags,
       ...twitterMetaTags,
+      ...(ogUrlTag ? [ogUrlTag] : []),
       ...(canonicalLink ? [canonicalLink[0]] : []),
     ].join('\n    ');
 
@@ -71,12 +82,14 @@ export default async function handler(request: Request): Promise<Response> {
     }
 
     // Inject dynamic OG tags before </head>
-    html = html.replace('</head>', `    ${injectedTags}\n  </head>`);
+    if (html.includes('</head>')) {
+      html = html.replace('</head>', `    ${injectedTags}\n  </head>`);
+    }
 
     return new Response(html, {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+        'Cache-Control': 'public, max-age=0, s-maxage=3600',
       },
     });
   } catch (e) {
