@@ -82,12 +82,14 @@ export default async function handler(request: Request): Promise<Response> {
     }
 
     // Inject dynamic OG tags before </head>
-    html = html.replace('</head>', `    ${injectedTags}\n  </head>`);
+    if (html.includes('</head>')) {
+      html = html.replace('</head>', `    ${injectedTags}\n  </head>`);
+    }
 
     return new Response(html, {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+        'Cache-Control': 'public, max-age=0, s-maxage=3600',
       },
     });
   } catch (e) {
