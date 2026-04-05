@@ -719,6 +719,18 @@ export function UsersTab() {
                       onToggle={() => toggleRepresentativeStatus(user.id)}
                     />
                   </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Пошта:</span>
+                    {user.email_confirmed_at ? (
+                      <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                        <MailCheck className="h-3.5 w-3.5" /> Підтверджена
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
+                        <MailX className="h-3.5 w-3.5" /> Не підтверджена
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="h-3 w-3" />
                     <span>{formatLastSeen(user.last_seen)}</span>
