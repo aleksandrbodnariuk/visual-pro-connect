@@ -566,8 +566,8 @@ export function UsersTab() {
 
         {/* Desktop Table - hidden on mobile */}
         <div className="hidden md:block overflow-x-auto">
-          <div className="min-w-[1400px] space-y-4">
-            <div className="grid grid-cols-10 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
+          <div className="min-w-[1500px] space-y-4">
+            <div className="grid grid-cols-11 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
               <div>ID</div>
               <div>Email</div>
               <div>Ім'я</div>
@@ -576,6 +576,7 @@ export function UsersTab() {
               <div>Акціонер</div>
               <div>Фахівець</div>
               <div>Представник</div>
+              <div>Пошта</div>
               <div>Останній візит</div>
               <div>Дії</div>
             </div>
