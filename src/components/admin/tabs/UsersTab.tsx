@@ -12,7 +12,7 @@ import { SpecialistToggle } from "@/components/admin/users/SpecialistToggle";
 import { RepresentativeToggle } from "@/components/admin/users/RepresentativeToggle";
 import { UserActions } from "@/components/admin/users/UserActions";
 import { DeleteUserDialog } from "@/components/admin/users/DeleteUserDialog";
-import { Copy, Clock } from "lucide-react";
+import { Copy, Clock, MailCheck, MailX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // Format last_seen date to a human-readable string
