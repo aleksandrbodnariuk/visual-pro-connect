@@ -3,6 +3,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FriendsList } from "@/components/profile/FriendsList";
 import { FriendRequestsList } from "@/components/profile/FriendRequestsList";
+import { SentFriendRequestsList } from "@/components/profile/SentFriendRequestsList";
 import { BlockedUsersList } from "@/components/profile/BlockedUsersList";
 
 export default function Friends() {
@@ -23,6 +24,7 @@ export default function Friends() {
             <div className="space-y-6">
               <FriendRequestsList />
               <FriendsList showAll />
+              <SentFriendRequestsList />
               <BlockedUsersList />
             </div>
           </div>
