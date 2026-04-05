@@ -12,7 +12,7 @@ import { SpecialistToggle } from "@/components/admin/users/SpecialistToggle";
 import { RepresentativeToggle } from "@/components/admin/users/RepresentativeToggle";
 import { UserActions } from "@/components/admin/users/UserActions";
 import { DeleteUserDialog } from "@/components/admin/users/DeleteUserDialog";
-import { Copy, Clock } from "lucide-react";
+import { Copy, Clock, MailCheck, MailX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // Format last_seen date to a human-readable string
@@ -566,8 +566,8 @@ export function UsersTab() {
 
         {/* Desktop Table - hidden on mobile */}
         <div className="hidden md:block overflow-x-auto">
-          <div className="min-w-[1400px] space-y-4">
-            <div className="grid grid-cols-10 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
+          <div className="min-w-[1500px] space-y-4">
+            <div className="grid grid-cols-11 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
               <div>ID</div>
               <div>Email</div>
               <div>Ім'я</div>
@@ -576,12 +576,13 @@ export function UsersTab() {
               <div>Акціонер</div>
               <div>Фахівець</div>
               <div>Представник</div>
+              <div>Пошта</div>
               <div>Останній візит</div>
               <div>Дії</div>
             </div>
 
             {filteredUsers.map((user) => (
-              <div key={user.id} className="grid grid-cols-10 gap-4 items-center py-2 border-b">
+              <div key={user.id} className="grid grid-cols-11 gap-4 items-center py-2 border-b">
                 <div className="text-xs font-mono flex items-center gap-1 min-w-0">
                   <span className="truncate max-w-[120px]" title={user.id}>
                     {user.id}
@@ -628,6 +629,19 @@ export function UsersTab() {
                   isRepresentative={isRepresentative(user.id)}
                   onToggle={() => toggleRepresentativeStatus(user.id)}
                 />
+                <div className="flex items-center gap-1 min-w-0" title={user.email_confirmed_at ? `Підтверджено: ${new Date(user.email_confirmed_at).toLocaleString('uk-UA')}` : 'Не підтверджено'}>
+                  {user.email_confirmed_at ? (
+                    <span className="flex items-center gap-1 text-xs text-green-500">
+                      <MailCheck className="h-4 w-4 shrink-0" />
+                      <span className="truncate">Так</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-xs text-red-500">
+                      <MailX className="h-4 w-4 shrink-0" />
+                      <span className="truncate">Ні</span>
+                    </span>
+                  )}
+                </div>
                 <div className="text-xs text-muted-foreground flex items-center gap-1 min-w-0" title={user.last_seen ? new Date(user.last_seen).toLocaleString('uk-UA') : 'Ніколи'}>
                   <Clock className="h-3 w-3 shrink-0" />
                   <span className="truncate">{formatLastSeen(user.last_seen)}</span>
@@ -704,6 +718,18 @@ export function UsersTab() {
                       isRepresentative={isRepresentative(user.id)}
                       onToggle={() => toggleRepresentativeStatus(user.id)}
                     />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Пошта:</span>
+                    {user.email_confirmed_at ? (
+                      <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                        <MailCheck className="h-3.5 w-3.5" /> Підтверджена
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
+                        <MailX className="h-3.5 w-3.5" /> Не підтверджена
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="h-3 w-3" />

@@ -1937,6 +1937,7 @@ export type Database = {
           country: string
           created_at: string
           email: string
+          email_confirmed_at: string
           facebook: string
           founder_admin: boolean
           full_name: string
