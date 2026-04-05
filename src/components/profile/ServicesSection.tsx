@@ -179,6 +179,7 @@ export function ServicesSection({ isCurrentUser, categories, onEditServices, edi
 
   const handleEditService = (service: Service) => {
     setNewService(service);
+    setServicesEditOpen(true);
   };
 
   const handleDeleteService = (id: string) => {
