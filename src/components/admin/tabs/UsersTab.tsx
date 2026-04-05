@@ -629,6 +629,19 @@ export function UsersTab() {
                   isRepresentative={isRepresentative(user.id)}
                   onToggle={() => toggleRepresentativeStatus(user.id)}
                 />
+                <div className="flex items-center gap-1 min-w-0" title={user.email_confirmed_at ? `Підтверджено: ${new Date(user.email_confirmed_at).toLocaleString('uk-UA')}` : 'Не підтверджено'}>
+                  {user.email_confirmed_at ? (
+                    <span className="flex items-center gap-1 text-xs text-green-500">
+                      <MailCheck className="h-4 w-4 shrink-0" />
+                      <span className="truncate">Так</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-xs text-red-500">
+                      <MailX className="h-4 w-4 shrink-0" />
+                      <span className="truncate">Ні</span>
+                    </span>
+                  )}
+                </div>
                 <div className="text-xs text-muted-foreground flex items-center gap-1 min-w-0" title={user.last_seen ? new Date(user.last_seen).toLocaleString('uk-UA') : 'Ніколи'}>
                   <Clock className="h-3 w-3 shrink-0" />
                   <span className="truncate">{formatLastSeen(user.last_seen)}</span>
