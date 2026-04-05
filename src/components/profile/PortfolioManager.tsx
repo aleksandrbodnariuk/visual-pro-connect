@@ -141,9 +141,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       try {
         setIsUploading(true);
         
-        const thumbnailUrl = videoData.thumbnail || videoData.embedUrl;
-        
-        // Спроба збереження в Supabase
+        // Спроба збереження в Supabase — зберігаємо оригінальне посилання
         try {
           const { error: insertError } = await supabase
             .from("portfolio")
@@ -151,7 +149,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
               user_id: userId,
               title,
               description,
-              media_url: thumbnailUrl,
+              media_url: videoLink,
               media_type: "video"
             });
 
@@ -164,7 +162,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
             id: `local_${Date.now()}`,
             title,
             description,
-            media_url: thumbnailUrl,
+            media_url: videoLink,
             media_type: "video"
           };
           
