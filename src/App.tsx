@@ -39,6 +39,7 @@ const RepresentativePanel = lazy(() => import("./pages/RepresentativePanel"));
 const ModeratorPanel = lazy(() => import("./pages/ModeratorPanel"));
 const ServiceCatalog = lazy(() => import("./pages/ServiceCatalog"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -98,6 +99,7 @@ const AppContent = () => {
             <Route path="/representative-panel" element={<RepresentativePanel />} />
             <Route path="/moderator-panel" element={<ModeratorPanel />} />
             <Route path="/services" element={<ServiceCatalog />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

@@ -39,7 +39,9 @@ export default function SupabaseLoginForm({ onSwitchToRegister, onForgotPassword
       if (error) {
         console.error("Login error:", error);
         if (error.message.includes('Invalid login credentials')) {
-          toast.error('Невірні облікові дані. Спробуйте відновити пароль, якщо забули його.');
+          toast.error('Невірний email або пароль. Якщо ви не підтвердили email — перевірте пошту. Або спробуйте відновити пароль.');
+        } else if (error.message.includes('Email not confirmed')) {
+          toast.error('Email не підтверджено. Перевірте вашу поштову скриньку та натисніть на лінк підтвердження.');
         } else {
           toast.error(error.message);
         }
