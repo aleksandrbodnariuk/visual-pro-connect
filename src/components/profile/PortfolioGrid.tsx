@@ -1,6 +1,6 @@
 import { Camera, Music, Video, Play, Heart, MessageCircle, MoreHorizontal, Edit, Trash2, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, memo, useMemo } from "react";
+import { useState, useEffect, memo, useMemo, useRef } from "react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -32,7 +32,6 @@ interface PortfolioGridProps {
   onAddItem?: () => void;
 }
 
-// Parse video URL to get thumbnail and embed URL
 function parseVideoUrl(url: string) {
   const youtubeMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([^&\s?/]+)/);
   if (youtubeMatch) {
@@ -55,14 +54,13 @@ function parseVideoUrl(url: string) {
   return null;
 }
 
-function isVideoLink(url: string) {
-  return /youtube\.com|youtu\.be|vimeo\.com/i.test(url);
-}
-
 export const PortfolioGrid = memo(({ items: initialItems, className, userId, isOwner = false, onAddItem }: PortfolioGridProps) => {
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(initialItems);
   const [loading, setLoading] = useState(false);
   const [playingItem, setPlayingItem] = useState<{ embedUrl: string; title: string } | null>(null);
+  const [viewingPhoto, setViewingPhoto] = useState<{ url: string; title: string } | null>(null);
+  const [playingAudio, setPlayingAudio] = useState<{ url: string; title: string } | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   
   useEffect(() => {
     if (userId) {
@@ -117,9 +115,16 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
     if (videoData) {
       setPlayingItem({ embedUrl: videoData.embedUrl, title: item.title });
     } else {
-      // Fallback: open original link
       window.open(item.thumbnailUrl, '_blank');
     }
+  };
+
+  const handleClickPhoto = (item: PortfolioItem) => {
+    setViewingPhoto({ url: item.thumbnailUrl, title: item.title });
+  };
+
+  const handlePlayAudio = (item: PortfolioItem) => {
+    setPlayingAudio({ url: item.thumbnailUrl, title: item.title });
   };
 
   if (loading) {
@@ -153,15 +158,21 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
           const videoData = item.type === "video" ? parseVideoUrl(item.thumbnailUrl) : null;
           const thumbnailSrc = videoData?.thumbnail || item.thumbnailUrl;
           const isVideo = item.type === "video";
+          const isAudio = item.type === "audio";
+          const isPhoto = item.type === "photo";
 
           return (
             <div
               key={item.id}
-              className={cn("group relative overflow-hidden rounded-lg", isVideo && "cursor-pointer")}
-              onClick={isVideo ? () => handlePlayVideo(item) : undefined}
+              className="group relative overflow-hidden rounded-lg cursor-pointer"
+              onClick={() => {
+                if (isVideo) handlePlayVideo(item);
+                else if (isAudio) handlePlayAudio(item);
+                else if (isPhoto) handleClickPhoto(item);
+              }}
             >
-              <div className="aspect-square w-full overflow-hidden">
-                {item.type === "audio" ? (
+              <div className="aspect-[4/3] w-full overflow-hidden bg-muted">
+                {isAudio ? (
                   <div className="h-full w-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                     <Music className="h-16 w-16 text-white" />
                   </div>
@@ -177,15 +188,15 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
               
               {/* Media type icon */}
               <div className="absolute left-2 top-2 rounded-full bg-black/70 p-1.5 text-white">
-                {item.type === "photo" && <Camera className="h-4 w-4" />}
-                {item.type === "video" && <Video className="h-4 w-4" />}
-                {item.type === "audio" && <Music className="h-4 w-4" />}
+                {isPhoto && <Camera className="h-4 w-4" />}
+                {isVideo && <Video className="h-4 w-4" />}
+                {isAudio && <Music className="h-4 w-4" />}
               </div>
               
               {/* Play button for video/audio */}
-              {(item.type === "video" || item.type === "audio") && (
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
-                  <div className="rounded-full bg-white/20 p-3 backdrop-blur-sm">
+              {(isVideo || isAudio) && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="rounded-full bg-black/40 p-3 backdrop-blur-sm group-hover:bg-black/60 transition-colors">
                     <Play className="h-8 w-8 text-white" fill="white" />
                   </div>
                 </div>
@@ -220,19 +231,26 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
               {/* Hover overlay */}
               <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/80 to-transparent p-3 opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none">
                 <h3 className="text-sm font-medium text-white">{item.title}</h3>
-                <div className="mt-1 flex items-center gap-3">
-                  <span className="flex items-center gap-1 text-xs text-white">
-                    <Heart className="h-3 w-3" /> {item.likes}
-                  </span>
-                  <span className="flex items-center gap-1 text-xs text-white">
-                    <MessageCircle className="h-3 w-3" /> {item.comments}
-                  </span>
-                </div>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Photo lightbox */}
+      <Dialog open={!!viewingPhoto} onOpenChange={() => setViewingPhoto(null)}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95 border-none">
+          {viewingPhoto && (
+            <div className="flex items-center justify-center min-h-[50vh] max-h-[85vh] p-4">
+              <img
+                src={viewingPhoto.url}
+                alt={viewingPhoto.title}
+                className="max-w-full max-h-[80vh] object-contain rounded"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Video player dialog */}
       <Dialog open={!!playingItem} onOpenChange={() => setPlayingItem(null)}>
@@ -245,6 +263,34 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
                 allowFullScreen
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 title={playingItem.title}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Audio player dialog */}
+      <Dialog open={!!playingAudio} onOpenChange={(open) => {
+        if (!open) {
+          audioRef.current?.pause();
+          setPlayingAudio(null);
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          {playingAudio && (
+            <div className="space-y-4 pt-4">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                  <Music className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="font-medium text-foreground truncate">{playingAudio.title}</h3>
+              </div>
+              <audio
+                ref={audioRef}
+                src={playingAudio.url}
+                controls
+                autoPlay
+                className="w-full"
               />
             </div>
           )}

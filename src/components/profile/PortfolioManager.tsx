@@ -546,23 +546,33 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
                       <img 
                         src={item.media_url} 
                         alt={item.title}
-                        className="object-cover w-full h-full"
+                        className="object-contain w-full h-full"
                       />
                     ) : item.media_type === "audio" ? (
-                      <div className="flex items-center justify-center h-full bg-gradient-to-br from-purple-500 to-pink-500">
+                      <div className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-purple-500 to-pink-500 gap-2">
                         <Music className="h-12 w-12 text-white" />
-                        <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                          Аудіо
-                        </span>
+                        <span className="text-white text-xs">Аудіо</span>
                       </div>
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <FileVideo className="h-12 w-12 text-muted-foreground" />
-                        <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                          Відео
-                        </span>
-                      </div>
-                    )}
+                    ) : (() => {
+                      const vd = parseVideoUrl(item.media_url);
+                      return vd?.thumbnail ? (
+                        <>
+                          <img src={vd.thumbnail} alt={item.title} className="object-cover w-full h-full" />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-10 w-10 rounded-full bg-black/50 flex items-center justify-center">
+                              <FileVideo className="h-5 w-5 text-white" />
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <FileVideo className="h-12 w-12 text-muted-foreground" />
+                          <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                            Відео
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className="p-4">
                     <h4 className="font-medium truncate">{item.title}</h4>
