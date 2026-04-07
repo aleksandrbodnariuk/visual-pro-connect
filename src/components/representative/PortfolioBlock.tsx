@@ -3,8 +3,27 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, Video, Music, ImageIcon } from 'lucide-react';
+import { Camera, Video, Music, ImageIcon, Play } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+
+function parseVideoUrl(url: string) {
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([^&\s?/]+)/);
+  if (ytMatch) {
+    return {
+      thumbnail: `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`,
+      embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`,
+    };
+  }
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) {
+    return {
+      thumbnail: `https://vumbnail.com/${vimeoMatch[1]}.jpg`,
+      embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1`,
+    };
+  }
+  return null;
+}
 
 interface PortfolioItem {
   id: string;
@@ -39,6 +58,7 @@ export function PortfolioBlock() {
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
+  const [playingVideo, setPlayingVideo] = useState<{ embedUrl: string; title: string } | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -97,7 +117,6 @@ export function PortfolioBlock() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Filters — horizontal scroll on mobile */}
         <div className="overflow-x-auto -mx-3 px-3 pb-1">
           <div className="flex gap-2 min-w-max">
             {FILTERS.map((f) => (
@@ -127,11 +146,26 @@ export function PortfolioBlock() {
             {filtered.map((item) => {
               const profile = profiles.get(item.user_id);
               const Icon = TYPE_ICON[item.media_type] || Camera;
+              const isVideo = item.media_type === 'video';
+              const videoData = isVideo ? parseVideoUrl(item.media_url) : null;
+              const thumbnailSrc = isVideo && videoData ? videoData.thumbnail : (item.media_type === 'photo' ? item.media_url : null);
+
               return (
-                <div key={item.id} className="group relative aspect-square rounded-lg overflow-hidden border bg-muted/30">
-                  {item.media_type === 'photo' ? (
+                <div
+                  key={item.id}
+                  className={cn(
+                    'group relative aspect-square rounded-lg overflow-hidden border bg-muted/30',
+                    isVideo && videoData && 'cursor-pointer'
+                  )}
+                  onClick={() => {
+                    if (isVideo && videoData) {
+                      setPlayingVideo({ embedUrl: videoData.embedUrl, title: item.title });
+                    }
+                  }}
+                >
+                  {thumbnailSrc ? (
                     <img
-                      src={item.media_url}
+                      src={thumbnailSrc}
                       alt={item.title}
                       className="w-full h-full object-cover"
                       loading="lazy"
@@ -142,7 +176,14 @@ export function PortfolioBlock() {
                     </div>
                   )}
 
-                  {/* Hover overlay */}
+                  {isVideo && videoData && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="h-12 w-12 rounded-full bg-background/80 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                        <Play className="h-6 w-6 ml-0.5 fill-current text-foreground" />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2.5">
                     <p className="text-white text-xs font-medium truncate">{item.title}</p>
                     {profile && (
@@ -161,6 +202,22 @@ export function PortfolioBlock() {
           </div>
         )}
       </CardContent>
+
+      <Dialog open={!!playingVideo} onOpenChange={() => setPlayingVideo(null)}>
+        <DialogContent className="max-w-3xl p-0 overflow-hidden">
+          {playingVideo && (
+            <div className="aspect-video w-full">
+              <iframe
+                src={playingVideo.embedUrl}
+                className="w-full h-full"
+                allowFullScreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                title={playingVideo.title}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
