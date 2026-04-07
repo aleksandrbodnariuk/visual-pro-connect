@@ -3,8 +3,27 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, Video, Music, ImageIcon } from 'lucide-react';
+import { Camera, Video, Music, ImageIcon, Play } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+
+function parseVideoUrl(url: string) {
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([^&\s?/]+)/);
+  if (ytMatch) {
+    return {
+      thumbnail: `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`,
+      embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`,
+    };
+  }
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) {
+    return {
+      thumbnail: `https://vumbnail.com/${vimeoMatch[1]}.jpg`,
+      embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1`,
+    };
+  }
+  return null;
+}
 
 interface PortfolioItem {
   id: string;
