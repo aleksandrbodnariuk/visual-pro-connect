@@ -1,6 +1,6 @@
 import { Camera, Music, Video, Play, Heart, MessageCircle, MoreHorizontal, Edit, Trash2, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, memo, useMemo, useRef } from "react";
+import { useState, useEffect, memo, useRef } from "react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -32,6 +32,13 @@ interface PortfolioGridProps {
   onAddItem?: () => void;
 }
 
+interface PortfolioRecord {
+  id: string;
+  title: string;
+  media_url: string;
+  media_type: string;
+}
+
 function parseVideoUrl(url: string) {
   const youtubeMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([^&\s?/]+)/);
   if (youtubeMatch) {
@@ -54,6 +61,32 @@ function parseVideoUrl(url: string) {
   return null;
 }
 
+const getLocalPortfolioRecords = (userId?: string): PortfolioRecord[] => {
+  if (!userId) return [];
+
+  try {
+    return JSON.parse(localStorage.getItem(`portfolio_${userId}`) || "[]");
+  } catch {
+    return [];
+  }
+};
+
+const mapPortfolioRecordToItem = (item: PortfolioRecord): PortfolioItem => {
+  let mediaType: "photo" | "video" | "audio" = "photo";
+
+  if (item.media_type === "video") mediaType = "video";
+  else if (item.media_type === "audio") mediaType = "audio";
+
+  return {
+    id: item.id,
+    type: mediaType,
+    thumbnailUrl: item.media_url,
+    title: item.title,
+    likes: 0,
+    comments: 0,
+  };
+};
+
 export const PortfolioGrid = memo(({ items: initialItems, className, userId, isOwner = false, onAddItem }: PortfolioGridProps) => {
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(initialItems);
   const [loading, setLoading] = useState(false);
@@ -63,43 +96,43 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
   useEffect(() => {
-    if (userId) {
-      const fetchPortfolioItems = async () => {
-        setLoading(true);
-        try {
-          const { data, error } = await supabase
-            .from('portfolio')
-            .select('*')
-            .eq('user_id', userId);
-            
-          if (error) throw error;
-          
-          if (data && data.length > 0) {
-            const formattedItems = data.map(item => {
-              let mediaType: "photo" | "video" | "audio" = "photo";
-              if (item.media_type === 'video') mediaType = "video";
-              else if (item.media_type === 'audio') mediaType = "audio";
-              
-              return {
-                id: item.id,
-                type: mediaType,
-                thumbnailUrl: item.media_url,
-                title: item.title,
-                likes: 0,
-                comments: 0
-              };
-            });
-            setPortfolioItems(formattedItems);
-          }
-        } catch (error) {
-          console.error("Error fetching portfolio:", error);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchPortfolioItems();
+    if (!userId) {
+      setPortfolioItems(initialItems);
     }
-  }, [userId, initialItems]);
+  }, [initialItems, userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchPortfolioItems = async () => {
+      setLoading(true);
+      const localItems = getLocalPortfolioRecords(userId);
+
+      try {
+        const { data, error } = await supabase
+          .from('portfolio')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const remoteItems = (data || []).map(mapPortfolioRecordToItem);
+        const fallbackItems = localItems
+          .filter((localItem) => !remoteItems.some((remoteItem) => remoteItem.id === localItem.id))
+          .map(mapPortfolioRecordToItem);
+
+        setPortfolioItems([...fallbackItems, ...remoteItems]);
+      } catch (error) {
+        console.error("Error fetching portfolio:", error);
+        setPortfolioItems(localItems.map(mapPortfolioRecordToItem));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPortfolioItems();
+  }, [userId]);
   
   const handleEdit = (id: string) => {
     toast.info(`Редагування елементу ${id}`);

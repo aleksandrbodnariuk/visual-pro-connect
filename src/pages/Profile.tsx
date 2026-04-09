@@ -60,6 +60,7 @@ export default function Profile() {
   const [error, setError] = useState<string | null>(null);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [portfolioManagerOpen, setPortfolioManagerOpen] = useState(false);
+  const [portfolioRefreshKey, setPortfolioRefreshKey] = useState(0);
   const [isSpecialist, setIsSpecialist] = useState(false);
   
   const [servicesDialogOpen, setServicesDialogOpen] = useState(false);
@@ -309,6 +310,7 @@ export default function Profile() {
   };
 
   const handlePortfolioUpdate = () => {
+    setPortfolioRefreshKey((current) => current + 1);
     toast.success("Портфоліо оновлено");
   };
 
@@ -410,6 +412,7 @@ export default function Profile() {
                 )}
                 <Suspense fallback={<div>Завантаження портфоліо...</div>}>
                   <PortfolioGrid 
+                    key={`portfolio-${user?.id}-${portfolioRefreshKey}`}
                     items={[]} 
                     userId={user?.id} 
                     isOwner={isCurrentUser}
