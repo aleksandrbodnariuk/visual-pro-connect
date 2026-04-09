@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 interface PortfolioItem {
   id: string;
   title: string;
-  description: string;
+  description: string | null;
   media_url: string;
   media_type: string;
 }
@@ -57,6 +57,48 @@ const parseVideoUrl = (url: string) => {
   return null;
 };
 
+const getLocalPortfolioStorageKey = (userId: string) => `portfolio_${userId}`;
+
+const getLocalPortfolioItems = (userId: string): PortfolioItem[] => {
+  try {
+    return JSON.parse(localStorage.getItem(getLocalPortfolioStorageKey(userId)) || "[]");
+  } catch {
+    return [];
+  }
+};
+
+const saveLocalPortfolioItems = (userId: string, items: PortfolioItem[]) => {
+  localStorage.setItem(getLocalPortfolioStorageKey(userId), JSON.stringify(items));
+};
+
+const readFileAsDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve((reader.result as string) || "");
+    reader.onerror = () => reject(new Error("Не вдалося прочитати файл"));
+    reader.readAsDataURL(file);
+  });
+
+const getMediaTypeFromFile = (file: File) => {
+  if (file.type.startsWith("image/")) return "photo";
+  if (file.type.startsWith("video/")) return "video";
+  if (file.type.startsWith("audio/")) return "audio";
+  return "photo";
+};
+
+const getStorageBucketForMediaType = (mediaType: string) =>
+  mediaType === "audio" ? "posts" : "portfolio";
+
+const getStorageLocationFromUrl = (url: string) => {
+  const match = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+  if (!match) return null;
+
+  return {
+    bucket: match[1],
+    path: decodeURIComponent(match[2].split(/[?#]/)[0]),
+  };
+};
+
 export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -81,8 +123,8 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   const fetchPortfolioItems = async () => {
     try {
       setIsLoading(true);
-      
-      // Спроба отримати дані з Supabase
+      const localData = getLocalPortfolioItems(userId);
+
       try {
         const { data, error } = await supabase
           .from("portfolio")
@@ -91,18 +133,18 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
           .order("created_at", { ascending: false });
 
         if (error) throw error;
-        
-        if (data && data.length > 0) {
-          setPortfolioItems(data);
-          return;
-        }
+
+        const remoteData = data || [];
+        const mergedItems = [
+          ...localData.filter((localItem) => !remoteData.some((remoteItem) => remoteItem.id === localItem.id)),
+          ...remoteData,
+        ];
+
+        setPortfolioItems(mergedItems);
       } catch (supabaseError) {
         console.warn("Не вдалося отримати дані з Supabase:", supabaseError);
+        setPortfolioItems(localData);
       }
-      
-      // Якщо дані не отримано з Supabase, використовуємо локальне сховище
-      const localData = JSON.parse(localStorage.getItem(`portfolio_${userId}`) || "[]");
-      setPortfolioItems(localData);
       
     } catch (error: any) {
       toast.error("Помилка при завантаженні портфоліо");
@@ -195,32 +237,23 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
 
     try {
       setIsUploading(true);
-      // Визначаємо тип медіа включаючи аудіо
-      let mediaType: string;
-      if (file.type.startsWith("image/")) {
-        mediaType = "photo";
-      } else if (file.type.startsWith("video/")) {
-        mediaType = "video";
-      } else if (file.type.startsWith("audio/")) {
-        mediaType = "audio";
-      } else {
-        mediaType = "photo"; // Default
-      }
+      const mediaType = getMediaTypeFromFile(file);
       let mediaUrl = "";
       
       // Спроба завантаження в Supabase
       try {
+        const bucket = getStorageBucketForMediaType(mediaType);
         const fileExt = file.name.split(".").pop();
         const filePath = `${userId}/${Date.now()}.${fileExt}`;
         
         const { error: uploadError } = await supabase.storage
-          .from("portfolio")
+          .from(bucket)
           .upload(filePath, file);
 
         if (uploadError) throw uploadError;
 
         const { data: urlData } = supabase.storage
-          .from("portfolio")
+          .from(bucket)
           .getPublicUrl(filePath);
 
         mediaUrl = urlData.publicUrl;
@@ -238,36 +271,26 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
         if (insertError) throw insertError;
       } catch (supabaseError) {
         console.warn("Не вдалося завантажити в Supabase:", supabaseError);
-        
-        // Альтернативне рішення - зберігаємо в локальному сховищі
-        // У реальному додатку тут можна використовувати Firebase або інше сховище
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64Data = reader.result as string;
-          mediaUrl = base64Data;
-          
-          const newItem = {
-            id: `local_${Date.now()}`,
-            title,
-            description,
-            media_url: mediaUrl,
-            media_type: mediaType
-          };
-          
-          const existingItems = JSON.parse(localStorage.getItem(`portfolio_${userId}`) || "[]");
-          const updatedItems = [newItem, ...existingItems];
-          localStorage.setItem(`portfolio_${userId}`, JSON.stringify(updatedItems));
-          
-          setPortfolioItems(updatedItems);
+        mediaUrl = await readFileAsDataUrl(file);
+
+        const newItem = {
+          id: `local_${Date.now()}`,
+          title,
+          description,
+          media_url: mediaUrl,
+          media_type: mediaType,
         };
-        reader.readAsDataURL(file);
+
+        const updatedItems = [newItem, ...getLocalPortfolioItems(userId)];
+        saveLocalPortfolioItems(userId, updatedItems);
+        setPortfolioItems(updatedItems);
       }
 
       toast.success("Файл успішно завантажено");
       setTitle("");
       setDescription("");
       setFile(null);
-      fetchPortfolioItems();
+      await fetchPortfolioItems();
       onUpdate();
     } catch (error: any) {
       toast.error("Помилка при завантаженні файлу");
@@ -294,103 +317,89 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       setIsUploading(true);
       let updatedMediaUrl = editItem.media_url;
       let updatedMediaType = editItem.media_type;
-      
-      // Якщо вибрано новий файл, завантажуємо його
-      if (editFile) {
-        updatedMediaType = editFile.type.startsWith("image/") ? "photo" : "video";
-        
-        // Спроба завантаження в Supabase
-        try {
-          // Спочатку видаляємо старий файл
-          const oldFilePathMatch = editItem.media_url.match(/\/([^/?#]+)(?:[?#]|$)/);
-          if (oldFilePathMatch && oldFilePathMatch[1]) {
-            try {
-              await supabase.storage
-                .from("portfolio")
-                .remove([`${userId}/${oldFilePathMatch[1]}`]);
-            } catch (error) {
-              console.warn("Не вдалося видалити старий файл:", error);
-            }
-          }
-          
-          // Завантажуємо новий файл
-          const fileExt = editFile.name.split(".").pop();
-          const filePath = `${userId}/${Date.now()}.${fileExt}`;
-          
-          const { error: uploadError } = await supabase.storage
-            .from("portfolio")
-            .upload(filePath, editFile);
+      const isLocalOnlyItem = editItem.id.startsWith("local_");
 
-          if (uploadError) throw uploadError;
-
-          const { data: urlData } = supabase.storage
-            .from("portfolio")
-            .getPublicUrl(filePath);
-
-          updatedMediaUrl = urlData.publicUrl;
-        } catch (supabaseError) {
-          console.warn("Не вдалося завантажити в Supabase:", supabaseError);
-          
-          // Альтернативне рішення для локального сховища
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            updatedMediaUrl = reader.result as string;
-            
-            // Оновлюємо дані в локальному сховищі
-            const existingItems = JSON.parse(localStorage.getItem(`portfolio_${userId}`) || "[]");
-            const updatedItems = existingItems.map((item: PortfolioItem) => {
-              if (item.id === editItem.id) {
-                return {
-                  ...item,
-                  title: editTitle,
-                  description: editDescription,
-                  media_url: updatedMediaUrl,
-                  media_type: updatedMediaType
-                };
-              }
-              return item;
-            });
-            
-            localStorage.setItem(`portfolio_${userId}`, JSON.stringify(updatedItems));
-            setPortfolioItems(updatedItems);
-          };
-          reader.readAsDataURL(editFile);
-        }
-      }
-      
-      // Оновлюємо запис в базі даних
-      try {
-        const { error: updateError } = await supabase
-          .from("portfolio")
-          .update({
-            title: editTitle,
-            description: editDescription,
-            media_url: updatedMediaUrl,
-            media_type: updatedMediaType
-          })
-          .eq("id", editItem.id);
-
-        if (updateError) throw updateError;
-      } catch (updateError) {
-        console.warn("Не вдалося оновити запис в Supabase:", updateError);
-        
-        // Оновлюємо дані в локальному сховищі
-        const existingItems = JSON.parse(localStorage.getItem(`portfolio_${userId}`) || "[]");
-        const updatedItems = existingItems.map((item: PortfolioItem) => {
+      const updateLocalItem = () => {
+        const existingItems = getLocalPortfolioItems(userId);
+        const updatedItems = existingItems.map((item) => {
           if (item.id === editItem.id) {
             return {
               ...item,
               title: editTitle,
               description: editDescription,
               media_url: updatedMediaUrl,
-              media_type: updatedMediaType
+              media_type: updatedMediaType,
             };
           }
           return item;
         });
-        
-        localStorage.setItem(`portfolio_${userId}`, JSON.stringify(updatedItems));
+
+        saveLocalPortfolioItems(userId, updatedItems);
         setPortfolioItems(updatedItems);
+      };
+      
+      // Якщо вибрано новий файл, завантажуємо його
+      if (editFile) {
+        updatedMediaType = getMediaTypeFromFile(editFile);
+        
+        // Спроба завантаження в Supabase
+        try {
+          // Спочатку видаляємо старий файл
+          const oldStorageLocation = getStorageLocationFromUrl(editItem.media_url);
+          if (oldStorageLocation) {
+            try {
+              await supabase.storage
+                .from(oldStorageLocation.bucket)
+                .remove([oldStorageLocation.path]);
+            } catch (error) {
+              console.warn("Не вдалося видалити старий файл:", error);
+            }
+          }
+          
+          // Завантажуємо новий файл
+          const bucket = getStorageBucketForMediaType(updatedMediaType);
+          const fileExt = editFile.name.split(".").pop();
+          const filePath = `${userId}/${Date.now()}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from(bucket)
+            .upload(filePath, editFile);
+
+          if (uploadError) throw uploadError;
+
+          const { data: urlData } = supabase.storage
+            .from(bucket)
+            .getPublicUrl(filePath);
+
+          updatedMediaUrl = urlData.publicUrl;
+        } catch (supabaseError) {
+          console.warn("Не вдалося завантажити в Supabase:", supabaseError);
+          updatedMediaUrl = await readFileAsDataUrl(editFile);
+          updateLocalItem();
+        }
+      }
+
+      if (isLocalOnlyItem) {
+        updateLocalItem();
+      } else {
+      
+        // Оновлюємо запис в базі даних
+        try {
+          const { error: updateError } = await supabase
+            .from("portfolio")
+            .update({
+              title: editTitle,
+              description: editDescription,
+              media_url: updatedMediaUrl,
+              media_type: updatedMediaType
+            })
+            .eq("id", editItem.id);
+
+          if (updateError) throw updateError;
+        } catch (updateError) {
+          console.warn("Не вдалося оновити запис в Supabase:", updateError);
+          updateLocalItem();
+        }
       }
 
       toast.success("Файл успішно оновлено");
@@ -399,7 +408,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       setEditDescription("");
       setEditFile(null);
       setEditDialogOpen(false);
-      fetchPortfolioItems();
+      await fetchPortfolioItems();
       onUpdate();
     } catch (error: any) {
       toast.error("Помилка при оновленні файлу");
@@ -418,36 +427,40 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
     if (!selectedItem) return;
     
     try {
+      const isLocalOnlyItem = selectedItem.id.startsWith("local_");
+
+      const removeLocalItem = () => {
+        const updatedItems = getLocalPortfolioItems(userId).filter((item) => item.id !== selectedItem.id);
+        saveLocalPortfolioItems(userId, updatedItems);
+        setPortfolioItems((currentItems) => currentItems.filter((item) => item.id !== selectedItem.id));
+      };
+
       // Спроба видалення з Supabase
       try {
-        // Видаляємо запис з бази даних
-        const { error: deleteRecordError } = await supabase
-          .from("portfolio")
-          .delete()
-          .eq("id", selectedItem.id);
-
-        if (deleteRecordError) throw deleteRecordError;
-        
-        // Спроба видалити файл зі сховища
-        const filePathMatch = selectedItem.media_url.match(/\/([^/?#]+)(?:[?#]|$)/);
-        if (filePathMatch && filePathMatch[1]) {
-          const filePath = `${userId}/${filePathMatch[1]}`;
-          await supabase.storage
+        if (!isLocalOnlyItem) {
+          const { error: deleteRecordError } = await supabase
             .from("portfolio")
-            .remove([filePath]);
+            .delete()
+            .eq("id", selectedItem.id);
+
+          if (deleteRecordError) throw deleteRecordError;
+
+          const storageLocation = getStorageLocationFromUrl(selectedItem.media_url);
+          if (storageLocation) {
+            await supabase.storage
+              .from(storageLocation.bucket)
+              .remove([storageLocation.path]);
+          }
         }
+
+        removeLocalItem();
       } catch (supabaseError) {
         console.warn("Не вдалося видалити з Supabase:", supabaseError);
-        
-        // Видаляємо з локального сховища
-        const existingItems = JSON.parse(localStorage.getItem(`portfolio_${userId}`) || "[]");
-        const updatedItems = existingItems.filter((item: PortfolioItem) => item.id !== selectedItem.id);
-        localStorage.setItem(`portfolio_${userId}`, JSON.stringify(updatedItems));
-        setPortfolioItems(updatedItems);
+        removeLocalItem();
       }
 
       toast.success("Файл успішно видалено");
-      fetchPortfolioItems();
+      await fetchPortfolioItems();
       onUpdate();
     } catch (error: any) {
       toast.error("Помилка при видаленні файлу");
@@ -645,7 +658,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
                 <Input
                   id="editFile"
                   type="file"
-                  accept="image/*,video/*"
+                  accept="image/*,video/*,audio/*"
                   onChange={handleEditFileChange}
                   disabled={isUploading}
                 />
