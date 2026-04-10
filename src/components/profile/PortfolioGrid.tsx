@@ -308,6 +308,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
           );
         })}
       </div>
+      )}
 
       {/* Photo lightbox */}
       <Dialog open={!!viewingPhoto} onOpenChange={() => setViewingPhoto(null)}>
