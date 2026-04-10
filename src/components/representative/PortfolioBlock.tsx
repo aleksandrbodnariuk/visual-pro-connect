@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -59,6 +59,13 @@ export function PortfolioBlock() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
   const [playingVideo, setPlayingVideo] = useState<{ embedUrl: string; title: string } | null>(null);
+  const [viewingPhoto, setViewingPhoto] = useState<{ url: string; title: string } | null>(null);
+  const [playingAudio, setPlayingAudio] = useState<{ url: string; title: string } | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    return () => { audioRef.current?.pause(); audioRef.current = null; };
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -147,19 +154,23 @@ export function PortfolioBlock() {
               const profile = profiles.get(item.user_id);
               const Icon = TYPE_ICON[item.media_type] || Camera;
               const isVideo = item.media_type === 'video';
+              const isAudio = item.media_type === 'audio';
+              const isPhoto = item.media_type === 'photo';
               const videoData = isVideo ? parseVideoUrl(item.media_url) : null;
-              const thumbnailSrc = isVideo && videoData ? videoData.thumbnail : (item.media_type === 'photo' ? item.media_url : null);
+              const thumbnailSrc = isVideo && videoData ? videoData.thumbnail : (isPhoto ? item.media_url : null);
 
               return (
                 <div
                   key={item.id}
-                  className={cn(
-                    'group relative aspect-square rounded-lg overflow-hidden border bg-muted/30',
-                    isVideo && videoData && 'cursor-pointer'
-                  )}
+                  className="group relative aspect-square rounded-lg overflow-hidden border bg-muted/30 cursor-pointer"
                   onClick={() => {
                     if (isVideo && videoData) {
                       setPlayingVideo({ embedUrl: videoData.embedUrl, title: item.title });
+                    } else if (isPhoto) {
+                      setViewingPhoto({ url: item.media_url, title: item.title });
+                    } else if (isAudio) {
+                      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+                      setPlayingAudio({ url: item.media_url, title: item.title });
                     }
                   }}
                 >
@@ -170,6 +181,10 @@ export function PortfolioBlock() {
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
+                  ) : isAudio ? (
+                    <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                      <Music className="h-10 w-10 text-white" />
+                    </div>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Icon className="h-10 w-10 text-muted-foreground/50" />
@@ -177,6 +192,14 @@ export function PortfolioBlock() {
                   )}
 
                   {isVideo && videoData && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="h-12 w-12 rounded-full bg-background/80 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                        <Play className="h-6 w-6 ml-0.5 fill-current text-foreground" />
+                      </div>
+                    </div>
+                  )}
+
+                  {isAudio && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="h-12 w-12 rounded-full bg-background/80 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
                         <Play className="h-6 w-6 ml-0.5 fill-current text-foreground" />
@@ -203,6 +226,22 @@ export function PortfolioBlock() {
         )}
       </CardContent>
 
+      {/* Photo lightbox */}
+      <Dialog open={!!viewingPhoto} onOpenChange={() => setViewingPhoto(null)}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95 border-none">
+          {viewingPhoto && (
+            <div className="flex items-center justify-center min-h-[50vh] max-h-[85vh] p-4">
+              <img
+                src={viewingPhoto.url}
+                alt={viewingPhoto.title}
+                className="max-w-full max-h-[80vh] object-contain rounded"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Video player */}
       <Dialog open={!!playingVideo} onOpenChange={() => setPlayingVideo(null)}>
         <DialogContent className="max-w-3xl p-0 overflow-hidden">
           {playingVideo && (
@@ -214,6 +253,25 @@ export function PortfolioBlock() {
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 title={playingVideo.title}
               />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Audio player */}
+      <Dialog open={!!playingAudio} onOpenChange={(open) => {
+        if (!open) { audioRef.current?.pause(); setPlayingAudio(null); }
+      }}>
+        <DialogContent className="max-w-md">
+          {playingAudio && (
+            <div className="space-y-4 pt-4">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                  <Music className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="font-medium text-foreground truncate">{playingAudio.title}</h3>
+              </div>
+              <audio ref={audioRef} src={playingAudio.url} controls autoPlay className="w-full" />
             </div>
           )}
         </DialogContent>
