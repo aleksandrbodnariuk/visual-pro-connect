@@ -199,8 +199,34 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
 
   return (
     <>
+      {/* Filter buttons */}
+      <div className="overflow-x-auto -mx-3 px-3 pb-1 mb-4">
+        <div className="flex gap-2 min-w-max">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-2 rounded-full text-sm border transition-colors whitespace-nowrap min-h-[44px]',
+                filter === f.key
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-card hover:bg-muted border-border'
+              )}
+            >
+              <f.icon className="h-3.5 w-3.5" />
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filteredItems.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-6">
+          Немає робіт у цій категорії
+        </p>
+      ) : (
       <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4", className)}>
-        {portfolioItems.map((item) => {
+        {filteredItems.map((item) => {
           const videoData = item.type === "video" ? parseVideoUrl(item.thumbnailUrl) : null;
           const thumbnailSrc = videoData?.thumbnail || item.thumbnailUrl;
           const isVideo = item.type === "video";
