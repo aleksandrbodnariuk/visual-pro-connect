@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -59,6 +59,13 @@ export function PortfolioBlock() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
   const [playingVideo, setPlayingVideo] = useState<{ embedUrl: string; title: string } | null>(null);
+  const [viewingPhoto, setViewingPhoto] = useState<{ url: string; title: string } | null>(null);
+  const [playingAudio, setPlayingAudio] = useState<{ url: string; title: string } | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    return () => { audioRef.current?.pause(); audioRef.current = null; };
+  }, []);
 
   useEffect(() => {
     async function load() {
