@@ -101,7 +101,6 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
   const [playingItem, setPlayingItem] = useState<{ embedUrl: string; title: string } | null>(null);
   const [viewingPhotoIndex, setViewingPhotoIndex] = useState<number | null>(null);
   const [playingAudio, setPlayingAudio] = useState<{ url: string; title: string } | null>(null);
-  const [playingAudio, setPlayingAudio] = useState<{ url: string; title: string } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const filteredItems = useMemo(
