@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, Video, Music, ImageIcon, Play } from 'lucide-react';
+import { Camera, Video, Music, ImageIcon, Play, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
@@ -59,7 +59,7 @@ export function PortfolioBlock() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
   const [playingVideo, setPlayingVideo] = useState<{ embedUrl: string; title: string } | null>(null);
-  const [viewingPhoto, setViewingPhoto] = useState<{ url: string; title: string } | null>(null);
+  const [viewingPhotoIndex, setViewingPhotoIndex] = useState<number | null>(null);
   const [playingAudio, setPlayingAudio] = useState<{ url: string; title: string } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -101,6 +101,29 @@ export function PortfolioBlock() {
     () => (filter === 'all' ? items : items.filter((i) => i.media_type === filter)),
     [items, filter]
   );
+
+  const photoItems = useMemo(
+    () => filtered.filter(i => i.media_type === 'photo'),
+    [filtered]
+  );
+
+  const handlePrevPhoto = useCallback(() => {
+    setViewingPhotoIndex(prev => prev !== null && prev > 0 ? prev - 1 : prev);
+  }, []);
+
+  const handleNextPhoto = useCallback(() => {
+    setViewingPhotoIndex(prev => prev !== null && prev < photoItems.length - 1 ? prev + 1 : prev);
+  }, [photoItems.length]);
+
+  useEffect(() => {
+    if (viewingPhotoIndex === null) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') handlePrevPhoto();
+      else if (e.key === 'ArrowRight') handleNextPhoto();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [viewingPhotoIndex, handlePrevPhoto, handleNextPhoto]);
 
   if (loading) {
     return (
@@ -167,7 +190,8 @@ export function PortfolioBlock() {
                     if (isVideo && videoData) {
                       setPlayingVideo({ embedUrl: videoData.embedUrl, title: item.title });
                     } else if (isPhoto) {
-                      setViewingPhoto({ url: item.media_url, title: item.title });
+                      const idx = photoItems.findIndex(p => p.id === item.id);
+                      setViewingPhotoIndex(idx >= 0 ? idx : 0);
                     } else if (isAudio) {
                       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
                       setPlayingAudio({ url: item.media_url, title: item.title });
@@ -227,15 +251,34 @@ export function PortfolioBlock() {
       </CardContent>
 
       {/* Photo lightbox */}
-      <Dialog open={!!viewingPhoto} onOpenChange={() => setViewingPhoto(null)}>
+      <Dialog open={viewingPhotoIndex !== null} onOpenChange={() => setViewingPhotoIndex(null)}>
         <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95 border-none">
-          {viewingPhoto && (
-            <div className="flex items-center justify-center min-h-[50vh] max-h-[85vh] p-4">
+          {viewingPhotoIndex !== null && photoItems[viewingPhotoIndex] && (
+            <div className="relative flex items-center justify-center min-h-[50vh] max-h-[85vh] p-4">
+              {viewingPhotoIndex > 0 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handlePrevPhoto(); }}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center transition-colors"
+                >
+                  <ChevronLeft className="h-6 w-6 text-white" />
+                </button>
+              )}
               <img
-                src={viewingPhoto.url}
-                alt={viewingPhoto.title}
+                src={photoItems[viewingPhotoIndex].media_url}
+                alt={photoItems[viewingPhotoIndex].title}
                 className="max-w-full max-h-[80vh] object-contain rounded"
               />
+              {viewingPhotoIndex < photoItems.length - 1 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleNextPhoto(); }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center transition-colors"
+                >
+                  <ChevronRight className="h-6 w-6 text-white" />
+                </button>
+              )}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/70 text-sm">
+                {viewingPhotoIndex + 1} / {photoItems.length}
+              </div>
             </div>
           )}
         </DialogContent>
