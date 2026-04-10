@@ -1,6 +1,6 @@
-import { Camera, Music, Video, Play, Heart, MessageCircle, MoreHorizontal, Edit, Trash2, Plus, X } from "lucide-react";
+import { Camera, Music, Video, Play, Heart, MessageCircle, MoreHorizontal, Edit, Trash2, Plus, X, ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, memo, useRef } from "react";
+import { useState, useEffect, useMemo, memo, useRef } from "react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
