@@ -87,13 +87,26 @@ const mapPortfolioRecordToItem = (item: PortfolioRecord): PortfolioItem => {
   };
 };
 
+const FILTERS = [
+  { key: 'all', label: 'Усі', icon: ImageIcon },
+  { key: 'photo', label: 'Фото', icon: Camera },
+  { key: 'video', label: 'Відео', icon: Video },
+  { key: 'audio', label: 'Музика', icon: Music },
+] as const;
+
 export const PortfolioGrid = memo(({ items: initialItems, className, userId, isOwner = false, onAddItem }: PortfolioGridProps) => {
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(initialItems);
   const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState<string>('all');
   const [playingItem, setPlayingItem] = useState<{ embedUrl: string; title: string } | null>(null);
   const [viewingPhoto, setViewingPhoto] = useState<{ url: string; title: string } | null>(null);
   const [playingAudio, setPlayingAudio] = useState<{ url: string; title: string } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const filteredItems = useMemo(
+    () => filter === 'all' ? portfolioItems : portfolioItems.filter(i => i.type === filter),
+    [portfolioItems, filter]
+  );
   
   useEffect(() => {
     if (!userId) {
