@@ -1,6 +1,6 @@
-import { Camera, Music, Video, Play, Heart, MessageCircle, MoreHorizontal, Edit, Trash2, Plus, X } from "lucide-react";
+import { Camera, Music, Video, Play, Heart, MessageCircle, MoreHorizontal, Edit, Trash2, Plus, X, ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, memo, useRef } from "react";
+import { useState, useEffect, useMemo, memo, useRef } from "react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -87,13 +87,26 @@ const mapPortfolioRecordToItem = (item: PortfolioRecord): PortfolioItem => {
   };
 };
 
+const FILTERS = [
+  { key: 'all', label: 'Усі', icon: ImageIcon },
+  { key: 'photo', label: 'Фото', icon: Camera },
+  { key: 'video', label: 'Відео', icon: Video },
+  { key: 'audio', label: 'Музика', icon: Music },
+] as const;
+
 export const PortfolioGrid = memo(({ items: initialItems, className, userId, isOwner = false, onAddItem }: PortfolioGridProps) => {
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(initialItems);
   const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState<string>('all');
   const [playingItem, setPlayingItem] = useState<{ embedUrl: string; title: string } | null>(null);
   const [viewingPhoto, setViewingPhoto] = useState<{ url: string; title: string } | null>(null);
   const [playingAudio, setPlayingAudio] = useState<{ url: string; title: string } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const filteredItems = useMemo(
+    () => filter === 'all' ? portfolioItems : portfolioItems.filter(i => i.type === filter),
+    [portfolioItems, filter]
+  );
   
   useEffect(() => {
     if (!userId) {
@@ -186,8 +199,34 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
 
   return (
     <>
+      {/* Filter buttons */}
+      <div className="overflow-x-auto -mx-3 px-3 pb-1 mb-4">
+        <div className="flex gap-2 min-w-max">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-2 rounded-full text-sm border transition-colors whitespace-nowrap min-h-[44px]',
+                filter === f.key
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-card hover:bg-muted border-border'
+              )}
+            >
+              <f.icon className="h-3.5 w-3.5" />
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filteredItems.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-6">
+          Немає робіт у цій категорії
+        </p>
+      ) : (
       <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4", className)}>
-        {portfolioItems.map((item) => {
+        {filteredItems.map((item) => {
           const videoData = item.type === "video" ? parseVideoUrl(item.thumbnailUrl) : null;
           const thumbnailSrc = videoData?.thumbnail || item.thumbnailUrl;
           const isVideo = item.type === "video";
@@ -269,6 +308,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
           );
         })}
       </div>
+      )}
 
       {/* Photo lightbox */}
       <Dialog open={!!viewingPhoto} onOpenChange={() => setViewingPhoto(null)}>
