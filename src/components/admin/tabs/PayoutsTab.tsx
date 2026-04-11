@@ -522,6 +522,10 @@ export function PayoutsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Representative Payouts Section */}
+      <Separator className="my-8" />
+      <RepPayoutsSection />
     </div>
   );
 }
