@@ -85,6 +85,8 @@ function statusVariant(s: string): 'default' | 'secondary' | 'outline' | 'destru
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+import { RepPayoutsSection } from './RepPayoutsSection';
+
 export function PayoutsTab() {
   const [payouts, setPayouts] = useState<PayoutRow[]>([]);
   const { config: distConfig } = useProfitDistConfig();

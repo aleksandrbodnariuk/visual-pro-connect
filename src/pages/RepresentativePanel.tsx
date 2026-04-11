@@ -17,6 +17,7 @@ import { ServiceCalculator } from '@/components/representative/ServiceCalculator
 import { PortfolioBlock } from '@/components/representative/PortfolioBlock';
 import { ShareInviteBlock } from '@/components/representative/ShareInviteBlock';
 import { AnalyticsBlock } from '@/components/representative/AnalyticsBlock';
+import { RepresentativePayouts } from '@/components/representative/RepresentativePayouts';
 import { Card as UICard, CardHeader, CardTitle, CardContent as UICardContent } from '@/components/ui/card';
 
 interface RepresentativeRecord {
@@ -195,6 +196,7 @@ export default function RepresentativePanel() {
         {repRecord && (
           <div className="space-y-4 sm:space-y-6">
             <EarningsBlock representativeId={repRecord.id} />
+            <RepresentativePayouts userId={user!.id} />
             <TeamTree representativeId={repRecord.id} />
 
             <UICard>
