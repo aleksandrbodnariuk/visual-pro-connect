@@ -970,6 +970,69 @@ export type Database = {
           },
         ]
       }
+      representative_payouts: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          confirmed_at: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          order_ids: string[]
+          paid_at: string | null
+          paid_by: string | null
+          percent_at_calculation: number
+          representative_id: string
+          role_at_calculation: string | null
+          status: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount?: number
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_ids?: string[]
+          paid_at?: string | null
+          paid_by?: string | null
+          percent_at_calculation?: number
+          representative_id: string
+          role_at_calculation?: string | null
+          status?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_ids?: string[]
+          paid_at?: string | null
+          paid_by?: string | null
+          percent_at_calculation?: number
+          representative_id?: string
+          role_at_calculation?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "representative_payouts_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "representative_payouts_representative_id_fkey"
+            columns: ["representative_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       representatives: {
         Row: {
           created_at: string
@@ -1634,6 +1697,10 @@ export type Database = {
         Args: { _payout_id: string }
         Returns: undefined
       }
+      admin_force_confirm_rep_payout: {
+        Args: { _payout_id: string }
+        Returns: undefined
+      }
       approve_share_transaction: {
         Args: { _transaction_id: string }
         Returns: undefined
@@ -1648,6 +1715,7 @@ export type Database = {
       }
       check_admin_access: { Args: never; Returns: boolean }
       confirm_payout: { Args: { _payout_id: string }; Returns: undefined }
+      confirm_rep_payout: { Args: { _payout_id: string }; Returns: undefined }
       create_share_listing: {
         Args: { _note?: string; _quantity: number }
         Returns: string
@@ -1989,6 +2057,10 @@ export type Database = {
       }
       is_user_admin: { Args: { _user_id: string }; Returns: boolean }
       mark_payout_paid: {
+        Args: { _admin_notes?: string; _payout_id: string }
+        Returns: undefined
+      }
+      mark_rep_payout_paid: {
         Args: { _admin_notes?: string; _payout_id: string }
         Returns: undefined
       }
