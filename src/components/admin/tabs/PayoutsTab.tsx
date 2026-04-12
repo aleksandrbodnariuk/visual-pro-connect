@@ -421,6 +421,7 @@ export function PayoutsTab() {
             payouts={paid}
             names={names}
             loading={loading}
+            merged={merged}
             emptyText="Немає виплат, що очікують підтвердження від акціонерів."
             actions={(p) => (
               <Button size="sm" variant="outline" onClick={() => setForceDialog(p)}>
@@ -436,6 +437,7 @@ export function PayoutsTab() {
             payouts={confirmed}
             names={names}
             loading={loading}
+            merged={merged}
             emptyText="Ще немає підтверджених виплат."
             actions={(p) => (
               <Button size="sm" variant="ghost" onClick={() => setDeleteDialog(p)}>
