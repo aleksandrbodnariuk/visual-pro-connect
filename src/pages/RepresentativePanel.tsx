@@ -6,7 +6,8 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, UserPlus, CalendarPlus, Loader2 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Users, UserPlus, CalendarPlus, Loader2, Settings } from 'lucide-react';
 import { InviteFriendDialog } from '@/components/representative/InviteFriendDialog';
 import { InvitesList } from '@/components/representative/InvitesList';
 import { TeamTree } from '@/components/representative/TeamTree';
@@ -194,37 +195,53 @@ export default function RepresentativePanel() {
         )}
 
         {repRecord && (
-          <div className="space-y-4 sm:space-y-6">
-            <EarningsBlock representativeId={repRecord.id} />
-            <RepresentativePayouts userId={user!.id} />
-            <TeamTree representativeId={repRecord.id} />
+          <Tabs defaultValue="cabinet" className="w-full">
+            <TabsList className="mb-6 flex-wrap">
+              <TabsTrigger value="cabinet">Кабінет</TabsTrigger>
+              <TabsTrigger value="settings" className="gap-1.5">
+                <Settings className="h-4 w-4" />
+                Налаштування
+              </TabsTrigger>
+            </TabsList>
 
-            <UICard>
-              <CardHeader>
-                <CardTitle className="text-base sm:text-lg">Календар бронювань</CardTitle>
-              </CardHeader>
-              <UICardContent>
-                <div className="overflow-x-auto -mx-2 px-2">
-                  <RepBookingCalendar
-                    bookings={bookings}
-                    selectedDate={selectedDate}
-                    onSelectDate={setSelectedDate}
-                  />
-                </div>
-              </UICardContent>
-            </UICard>
+            <TabsContent value="cabinet">
+              <div className="space-y-4 sm:space-y-6">
+                <UICard>
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">Календар бронювань</CardTitle>
+                  </CardHeader>
+                  <UICardContent>
+                    <div className="overflow-x-auto -mx-2 px-2">
+                      <RepBookingCalendar
+                        bookings={bookings}
+                        selectedDate={selectedDate}
+                        onSelectDate={setSelectedDate}
+                      />
+                    </div>
+                  </UICardContent>
+                </UICard>
 
-            <ServiceCalculator />
-            <PortfolioBlock />
+                <ServiceCalculator />
+                <PortfolioBlock />
+              </div>
+            </TabsContent>
 
-            <ShareInviteBlock
-              representativeId={repRecord.id}
-              onInviteDialogOpen={() => setInviteOpen(true)}
-            />
+            <TabsContent value="settings">
+              <div className="space-y-4 sm:space-y-6">
+                <RepresentativePayouts userId={user!.id} />
+                <TeamTree representativeId={repRecord.id} />
+                <EarningsBlock representativeId={repRecord.id} />
 
-            <InvitesList userId={user!.id} onAccepted={loadRepresentative} />
-            <AnalyticsBlock />
-          </div>
+                <ShareInviteBlock
+                  representativeId={repRecord.id}
+                  onInviteDialogOpen={() => setInviteOpen(true)}
+                />
+                <InvitesList userId={user!.id} onAccepted={loadRepresentative} />
+
+                <AnalyticsBlock />
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </div>
 
