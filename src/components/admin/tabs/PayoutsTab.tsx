@@ -328,7 +328,15 @@ export function PayoutsTab() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h2 className="text-xl font-bold">Виплати акціонерам</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant={merged ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setMerged(!merged)}
+          >
+            <Layers className="h-4 w-4 mr-1" />
+            {merged ? 'Розгорнути виплати' : "Об'єднати виплати"}
+          </Button>
           <Button variant="outline" size="sm" onClick={loadPayouts} disabled={loading}>
             <RefreshCw className="h-4 w-4 mr-1" />
             Оновити
