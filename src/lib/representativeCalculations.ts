@@ -63,42 +63,24 @@ export interface RepresentativePoolResult {
 // ─── Визначення відсотків за комбінацією ─────────────────────────────────────
 
 /**
- * Визначає відсотки для кожної ролі залежно від комбінації в ланцюгу.
- * Використовує конфігуровані відсотки замість захардкоджених.
+ * Визначає відсотки за ПОЗИЦІЄЮ в ланцюгу (не за роллю).
+ * Позиція 0 (творець замовлення) → personalPercent (5%)
+ * Позиція 1 (батько) → managerPercent (3%)
+ * Позиція 2 (дідусь) → directorPercent (2%)
  */
 function resolvePercents(
   chain: RepresentativeChainNode[],
   cfg: RepCommissionConfig,
 ): Map<string, number> {
-  const hasRep = chain.some(n => n.role === 'representative');
-  const hasManager = chain.some(n => n.role === 'manager');
-  const hasDirector = chain.some(n => n.role === 'director');
-
   const percents = new Map<string, number>();
+  const rateByPosition = [cfg.personalPercent, cfg.managerPercent, cfg.directorPercent];
 
-  if (hasRep && hasManager && hasDirector) {
-    // E) rep + manager + director
-    percents.set('representative', cfg.personalPercent);
-    percents.set('manager', cfg.managerPercent);
-    percents.set('director', cfg.directorPercent);
-  } else if (hasRep && hasManager) {
-    // B) rep + manager
-    percents.set('representative', cfg.personalPercent);
-    percents.set('manager', cfg.managerPercent);
-  } else if (hasManager && hasDirector) {
-    // F) manager + director (manager gets personal, director gets director share)
-    percents.set('manager', cfg.personalPercent);
-    percents.set('director', cfg.directorPercent);
-  } else if (hasRep) {
-    // A) тільки rep
-    percents.set('representative', cfg.personalPercent);
-  } else if (hasManager) {
-    // C) тільки manager (gets personal — особисте замовлення)
-    percents.set('manager', cfg.personalPercent);
-  } else if (hasDirector) {
-    // D) тільки director (gets personal — особисте замовлення)
-    percents.set('director', cfg.personalPercent);
-  }
+  chain.forEach((node, index) => {
+    if (index < rateByPosition.length) {
+      // Use representativeId as key to support multiple nodes with same role
+      percents.set(node.representativeId, rateByPosition[index]);
+    }
+  });
 
   return percents;
 }
@@ -130,7 +112,7 @@ export function calcRepresentativePool(
   const deductions: RepresentativeDeduction[] = [];
 
   for (const node of chain) {
-    const percent = percents.get(node.role) ?? 0;
+    const percent = percents.get(node.representativeId) ?? 0;
     if (percent <= 0) continue;
 
     deductions.push({
