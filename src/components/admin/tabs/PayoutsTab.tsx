@@ -15,8 +15,11 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  Collapsible, CollapsibleContent, CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
   Calculator, DollarSign, CheckCircle2, Clock, AlertCircle, Loader2,
-  Send, ShieldCheck, RefreshCw, Trash2,
+  Send, ShieldCheck, RefreshCw, Trash2, Layers, ChevronDown,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
