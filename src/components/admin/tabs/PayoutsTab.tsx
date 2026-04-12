@@ -547,12 +547,13 @@ export function PayoutsTab() {
 // ─── PayoutTable sub-component ──────────────────────────────────────────────
 
 function PayoutTable({
-  payouts, names, loading, emptyText, actions,
+  payouts, names, loading, emptyText, actions, merged,
 }: {
   payouts: PayoutRow[];
   names: Record<string, string>;
   loading: boolean;
   emptyText: string;
+  merged?: boolean;
   actions?: (p: PayoutRow) => React.ReactNode;
 }) {
   if (loading) {
@@ -571,39 +572,112 @@ function PayoutTable({
     );
   }
 
+  if (!merged) {
+    return (
+      <div className="rounded-lg border divide-y">
+        {payouts.map((p) => (
+          <PayoutRow key={p.id} p={p} names={names} actions={actions} />
+        ))}
+      </div>
+    );
+  }
+
+  // Grouped/merged view
+  const grouped = new Map<string, PayoutRow[]>();
+  for (const p of payouts) {
+    const list = grouped.get(p.shareholder_id) || [];
+    list.push(p);
+    grouped.set(p.shareholder_id, list);
+  }
+
   return (
     <div className="rounded-lg border divide-y">
-      {payouts.map((p) => (
-        <div key={p.id} className="p-3 flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium text-sm">{names[p.shareholder_id] || 'Невідомий'}</span>
-              <Badge variant={statusVariant(p.status)} className="text-xs">
-                {statusLabel(p.status)}
-              </Badge>
-              {p.title_at_calculation && (
-                <Badge variant="outline" className="text-xs">{p.title_at_calculation}</Badge>
-              )}
-            </div>
-            <div className="flex gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
-              <span>Базовий: {fmt(p.base_income)}</span>
-              <span>Титульний: {fmt(p.title_bonus)}</span>
-              <span>{p.shares_at_calculation} акц. ({p.share_percent_at_calculation}%)</span>
-              <span>{p.order_ids.length} замовл.</span>
-              <span>{fmtDate(p.created_at)}</span>
-              {p.paid_at && <span>Виплачено: {fmtDate(p.paid_at)}</span>}
-              {p.confirmed_at && <span>Підтв: {fmtDate(p.confirmed_at)}</span>}
-            </div>
-            {p.admin_notes && (
-              <p className="text-xs text-muted-foreground mt-1 italic">{p.admin_notes}</p>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-lg font-bold text-primary whitespace-nowrap">{fmt(p.amount)}</span>
-            {actions && actions(p)}
-          </div>
+      {Array.from(grouped.entries()).map(([shId, items]) => {
+        const totalAmount = items.reduce((s, i) => s + i.amount, 0);
+        const totalBase = items.reduce((s, i) => s + i.base_income, 0);
+        const totalTitleBonus = items.reduce((s, i) => s + i.title_bonus, 0);
+        const totalOrders = items.reduce((s, i) => s + i.order_ids.length, 0);
+        const latest = items[0];
+
+        return (
+          <Collapsible key={shId}>
+            <CollapsibleTrigger asChild>
+              <div className="p-3 flex flex-col sm:flex-row sm:items-center gap-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-sm">{names[shId] || 'Невідомий'}</span>
+                    <Badge variant={statusVariant(latest.status)} className="text-xs">
+                      {statusLabel(latest.status)}
+                    </Badge>
+                    {latest.title_at_calculation && (
+                      <Badge variant="outline" className="text-xs">{latest.title_at_calculation}</Badge>
+                    )}
+                    <Badge variant="secondary" className="text-xs">{items.length} виплат</Badge>
+                  </div>
+                  <div className="flex gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
+                    <span>Базовий: {fmt(totalBase)}</span>
+                    <span>Титульний: {fmt(totalTitleBonus)}</span>
+                    <span>{latest.shares_at_calculation} акц. ({latest.share_percent_at_calculation}%)</span>
+                    <span>{totalOrders} замовл.</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-lg font-bold text-primary whitespace-nowrap">{fmt(totalAmount)}</span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="border-t bg-muted/30 divide-y">
+                {items.map((p) => (
+                  <PayoutRow key={p.id} p={p} names={names} actions={actions} nested />
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })}
+    </div>
+  );
+}
+
+function PayoutRow({
+  p, names, actions, nested,
+}: {
+  p: PayoutRow;
+  names: Record<string, string>;
+  actions?: (p: PayoutRow) => React.ReactNode;
+  nested?: boolean;
+}) {
+  return (
+    <div className={`p-3 flex flex-col sm:flex-row sm:items-center gap-3 ${nested ? 'pl-6' : ''}`}>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-medium text-sm">{names[p.shareholder_id] || 'Невідомий'}</span>
+          <Badge variant={statusVariant(p.status)} className="text-xs">
+            {statusLabel(p.status)}
+          </Badge>
+          {p.title_at_calculation && (
+            <Badge variant="outline" className="text-xs">{p.title_at_calculation}</Badge>
+          )}
         </div>
-      ))}
+        <div className="flex gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
+          <span>Базовий: {fmt(p.base_income)}</span>
+          <span>Титульний: {fmt(p.title_bonus)}</span>
+          <span>{p.shares_at_calculation} акц. ({p.share_percent_at_calculation}%)</span>
+          <span>{p.order_ids.length} замовл.</span>
+          <span>{fmtDate(p.created_at)}</span>
+          {p.paid_at && <span>Виплачено: {fmtDate(p.paid_at)}</span>}
+          {p.confirmed_at && <span>Підтв: {fmtDate(p.confirmed_at)}</span>}
+        </div>
+        {p.admin_notes && (
+          <p className="text-xs text-muted-foreground mt-1 italic">{p.admin_notes}</p>
+        )}
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="text-lg font-bold text-primary whitespace-nowrap">{fmt(p.amount)}</span>
+        {actions && actions(p)}
+      </div>
     </div>
   );
 }
