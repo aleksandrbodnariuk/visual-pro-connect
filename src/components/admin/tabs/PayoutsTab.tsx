@@ -405,6 +405,7 @@ export function PayoutsTab() {
             payouts={pending}
             names={names}
             loading={loading}
+            merged={merged}
             emptyText="Немає очікуваних виплат. Натисніть «Розрахувати виплати» для створення."
             actions={(p) => (
               <Button size="sm" onClick={() => { setPayDialog(p); setPayNotes(''); }}>
