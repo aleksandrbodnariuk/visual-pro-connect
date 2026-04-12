@@ -112,7 +112,7 @@ export function calcRepresentativePool(
   const deductions: RepresentativeDeduction[] = [];
 
   for (const node of chain) {
-    const percent = percents.get(node.role) ?? 0;
+    const percent = percents.get(node.representativeId) ?? 0;
     if (percent <= 0) continue;
 
     deductions.push({
