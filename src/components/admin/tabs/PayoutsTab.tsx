@@ -97,7 +97,7 @@ export function PayoutsTab() {
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
   const [activeTab, setActiveTab] = useState('pending');
-
+  const [merged, setMerged] = useState(false);
   // Dialog state
   const [payDialog, setPayDialog] = useState<PayoutRow | null>(null);
   const [payNotes, setPayNotes] = useState('');
