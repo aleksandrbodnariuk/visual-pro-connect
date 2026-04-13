@@ -132,6 +132,68 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
       });
   }, [order?.id, isAdmin, open]);
 
+  // Load existing specialist payouts for this order
+  useEffect(() => {
+    if (!order || !isAdmin || !open) {
+      setSpecPayoutsExist(false);
+      setExistingSpecPayouts([]);
+      setSpecAmounts({});
+      return;
+    }
+    (supabase as any)
+      .from('specialist_payouts')
+      .select('*')
+      .eq('order_id', order.id)
+      .then(({ data }: any) => {
+        const payouts = data || [];
+        setExistingSpecPayouts(payouts);
+        setSpecPayoutsExist(payouts.length > 0);
+        // Pre-fill amounts from existing payouts
+        const amounts: Record<string, string> = {};
+        payouts.forEach((p: any) => {
+          amounts[p.specialist_id] = String(p.amount);
+        });
+        setSpecAmounts(amounts);
+      });
+  }, [order?.id, isAdmin, open]);
+
+  const handleSaveSpecPayouts = useCallback(async () => {
+    if (!order) return;
+    setSavingSpecPayouts(true);
+    try {
+      // Delete existing payouts for this order first
+      if (specPayoutsExist) {
+        await (supabase as any).from('specialist_payouts').delete().eq('order_id', order.id);
+      }
+      // Insert new ones
+      const inserts: any[] = [];
+      for (const p of participants) {
+        const amt = parseFloat(specAmounts[p.specialist_id] || '0');
+        if (amt > 0) {
+          inserts.push({
+            specialist_id: p.specialist_id,
+            order_id: order.id,
+            amount: Math.round(amt * 100) / 100,
+            role_at_calculation: p.role,
+            status: 'pending',
+            notes: `Замовлення: ${order.title}`,
+          });
+        }
+      }
+      if (inserts.length > 0) {
+        const { error } = await (supabase as any).from('specialist_payouts').insert(inserts);
+        if (error) throw error;
+      }
+      setSpecPayoutsExist(inserts.length > 0);
+      setExistingSpecPayouts(inserts);
+      toast.success(`Збережено виплати для ${inserts.length} фахівців`);
+    } catch (err: any) {
+      toast.error(err.message || 'Помилка збереження');
+    } finally {
+      setSavingSpecPayouts(false);
+    }
+  }, [order, participants, specAmounts, specPayoutsExist]);
+
   if (!order) return null;
 
   const handleSave = async () => {
