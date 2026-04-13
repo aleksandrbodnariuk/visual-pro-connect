@@ -573,6 +573,80 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                     </>
                   )}
                 </div>
+               )}
+
+              {/* ── Розподіл коштів фахівцям ── */}
+              {order.status === 'confirmed' && hasFinancials && savedAmount != null && savedAmount > 0 && participants.length > 0 && (
+                <div className="rounded-lg border p-3 space-y-3">
+                  <h4 className="text-sm font-medium flex items-center gap-1.5">
+                    <Wrench className="h-4 w-4 text-muted-foreground" />
+                    Розподіл коштів фахівцям
+                  </h4>
+                  {(() => {
+                    const { calcNetProfit: cnp, calcProfitPools } = require('@/lib/shareholderCalculations');
+                    const np = cnp(savedAmount ?? 0, savedExpenses ?? 0);
+                    const pools = calcProfitPools(np);
+                    const totalAssigned = participants.reduce((s, p) => s + parseFloat(specAmounts[p.specialist_id] || '0'), 0);
+                    const remaining = pools.specialistsPool - totalAssigned;
+                    return (
+                      <>
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Пул фахівців (50%):</span>
+                          <span className="font-medium">{pools.specialistsPool.toFixed(2)} $</span>
+                        </div>
+                        <div className="space-y-2">
+                          {participants.map(p => {
+                            const info = participantInfos[p.specialist_id];
+                            return (
+                              <div key={p.id} className="flex items-center gap-2">
+                                <span className="text-sm flex-1 min-w-0 truncate">
+                                  {info?.full_name || 'Завантаження...'}
+                                </span>
+                                <div className="w-28">
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="0"
+                                    className="h-8 text-sm"
+                                    value={specAmounts[p.specialist_id] || ''}
+                                    onChange={e => setSpecAmounts(prev => ({
+                                      ...prev,
+                                      [p.specialist_id]: e.target.value,
+                                    }))}
+                                  />
+                                </div>
+                                <span className="text-xs text-muted-foreground w-4">$</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className={`flex justify-between text-xs font-medium ${remaining < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                          <span>Залишок:</span>
+                          <span>{remaining.toFixed(2)} $</span>
+                        </div>
+                        {specPayoutsExist && (
+                          <p className="text-xs text-muted-foreground italic">
+                            Виплати вже збережені. При повторному збереженні попередні будуть замінені.
+                          </p>
+                        )}
+                        <Button
+                          size="sm"
+                          className="w-full"
+                          disabled={savingSpecPayouts || totalAssigned <= 0}
+                          onClick={handleSaveSpecPayouts}
+                        >
+                          {savingSpecPayouts ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4 mr-2" />
+                          )}
+                          {specPayoutsExist ? 'Оновити виплати фахівцям' : 'Зберегти виплати фахівцям'}
+                        </Button>
+                      </>
+                    );
+                  })()}
+                </div>
               )}
 
               <div className="flex flex-wrap gap-2">
