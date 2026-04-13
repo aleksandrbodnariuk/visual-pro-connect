@@ -1468,6 +1468,73 @@ export type Database = {
           },
         ]
       }
+      specialist_payouts: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          confirmed_at: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          order_id: string
+          paid_at: string | null
+          paid_by: string | null
+          role_at_calculation: string | null
+          specialist_id: string
+          status: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount?: number
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          paid_at?: string | null
+          paid_by?: string | null
+          role_at_calculation?: string | null
+          specialist_id: string
+          status?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          paid_at?: string | null
+          paid_by?: string | null
+          role_at_calculation?: string | null
+          specialist_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specialist_payouts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "specialist_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "specialist_payouts_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "specialist_payouts_specialist_id_fkey"
+            columns: ["specialist_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           approved_by_admin: boolean | null
@@ -1701,6 +1768,10 @@ export type Database = {
         Args: { _payout_id: string }
         Returns: undefined
       }
+      admin_force_confirm_spec_payout: {
+        Args: { _payout_id: string }
+        Returns: undefined
+      }
       approve_share_transaction: {
         Args: { _transaction_id: string }
         Returns: undefined
@@ -1717,6 +1788,7 @@ export type Database = {
       check_admin_access: { Args: never; Returns: boolean }
       confirm_payout: { Args: { _payout_id: string }; Returns: undefined }
       confirm_rep_payout: { Args: { _payout_id: string }; Returns: undefined }
+      confirm_spec_payout: { Args: { _payout_id: string }; Returns: undefined }
       create_share_listing: {
         Args: { _note?: string; _quantity: number }
         Returns: string
@@ -2062,6 +2134,10 @@ export type Database = {
         Returns: undefined
       }
       mark_rep_payout_paid: {
+        Args: { _admin_notes?: string; _payout_id: string }
+        Returns: undefined
+      }
+      mark_spec_payout_paid: {
         Args: { _admin_notes?: string; _payout_id: string }
         Returns: undefined
       }

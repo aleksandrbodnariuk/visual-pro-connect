@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,14 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon, Check, X, Archive, UserPlus, Trash2, TrendingUp, Banknote, Loader2 } from 'lucide-react';
+import { CalendarIcon, Check, X, Archive, UserPlus, Trash2, TrendingUp, Banknote, Loader2, Wrench, Save } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { SpecialistOrder, OrderParticipant, OrderType, ORDER_TYPE_LABELS, ORDER_TYPE_COLORS, STATUS_LABELS } from './types';
 import { supabase } from '@/integrations/supabase/client';
 import { Separator } from '@/components/ui/separator';
-import { calcNetProfit } from '@/lib/shareholderCalculations';
+import { calcNetProfit, calcProfitPools } from '@/lib/shareholderCalculations';
 import { ProfitPreviewBlock } from './ProfitPreviewBlock';
 import { toast } from 'sonner';
 
@@ -63,6 +63,12 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
   const [addSpecRole, setAddSpecRole] = useState<OrderType>('photo');
   const [profitDistributed, setProfitDistributed] = useState<boolean | null>(null);
   const [distributing, setDistributing] = useState(false);
+
+  // Specialist payouts state
+  const [specAmounts, setSpecAmounts] = useState<Record<string, string>>({});
+  const [specPayoutsExist, setSpecPayoutsExist] = useState<boolean>(false);
+  const [savingSpecPayouts, setSavingSpecPayouts] = useState(false);
+  const [existingSpecPayouts, setExistingSpecPayouts] = useState<any[]>([]);
 
   useEffect(() => {
     if (order) {
@@ -125,6 +131,68 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
         setProfitDistributed(data && data.length > 0);
       });
   }, [order?.id, isAdmin, open]);
+
+  // Load existing specialist payouts for this order
+  useEffect(() => {
+    if (!order || !isAdmin || !open) {
+      setSpecPayoutsExist(false);
+      setExistingSpecPayouts([]);
+      setSpecAmounts({});
+      return;
+    }
+    (supabase as any)
+      .from('specialist_payouts')
+      .select('*')
+      .eq('order_id', order.id)
+      .then(({ data }: any) => {
+        const payouts = data || [];
+        setExistingSpecPayouts(payouts);
+        setSpecPayoutsExist(payouts.length > 0);
+        // Pre-fill amounts from existing payouts
+        const amounts: Record<string, string> = {};
+        payouts.forEach((p: any) => {
+          amounts[p.specialist_id] = String(p.amount);
+        });
+        setSpecAmounts(amounts);
+      });
+  }, [order?.id, isAdmin, open]);
+
+  const handleSaveSpecPayouts = useCallback(async () => {
+    if (!order) return;
+    setSavingSpecPayouts(true);
+    try {
+      // Delete existing payouts for this order first
+      if (specPayoutsExist) {
+        await (supabase as any).from('specialist_payouts').delete().eq('order_id', order.id);
+      }
+      // Insert new ones
+      const inserts: any[] = [];
+      for (const p of participants) {
+        const amt = parseFloat(specAmounts[p.specialist_id] || '0');
+        if (amt > 0) {
+          inserts.push({
+            specialist_id: p.specialist_id,
+            order_id: order.id,
+            amount: Math.round(amt * 100) / 100,
+            role_at_calculation: p.role,
+            status: 'pending',
+            notes: `Замовлення: ${order.title}`,
+          });
+        }
+      }
+      if (inserts.length > 0) {
+        const { error } = await (supabase as any).from('specialist_payouts').insert(inserts);
+        if (error) throw error;
+      }
+      setSpecPayoutsExist(inserts.length > 0);
+      setExistingSpecPayouts(inserts);
+      toast.success(`Збережено виплати для ${inserts.length} фахівців`);
+    } catch (err: any) {
+      toast.error(err.message || 'Помилка збереження');
+    } finally {
+      setSavingSpecPayouts(false);
+    }
+  }, [order, participants, specAmounts, specPayoutsExist]);
 
   if (!order) return null;
 
@@ -504,6 +572,79 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                       </Button>
                     </>
                   )}
+                </div>
+               )}
+
+              {/* ── Розподіл коштів фахівцям ── */}
+              {order.status === 'confirmed' && hasFinancials && savedAmount != null && savedAmount > 0 && participants.length > 0 && (
+                <div className="rounded-lg border p-3 space-y-3">
+                  <h4 className="text-sm font-medium flex items-center gap-1.5">
+                    <Wrench className="h-4 w-4 text-muted-foreground" />
+                    Розподіл коштів фахівцям
+                  </h4>
+                  {(() => {
+                    const np = calcNetProfit(savedAmount ?? 0, savedExpenses ?? 0);
+                    const pools = calcProfitPools(np);
+                    const totalAssigned = participants.reduce((s, p) => s + parseFloat(specAmounts[p.specialist_id] || '0'), 0);
+                    const remaining = pools.specialistsPool - totalAssigned;
+                    return (
+                      <>
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Пул фахівців (50%):</span>
+                          <span className="font-medium">{pools.specialistsPool.toFixed(2)} $</span>
+                        </div>
+                        <div className="space-y-2">
+                          {participants.map(p => {
+                            const info = participantInfos[p.specialist_id];
+                            return (
+                              <div key={p.id} className="flex items-center gap-2">
+                                <span className="text-sm flex-1 min-w-0 truncate">
+                                  {info?.full_name || 'Завантаження...'}
+                                </span>
+                                <div className="w-28">
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="0"
+                                    className="h-8 text-sm"
+                                    value={specAmounts[p.specialist_id] || ''}
+                                    onChange={e => setSpecAmounts(prev => ({
+                                      ...prev,
+                                      [p.specialist_id]: e.target.value,
+                                    }))}
+                                  />
+                                </div>
+                                <span className="text-xs text-muted-foreground w-4">$</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className={`flex justify-between text-xs font-medium ${remaining < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                          <span>Залишок:</span>
+                          <span>{remaining.toFixed(2)} $</span>
+                        </div>
+                        {specPayoutsExist && (
+                          <p className="text-xs text-muted-foreground italic">
+                            Виплати вже збережені. При повторному збереженні попередні будуть замінені.
+                          </p>
+                        )}
+                        <Button
+                          size="sm"
+                          className="w-full"
+                          disabled={savingSpecPayouts || totalAssigned <= 0}
+                          onClick={handleSaveSpecPayouts}
+                        >
+                          {savingSpecPayouts ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4 mr-2" />
+                          )}
+                          {specPayoutsExist ? 'Оновити виплати фахівцям' : 'Зберегти виплати фахівцям'}
+                        </Button>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
 
