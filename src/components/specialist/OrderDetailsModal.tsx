@@ -61,7 +61,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
   const [participantInfos, setParticipantInfos] = useState<Record<string, SpecialistInfo>>({});
   const [addSpecId, setAddSpecId] = useState('');
   const [addSpecRole, setAddSpecRole] = useState<OrderType>('photo');
-  const [profitDistributed, setProfitDistributed] = boolean | null>(null);
+  const [profitDistributed, setProfitDistributed] = useState<boolean | null>(null);
   const [distributing, setDistributing] = useState(false);
 
   // Specialist payouts state
