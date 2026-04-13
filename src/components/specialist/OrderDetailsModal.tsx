@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { SpecialistOrder, OrderParticipant, OrderType, ORDER_TYPE_LABELS, ORDER_TYPE_COLORS, STATUS_LABELS } from './types';
 import { supabase } from '@/integrations/supabase/client';
 import { Separator } from '@/components/ui/separator';
-import { calcNetProfit } from '@/lib/shareholderCalculations';
+import { calcNetProfit, calcProfitPools } from '@/lib/shareholderCalculations';
 import { ProfitPreviewBlock } from './ProfitPreviewBlock';
 import { toast } from 'sonner';
 
