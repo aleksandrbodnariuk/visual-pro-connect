@@ -89,6 +89,7 @@ function statusVariant(s: string): 'default' | 'secondary' | 'outline' | 'destru
 // ─── Component ────────────────────────────────────────────────────────────────
 
 import { RepPayoutsSection } from './RepPayoutsSection';
+import { SpecPayoutsSection } from './SpecPayoutsSection';
 
 export function PayoutsTab() {
   const [payouts, setPayouts] = useState<PayoutRow[]>([]);
@@ -540,6 +541,10 @@ export function PayoutsTab() {
       {/* Representative Payouts Section */}
       <Separator className="my-8" />
       <RepPayoutsSection />
+
+      {/* Specialist Payouts Section */}
+      <Separator className="my-8" />
+      <SpecPayoutsSection />
     </div>
   );
 }
