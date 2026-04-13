@@ -1705,6 +1705,7 @@ export type Database = {
         Args: { _transaction_id: string }
         Returns: undefined
       }
+      assign_default_role: { Args: { _user_id: string }; Returns: undefined }
       can_access_user_public_data: {
         Args: { target_user_id: string }
         Returns: boolean
