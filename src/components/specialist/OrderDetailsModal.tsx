@@ -583,8 +583,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                     Розподіл коштів фахівцям
                   </h4>
                   {(() => {
-                    const { calcNetProfit: cnp, calcProfitPools } = require('@/lib/shareholderCalculations');
-                    const np = cnp(savedAmount ?? 0, savedExpenses ?? 0);
+                    const np = calcNetProfit(savedAmount ?? 0, savedExpenses ?? 0);
                     const pools = calcProfitPools(np);
                     const totalAssigned = participants.reduce((s, p) => s + parseFloat(specAmounts[p.specialist_id] || '0'), 0);
                     const remaining = pools.specialistsPool - totalAssigned;
