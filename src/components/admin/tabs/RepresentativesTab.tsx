@@ -58,8 +58,12 @@ const ALL_SETTING_KEYS = [SETTING_INVITE_TEXT, SETTING_TOTAL_MAX, SETTING_PERSON
 export function RepresentativesTab() {
   const [tree, setTree] = useState<RepNode[]>([]);
   const [orders, setOrders] = useState<RepOrder[]>([]);
+  const [activeOrders, setActiveOrders] = useState<RepOrder[]>([]);
+  const [archivedOrders, setArchivedOrders] = useState<RepOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<"structure" | "orders" | "services" | "settings">("structure");
+  const [archiveDialog, setArchiveDialog] = useState<RepOrder | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<RepOrder | null>(null);
 
   // Settings state
   const [totalMaxPercent, setTotalMaxPercent] = useState("10");
