@@ -55,7 +55,10 @@ export default function RepresentativePanel() {
   const [loading, setLoading] = useState(true);
 
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [archivedBookings, setArchivedBookings] = useState<Booking[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [archiveDialog, setArchiveDialog] = useState<Booking | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<Booking | null>(null);
 
   const loadRepresentative = useCallback(async () => {
     if (!user) return;
