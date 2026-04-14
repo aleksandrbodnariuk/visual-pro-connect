@@ -370,6 +370,37 @@ export default function RepresentativePanel() {
             initialDate={selectedDate}
             onCreated={loadBookings}
           />
+          {/* Archive dialog */}
+          <Dialog open={!!archiveDialog} onOpenChange={() => setArchiveDialog(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Архівувати замовлення?</DialogTitle>
+                <DialogDescription>
+                  Замовлення «{archiveDialog?.title}» буде переміщено в архів.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setArchiveDialog(null)}>Скасувати</Button>
+                <Button onClick={() => archiveDialog && archiveBooking(archiveDialog.id)}>Архівувати</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Delete dialog */}
+          <Dialog open={!!deleteDialog} onOpenChange={() => setDeleteDialog(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Видалити замовлення?</DialogTitle>
+                <DialogDescription>
+                  Замовлення «{deleteDialog?.title}» буде видалено безповоротно.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDeleteDialog(null)}>Скасувати</Button>
+                <Button variant="destructive" onClick={() => deleteDialog && deleteBooking(deleteDialog.id)}>Видалити</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </>
