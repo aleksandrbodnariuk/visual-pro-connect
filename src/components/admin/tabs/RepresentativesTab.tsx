@@ -296,6 +296,44 @@ export function RepresentativesTab() {
     confirmed: "Підтверджено",
     completed: "Виконано",
     cancelled: "Скасовано",
+    archived: "Архів",
+  };
+
+  const archiveOrder = async (orderId: string) => {
+    try {
+      const { error } = await supabase
+        .from("specialist_orders")
+        .update({ status: "archived" })
+        .eq("id", orderId);
+      if (error) throw error;
+      toast.success("Замовлення архівовано");
+      setArchiveDialog(null);
+      loadOrders();
+    } catch (err) {
+      console.error("Error archiving order:", err);
+      toast.error("Помилка архівації");
+    }
+  };
+
+  const deleteOrder = async (orderId: string) => {
+    try {
+      // Delete participants first
+      await supabase
+        .from("specialist_order_participants")
+        .delete()
+        .eq("order_id", orderId);
+      const { error } = await supabase
+        .from("specialist_orders")
+        .delete()
+        .eq("id", orderId);
+      if (error) throw error;
+      toast.success("Замовлення видалено");
+      setDeleteDialog(null);
+      loadOrders();
+    } catch (err) {
+      console.error("Error deleting order:", err);
+      toast.error("Помилка видалення");
+    }
   };
 
   return (
