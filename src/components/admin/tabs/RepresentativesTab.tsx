@@ -418,61 +418,68 @@ export function RepresentativesTab() {
             <CardDescription>Замовлення, прив'язані до представників</CardDescription>
           </CardHeader>
           <CardContent>
-            {orders.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <ShoppingCart className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                <p className="font-medium">Немає замовлень</p>
-              </div>
-            ) : (
-              <>
-                {/* Desktop */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-left">
-                        <th className="p-2">Замовлення</th>
-                        <th className="p-2">Представник</th>
-                        <th className="p-2">Дата</th>
-                        <th className="p-2">Сума</th>
-                        <th className="p-2">Статус</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.map((o) => (
-                        <tr key={o.id} className="border-b hover:bg-muted/50">
-                          <td className="p-2 font-medium">{o.title}</td>
-                          <td className="p-2">{o.representative_name}</td>
-                          <td className="p-2">{new Date(o.order_date).toLocaleDateString("uk-UA")}</td>
-                          <td className="p-2">{o.order_amount != null ? `${o.order_amount} $` : "—"}</td>
-                          <td className="p-2">
-                            <Badge variant="secondary">{STATUS_LABELS[o.status] || o.status}</Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {/* Mobile */}
-                <div className="md:hidden space-y-3">
-                  {orders.map((o) => (
-                    <Card key={o.id} className="p-3">
-                      <p className="font-medium">{o.title}</p>
-                      <p className="text-sm text-muted-foreground">{o.representative_name}</p>
-                      <div className="flex justify-between mt-2 text-sm">
-                        <span>{new Date(o.order_date).toLocaleDateString("uk-UA")}</span>
-                        <span>{o.order_amount != null ? `${o.order_amount} $` : "—"}</span>
-                      </div>
-                      <Badge variant="secondary" className="mt-2">
-                        {STATUS_LABELS[o.status] || o.status}
-                      </Badge>
-                    </Card>
-                  ))}
-                </div>
-              </>
-            )}
+            <Tabs defaultValue="active">
+              <TabsList className="mb-4">
+                <TabsTrigger value="active">Активні ({activeOrders.length})</TabsTrigger>
+                <TabsTrigger value="archived">
+                  <Archive className="h-4 w-4 mr-1" />
+                  Архів ({archivedOrders.length})
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="active">
+                <RepOrdersTable
+                  orders={activeOrders}
+                  statusLabels={STATUS_LABELS}
+                  onArchive={(o) => setArchiveDialog(o)}
+                  showArchiveBtn
+                />
+              </TabsContent>
+
+              <TabsContent value="archived">
+                <RepOrdersTable
+                  orders={archivedOrders}
+                  statusLabels={STATUS_LABELS}
+                  onDelete={(o) => setDeleteDialog(o)}
+                  showDeleteBtn
+                />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       )}
+
+      {/* Archive confirmation */}
+      <Dialog open={!!archiveDialog} onOpenChange={() => setArchiveDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Архівувати замовлення?</DialogTitle>
+            <DialogDescription>
+              Замовлення «{archiveDialog?.title}» буде переміщено в архів.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setArchiveDialog(null)}>Скасувати</Button>
+            <Button onClick={() => archiveDialog && archiveOrder(archiveDialog.id)}>Архівувати</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <Dialog open={!!deleteDialog} onOpenChange={() => setDeleteDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Видалити замовлення?</DialogTitle>
+            <DialogDescription>
+              Замовлення «{deleteDialog?.title}» буде видалено безповоротно.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialog(null)}>Скасувати</Button>
+            <Button variant="destructive" onClick={() => deleteDialog && deleteOrder(deleteDialog.id)}>Видалити</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Settings View ── */}
       {activeView === "settings" && (
