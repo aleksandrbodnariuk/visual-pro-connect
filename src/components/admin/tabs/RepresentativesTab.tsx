@@ -152,7 +152,7 @@ export function RepresentativesTab() {
         .select("id, title, status, order_amount, order_date, representative_id")
         .not("representative_id", "is", null)
         .order("order_date", { ascending: false })
-        .limit(100);
+        .limit(200);
 
       if (error) throw error;
 
@@ -183,16 +183,18 @@ export function RepresentativesTab() {
         }
       }
 
-      setOrders(
-        (data || []).map((o) => ({
-          id: o.id,
-          title: o.title,
-          status: o.status,
-          order_amount: o.order_amount,
-          order_date: o.order_date,
-          representative_name: repNameMap[o.representative_id!] || "—",
-        }))
-      );
+      const mapped = (data || []).map((o) => ({
+        id: o.id,
+        title: o.title,
+        status: o.status,
+        order_amount: o.order_amount,
+        order_date: o.order_date,
+        representative_name: repNameMap[o.representative_id!] || "—",
+      }));
+
+      setOrders(mapped);
+      setActiveOrders(mapped.filter((o) => o.status !== "archived"));
+      setArchivedOrders(mapped.filter((o) => o.status === "archived"));
     } catch (err) {
       console.error("Error loading representative orders:", err);
     }
