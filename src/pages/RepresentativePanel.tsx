@@ -265,6 +265,71 @@ export default function RepresentativePanel() {
                   </UICardContent>
                 </UICard>
 
+                {/* Own bookings list with archive */}
+                <UICard>
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">Мої замовлення</CardTitle>
+                  </CardHeader>
+                  <UICardContent>
+                    <Tabs defaultValue="active">
+                      <TabsList className="mb-4">
+                        <TabsTrigger value="active">Активні ({bookings.filter(b => b.isOwn).length})</TabsTrigger>
+                        <TabsTrigger value="archived">
+                          <Archive className="h-4 w-4 mr-1" />
+                          Архів ({archivedBookings.length})
+                        </TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="active">
+                        {bookings.filter(b => b.isOwn).length === 0 ? (
+                          <p className="text-center py-6 text-muted-foreground">Немає активних замовлень</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {bookings.filter(b => b.isOwn).map(b => (
+                              <div key={b.id} className="flex items-center justify-between p-3 rounded-lg border">
+                                <div className="min-w-0">
+                                  <p className="font-medium truncate">{b.title}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {new Date(b.order_date).toLocaleDateString("uk-UA")}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <Badge variant="secondary">{b.status === 'confirmed' ? 'Підтверджено' : 'Очікує'}</Badge>
+                                  <Button variant="outline" size="sm" onClick={() => setArchiveDialog(b)} title="Архівувати">
+                                    <Archive className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </TabsContent>
+
+                      <TabsContent value="archived">
+                        {archivedBookings.length === 0 ? (
+                          <p className="text-center py-6 text-muted-foreground">Архів порожній</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {archivedBookings.map(b => (
+                              <div key={b.id} className="flex items-center justify-between p-3 rounded-lg border">
+                                <div className="min-w-0">
+                                  <p className="font-medium truncate">{b.title}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {new Date(b.order_date).toLocaleDateString("uk-UA")}
+                                  </p>
+                                </div>
+                                <Button variant="destructive" size="sm" onClick={() => setDeleteDialog(b)} title="Видалити">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </TabsContent>
+                    </Tabs>
+                  </UICardContent>
+                </UICard>
+
                 <ServiceCalculator />
                 <PortfolioBlock />
               </div>
