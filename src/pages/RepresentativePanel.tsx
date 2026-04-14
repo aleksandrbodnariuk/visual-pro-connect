@@ -99,6 +99,7 @@ export default function RepresentativePanel() {
   const loadBookings = useCallback(async () => {
     if (!repRecord) return;
     try {
+      // Load active bookings for calendar
       const { data, error } = await supabase
         .from('specialist_orders')
         .select('id, title, order_date, status, description, representative_id')
@@ -110,10 +111,49 @@ export default function RepresentativePanel() {
         ...b,
         isOwn: b.representative_id === repRecord.id,
       })) as Booking[]);
+
+      // Load archived bookings for this rep
+      const { data: archived } = await supabase
+        .from('specialist_orders')
+        .select('id, title, order_date, status, description, representative_id')
+        .eq('representative_id', repRecord.id)
+        .eq('status', 'archived')
+        .order('order_date', { ascending: false });
+
+      setArchivedBookings((archived || []).map((b: any) => ({
+        ...b,
+        isOwn: true,
+      })) as Booking[]);
     } catch (err) {
       console.error('Error loading bookings:', err);
     }
   }, [repRecord]);
+
+  const archiveBooking = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('specialist_orders')
+        .update({ status: 'archived' })
+        .eq('id', id);
+      if (error) throw error;
+      setArchiveDialog(null);
+      loadBookings();
+    } catch (err) {
+      console.error('Error archiving booking:', err);
+    }
+  };
+
+  const deleteBooking = async (id: string) => {
+    try {
+      await supabase.from('specialist_order_participants').delete().eq('order_id', id);
+      const { error } = await supabase.from('specialist_orders').delete().eq('id', id);
+      if (error) throw error;
+      setDeleteDialog(null);
+      loadBookings();
+    } catch (err) {
+      console.error('Error deleting booking:', err);
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
