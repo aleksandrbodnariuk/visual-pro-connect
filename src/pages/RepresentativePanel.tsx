@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Users, UserPlus, CalendarPlus, Loader2, Settings } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Users, UserPlus, CalendarPlus, Loader2, Settings, Archive, Trash2 } from 'lucide-react';
 import { InviteFriendDialog } from '@/components/representative/InviteFriendDialog';
 import { InvitesList } from '@/components/representative/InvitesList';
 import { TeamTree } from '@/components/representative/TeamTree';
@@ -54,7 +55,10 @@ export default function RepresentativePanel() {
   const [loading, setLoading] = useState(true);
 
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [archivedBookings, setArchivedBookings] = useState<Booking[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [archiveDialog, setArchiveDialog] = useState<Booking | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<Booking | null>(null);
 
   const loadRepresentative = useCallback(async () => {
     if (!user) return;
@@ -95,6 +99,7 @@ export default function RepresentativePanel() {
   const loadBookings = useCallback(async () => {
     if (!repRecord) return;
     try {
+      // Load active bookings for calendar
       const { data, error } = await supabase
         .from('specialist_orders')
         .select('id, title, order_date, status, description, representative_id')
@@ -106,10 +111,49 @@ export default function RepresentativePanel() {
         ...b,
         isOwn: b.representative_id === repRecord.id,
       })) as Booking[]);
+
+      // Load archived bookings for this rep
+      const { data: archived } = await supabase
+        .from('specialist_orders')
+        .select('id, title, order_date, status, description, representative_id')
+        .eq('representative_id', repRecord.id)
+        .eq('status', 'archived')
+        .order('order_date', { ascending: false });
+
+      setArchivedBookings((archived || []).map((b: any) => ({
+        ...b,
+        isOwn: true,
+      })) as Booking[]);
     } catch (err) {
       console.error('Error loading bookings:', err);
     }
   }, [repRecord]);
+
+  const archiveBooking = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('specialist_orders')
+        .update({ status: 'archived' })
+        .eq('id', id);
+      if (error) throw error;
+      setArchiveDialog(null);
+      loadBookings();
+    } catch (err) {
+      console.error('Error archiving booking:', err);
+    }
+  };
+
+  const deleteBooking = async (id: string) => {
+    try {
+      await supabase.from('specialist_order_participants').delete().eq('order_id', id);
+      const { error } = await supabase.from('specialist_orders').delete().eq('id', id);
+      if (error) throw error;
+      setDeleteDialog(null);
+      loadBookings();
+    } catch (err) {
+      console.error('Error deleting booking:', err);
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -221,6 +265,71 @@ export default function RepresentativePanel() {
                   </UICardContent>
                 </UICard>
 
+                {/* Own bookings list with archive */}
+                <UICard>
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">Мої замовлення</CardTitle>
+                  </CardHeader>
+                  <UICardContent>
+                    <Tabs defaultValue="active">
+                      <TabsList className="mb-4">
+                        <TabsTrigger value="active">Активні ({bookings.filter(b => b.isOwn).length})</TabsTrigger>
+                        <TabsTrigger value="archived">
+                          <Archive className="h-4 w-4 mr-1" />
+                          Архів ({archivedBookings.length})
+                        </TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="active">
+                        {bookings.filter(b => b.isOwn).length === 0 ? (
+                          <p className="text-center py-6 text-muted-foreground">Немає активних замовлень</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {bookings.filter(b => b.isOwn).map(b => (
+                              <div key={b.id} className="flex items-center justify-between p-3 rounded-lg border">
+                                <div className="min-w-0">
+                                  <p className="font-medium truncate">{b.title}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {new Date(b.order_date).toLocaleDateString("uk-UA")}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <Badge variant="secondary">{b.status === 'confirmed' ? 'Підтверджено' : 'Очікує'}</Badge>
+                                  <Button variant="outline" size="sm" onClick={() => setArchiveDialog(b)} title="Архівувати">
+                                    <Archive className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </TabsContent>
+
+                      <TabsContent value="archived">
+                        {archivedBookings.length === 0 ? (
+                          <p className="text-center py-6 text-muted-foreground">Архів порожній</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {archivedBookings.map(b => (
+                              <div key={b.id} className="flex items-center justify-between p-3 rounded-lg border">
+                                <div className="min-w-0">
+                                  <p className="font-medium truncate">{b.title}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {new Date(b.order_date).toLocaleDateString("uk-UA")}
+                                  </p>
+                                </div>
+                                <Button variant="destructive" size="sm" onClick={() => setDeleteDialog(b)} title="Видалити">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </TabsContent>
+                    </Tabs>
+                  </UICardContent>
+                </UICard>
+
                 <ServiceCalculator />
                 <PortfolioBlock />
               </div>
@@ -261,6 +370,37 @@ export default function RepresentativePanel() {
             initialDate={selectedDate}
             onCreated={loadBookings}
           />
+          {/* Archive dialog */}
+          <Dialog open={!!archiveDialog} onOpenChange={() => setArchiveDialog(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Архівувати замовлення?</DialogTitle>
+                <DialogDescription>
+                  Замовлення «{archiveDialog?.title}» буде переміщено в архів.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setArchiveDialog(null)}>Скасувати</Button>
+                <Button onClick={() => archiveDialog && archiveBooking(archiveDialog.id)}>Архівувати</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Delete dialog */}
+          <Dialog open={!!deleteDialog} onOpenChange={() => setDeleteDialog(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Видалити замовлення?</DialogTitle>
+                <DialogDescription>
+                  Замовлення «{deleteDialog?.title}» буде видалено безповоротно.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDeleteDialog(null)}>Скасувати</Button>
+                <Button variant="destructive" onClick={() => deleteDialog && deleteBooking(deleteDialog.id)}>Видалити</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </>
