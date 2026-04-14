@@ -679,3 +679,104 @@ function TreeNode({
     </div>
   );
 }
+
+// ── Reusable orders table for active/archived ──
+function RepOrdersTable({
+  orders,
+  statusLabels,
+  onArchive,
+  onDelete,
+  showArchiveBtn,
+  showDeleteBtn,
+}: {
+  orders: RepOrder[];
+  statusLabels: Record<string, string>;
+  onArchive?: (o: RepOrder) => void;
+  onDelete?: (o: RepOrder) => void;
+  showArchiveBtn?: boolean;
+  showDeleteBtn?: boolean;
+}) {
+  if (orders.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <ShoppingCart className="h-10 w-10 mx-auto mb-3 opacity-50" />
+        <p className="font-medium">Немає замовлень</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Desktop */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left">
+              <th className="p-2">Замовлення</th>
+              <th className="p-2">Представник</th>
+              <th className="p-2">Дата</th>
+              <th className="p-2">Сума</th>
+              <th className="p-2">Статус</th>
+              <th className="p-2">Дії</th>
+            </tr>
+          </thead>
+          <tbody>
+            {orders.map((o) => (
+              <tr key={o.id} className="border-b hover:bg-muted/50">
+                <td className="p-2 font-medium">{o.title}</td>
+                <td className="p-2">{o.representative_name}</td>
+                <td className="p-2">{new Date(o.order_date).toLocaleDateString("uk-UA")}</td>
+                <td className="p-2">{o.order_amount != null ? `${o.order_amount} $` : "—"}</td>
+                <td className="p-2">
+                  <Badge variant="secondary">{statusLabels[o.status] || o.status}</Badge>
+                </td>
+                <td className="p-2">
+                  <div className="flex gap-1">
+                    {showArchiveBtn && onArchive && (
+                      <Button variant="outline" size="sm" onClick={() => onArchive(o)} title="Архівувати">
+                        <Archive className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {showDeleteBtn && onDelete && (
+                      <Button variant="destructive" size="sm" onClick={() => onDelete(o)} title="Видалити">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {/* Mobile */}
+      <div className="md:hidden space-y-3">
+        {orders.map((o) => (
+          <Card key={o.id} className="p-3">
+            <p className="font-medium">{o.title}</p>
+            <p className="text-sm text-muted-foreground">{o.representative_name}</p>
+            <div className="flex justify-between mt-2 text-sm">
+              <span>{new Date(o.order_date).toLocaleDateString("uk-UA")}</span>
+              <span>{o.order_amount != null ? `${o.order_amount} $` : "—"}</span>
+            </div>
+            <div className="flex justify-between items-center mt-2">
+              <Badge variant="secondary">{statusLabels[o.status] || o.status}</Badge>
+              <div className="flex gap-1">
+                {showArchiveBtn && onArchive && (
+                  <Button variant="outline" size="sm" onClick={() => onArchive(o)}>
+                    <Archive className="h-4 w-4 mr-1" /> Архів
+                  </Button>
+                )}
+                {showDeleteBtn && onDelete && (
+                  <Button variant="destructive" size="sm" onClick={() => onDelete(o)}>
+                    <Trash2 className="h-4 w-4 mr-1" /> Видалити
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </>
+  );
+}
