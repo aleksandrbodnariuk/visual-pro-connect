@@ -82,7 +82,7 @@ export function SupportTab() {
     setTickets(data || []);
 
     // Load user names
-    const userIds = [...new Set((data || []).map((t: any) => t.user_id))];
+    const userIds = [...new Set((data || []).map((t: any) => t.user_id))] as string[];
     if (userIds.length > 0) {
       const { data: usersData } = await supabase
         .from("users")
@@ -153,15 +153,15 @@ export function SupportTab() {
           <p className="text-xs text-muted-foreground">Всього</p>
         </Card>
         <Card className="p-4 text-center">
-          <p className="text-2xl font-bold text-orange-500">{openCount}</p>
+          <p className="text-2xl font-bold text-destructive">{openCount}</p>
           <p className="text-xs text-muted-foreground">Відкриті</p>
         </Card>
         <Card className="p-4 text-center">
-          <p className="text-2xl font-bold text-blue-500">{inProgressCount}</p>
+          <p className="text-2xl font-bold text-primary">{inProgressCount}</p>
           <p className="text-xs text-muted-foreground">В роботі</p>
         </Card>
         <Card className="p-4 text-center">
-          <p className="text-2xl font-bold text-green-500">{tickets.filter((t) => t.status === "closed").length}</p>
+          <p className="text-2xl font-bold text-accent-foreground">{tickets.filter((t) => t.status === "closed").length}</p>
           <p className="text-xs text-muted-foreground">Закриті</p>
         </Card>
       </div>
