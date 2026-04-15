@@ -265,6 +265,13 @@ export default function RepresentativePanel() {
                   </UICardContent>
                 </UICard>
 
+                <ServiceCalculator />
+                <PortfolioBlock />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="settings">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Own bookings list with archive */}
                 <UICard>
                   <CardHeader>
@@ -330,13 +337,6 @@ export default function RepresentativePanel() {
                   </UICardContent>
                 </UICard>
 
-                <ServiceCalculator />
-                <PortfolioBlock />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="settings">
-              <div className="space-y-4 sm:space-y-6">
                 <RepresentativePayouts userId={user!.id} />
                 <TeamTree representativeId={repRecord.id} />
                 <EarningsBlock representativeId={repRecord.id} />
