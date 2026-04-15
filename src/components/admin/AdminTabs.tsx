@@ -15,6 +15,7 @@ import { CalculationHistoryTab } from "./tabs/CalculationHistoryTab";
 import { AssetValuationTab } from "./tabs/AssetValuationTab";
 import { PayoutsTab } from "./tabs/PayoutsTab";
 import { NotificationsTab } from "./tabs/NotificationsTab";
+import { SupportTab } from "./tabs/SupportTab";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -62,6 +63,10 @@ export function AdminTabs() {
 
         <TabsTrigger value="stock-exchange">Облік часток</TabsTrigger>
         <TabsTrigger value="assets">Облік майна</TabsTrigger>
+
+        <div className="w-px self-stretch bg-border mx-1 shrink-0" />
+
+        <TabsTrigger value="support">Підтримка</TabsTrigger>
       </TabsList>
       
       <TabsContent value="users">
@@ -122,6 +127,10 @@ export function AdminTabs() {
 
       <TabsContent value="payouts">
         <PayoutsTab />
+      </TabsContent>
+
+      <TabsContent value="support">
+        <SupportTab />
       </TabsContent>
     </Tabs>
   );

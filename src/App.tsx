@@ -18,6 +18,7 @@ import { MobileNavigation } from "./components/layout/MobileNavigation";
 import { InstallPrompt } from "./components/pwa/InstallPrompt";
 import { PushOnboarding } from "./components/pwa/PushOnboarding";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
+import { SupportButton } from "./components/support/SupportButton";
 import Index from "./pages/Index";
 
 // Lazy-loaded pages for code splitting
@@ -105,6 +106,7 @@ const AppContent = () => {
         </Suspense>
       </ErrorBoundary>
       <MobileNavigation />
+      <SupportButton />
       <InstallPrompt />
       <PushOnboarding />
     </BrowserRouter>
