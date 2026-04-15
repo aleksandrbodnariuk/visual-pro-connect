@@ -102,12 +102,21 @@ export function InvitesList({ userId, onAccepted }: InvitesListProps) {
       <CardContent className="space-y-3">
         {invites.map((invite) => (
           <div key={invite.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border">
-            <div className="min-w-0">
-              <p className="text-sm font-medium break-words">
-                {invite.inviter_name} запрошує вас стати представником
+            <div className="min-w-0 space-y-2">
+              <p className="text-sm font-bold">Заробляй разом з B&C</p>
+              <p className="text-sm">Стань представником нашої студії та отримуй гроші за кожного клієнта.</p>
+              <p className="text-sm text-muted-foreground">
+                Ми створюємо фото, відео, музику, а також пісні на замовлення —{' '}
+                ти просто знаходиш клієнтів і отримуєш свій відсоток.
               </p>
+              <div className="space-y-0.5 text-sm">
+                <p>👉 Без вкладень</p>
+                <p>👉 Без досвіду</p>
+                <p>👉 Без складних задач</p>
+              </div>
+              <p className="text-sm font-medium">Ми працюємо — ти заробляєш</p>
               <p className="text-xs text-muted-foreground">
-                {new Date(invite.created_at).toLocaleDateString('uk-UA')}
+                Запрошення від {invite.inviter_name} • {new Date(invite.created_at).toLocaleDateString('uk-UA')}
               </p>
             </div>
             <Button
