@@ -10,6 +10,7 @@ import { OrderDetailsModal } from '@/components/specialist/OrderDetailsModal';
 import { SpecialistOrder, OrderStatus } from '@/components/specialist/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -22,8 +23,33 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+const DELETE_WARNINGS: Record<string, string> = {
+  uk: 'Ця дія незворотня. Разом із замовленням будуть видалені всі нарахування та виплати (включно з невиплаченими коштами) для фахівців, представників та акціонерів.',
+  en: 'This action is irreversible. All payouts and earnings (including unpaid amounts) for specialists, representatives, and shareholders associated with this order will be deleted.',
+  pl: 'Ta czynność jest nieodwracalna. Wszystkie naliczenia i wypłaty (w tym niewypłacone środki) dla specjalistów, przedstawicieli i udziałowców powiązanych z tym zamówieniem zostaną usunięte.',
+  de: 'Diese Aktion ist unwiderruflich. Alle Auszahlungen und Vergütungen (einschließlich nicht ausgezahlter Beträge) für Spezialisten, Vertreter und Anteilseigner, die mit dieser Bestellung verbunden sind, werden gelöscht.',
+  ro: 'Această acțiune este ireversibilă. Toate calculele și plățile (inclusiv sumele neplătite) pentru specialiști, reprezentanți și acționari asociate cu această comandă vor fi șterse.',
+};
+
+const DELETE_TITLES: Record<string, string> = {
+  uk: 'Видалити замовлення?',
+  en: 'Delete order?',
+  pl: 'Usunąć zamówienie?',
+  de: 'Bestellung löschen?',
+  ro: 'Ștergeți comanda?',
+};
+
+const DELETE_CANCEL: Record<string, string> = {
+  uk: 'Скасувати', en: 'Cancel', pl: 'Anuluj', de: 'Abbrechen', ro: 'Anulează',
+};
+
+const DELETE_CONFIRM: Record<string, string> = {
+  uk: 'Видалити', en: 'Delete', pl: 'Usuń', de: 'Löschen', ro: 'Șterge',
+};
+
 export function AdminOrdersTab() {
   const { user } = useAuth();
+  const { language } = useLanguage();
   const [activeTab, setActiveTab] = useState<OrderStatus>('pending');
   const [orders, setOrders] = useState<SpecialistOrder[]>([]);
   const [participants, setParticipants] = useState<Record<string, any[]>>({});
@@ -127,12 +153,19 @@ export function AdminOrdersTab() {
 
   const handleDeleteOrder = async () => {
     if (!orderToDelete) return;
-    // Delete participants first
-    await (supabase as any).from('specialist_order_participants').delete().eq('order_id', orderToDelete);
-    const { error } = await (supabase as any).from('specialist_orders').delete().eq('id', orderToDelete);
-    if (error) { toast.error(error.message); } else {
-      toast.success('Замовлення видалено');
-      if (selectedOrder?.id === orderToDelete) { setDetailsOpen(false); setSelectedOrder(null); }
+    try {
+      // Delete all related financial records first
+      await (supabase as any).from('representative_earnings').delete().eq('order_id', orderToDelete);
+      await (supabase as any).from('specialist_payouts').delete().eq('order_id', orderToDelete);
+      await (supabase as any).from('financial_audit_log').delete().eq('order_id', orderToDelete);
+      await (supabase as any).from('specialist_order_participants').delete().eq('order_id', orderToDelete);
+      const { error } = await (supabase as any).from('specialist_orders').delete().eq('id', orderToDelete);
+      if (error) { toast.error(error.message); } else {
+        toast.success('Замовлення видалено');
+        if (selectedOrder?.id === orderToDelete) { setDetailsOpen(false); setSelectedOrder(null); }
+      }
+    } catch (err: any) {
+      toast.error(err.message);
     }
     setDeleteDialogOpen(false);
     setOrderToDelete(null);
@@ -218,15 +251,15 @@ export function AdminOrdersTab() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Видалити замовлення?</AlertDialogTitle>
+            <AlertDialogTitle>{DELETE_TITLES[language] || DELETE_TITLES.uk}</AlertDialogTitle>
             <AlertDialogDescription>
-              Ця дія незворотня. Замовлення та всі його учасники будуть видалені.
+              {DELETE_WARNINGS[language] || DELETE_WARNINGS.uk}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Скасувати</AlertDialogCancel>
+            <AlertDialogCancel>{DELETE_CANCEL[language] || DELETE_CANCEL.uk}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteOrder} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Видалити
+              {DELETE_CONFIRM[language] || DELETE_CONFIRM.uk}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
