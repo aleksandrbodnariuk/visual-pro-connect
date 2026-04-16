@@ -154,10 +154,22 @@ export function AdminOrdersTab() {
   const handleDeleteOrder = async () => {
     if (!orderToDelete) return;
     try {
-      // Delete all related financial records first
-      await (supabase as any).from('representative_earnings').delete().eq('order_id', orderToDelete);
-      await (supabase as any).from('specialist_payouts').delete().eq('order_id', orderToDelete);
-      await (supabase as any).from('financial_audit_log').delete().eq('order_id', orderToDelete);
+      // Delete all related financial records first — check each for errors
+      const delEarnings = await (supabase as any).from('representative_earnings').delete().eq('order_id', orderToDelete);
+      if (delEarnings.error) console.warn('representative_earnings delete:', delEarnings.error.message);
+      
+      const delSpecPayouts = await (supabase as any).from('specialist_payouts').delete().eq('order_id', orderToDelete);
+      if (delSpecPayouts.error) console.warn('specialist_payouts delete:', delSpecPayouts.error.message);
+      
+      const delAudit = await (supabase as any).from('financial_audit_log').delete().eq('order_id', orderToDelete);
+      if (delAudit.error) {
+        console.error('financial_audit_log delete failed:', delAudit.error.message);
+        toast.error('Не вдалося видалити фінансові записи: ' + delAudit.error.message);
+        setDeleteDialogOpen(false);
+        setOrderToDelete(null);
+        return;
+      }
+      
       await (supabase as any).from('specialist_order_participants').delete().eq('order_id', orderToDelete);
       const { error } = await (supabase as any).from('specialist_orders').delete().eq('id', orderToDelete);
       if (error) { toast.error(error.message); } else {
