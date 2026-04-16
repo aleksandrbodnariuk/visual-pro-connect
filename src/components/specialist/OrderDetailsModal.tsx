@@ -419,8 +419,8 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     Фінанси замовлення
                   </h4>
-                  {!editingFinancials && !editing && (
-                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setEditingFinancials(true); setEditing(false); }}>
+                  {!editingFinancials && (
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setEditingFinancials(true); }}>
                       Редагувати
                     </Button>
                   )}
