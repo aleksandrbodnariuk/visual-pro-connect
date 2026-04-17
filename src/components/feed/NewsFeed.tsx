@@ -16,9 +16,13 @@ import { ImageCropEditor } from "@/components/ui/ImageCropEditor";
 import { compressImageFromDataUrl, dataUrlToBlob, validateImageSize, OUTPUT_FORMAT, OUTPUT_EXTENSION } from '@/lib/imageCompression';
 import { useFeedData } from "@/hooks/useFeedData";
 
+const PAGE_SIZE = 12;
+
 export function NewsFeed() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [newPostContent, setNewPostContent] = useState("");
   const [isFormExpanded, setIsFormExpanded] = useState(false);
   const [activeCategory, setActiveCategory] = useState("all");
@@ -41,12 +45,24 @@ export function NewsFeed() {
     loadCurrentUser();
   }, []);
 
-  // Realtime for new/deleted posts
+  // Realtime: only react to NEW or DELETED posts (insert into list / remove from list).
+  // Avoid full reload to prevent mass refetches on every change.
   useEffect(() => {
     const channel = supabase
       .channel(`realtime_posts_feed_${Math.random().toString(36).substring(7)}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
-        loadPosts(false);
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, async (payload) => {
+        const newPost: any = payload.new;
+        if (!newPost) return;
+        // Skip if already in list (we appended optimistically on create)
+        setPosts(prev => {
+          if (prev.some(p => p.id === newPost.id)) return prev;
+          return [newPost, ...prev];
+        });
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'posts' }, (payload) => {
+        const oldPost: any = payload.old;
+        if (!oldPost?.id) return;
+        setPosts(prev => prev.filter(p => p.id !== oldPost.id));
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -64,34 +80,56 @@ export function NewsFeed() {
     }
   };
 
+  const fetchPostsRange = async (from: number, to: number) => {
+    const { data: supabasePosts, error } = await supabase
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(from, to);
+    if (error && error.code !== 'PGRST116') console.error("Error loading posts:", error);
+    if (!supabasePosts || supabasePosts.length === 0) return [];
+    const authorIds = [...new Set(supabasePosts.map(p => p.user_id).filter(Boolean))] as string[];
+    const { data: authors } = authorIds.length > 0
+      ? await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: authorIds })
+      : { data: [] as any[] };
+    return supabasePosts.map(post => ({
+      ...post,
+      author: authors?.find((a: any) => a.id === post.user_id) || null,
+    }));
+  };
+
   const loadPosts = async (isInitial = true) => {
     try {
       if (isInitial) setLoading(true);
       const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
-      
-      const fetchPosts = async () => {
-        const { data: supabasePosts, error } = await supabase
-          .from('posts').select('*').order('created_at', { ascending: false });
-        if (error && error.code !== 'PGRST116') console.error("Error loading posts:", error);
-
-        if (supabasePosts && supabasePosts.length > 0) {
-          const authorIds = [...new Set(supabasePosts.map(p => p.user_id).filter(Boolean))] as string[];
-          const { data: authors } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: authorIds });
-          return supabasePosts.map(post => ({
-            ...post,
-            author: authors?.find((a: any) => a.id === post.user_id) || null
-          }));
-        }
-        return [];
-      };
-
-      const result = await Promise.race([fetchPosts(), timeout]);
+      const result = await Promise.race([fetchPostsRange(0, PAGE_SIZE - 1), timeout]);
       setPosts(result);
+      setHasMore(result.length === PAGE_SIZE);
     } catch (error) {
       console.error("Error loading posts:", error);
       setPosts([]);
+      setHasMore(false);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMorePosts = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const offset = posts.length;
+      const more = await fetchPostsRange(offset, offset + PAGE_SIZE - 1);
+      // Deduplicate by id (avoids overlap if realtime added something)
+      setPosts(prev => {
+        const existing = new Set(prev.map(p => p.id));
+        return [...prev, ...more.filter(p => !existing.has(p.id))];
+      });
+      setHasMore(more.length === PAGE_SIZE);
+    } catch (error) {
+      console.error("Error loading more posts:", error);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -366,6 +404,15 @@ export function NewsFeed() {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Load more (only when no category filter active to keep UX consistent) */}
+          {hasMore && filteredPosts.length > 0 && activeCategory === 'all' && (
+            <div className="flex justify-center pt-2">
+              <Button variant="outline" onClick={loadMorePosts} disabled={loadingMore}>
+                {loadingMore ? 'Завантаження...' : 'Завантажити ще'}
+              </Button>
+            </div>
           )}
         </TabsContent>
       </Tabs>

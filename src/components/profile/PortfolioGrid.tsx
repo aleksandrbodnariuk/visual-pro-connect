@@ -94,9 +94,13 @@ const FILTERS = [
   { key: 'audio', label: 'Музика', icon: Music },
 ] as const;
 
+const PAGE_SIZE = 12;
+
 export const PortfolioGrid = memo(({ items: initialItems, className, userId, isOwner = false, onAddItem }: PortfolioGridProps) => {
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(initialItems);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [filter, setFilter] = useState<string>('all');
   const [playingItem, setPlayingItem] = useState<{ embedUrl: string; title: string } | null>(null);
   const [viewingPhotoIndex, setViewingPhotoIndex] = useState<number | null>(null);
@@ -122,7 +126,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
   useEffect(() => {
     if (!userId) return;
 
-    const fetchPortfolioItems = async () => {
+    const fetchInitialPortfolioItems = async () => {
       setLoading(true);
       const localItems = getLocalPortfolioRecords(userId);
 
@@ -131,26 +135,55 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
           .from('portfolio')
           .select('*')
           .eq('user_id', userId)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .range(0, PAGE_SIZE - 1);
 
         if (error) throw error;
 
         const remoteItems = (data || []).map(mapPortfolioRecordToItem);
-        const fallbackItems = localItems
-          .filter((localItem) => !remoteItems.some((remoteItem) => remoteItem.id === localItem.id))
-          .map(mapPortfolioRecordToItem);
+        // Local fallback items only shown if remote is empty (legacy data)
+        const fallbackItems = remoteItems.length === 0
+          ? localItems.map(mapPortfolioRecordToItem)
+          : [];
 
         setPortfolioItems([...fallbackItems, ...remoteItems]);
+        setHasMore(remoteItems.length === PAGE_SIZE);
       } catch (error) {
         console.error("Error fetching portfolio:", error);
         setPortfolioItems(localItems.map(mapPortfolioRecordToItem));
+        setHasMore(false);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPortfolioItems();
+    fetchInitialPortfolioItems();
   }, [userId]);
+
+  const loadMore = async () => {
+    if (!userId || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const offset = portfolioItems.length;
+      const { data, error } = await supabase
+        .from('portfolio')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) throw error;
+      const more = (data || []).map(mapPortfolioRecordToItem);
+      setPortfolioItems(prev => {
+        const existing = new Set(prev.map(p => p.id));
+        return [...prev, ...more.filter(p => !existing.has(p.id))];
+      });
+      setHasMore(more.length === PAGE_SIZE);
+    } catch (error) {
+      console.error('Error loading more portfolio items:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
   
   const handleEdit = (id: string) => {
     toast.info(`Редагування елементу ${id}`);
@@ -278,6 +311,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
                     alt={item.title}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
                     loading="lazy"
+                    decoding="async"
                   />
                 )}
               </div>
@@ -332,6 +366,15 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
           );
         })}
       </div>
+      )}
+
+      {/* Load more (only for the "all" filter; filters operate on already loaded items) */}
+      {hasMore && filter === 'all' && portfolioItems.length > 0 && (
+        <div className="flex justify-center mt-4">
+          <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? 'Завантаження...' : 'Показати ще'}
+          </Button>
+        </div>
       )}
 
       {/* Photo lightbox with navigation */}
