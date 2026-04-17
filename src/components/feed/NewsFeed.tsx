@@ -405,6 +405,15 @@ export function NewsFeed() {
               </CardContent>
             </Card>
           )}
+
+          {/* Load more (only when no category filter active to keep UX consistent) */}
+          {hasMore && filteredPosts.length > 0 && activeCategory === 'all' && (
+            <div className="flex justify-center pt-2">
+              <Button variant="outline" onClick={loadMorePosts} disabled={loadingMore}>
+                {loadingMore ? 'Завантаження...' : 'Завантажити ще'}
+              </Button>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
