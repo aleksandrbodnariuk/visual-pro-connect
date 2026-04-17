@@ -459,7 +459,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
                   disabled={isUploading}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Підтримуються: JPG, PNG, MP4, MP3, WAV та інші
+                  Зображення стискаються в WebP. Максимум 10MB до стиснення / 5MB після.
                 </p>
               </div>
             </TabsContent>
