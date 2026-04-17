@@ -498,6 +498,8 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
                         src={item.media_url} 
                         alt={item.title}
                         className="object-contain w-full h-full"
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : item.media_type === "audio" ? (
                       <div className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-purple-500 to-pink-500 gap-2">
@@ -508,7 +510,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
                       const vd = parseVideoUrl(item.media_url);
                       return vd?.thumbnail ? (
                         <>
-                          <img src={vd.thumbnail} alt={item.title} className="object-cover w-full h-full" />
+                          <img src={vd.thumbnail} alt={item.title} className="object-cover w-full h-full" loading="lazy" decoding="async" />
                           <div className="absolute inset-0 flex items-center justify-center">
                             <div className="h-10 w-10 rounded-full bg-black/50 flex items-center justify-center">
                               <FileVideo className="h-5 w-5 text-white" />
@@ -550,6 +552,13 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
                 </Card>
               ))}
             </div>
+            {hasMore && (
+              <div className="flex justify-center pt-2">
+                <Button variant="outline" onClick={loadMoreItems} disabled={loadingMore}>
+                  {loadingMore ? 'Завантаження...' : 'Показати ще'}
+                </Button>
+              </div>
+            )}
           </div>
         )}
         
