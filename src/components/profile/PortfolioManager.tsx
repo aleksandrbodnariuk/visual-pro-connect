@@ -130,6 +130,8 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [editItem, setEditItem] = useState<PortfolioItem | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -147,34 +149,49 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   const fetchPortfolioItems = async () => {
     try {
       setIsLoading(true);
-      const localData = getLocalPortfolioItems(userId);
+      const { data, error } = await supabase
+        .from("portfolio")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .range(0, PAGE_SIZE - 1);
 
-      try {
-        const { data, error } = await supabase
-          .from("portfolio")
-          .select("*")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false });
-
-        if (error) throw error;
-
-        const remoteData = data || [];
-        const mergedItems = [
-          ...localData.filter((localItem) => !remoteData.some((remoteItem) => remoteItem.id === localItem.id)),
-          ...remoteData,
-        ];
-
-        setPortfolioItems(mergedItems);
-      } catch (supabaseError) {
-        console.warn("Не вдалося отримати дані з Supabase:", supabaseError);
-        setPortfolioItems(localData);
-      }
-      
+      if (error) throw error;
+      const items = (data || []) as PortfolioItem[];
+      setPortfolioItems(items);
+      setHasMore(items.length === PAGE_SIZE);
     } catch (error: any) {
+      console.error("Помилка при завантаженні портфоліо:", error);
       toast.error("Помилка при завантаженні портфоліо");
-      console.error(error);
+      setPortfolioItems([]);
+      setHasMore(false);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadMoreItems = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const offset = portfolioItems.length;
+      const { data, error } = await supabase
+        .from("portfolio")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) throw error;
+      const more = (data || []) as PortfolioItem[];
+      setPortfolioItems(prev => {
+        const existing = new Set(prev.map(p => p.id));
+        return [...prev, ...more.filter(p => !existing.has(p.id))];
+      });
+      setHasMore(more.length === PAGE_SIZE);
+    } catch (error) {
+      console.error("Не вдалося завантажити більше:", error);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -191,124 +208,75 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   };
 
   const handleUpload = async () => {
-    // Перевірка для посилання
+    // ---- VIDEO LINK MODE ----
     if (uploadType === "link") {
       if (!videoLink || !title) {
         toast.error("Будь ласка, заповніть назву та посилання");
         return;
       }
-      
       const videoData = parseVideoUrl(videoLink);
       if (!videoData) {
         toast.error("Невірний формат посилання. Підтримуються YouTube та Vimeo");
         return;
       }
-      
       try {
         setIsUploading(true);
-        
-        // Спроба збереження в Supabase — зберігаємо оригінальне посилання
-        try {
-          const { error: insertError } = await supabase
-            .from("portfolio")
-            .insert({
-              user_id: userId,
-              title,
-              description,
-              media_url: videoLink,
-              media_type: "video"
-            });
-
-          if (insertError) throw insertError;
-        } catch (supabaseError) {
-          console.warn("Не вдалося зберегти в Supabase:", supabaseError);
-          
-          // Зберігаємо в локальному сховищі
-          const newItem = {
-            id: `local_${Date.now()}`,
-            title,
-            description,
-            media_url: videoLink,
-            media_type: "video"
-          };
-          
-          const existingItems = JSON.parse(localStorage.getItem(`portfolio_${userId}`) || "[]");
-          const updatedItems = [newItem, ...existingItems];
-          localStorage.setItem(`portfolio_${userId}`, JSON.stringify(updatedItems));
-          setPortfolioItems(updatedItems);
-        }
+        const { error: insertError } = await supabase
+          .from("portfolio")
+          .insert({ user_id: userId, title, description, media_url: videoLink, media_type: "video" });
+        if (insertError) throw insertError;
 
         toast.success("Відео успішно додано");
         setTitle("");
         setDescription("");
         setVideoLink("");
-        fetchPortfolioItems();
+        await fetchPortfolioItems();
         onUpdate();
       } catch (error: any) {
+        console.error("Помилка при додаванні відео:", error);
         toast.error("Помилка при додаванні відео");
-        console.error(error);
       } finally {
         setIsUploading(false);
       }
       return;
     }
-    
-    // Перевірка для файлу
+
+    // ---- FILE UPLOAD MODE ----
     if (!file || !title) {
       toast.error("Будь ласка, заповніть всі обов'язкові поля");
+      return;
+    }
+
+    // Pre-upload size check (only hard-block for non-images > 10MB; images are compressed)
+    if (file.size > MAX_INPUT_BYTES && !file.type.startsWith('image/')) {
+      toast.error(`Файл занадто великий (${(file.size / 1024 / 1024).toFixed(1)}MB). Максимум 10MB.`);
       return;
     }
 
     try {
       setIsUploading(true);
       const mediaType = getMediaTypeFromFile(file);
-      let mediaUrl = "";
-      
-      // Спроба завантаження в Supabase
+
+      // Compress images to WebP; pass through audio/video as-is
+      let fileToUpload: File;
       try {
-        const bucket = getStorageBucketForMediaType(mediaType);
-        const fileExt = file.name.split(".").pop();
-        const filePath = `${userId}/${Date.now()}.${fileExt}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from(bucket)
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage
-          .from(bucket)
-          .getPublicUrl(filePath);
-
-        mediaUrl = urlData.publicUrl;
-        
-        const { error: insertError } = await supabase
-          .from("portfolio")
-          .insert({
-            user_id: userId,
-            title,
-            description,
-            media_url: mediaUrl,
-            media_type: mediaType
-          });
-
-        if (insertError) throw insertError;
-      } catch (supabaseError) {
-        console.warn("Не вдалося завантажити в Supabase:", supabaseError);
-        mediaUrl = await readFileAsDataUrl(file);
-
-        const newItem = {
-          id: `local_${Date.now()}`,
-          title,
-          description,
-          media_url: mediaUrl,
-          media_type: mediaType,
-        };
-
-        const updatedItems = [newItem, ...getLocalPortfolioItems(userId)];
-        saveLocalPortfolioItems(userId, updatedItems);
-        setPortfolioItems(updatedItems);
+        fileToUpload = await prepareImageForUpload(file);
+      } catch (prepError: any) {
+        toast.error(prepError?.message || "Не вдалося підготувати файл");
+        setIsUploading(false);
+        return;
       }
+
+      const bucket = getStorageBucketForMediaType(mediaType);
+      const ext = fileToUpload.name.split(".").pop() || "bin";
+      const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+      const mediaUrl = await uploadToStorage(bucket, filePath, fileToUpload, fileToUpload.type);
+
+      const { error: insertError } = await supabase
+        .from("portfolio")
+        .insert({ user_id: userId, title, description, media_url: mediaUrl, media_type: mediaType });
+      if (insertError) throw insertError;
 
       toast.success("Файл успішно завантажено");
       setTitle("");
@@ -317,8 +285,8 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       await fetchPortfolioItems();
       onUpdate();
     } catch (error: any) {
-      toast.error("Помилка при завантаженні файлу");
-      console.error(error);
+      console.error("Помилка при завантаженні файлу:", error);
+      toast.error(error?.message || "Помилка при завантаженні файлу");
     } finally {
       setIsUploading(false);
     }
@@ -341,90 +309,52 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       setIsUploading(true);
       let updatedMediaUrl = editItem.media_url;
       let updatedMediaType = editItem.media_type;
-      const isLocalOnlyItem = editItem.id.startsWith("local_");
 
-      const updateLocalItem = () => {
-        const existingItems = getLocalPortfolioItems(userId);
-        const updatedItems = existingItems.map((item) => {
-          if (item.id === editItem.id) {
-            return {
-              ...item,
-              title: editTitle,
-              description: editDescription,
-              media_url: updatedMediaUrl,
-              media_type: updatedMediaType,
-            };
-          }
-          return item;
-        });
-
-        saveLocalPortfolioItems(userId, updatedItems);
-        setPortfolioItems(updatedItems);
-      };
-      
-      // Якщо вибрано новий файл, завантажуємо його
+      // If a new file is selected — compress + upload via uploadToStorage
       if (editFile) {
+        if (editFile.size > MAX_INPUT_BYTES && !editFile.type.startsWith('image/')) {
+          toast.error(`Файл занадто великий (${(editFile.size / 1024 / 1024).toFixed(1)}MB). Максимум 10MB.`);
+          setIsUploading(false);
+          return;
+        }
+
         updatedMediaType = getMediaTypeFromFile(editFile);
-        
-        // Спроба завантаження в Supabase
+
+        let fileToUpload: File;
         try {
-          // Спочатку видаляємо старий файл
-          const oldStorageLocation = getStorageLocationFromUrl(editItem.media_url);
-          if (oldStorageLocation) {
-            try {
-              await supabase.storage
-                .from(oldStorageLocation.bucket)
-                .remove([oldStorageLocation.path]);
-            } catch (error) {
-              console.warn("Не вдалося видалити старий файл:", error);
-            }
+          fileToUpload = await prepareImageForUpload(editFile);
+        } catch (prepError: any) {
+          toast.error(prepError?.message || "Не вдалося підготувати файл");
+          setIsUploading(false);
+          return;
+        }
+
+        // Try removing the old file (best-effort)
+        const oldStorageLocation = getStorageLocationFromUrl(editItem.media_url);
+        if (oldStorageLocation) {
+          try {
+            await supabase.storage.from(oldStorageLocation.bucket).remove([oldStorageLocation.path]);
+          } catch (e) {
+            console.warn("Не вдалося видалити старий файл:", e);
           }
-          
-          // Завантажуємо новий файл
-          const bucket = getStorageBucketForMediaType(updatedMediaType);
-          const fileExt = editFile.name.split(".").pop();
-          const filePath = `${userId}/${Date.now()}.${fileExt}`;
-          
-          const { error: uploadError } = await supabase.storage
-            .from(bucket)
-            .upload(filePath, editFile);
-
-          if (uploadError) throw uploadError;
-
-          const { data: urlData } = supabase.storage
-            .from(bucket)
-            .getPublicUrl(filePath);
-
-          updatedMediaUrl = urlData.publicUrl;
-        } catch (supabaseError) {
-          console.warn("Не вдалося завантажити в Supabase:", supabaseError);
-          updatedMediaUrl = await readFileAsDataUrl(editFile);
-          updateLocalItem();
         }
+
+        const bucket = getStorageBucketForMediaType(updatedMediaType);
+        const ext = fileToUpload.name.split(".").pop() || "bin";
+        const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        updatedMediaUrl = await uploadToStorage(bucket, filePath, fileToUpload, fileToUpload.type);
       }
 
-      if (isLocalOnlyItem) {
-        updateLocalItem();
-      } else {
-      
-        // Оновлюємо запис в базі даних
-        try {
-          const { error: updateError } = await supabase
-            .from("portfolio")
-            .update({
-              title: editTitle,
-              description: editDescription,
-              media_url: updatedMediaUrl,
-              media_type: updatedMediaType
-            })
-            .eq("id", editItem.id);
-
-          if (updateError) throw updateError;
-        } catch (updateError) {
-          console.warn("Не вдалося оновити запис в Supabase:", updateError);
-          updateLocalItem();
-        }
-      }
+      const { error: updateError } = await supabase
+        .from("portfolio")
+        .update({
+          title: editTitle,
+          description: editDescription,
+          media_url: updatedMediaUrl,
+          media_type: updatedMediaType,
+        })
+        .eq("id", editItem.id);
+      if (updateError) throw updateError;
 
       toast.success("Файл успішно оновлено");
       setEditItem(null);
@@ -435,8 +365,8 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       await fetchPortfolioItems();
       onUpdate();
     } catch (error: any) {
-      toast.error("Помилка при оновленні файлу");
-      console.error(error);
+      console.error("Помилка при оновленні файлу:", error);
+      toast.error(error?.message || "Помилка при оновленні файлу");
     } finally {
       setIsUploading(false);
     }
@@ -449,46 +379,30 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
 
   const handleDelete = async () => {
     if (!selectedItem) return;
-    
+
     try {
-      const isLocalOnlyItem = selectedItem.id.startsWith("local_");
+      const { error: deleteRecordError } = await supabase
+        .from("portfolio")
+        .delete()
+        .eq("id", selectedItem.id);
 
-      const removeLocalItem = () => {
-        const updatedItems = getLocalPortfolioItems(userId).filter((item) => item.id !== selectedItem.id);
-        saveLocalPortfolioItems(userId, updatedItems);
-        setPortfolioItems((currentItems) => currentItems.filter((item) => item.id !== selectedItem.id));
-      };
+      if (deleteRecordError) throw deleteRecordError;
 
-      // Спроба видалення з Supabase
-      try {
-        if (!isLocalOnlyItem) {
-          const { error: deleteRecordError } = await supabase
-            .from("portfolio")
-            .delete()
-            .eq("id", selectedItem.id);
-
-          if (deleteRecordError) throw deleteRecordError;
-
-          const storageLocation = getStorageLocationFromUrl(selectedItem.media_url);
-          if (storageLocation) {
-            await supabase.storage
-              .from(storageLocation.bucket)
-              .remove([storageLocation.path]);
-          }
+      const storageLocation = getStorageLocationFromUrl(selectedItem.media_url);
+      if (storageLocation) {
+        try {
+          await supabase.storage.from(storageLocation.bucket).remove([storageLocation.path]);
+        } catch (e) {
+          console.warn("Не вдалося видалити файл зі сховища:", e);
         }
-
-        removeLocalItem();
-      } catch (supabaseError) {
-        console.warn("Не вдалося видалити з Supabase:", supabaseError);
-        removeLocalItem();
       }
 
+      setPortfolioItems(prev => prev.filter(i => i.id !== selectedItem.id));
       toast.success("Файл успішно видалено");
-      await fetchPortfolioItems();
       onUpdate();
     } catch (error: any) {
+      console.error("Помилка при видаленні файлу:", error);
       toast.error("Помилка при видаленні файлу");
-      console.error(error);
     } finally {
       setDeleteDialogOpen(false);
       setSelectedItem(null);
