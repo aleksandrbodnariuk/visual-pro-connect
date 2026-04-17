@@ -311,6 +311,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
                     alt={item.title}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
                     loading="lazy"
+                    decoding="async"
                   />
                 )}
               </div>
@@ -365,6 +366,15 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
           );
         })}
       </div>
+      )}
+
+      {/* Load more (only for the "all" filter; filters operate on already loaded items) */}
+      {hasMore && filter === 'all' && portfolioItems.length > 0 && (
+        <div className="flex justify-center mt-4">
+          <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? 'Завантаження...' : 'Показати ще'}
+          </Button>
+        </div>
       )}
 
       {/* Photo lightbox with navigation */}
