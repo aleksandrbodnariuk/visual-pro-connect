@@ -81,11 +81,8 @@ export function useBannerUpload(
       }
 
       toast.success('Банер успішно оновлено');
-      
-      // Force page reload after a short delay
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // No full page reload — state already updated above; parent components
+      // refetch via onComplete or AuthContext will pick up the change.
     } catch (error) {
       console.error('Помилка при завантаженні банера:', error);
       toast.error('Не вдалося завантажити банер. Перевірте підключення до інтернету та спробуйте ще раз.');
