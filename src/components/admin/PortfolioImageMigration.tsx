@@ -36,8 +36,8 @@ function formatBytes(bytes?: number): string {
 
 export function PortfolioImageMigration() {
   const [running, setRunning] = useState(false);
-  const [dryRun, setDryRun] = useState(false);
-  const [limit, setLimit] = useState(20);
+  const [dryRun, setDryRun] = useState(true);
+  const [limit, setLimit] = useState(5);
   const [result, setResult] = useState<MigrationResult | null>(null);
 
   const runMigration = async () => {
@@ -50,8 +50,25 @@ export function PortfolioImageMigration() {
         body: { dryRun, limit },
       });
       if (error) throw error;
-      setResult(data as MigrationResult);
       const r = data as MigrationResult;
+
+      // Enrich details with thumbnails + titles for display
+      const ids = r.details.map((d) => d.id);
+      if (ids.length) {
+        const { data: rows } = await supabase
+          .from('portfolio')
+          .select('id, media_url, title')
+          .in('id', ids);
+        const map = new Map((rows || []).map((row) => [row.id, row]));
+        r.details = r.details.map((d) => {
+          const row = map.get(d.id);
+          return row
+            ? { ...d, previewUrl: row.media_url, title: row.title }
+            : d;
+        });
+      }
+
+      setResult(r);
       toast.success(`Готово: оброблено ${r.processed}, пропущено ${r.skipped}, помилок ${r.errors}`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Невідома помилка';
