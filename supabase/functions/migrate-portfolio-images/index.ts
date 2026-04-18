@@ -1,11 +1,10 @@
-// Migrate existing portfolio photos: download → resize (max 1200px) → WebP (q=0.8) → upload → update DB → delete old
-// Uses @jsquash WASM libs (Sharp is not available in Deno)
+// Migrate existing portfolio photos: download (pre-resized via Supabase Image Transform) → WebP encode → upload → update DB → delete old
+// Memory-safe: relies on Supabase render endpoint to resize before download, then jsquash only encodes WebP.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import decodeJpeg, { init as initJpegDecode } from 'https://esm.sh/@jsquash/jpeg@1.5.0/decode';
 import decodePng, { init as initPngDecode } from 'https://esm.sh/@jsquash/png@3.0.1/decode';
 import decodeWebp, { init as initWebpDecode } from 'https://esm.sh/@jsquash/webp@1.4.0/decode';
 import encodeWebp, { init as initWebpEncode } from 'https://esm.sh/@jsquash/webp@1.4.0/encode';
-import resize, { initResize } from 'https://esm.sh/@jsquash/resize@2.1.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,16 +12,25 @@ const corsHeaders = {
 };
 
 const MAX_DIM = 1200;
-const QUALITY = 80; // 0-100 for jsquash
-const SKIP_BELOW_BYTES = 500 * 1024; // 500KB
+const QUALITY = 80;
+const SKIP_BELOW_BYTES = 500 * 1024;
 const BUCKET = 'portfolio';
+
+interface MigrationDetail {
+  id: string;
+  status: 'processed' | 'skipped' | 'error';
+  reason?: string;
+  oldSize?: number;
+  newSize?: number;
+  newUrl?: string;
+}
 
 interface MigrationResult {
   total: number;
   processed: number;
   skipped: number;
   errors: number;
-  details: Array<{ id: string; status: 'processed' | 'skipped' | 'error'; reason?: string; oldSize?: number; newSize?: number; newUrl?: string }>;
+  details: MigrationDetail[];
 }
 
 function extractStoragePath(publicUrl: string, bucket: string): string | null {
@@ -32,12 +40,18 @@ function extractStoragePath(publicUrl: string, bucket: string): string | null {
   return publicUrl.substring(idx + marker.length).split('?')[0];
 }
 
+/**
+ * Build a URL that uses Supabase server-side image transform to pre-resize.
+ * This dramatically reduces memory usage in the edge function.
+ */
+function buildResizedUrl(publicUrl: string, bucket: string, supabaseUrl: string): string | null {
+  const path = extractStoragePath(publicUrl, bucket);
+  if (!path) return null;
+  return `${supabaseUrl}/storage/v1/render/image/public/${bucket}/${path}?width=${MAX_DIM}&height=${MAX_DIM}&resize=contain&quality=85&format=origin`;
+}
+
 async function decodeImage(buffer: ArrayBuffer, contentType: string): Promise<ImageData> {
   const ct = contentType.toLowerCase();
-  if (ct.includes('jpeg') || ct.includes('jpg')) {
-    await initJpegDecode();
-    return await decodeJpeg(buffer);
-  }
   if (ct.includes('png')) {
     await initPngDecode();
     return await decodePng(buffer);
@@ -46,32 +60,16 @@ async function decodeImage(buffer: ArrayBuffer, contentType: string): Promise<Im
     await initWebpDecode();
     return await decodeWebp(buffer);
   }
-  // Fallback: try jpeg first, then png
-  try {
-    await initJpegDecode();
-    return await decodeJpeg(buffer);
-  } catch {
-    await initPngDecode();
-    return await decodePng(buffer);
-  }
+  // jpeg / jpg / unknown → try jpeg
+  await initJpegDecode();
+  return await decodeJpeg(buffer);
 }
 
-async function processImage(buffer: ArrayBuffer, contentType: string): Promise<ArrayBuffer> {
-  let imageData = await decodeImage(buffer, contentType);
-
-  // Resize if needed (preserve aspect ratio)
-  const { width, height } = imageData;
-  if (width > MAX_DIM || height > MAX_DIM) {
-    const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
-    const newW = Math.round(width * ratio);
-    const newH = Math.round(height * ratio);
-    await initResize();
-    imageData = await resize(imageData, { width: newW, height: newH });
-  }
-
+async function processImage(buffer: ArrayBuffer, contentType: string): Promise<Uint8Array> {
+  const imageData = await decodeImage(buffer, contentType);
   await initWebpEncode();
   const encoded = await encodeWebp(imageData, { quality: QUALITY });
-  return encoded;
+  return new Uint8Array(encoded);
 }
 
 Deno.serve(async (req) => {
@@ -100,7 +98,9 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => ({}));
   const dryRun = body.dryRun === true;
-  const limit = typeof body.limit === 'number' ? body.limit : 100;
+  // Hard cap to keep memory usage safe; UI may request more but we clamp.
+  const requested = typeof body.limit === 'number' ? body.limit : 10;
+  const limit = Math.min(Math.max(1, requested), 10);
 
   const { data: items, error: fetchErr } = await supabase
     .from('portfolio')
@@ -129,19 +129,16 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Download
-      const resp = await fetch(item.media_url);
-      if (!resp.ok) {
-        result.errors++;
-        result.details.push({ id: item.id, status: 'error', reason: `download failed: ${resp.status}` });
-        continue;
+      // HEAD original to know its size (for skip + reporting)
+      let oldSize = 0;
+      try {
+        const head = await fetch(item.media_url, { method: 'HEAD' });
+        oldSize = parseInt(head.headers.get('content-length') || '0', 10);
+      } catch {
+        // ignore — we'll get the size from the transformed download
       }
-      const contentType = resp.headers.get('content-type') || 'image/jpeg';
-      const originalBuffer = await resp.arrayBuffer();
-      const oldSize = originalBuffer.byteLength;
 
-      // Skip small files (<500KB)
-      if (oldSize < SKIP_BELOW_BYTES) {
+      if (oldSize > 0 && oldSize < SKIP_BELOW_BYTES) {
         result.skipped++;
         result.details.push({ id: item.id, status: 'skipped', reason: 'below 500KB', oldSize });
         continue;
@@ -153,11 +150,48 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Compress
+      // Download via Supabase Image Transform — server-side resize to MAX_DIM.
+      // This keeps the edge function memory low even for 14MB originals.
+      const resizedUrl = buildResizedUrl(item.media_url, BUCKET, supabaseUrl);
+      const downloadUrl = resizedUrl || item.media_url;
+      const resp = await fetch(downloadUrl);
+      if (!resp.ok) {
+        // Fallback: if render endpoint failed, try original (size cap below will protect us)
+        if (resizedUrl) {
+          const fallback = await fetch(item.media_url);
+          if (!fallback.ok) {
+            result.errors++;
+            result.details.push({ id: item.id, status: 'error', reason: `download failed: ${resp.status}` });
+            continue;
+          }
+          var contentType = fallback.headers.get('content-type') || 'image/jpeg';
+          var originalBuffer = await fallback.arrayBuffer();
+        } else {
+          result.errors++;
+          result.details.push({ id: item.id, status: 'error', reason: `download failed: ${resp.status}` });
+          continue;
+        }
+      } else {
+        var contentType = resp.headers.get('content-type') || 'image/jpeg';
+        var originalBuffer = await resp.arrayBuffer();
+      }
+
+      // Safety cap: refuse to process > 8 MB inside the function (would risk OOM)
+      if (originalBuffer.byteLength > 8 * 1024 * 1024) {
+        result.errors++;
+        result.details.push({ id: item.id, status: 'error', reason: `too large after resize: ${originalBuffer.byteLength}b`, oldSize });
+        continue;
+      }
+
+      // Encode → WebP
       const optimized = await processImage(originalBuffer, contentType);
       const newSize = optimized.byteLength;
 
-      // Upload to optimized/{userId}/{timestamp}.webp
+      // Free original buffer reference ASAP
+      // @ts-ignore
+      originalBuffer = null;
+
+      // Upload to optimized/{userId}/{timestamp}-{shortId}.webp
       const newPath = `optimized/${item.user_id}/${Date.now()}-${item.id.slice(0, 8)}.webp`;
       const { error: uploadErr } = await supabase.storage
         .from(BUCKET)
@@ -179,7 +213,6 @@ Deno.serve(async (req) => {
         .eq('id', item.id);
 
       if (updateErr) {
-        // Rollback uploaded file
         await supabase.storage.from(BUCKET).remove([newPath]).catch(() => {});
         result.errors++;
         result.details.push({ id: item.id, status: 'error', reason: `db update: ${updateErr.message}` });
@@ -196,7 +229,7 @@ Deno.serve(async (req) => {
 
       result.processed++;
       result.details.push({ id: item.id, status: 'processed', oldSize, newSize, newUrl });
-      console.log(`[OK] ${item.id}: ${oldSize} → ${newSize} bytes (${Math.round((1 - newSize / oldSize) * 100)}% reduction)`);
+      console.log(`[OK] ${item.id}: ${oldSize}b → ${newSize}b`);
     } catch (e) {
       result.errors++;
       const msg = e instanceof Error ? e.message : String(e);
