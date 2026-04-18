@@ -109,9 +109,9 @@ export function PortfolioImageMigration() {
               id="limit"
               type="number"
               min={1}
-              max={100}
+              max={10}
               value={limit}
-              onChange={(e) => setLimit(Math.min(100, Math.max(1, parseInt(e.target.value) || 1)))}
+              onChange={(e) => setLimit(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
             />
           </div>
           <div className="flex items-end gap-2">
