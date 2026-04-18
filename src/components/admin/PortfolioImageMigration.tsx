@@ -8,12 +8,23 @@ import { Loader2, ImageDown, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
+interface MigrationDetail {
+  id: string;
+  status: 'processed' | 'skipped' | 'error';
+  reason?: string;
+  oldSize?: number;
+  newSize?: number;
+  newUrl?: string;
+  previewUrl?: string;
+  title?: string;
+}
+
 interface MigrationResult {
   total: number;
   processed: number;
   skipped: number;
   errors: number;
-  details: Array<{ id: string; status: 'processed' | 'skipped' | 'error'; reason?: string; oldSize?: number; newSize?: number }>;
+  details: MigrationDetail[];
 }
 
 function formatBytes(bytes?: number): string {
@@ -25,8 +36,8 @@ function formatBytes(bytes?: number): string {
 
 export function PortfolioImageMigration() {
   const [running, setRunning] = useState(false);
-  const [dryRun, setDryRun] = useState(false);
-  const [limit, setLimit] = useState(20);
+  const [dryRun, setDryRun] = useState(true);
+  const [limit, setLimit] = useState(5);
   const [result, setResult] = useState<MigrationResult | null>(null);
 
   const runMigration = async () => {
@@ -39,8 +50,25 @@ export function PortfolioImageMigration() {
         body: { dryRun, limit },
       });
       if (error) throw error;
-      setResult(data as MigrationResult);
       const r = data as MigrationResult;
+
+      // Enrich details with thumbnails + titles for display
+      const ids = r.details.map((d) => d.id);
+      if (ids.length) {
+        const { data: rows } = await supabase
+          .from('portfolio')
+          .select('id, media_url, title')
+          .in('id', ids);
+        const map = new Map((rows || []).map((row) => [row.id, row]));
+        r.details = r.details.map((d) => {
+          const row = map.get(d.id);
+          return row
+            ? { ...d, previewUrl: row.media_url, title: row.title }
+            : d;
+        });
+      }
+
+      setResult(r);
       toast.success(`Готово: оброблено ${r.processed}, пропущено ${r.skipped}, помилок ${r.errors}`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Невідома помилка';
@@ -63,7 +91,7 @@ export function PortfolioImageMigration() {
           Міграція зображень портфоліо
         </CardTitle>
         <CardDescription>
-          Стискає існуючі фото портфоліо у WebP (макс. 1200px, якість 0.8). Файли менше 500 КБ пропускаються. Старі файли видаляються після успішної заміни.
+          Стискає існуючі фото портфоліо у WebP (макс. 1200px, якість 0.8). Файли менше 500 КБ пропускаються. Старі файли видаляються після успішної заміни. Через ліміт пам'яті — макс. 10 за раз.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -81,9 +109,9 @@ export function PortfolioImageMigration() {
               id="limit"
               type="number"
               min={1}
-              max={100}
+              max={10}
               value={limit}
-              onChange={(e) => setLimit(Math.min(100, Math.max(1, parseInt(e.target.value) || 1)))}
+              onChange={(e) => setLimit(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
             />
           </div>
           <div className="flex items-end gap-2">
@@ -130,18 +158,33 @@ export function PortfolioImageMigration() {
               </div>
             )}
 
-            <div className="max-h-64 overflow-y-auto border rounded-lg divide-y text-xs">
+            <div className="max-h-96 overflow-y-auto border rounded-lg divide-y">
               {result.details.map((d) => (
-                <div key={d.id} className="p-2 flex items-center justify-between gap-2">
-                  <code className="text-muted-foreground truncate">{d.id.slice(0, 8)}</code>
+                <div key={d.id} className="p-2 flex items-center gap-3 text-xs">
+                  {d.previewUrl ? (
+                    <img
+                      src={d.previewUrl}
+                      alt={d.title || d.id}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-12 w-12 rounded object-cover bg-muted shrink-0"
+                    />
+                  ) : (
+                    <div className="h-12 w-12 rounded bg-muted shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">{d.title || '—'}</div>
+                    <code className="text-muted-foreground text-[10px]">{d.id.slice(0, 8)}</code>
+                  </div>
                   <Badge
                     variant={
                       d.status === 'processed' ? 'default' : d.status === 'error' ? 'destructive' : 'secondary'
                     }
+                    className="shrink-0"
                   >
                     {d.status}
                   </Badge>
-                  <span className="text-muted-foreground truncate flex-1 text-right">
+                  <span className="text-muted-foreground truncate text-right shrink-0 max-w-[160px]">
                     {d.status === 'processed'
                       ? `${formatBytes(d.oldSize)} → ${formatBytes(d.newSize)}`
                       : d.reason || ''}
