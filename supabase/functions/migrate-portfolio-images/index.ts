@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: fetchErr.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
-  const result: MigrationResult = { total: items?.length || 0, processed: 0, skipped: 0, errors: 0, details: [] };
+  const result: MigrationResult = { total: items?.length || 0, processed: 0, skipped: 0, errors: 0, remaining: remainingCount || 0, details: [] };
 
   for (const item of items || []) {
     try {
