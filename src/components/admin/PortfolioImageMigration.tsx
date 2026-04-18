@@ -8,12 +8,23 @@ import { Loader2, ImageDown, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
+interface MigrationDetail {
+  id: string;
+  status: 'processed' | 'skipped' | 'error';
+  reason?: string;
+  oldSize?: number;
+  newSize?: number;
+  newUrl?: string;
+  previewUrl?: string;
+  title?: string;
+}
+
 interface MigrationResult {
   total: number;
   processed: number;
   skipped: number;
   errors: number;
-  details: Array<{ id: string; status: 'processed' | 'skipped' | 'error'; reason?: string; oldSize?: number; newSize?: number }>;
+  details: MigrationDetail[];
 }
 
 function formatBytes(bytes?: number): string {
