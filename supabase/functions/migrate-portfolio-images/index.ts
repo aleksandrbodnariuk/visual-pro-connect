@@ -1,17 +1,16 @@
-// Migrate existing portfolio photos: download (pre-resized) → WebP encode (Photon WASM) → upload → update DB → delete old
-// Memory-safe: Photon is ~1MB WASM, processes one image at a time, releases memory after each.
+// Migrate existing portfolio photos using Supabase Image Transform to convert directly to WebP.
+// Zero in-function image processing — Supabase Render endpoint does resize + format conversion server-side.
+// This is the most memory-safe approach possible: function only fetches → uploads.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { PhotonImage, resize, SamplingFilter } from 'npm:@cf-wasm/photon@0.1.36';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const MAX_DIM = 1024;
-const QUALITY = 78;
+const MAX_DIM = 1200;
+const QUALITY = 80;
 const SKIP_BELOW_BYTES = 500 * 1024;
-const MAX_DOWNLOAD_BYTES = 6 * 1024 * 1024; // refuse > 6MB after pre-resize
 const BUCKET = 'portfolio';
 
 interface MigrationDetail {
@@ -40,14 +39,13 @@ function extractStoragePath(publicUrl: string, bucket: string): string | null {
 }
 
 /**
- * Use Supabase Image Transform to pre-resize on the server before download.
- * This is critical for memory: 14MB → ~300KB before reaching the function.
+ * Build a URL that uses Supabase Image Transform to BOTH resize AND convert to WebP.
+ * Format=webp triggers server-side transcode — we never touch raw pixels in the function.
  */
-function buildResizedUrl(publicUrl: string, bucket: string, supabaseUrl: string): string | null {
+function buildWebpUrl(publicUrl: string, bucket: string, supabaseUrl: string): string | null {
   const path = extractStoragePath(publicUrl, bucket);
   if (!path) return null;
-  // resize=contain ensures aspect ratio is preserved within MAX_DIM box
-  return `${supabaseUrl}/storage/v1/render/image/public/${bucket}/${path}?width=${MAX_DIM}&height=${MAX_DIM}&resize=contain&quality=80`;
+  return `${supabaseUrl}/storage/v1/render/image/public/${bucket}/${path}?width=${MAX_DIM}&height=${MAX_DIM}&resize=contain&quality=${QUALITY}&format=webp`;
 }
 
 async function processOne(
@@ -61,7 +59,7 @@ async function processOne(
     return { id: item.id, status: 'skipped', reason: 'already optimized' };
   }
 
-  // HEAD to detect tiny files we can skip
+  // HEAD original
   let oldSize = 0;
   try {
     const head = await fetch(item.media_url, { method: 'HEAD' });
@@ -76,49 +74,26 @@ async function processOne(
     return { id: item.id, status: 'processed', reason: 'dry-run', oldSize };
   }
 
-  // Download via Image Transform — server pre-resizes to <= MAX_DIM and re-encodes JPEG q80
-  const resizedUrl = buildResizedUrl(item.media_url, BUCKET, supabaseUrl);
-  let resp = resizedUrl ? await fetch(resizedUrl) : await fetch(item.media_url);
-  if (!resp.ok && resizedUrl) {
-    // Fallback to original
-    resp = await fetch(item.media_url);
+  // Server-side: resize + transcode to WebP. We just download the result.
+  const webpUrl = buildWebpUrl(item.media_url, BUCKET, supabaseUrl);
+  if (!webpUrl) {
+    return { id: item.id, status: 'error', reason: 'cannot build transform URL', oldSize };
   }
+
+  const resp = await fetch(webpUrl);
   if (!resp.ok) {
-    return { id: item.id, status: 'error', reason: `download failed: ${resp.status}`, oldSize };
+    const txt = await resp.text().catch(() => '');
+    return { id: item.id, status: 'error', reason: `transform failed ${resp.status}: ${txt.slice(0, 100)}`, oldSize };
   }
 
-  // Strict size guard
-  const cl = parseInt(resp.headers.get('content-length') || '0', 10);
-  if (cl > MAX_DOWNLOAD_BYTES) {
-    return { id: item.id, status: 'error', reason: `too large after resize: ${cl}b`, oldSize };
-  }
-
-  const inputBytes = new Uint8Array(await resp.arrayBuffer());
-  if (inputBytes.byteLength > MAX_DOWNLOAD_BYTES) {
-    return { id: item.id, status: 'error', reason: `too large after resize: ${inputBytes.byteLength}b`, oldSize };
-  }
-
-  // Photon: decode → (extra resize if still too big) → encode WebP
-  let img: PhotonImage | null = null;
-  let resized: PhotonImage | null = null;
-  let optimized: Uint8Array;
-  try {
-    img = PhotonImage.new_from_byteslice(inputBytes);
-    const w = img.get_width();
-    const h = img.get_height();
-    if (w > MAX_DIM || h > MAX_DIM) {
-      const ratio = Math.min(MAX_DIM / w, MAX_DIM / h);
-      resized = resize(img, Math.round(w * ratio), Math.round(h * ratio), SamplingFilter.Lanczos3);
-      optimized = resized.get_bytes_webp();
-    } else {
-      optimized = img.get_bytes_webp();
-    }
-  } finally {
-    img?.free();
-    resized?.free();
-  }
-
+  const optimized = new Uint8Array(await resp.arrayBuffer());
   const newSize = optimized.byteLength;
+
+  // Sanity: WebP signature 'RIFF....WEBP'
+  if (newSize < 100 || optimized[0] !== 0x52 /* R */ || optimized[8] !== 0x57 /* W */) {
+    return { id: item.id, status: 'error', reason: 'invalid WebP from transform', oldSize, newSize };
+  }
+
   const newPath = `optimized/${item.user_id}/${Date.now()}-${item.id.slice(0, 8)}.webp`;
   const { error: uploadErr } = await supabase.storage
     .from(BUCKET)
@@ -159,7 +134,6 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, serviceKey);
 
-  // Auth check
   const authHeader = req.headers.get('Authorization');
   if (!authHeader) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -178,9 +152,9 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => ({}));
   const dryRun = body.dryRun === true;
-  // Hard cap at 5 (sequential, memory-safe)
-  const requested = typeof body.limit === 'number' ? body.limit : 3;
-  const limit = Math.min(Math.max(1, requested), 5);
+  // Now we can safely process more — no in-function image decoding
+  const requested = typeof body.limit === 'number' ? body.limit : 10;
+  const limit = Math.min(Math.max(1, requested), 20);
 
   const { data: items, error: fetchErr } = await supabase
     .from('portfolio')
@@ -209,7 +183,7 @@ Deno.serve(async (req) => {
     details: [],
   };
 
-  // Sequential processing — never parallel — to keep memory low
+  // Sequential — keeps things predictable & memory-safe
   for (const item of items || []) {
     try {
       const detail = await processOne(item as any, supabase, supabaseUrl, dryRun);
