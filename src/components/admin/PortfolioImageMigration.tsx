@@ -158,18 +158,33 @@ export function PortfolioImageMigration() {
               </div>
             )}
 
-            <div className="max-h-64 overflow-y-auto border rounded-lg divide-y text-xs">
+            <div className="max-h-96 overflow-y-auto border rounded-lg divide-y">
               {result.details.map((d) => (
-                <div key={d.id} className="p-2 flex items-center justify-between gap-2">
-                  <code className="text-muted-foreground truncate">{d.id.slice(0, 8)}</code>
+                <div key={d.id} className="p-2 flex items-center gap-3 text-xs">
+                  {d.previewUrl ? (
+                    <img
+                      src={d.previewUrl}
+                      alt={d.title || d.id}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-12 w-12 rounded object-cover bg-muted shrink-0"
+                    />
+                  ) : (
+                    <div className="h-12 w-12 rounded bg-muted shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">{d.title || '—'}</div>
+                    <code className="text-muted-foreground text-[10px]">{d.id.slice(0, 8)}</code>
+                  </div>
                   <Badge
                     variant={
                       d.status === 'processed' ? 'default' : d.status === 'error' ? 'destructive' : 'secondary'
                     }
+                    className="shrink-0"
                   >
                     {d.status}
                   </Badge>
-                  <span className="text-muted-foreground truncate flex-1 text-right">
+                  <span className="text-muted-foreground truncate text-right shrink-0 max-w-[160px]">
                     {d.status === 'processed'
                       ? `${formatBytes(d.oldSize)} → ${formatBytes(d.newSize)}`
                       : d.reason || ''}
