@@ -1,7 +1,7 @@
 // Migrate existing portfolio photos: download (pre-resized) → WebP encode (Photon WASM) → upload → update DB → delete old
 // Memory-safe: Photon is ~1MB WASM, processes one image at a time, releases memory after each.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { PhotonImage, resize, SamplingFilter } from 'https://esm.sh/@cf-wasm/photon@0.1.36';
+import { PhotonImage, resize, SamplingFilter } from 'npm:@cf-wasm/photon@0.1.36';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
