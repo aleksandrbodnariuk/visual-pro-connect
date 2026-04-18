@@ -38,7 +38,7 @@ function formatBytes(bytes?: number): string {
 export function PortfolioImageMigration() {
   const [running, setRunning] = useState(false);
   const [dryRun, setDryRun] = useState(true);
-  const [limit, setLimit] = useState(3);
+  const [limit, setLimit] = useState(10);
   const [result, setResult] = useState<MigrationResult | null>(null);
 
   const runMigration = async () => {
@@ -92,7 +92,7 @@ export function PortfolioImageMigration() {
           Міграція зображень портфоліо
         </CardTitle>
         <CardDescription>
-          Стискає існуючі фото портфоліо у WebP (макс. 1024px, якість 0.78). Файли менше 500 КБ пропускаються. Старі файли видаляються після успішної заміни. Обробка послідовна — макс. 5 за раз для стабільності пам'яті.
+          Стискає існуючі фото портфоліо у WebP (макс. 1200px, якість 0.8) через серверну трансформацію Supabase. Файли менше 500 КБ пропускаються. Старі файли видаляються після успішної заміни. До 20 за раз.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -110,9 +110,9 @@ export function PortfolioImageMigration() {
               id="limit"
               type="number"
               min={1}
-              max={5}
+              max={20}
               value={limit}
-              onChange={(e) => setLimit(Math.min(5, Math.max(1, parseInt(e.target.value) || 1)))}
+              onChange={(e) => setLimit(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
             />
           </div>
           <div className="flex items-end gap-2">
