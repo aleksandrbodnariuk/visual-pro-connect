@@ -30,6 +30,7 @@ interface MigrationResult {
   processed: number;
   skipped: number;
   errors: number;
+  remaining: number;
   details: MigrationDetail[];
 }
 
