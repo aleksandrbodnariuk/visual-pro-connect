@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { LogoUpload } from "@/components/settings/LogoUpload";
 import { DatabaseDiagnostics } from "@/components/admin/DatabaseDiagnostics";
 import { ImageCompressionSettings } from "@/components/admin/ImageCompressionSettings";
+import { PortfolioImageMigration } from "@/components/admin/PortfolioImageMigration";
 
 export function SettingsTab() {
   const [settings, setSettings] = useState({
@@ -83,6 +84,8 @@ export function SettingsTab() {
       <LogoUpload />
       
       <ImageCompressionSettings />
+      
+      <PortfolioImageMigration />
       
       <DatabaseDiagnostics />
       

@@ -1,0 +1,157 @@
+import { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2, ImageDown, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+
+interface MigrationResult {
+  total: number;
+  processed: number;
+  skipped: number;
+  errors: number;
+  details: Array<{ id: string; status: 'processed' | 'skipped' | 'error'; reason?: string; oldSize?: number; newSize?: number }>;
+}
+
+function formatBytes(bytes?: number): string {
+  if (!bytes) return '—';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+export function PortfolioImageMigration() {
+  const [running, setRunning] = useState(false);
+  const [dryRun, setDryRun] = useState(false);
+  const [limit, setLimit] = useState(20);
+  const [result, setResult] = useState<MigrationResult | null>(null);
+
+  const runMigration = async () => {
+    if (!dryRun && !confirm(`Запустити міграцію для ${limit} зображень портфоліо? Це необоротна операція.`)) return;
+
+    setRunning(true);
+    setResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('migrate-portfolio-images', {
+        body: { dryRun, limit },
+      });
+      if (error) throw error;
+      setResult(data as MigrationResult);
+      const r = data as MigrationResult;
+      toast.success(`Готово: оброблено ${r.processed}, пропущено ${r.skipped}, помилок ${r.errors}`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Невідома помилка';
+      toast.error(`Помилка: ${msg}`);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const totalSaved = result?.details.reduce(
+    (acc, d) => acc + ((d.oldSize || 0) - (d.newSize || 0)),
+    0
+  );
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ImageDown className="h-5 w-5" />
+          Міграція зображень портфоліо
+        </CardTitle>
+        <CardDescription>
+          Стискає існуючі фото портфоліо у WebP (макс. 1200px, якість 0.8). Файли менше 500 КБ пропускаються. Старі файли видаляються після успішної заміни.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="rounded-lg border border-warning/50 bg-warning/10 p-3 flex gap-2 text-sm">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-warning" />
+          <div>
+            <strong>Увага:</strong> операція замінює оригінальні файли. Рекомендуємо спочатку запустити в режимі «Тестовий прогін», щоб побачити, що буде оброблено.
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="limit">Кількість записів за прогін</Label>
+            <Input
+              id="limit"
+              type="number"
+              min={1}
+              max={100}
+              value={limit}
+              onChange={(e) => setLimit(Math.min(100, Math.max(1, parseInt(e.target.value) || 1)))}
+            />
+          </div>
+          <div className="flex items-end gap-2">
+            <Button
+              variant={dryRun ? 'default' : 'outline'}
+              onClick={() => setDryRun(!dryRun)}
+              disabled={running}
+              className="flex-1"
+            >
+              {dryRun ? '✓ Тестовий прогін' : 'Тестовий прогін'}
+            </Button>
+          </div>
+        </div>
+
+        <Button onClick={runMigration} disabled={running} className="w-full gap-2">
+          {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageDown className="h-4 w-4" />}
+          {running ? 'Обробка...' : dryRun ? 'Запустити тестовий прогін' : 'Запустити міграцію'}
+        </Button>
+
+        {result && (
+          <div className="space-y-3 pt-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-muted-foreground">Всього</div>
+                <div className="text-2xl font-bold">{result.total}</div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-muted-foreground">Оброблено</div>
+                <div className="text-2xl font-bold text-success">{result.processed}</div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-muted-foreground">Пропущено</div>
+                <div className="text-2xl font-bold text-muted-foreground">{result.skipped}</div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-muted-foreground">Помилок</div>
+                <div className="text-2xl font-bold text-destructive">{result.errors}</div>
+              </div>
+            </div>
+
+            {!!totalSaved && totalSaved > 0 && (
+              <div className="rounded-lg bg-success/10 border border-success/30 p-3 text-sm">
+                <strong>Економія місця:</strong> {formatBytes(totalSaved)}
+              </div>
+            )}
+
+            <div className="max-h-64 overflow-y-auto border rounded-lg divide-y text-xs">
+              {result.details.map((d) => (
+                <div key={d.id} className="p-2 flex items-center justify-between gap-2">
+                  <code className="text-muted-foreground truncate">{d.id.slice(0, 8)}</code>
+                  <Badge
+                    variant={
+                      d.status === 'processed' ? 'default' : d.status === 'error' ? 'destructive' : 'secondary'
+                    }
+                  >
+                    {d.status}
+                  </Badge>
+                  <span className="text-muted-foreground truncate flex-1 text-right">
+                    {d.status === 'processed'
+                      ? `${formatBytes(d.oldSize)} → ${formatBytes(d.newSize)}`
+                      : d.reason || ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
