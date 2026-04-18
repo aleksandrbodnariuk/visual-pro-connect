@@ -24,6 +24,7 @@ interface MigrationResult {
   processed: number;
   skipped: number;
   errors: number;
+  remaining?: number;
   details: MigrationDetail[];
 }
 
@@ -155,6 +156,21 @@ export function PortfolioImageMigration() {
             {!!totalSaved && totalSaved > 0 && (
               <div className="rounded-lg bg-success/10 border border-success/30 p-3 text-sm">
                 <strong>Економія місця:</strong> {formatBytes(totalSaved)}
+              </div>
+            )}
+
+            {typeof result.remaining === 'number' && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex items-center justify-between gap-3">
+                <div className="text-sm">
+                  <strong>Залишилось необроблених:</strong> {result.remaining}
+                  {result.remaining === 0 && ' 🎉 Усі фото оптимізовано!'}
+                </div>
+                {result.remaining > 0 && (
+                  <Button size="sm" onClick={runMigration} disabled={running} className="gap-2">
+                    {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageDown className="h-4 w-4" />}
+                    Обробити наступні {Math.min(limit, result.remaining)}
+                  </Button>
+                )}
               </div>
             )}
 

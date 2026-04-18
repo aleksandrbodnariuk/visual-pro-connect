@@ -30,6 +30,7 @@ interface MigrationResult {
   processed: number;
   skipped: number;
   errors: number;
+  remaining: number;
   details: MigrationDetail[];
 }
 
@@ -102,17 +103,28 @@ Deno.serve(async (req) => {
   const requested = typeof body.limit === 'number' ? body.limit : 10;
   const limit = Math.min(Math.max(1, requested), 10);
 
+  // Only fetch records that are NOT yet optimized.
+  // After successful migration, media_url contains '/optimized/' — so those are skipped at the SQL level.
   const { data: items, error: fetchErr } = await supabase
     .from('portfolio')
     .select('id, user_id, media_url')
     .eq('media_type', 'photo')
+    .not('media_url', 'ilike', '%/optimized/%')
+    .order('created_at', { ascending: true })
     .limit(limit);
+
+  // Also report total remaining (un-optimized) count for the UI
+  const { count: remainingCount } = await supabase
+    .from('portfolio')
+    .select('id', { count: 'exact', head: true })
+    .eq('media_type', 'photo')
+    .not('media_url', 'ilike', '%/optimized/%');
 
   if (fetchErr) {
     return new Response(JSON.stringify({ error: fetchErr.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
-  const result: MigrationResult = { total: items?.length || 0, processed: 0, skipped: 0, errors: 0, details: [] };
+  const result: MigrationResult = { total: items?.length || 0, processed: 0, skipped: 0, errors: 0, remaining: remainingCount || 0, details: [] };
 
   for (const item of items || []) {
     try {
