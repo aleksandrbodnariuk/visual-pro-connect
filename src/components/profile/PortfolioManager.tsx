@@ -18,17 +18,17 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { uploadToStorage } from "@/lib/storage";
 import {
-  compressImageFromDataUrl,
-  dataUrlToBlob,
-  OUTPUT_FORMAT,
-  OUTPUT_EXTENSION,
-} from "@/lib/imageCompression";
+  uploadPortfolioImageVariants,
+  deletePortfolioVariants,
+} from "@/lib/portfolioMediaPipeline";
 
 interface PortfolioItem {
   id: string;
   title: string;
   description: string | null;
   media_url: string;
+  media_preview_url: string | null;
+  media_display_url: string | null;
   media_type: string;
 }
 
