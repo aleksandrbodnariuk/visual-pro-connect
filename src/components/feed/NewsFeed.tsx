@@ -300,7 +300,7 @@ export function NewsFeed() {
     if (post) { setPostToEdit({ id: post.id, content: post.content, media_url: post.media_url, category: post.category }); setEditPostOpen(true); }
   };
 
-  const handleEditSuccess = () => { loadPosts(); };
+  const handleEditSuccess = () => { loadInitialPosts(); };
 
   const filteredPosts = posts.filter(post => {
     if (activeCategory === "all") return true;
@@ -401,6 +401,22 @@ export function NewsFeed() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Realtime banner: new posts from other users */}
+      {pendingPosts.length > 0 && (
+        <div className="sticky top-2 z-20 flex justify-center">
+          <Button
+            onClick={revealPendingPosts}
+            size="sm"
+            className="rounded-full shadow-lg gap-2 animate-in fade-in slide-in-from-top-2"
+          >
+            <ArrowUp className="h-4 w-4" />
+            {pendingPosts.length === 1
+              ? '1 нова публікація'
+              : `${pendingPosts.length} нових публікацій`}
+          </Button>
+        </div>
+      )}
 
       {/* Category filters */}
       <Tabs value={activeCategory} onValueChange={setActiveCategory}>
