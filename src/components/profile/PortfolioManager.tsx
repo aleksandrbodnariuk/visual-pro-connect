@@ -272,6 +272,8 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       setIsUploading(false);
     }
   };
+
+  const handleOpenEditDialog = (item: PortfolioItem) => {
     setEditItem(item);
     setEditTitle(item.title);
     setEditDescription(item.description || "");
@@ -287,41 +289,32 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
     try {
       setIsUploading(true);
       let updatedMediaUrl = editItem.media_url;
+      let updatedPreviewUrl = editItem.media_preview_url;
+      let updatedDisplayUrl = editItem.media_display_url;
       let updatedMediaType = editItem.media_type;
 
-      // If a new file is selected — compress + upload via uploadToStorage
       if (editFile) {
-        if (editFile.size > MAX_INPUT_BYTES && !editFile.type.startsWith('image/')) {
-          toast.error(`Файл занадто великий (${(editFile.size / 1024 / 1024).toFixed(1)}MB). Максимум 10MB.`);
+        try {
+          validateForUpload(editFile);
+        } catch (e: any) {
+          toast.error(e?.message || "Файл не відповідає вимогам");
           setIsUploading(false);
           return;
         }
 
         updatedMediaType = getMediaTypeFromFile(editFile);
 
-        let fileToUpload: File;
-        try {
-          fileToUpload = await prepareImageForUpload(editFile);
-        } catch (prepError: any) {
-          toast.error(prepError?.message || "Не вдалося підготувати файл");
-          setIsUploading(false);
-          return;
-        }
+        // Best-effort cleanup of old variants before uploading new ones
+        await deletePortfolioVariants([
+          editItem.media_url,
+          editItem.media_preview_url,
+          editItem.media_display_url,
+        ]);
 
-        // Try removing the old file (best-effort)
-        const oldStorageLocation = getStorageLocationFromUrl(editItem.media_url);
-        if (oldStorageLocation) {
-          try {
-            await supabase.storage.from(oldStorageLocation.bucket).remove([oldStorageLocation.path]);
-          } catch (e) {
-            console.warn("Не вдалося видалити старий файл:", e);
-          }
-        }
-
-        const bucket = getStorageBucketForMediaType(updatedMediaType);
-        const ext = fileToUpload.name.split(".").pop() || "bin";
-        const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        updatedMediaUrl = await uploadToStorage(bucket, filePath, fileToUpload, fileToUpload.type);
+        const variants = await uploadPortfolioImageVariants(editFile, userId);
+        updatedMediaUrl = variants.originalUrl;
+        updatedPreviewUrl = variants.previewUrl;
+        updatedDisplayUrl = variants.displayUrl;
       }
 
       const { error: updateError } = await supabase
@@ -330,6 +323,8 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
           title: editTitle,
           description: editDescription,
           media_url: updatedMediaUrl,
+          media_preview_url: updatedPreviewUrl,
+          media_display_url: updatedDisplayUrl,
           media_type: updatedMediaType,
         })
         .eq("id", editItem.id);
