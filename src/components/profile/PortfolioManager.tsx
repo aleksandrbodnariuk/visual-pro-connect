@@ -230,9 +230,10 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       return;
     }
 
-    // Pre-upload size check (only hard-block for non-images > 10MB; images are compressed)
-    if (file.size > MAX_INPUT_BYTES && !file.type.startsWith('image/')) {
-      toast.error(`Файл занадто великий (${(file.size / 1024 / 1024).toFixed(1)}MB). Максимум 10MB.`);
+    try {
+      validateForUpload(file);
+    } catch (e: any) {
+      toast.error(e?.message || "Файл не відповідає вимогам");
       return;
     }
 
@@ -240,25 +241,22 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       setIsUploading(true);
       const mediaType = getMediaTypeFromFile(file);
 
-      // Compress images to WebP; pass through audio/video as-is
-      let fileToUpload: File;
-      try {
-        fileToUpload = await prepareImageForUpload(file);
-      } catch (prepError: any) {
-        toast.error(prepError?.message || "Не вдалося підготувати файл");
-        setIsUploading(false);
-        return;
-      }
-
-      const bucket = getStorageBucketForMediaType(mediaType);
-      const ext = fileToUpload.name.split(".").pop() || "bin";
-      const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
-      const mediaUrl = await uploadToStorage(bucket, filePath, fileToUpload, fileToUpload.type);
+      // Run through portfolio media pipeline:
+      //  - images → preview (≤400px) + display (≤1600px) WebP variants
+      //  - audio/video → uploaded as-is
+      const variants = await uploadPortfolioImageVariants(file, userId);
 
       const { error: insertError } = await supabase
         .from("portfolio")
-        .insert({ user_id: userId, title, description, media_url: mediaUrl, media_type: mediaType });
+        .insert({
+          user_id: userId,
+          title,
+          description,
+          media_url: variants.originalUrl,
+          media_preview_url: variants.previewUrl,
+          media_display_url: variants.displayUrl,
+          media_type: mediaType,
+        });
       if (insertError) throw insertError;
 
       toast.success("Файл успішно завантажено");
@@ -274,8 +272,6 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       setIsUploading(false);
     }
   };
-
-  const handleOpenEditDialog = (item: PortfolioItem) => {
     setEditItem(item);
     setEditTitle(item.title);
     setEditDescription(item.description || "");
