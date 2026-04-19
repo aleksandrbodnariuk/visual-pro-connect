@@ -362,8 +362,15 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
 
       if (deleteRecordError) throw deleteRecordError;
 
+      // Clean up all variants (legacy + preview + display) from storage
+      await deletePortfolioVariants([
+        selectedItem.media_url,
+        selectedItem.media_preview_url,
+        selectedItem.media_display_url,
+      ]);
+      // Audio files live in the 'posts' bucket (legacy convention) — fall back to old cleanup
       const storageLocation = getStorageLocationFromUrl(selectedItem.media_url);
-      if (storageLocation) {
+      if (storageLocation && storageLocation.bucket !== 'portfolio') {
         try {
           await supabase.storage.from(storageLocation.bucket).remove([storageLocation.path]);
         } catch (e) {
