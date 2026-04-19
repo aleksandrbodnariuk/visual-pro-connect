@@ -18,7 +18,10 @@ import {
 interface PortfolioItem {
   id: string;
   type: "photo" | "video" | "audio";
+  /** Lightweight URL for grid view (≤400px). Falls back to display/legacy. */
   thumbnailUrl: string;
+  /** High-quality URL for lightbox view (≤1600px). Falls back to legacy. */
+  displayUrl: string;
   title: string;
   likes: number;
   comments: number;
@@ -36,6 +39,8 @@ interface PortfolioRecord {
   id: string;
   title: string;
   media_url: string;
+  media_preview_url?: string | null;
+  media_display_url?: string | null;
   media_type: string;
 }
 
@@ -77,10 +82,16 @@ const mapPortfolioRecordToItem = (item: PortfolioRecord): PortfolioItem => {
   if (item.media_type === "video") mediaType = "video";
   else if (item.media_type === "audio") mediaType = "audio";
 
+  // Preview = small/fast for grid; Display = high-quality for lightbox
+  // Fallback chain: preview → display → legacy media_url
+  const thumbnailUrl = item.media_preview_url || item.media_display_url || item.media_url;
+  const displayUrl = item.media_display_url || item.media_url;
+
   return {
     id: item.id,
     type: mediaType,
-    thumbnailUrl: item.media_url,
+    thumbnailUrl,
+    displayUrl,
     title: item.title,
     likes: 0,
     comments: 0,
