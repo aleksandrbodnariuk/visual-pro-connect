@@ -97,30 +97,13 @@ const getStorageLocationFromUrl = (url: string) => {
 };
 
 /**
- * Prepare an image file for upload: compress to WebP via canvas, validate
- * size limits. Returns the resulting File (always WebP for images).
- * Throws with a user-friendly message if file exceeds caps.
+ * Pre-upload validation. Image processing now happens in the media pipeline,
+ * which generates preview + display variants automatically.
  */
-async function prepareImageForUpload(file: File): Promise<File> {
-  if (file.size > MAX_INPUT_BYTES) {
-    // Per spec: still try to compress (don't reject upfront unless image fails)
-    if (!file.type.startsWith('image/')) {
-      throw new Error('Файл занадто великий (понад 10MB).');
-    }
+function validateForUpload(file: File) {
+  if (file.size > MAX_INPUT_BYTES && !file.type.startsWith('image/')) {
+    throw new Error(`Файл занадто великий (${(file.size / 1024 / 1024).toFixed(1)}MB). Максимум 10MB.`);
   }
-  if (!file.type.startsWith('image/') || file.type === 'image/gif') {
-    return file;
-  }
-  const dataUrl = await readFileAsDataUrl(file);
-  const compressedDataUrl = await compressImageFromDataUrl(dataUrl, 'post');
-  const blob = dataUrlToBlob(compressedDataUrl);
-  if (blob.size > MAX_OUTPUT_BYTES) {
-    throw new Error(
-      `Зображення завелике навіть після стиснення (${(blob.size / 1024 / 1024).toFixed(1)}MB). Максимум 5MB.`
-    );
-  }
-  const newName = file.name.replace(/\.[^/.]+$/, OUTPUT_EXTENSION);
-  return new File([blob], newName, { type: OUTPUT_FORMAT, lastModified: Date.now() });
 }
 
 export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
