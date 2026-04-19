@@ -238,7 +238,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
   }, [viewingPhotoIndex, handlePrevPhoto, handleNextPhoto]);
 
   const handlePlayAudio = (item: PortfolioItem) => {
-    setPlayingAudio({ url: item.thumbnailUrl, title: item.title });
+    setPlayingAudio({ url: item.displayUrl, title: item.title });
   };
 
   if (loading) {
@@ -295,7 +295,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
       ) : (
       <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4", className)}>
         {filteredItems.map((item) => {
-          const videoData = item.type === "video" ? parseVideoUrl(item.thumbnailUrl) : null;
+          const videoData = item.type === "video" ? parseVideoUrl(item.displayUrl) : null;
           const thumbnailSrc = videoData?.thumbnail || item.thumbnailUrl;
           const isVideo = item.type === "video";
           const isAudio = item.type === "audio";
@@ -402,7 +402,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
                 </button>
               )}
               <img
-                src={photoItems[viewingPhotoIndex].thumbnailUrl}
+                src={photoItems[viewingPhotoIndex].displayUrl}
                 alt={photoItems[viewingPhotoIndex].title}
                 className="max-w-full max-h-[80vh] object-contain rounded"
               />
