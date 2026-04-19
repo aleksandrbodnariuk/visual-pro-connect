@@ -266,7 +266,8 @@ export function NewsFeed() {
       let mediaUrl = null;
       if (selectedFile) {
         const ext = selectedFile.name.split('.').pop() || 'jpg';
-        const path = `post-${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
+        // RLS politika "Authenticated upload with ownership" requires {user_id}/ prefix
+        const path = `${currentUser.id}/post-${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
         mediaUrl = await uploadToStorage('posts', path, selectedFile, selectedFile.type);
       }
       const { data, error } = await supabase.from('posts').insert([{
