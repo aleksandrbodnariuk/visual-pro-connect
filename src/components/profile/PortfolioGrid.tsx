@@ -206,11 +206,11 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
   };
 
   const handlePlayVideo = (item: PortfolioItem) => {
-    const videoData = parseVideoUrl(item.thumbnailUrl);
+    const videoData = parseVideoUrl(item.displayUrl);
     if (videoData) {
       setPlayingItem({ embedUrl: videoData.embedUrl, title: item.title });
     } else {
-      window.open(item.thumbnailUrl, '_blank');
+      window.open(item.displayUrl, '_blank');
     }
   };
 
