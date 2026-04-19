@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Image, Video, Users, Send, X, Pencil, Music } from "lucide-react";
+import { Image, Video, Users, Send, X, Pencil, Music, ArrowUp } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import { AudioPlayer } from "./AudioPlayer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "./PostCard";
