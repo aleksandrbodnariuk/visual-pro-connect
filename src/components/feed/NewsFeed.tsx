@@ -18,18 +18,22 @@ import { compressImageFromDataUrl, dataUrlToBlob, validateImageSize, OUTPUT_FORM
 import { useFeedData } from "@/hooks/useFeedData";
 
 const PAGE_SIZE = 12;
+const PREFETCH_THRESHOLD = 0.7; // trigger loadMore at 70% scroll
 
 export function NewsFeed() {
+  const { user: authUser } = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [lastCreatedAt, setLastCreatedAt] = useState<string | null>(null);
+  const [pendingPosts, setPendingPosts] = useState<any[]>([]); // banner buffer for others' new posts
   const [newPostContent, setNewPostContent] = useState("");
   const [isFormExpanded, setIsFormExpanded] = useState(false);
   const [activeCategory, setActiveCategory] = useState("all");
   const [editPostOpen, setEditPostOpen] = useState(false);
   const [postToEdit, setPostToEdit] = useState<any>(null);
-  
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -41,33 +45,45 @@ export function NewsFeed() {
 
   const [currentUser, setCurrentUser] = useState<any>(null);
 
+  // Dedup set: tracks all post IDs ever loaded into the feed
+  const knownPostIdsRef = useRef<Set<string>>(new Set());
+  // Track last cursor in ref for stable handler access
+  const lastCreatedAtRef = useRef<string | null>(null);
+  useEffect(() => { lastCreatedAtRef.current = lastCreatedAt; }, [lastCreatedAt]);
+
   useEffect(() => {
-    loadPosts();
+    loadInitialPosts();
     loadCurrentUser();
   }, []);
 
-  // Realtime: only react to NEW or DELETED posts (insert into list / remove from list).
-  // Avoid full reload to prevent mass refetches on every change.
+  // Realtime: own posts -> prepend immediately, others' posts -> buffer for banner.
+  // DELETE -> remove. Never refetch entire feed.
   useEffect(() => {
+    const myUserId = authUser?.id;
     const channel = supabase
       .channel(`realtime_posts_feed_${Math.random().toString(36).substring(7)}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, async (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
         const newPost: any = payload.new;
-        if (!newPost) return;
-        // Skip if already in list (we appended optimistically on create)
-        setPosts(prev => {
-          if (prev.some(p => p.id === newPost.id)) return prev;
-          return [newPost, ...prev];
-        });
+        if (!newPost?.id) return;
+        if (knownPostIdsRef.current.has(newPost.id)) return; // dedup
+        knownPostIdsRef.current.add(newPost.id);
+
+        if (myUserId && newPost.user_id === myUserId) {
+          setPosts(prev => prev.some(p => p.id === newPost.id) ? prev : [newPost, ...prev]);
+        } else {
+          setPendingPosts(prev => prev.some(p => p.id === newPost.id) ? prev : [newPost, ...prev]);
+        }
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'posts' }, (payload) => {
         const oldPost: any = payload.old;
         if (!oldPost?.id) return;
+        knownPostIdsRef.current.delete(oldPost.id);
         setPosts(prev => prev.filter(p => p.id !== oldPost.id));
+        setPendingPosts(prev => prev.filter(p => p.id !== oldPost.id));
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [authUser?.id]);
 
   const loadCurrentUser = async () => {
     try {
@@ -81,12 +97,16 @@ export function NewsFeed() {
     }
   };
 
-  const fetchPostsRange = async (from: number, to: number) => {
-    const { data: supabasePosts, error } = await supabase
+  /** Cursor-based fetch: returns posts strictly older than `cursor` (or latest if null). */
+  const fetchPostsCursor = async (cursor: string | null) => {
+    let query = supabase
       .from('posts')
       .select('*')
       .order('created_at', { ascending: false })
-      .range(from, to);
+      .limit(PAGE_SIZE);
+    if (cursor) query = query.lt('created_at', cursor);
+
+    const { data: supabasePosts, error } = await query;
     if (error && error.code !== 'PGRST116') console.error("Error loading posts:", error);
     if (!supabasePosts || supabasePosts.length === 0) return [];
     const authorIds = [...new Set(supabasePosts.map(p => p.user_id).filter(Boolean))] as string[];
@@ -99,13 +119,15 @@ export function NewsFeed() {
     }));
   };
 
-  const loadPosts = async (isInitial = true) => {
+  const loadInitialPosts = async () => {
     try {
-      if (isInitial) setLoading(true);
+      setLoading(true);
       const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
-      const result = await Promise.race([fetchPostsRange(0, PAGE_SIZE - 1), timeout]);
+      const result = await Promise.race([fetchPostsCursor(null), timeout]);
+      knownPostIdsRef.current = new Set(result.map((p: any) => p.id));
       setPosts(result);
       setHasMore(result.length === PAGE_SIZE);
+      setLastCreatedAt(result.length > 0 ? result[result.length - 1].created_at : null);
     } catch (error) {
       console.error("Error loading posts:", error);
       setPosts([]);
@@ -115,24 +137,58 @@ export function NewsFeed() {
     }
   };
 
-  const loadMorePosts = async () => {
+  const loadMorePosts = useCallback(async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     try {
-      const offset = posts.length;
-      const more = await fetchPostsRange(offset, offset + PAGE_SIZE - 1);
-      // Deduplicate by id (avoids overlap if realtime added something)
-      setPosts(prev => {
-        const existing = new Set(prev.map(p => p.id));
-        return [...prev, ...more.filter(p => !existing.has(p.id))];
-      });
+      const cursor = lastCreatedAtRef.current;
+      const more = await fetchPostsCursor(cursor);
+      const fresh = more.filter((p: any) => !knownPostIdsRef.current.has(p.id));
+      fresh.forEach((p: any) => knownPostIdsRef.current.add(p.id));
+      if (fresh.length > 0) {
+        setPosts(prev => [...prev, ...fresh]);
+        setLastCreatedAt(fresh[fresh.length - 1].created_at);
+      }
       setHasMore(more.length === PAGE_SIZE);
     } catch (error) {
       console.error("Error loading more posts:", error);
     } finally {
       setLoadingMore(false);
     }
-  };
+  }, [loadingMore, hasMore]);
+
+  // Scroll prefetch at ~70% of document height
+  useEffect(() => {
+    const onScroll = () => {
+      if (!hasMore || loadingMore || loading) return;
+      const scrolled = window.scrollY + window.innerHeight;
+      const total = document.documentElement.scrollHeight;
+      if (total > 0 && scrolled / total >= PREFETCH_THRESHOLD) {
+        loadMorePosts();
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [hasMore, loadingMore, loading, loadMorePosts]);
+
+  /** Reveal pending posts (from realtime buffer) at top of feed. */
+  const revealPendingPosts = useCallback(() => {
+    if (pendingPosts.length === 0) return;
+    setPosts(prev => {
+      const existing = new Set(prev.map(p => p.id));
+      const toAdd = pendingPosts.filter(p => !existing.has(p.id));
+      return [...toAdd, ...prev];
+    });
+    setPendingPosts([]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [pendingPosts]);
+
+  /**
+   * Frontend ranking-prep model (architecture-only; sorting stays by created_at DESC for now).
+   * score = likes_count * 2 + comments_count * 3 — exposed as helper for future ranking switch.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _scoreForRanking = (p: any) => (p.likes_count || 0) * 2 + (p.comments_count || 0) * 3;
 
   // ======== Centralized feed data (comments, likes, profiles) ========
   const postIds = useMemo(() => posts.map(p => p.id), [posts]);
