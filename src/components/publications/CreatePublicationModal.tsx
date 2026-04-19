@@ -109,7 +109,8 @@ export function CreatePublicationModal({
         }
 
         const fileExtension = contentType === OUTPUT_FORMAT ? 'webp' : (selectedFile.name.split('.').pop() || 'jpg');
-        const uniqueFileName = `post-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExtension}`;
+        // RLS politika "Authenticated upload with ownership" requires {user_id}/ prefix
+        const uniqueFileName = `${userId}/post-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExtension}`;
         
         console.log('Завантаження файлу:', uniqueFileName);
         mediaUrl = await uploadToStorage('posts', uniqueFileName, fileToUpload, contentType);
