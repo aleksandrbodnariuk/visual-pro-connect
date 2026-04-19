@@ -31,6 +31,8 @@ interface PortfolioItem {
   title: string;
   description: string | null;
   media_url: string;
+  media_preview_url: string | null;
+  media_display_url: string | null;
   media_type: string;
 }
 
@@ -72,7 +74,7 @@ export function PortfolioBlock() {
       try {
         const { data, error } = await supabase
           .from('portfolio')
-          .select('id, user_id, title, description, media_url, media_type')
+          .select('id, user_id, title, description, media_url, media_preview_url, media_display_url, media_type')
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -180,7 +182,9 @@ export function PortfolioBlock() {
               const isAudio = item.media_type === 'audio';
               const isPhoto = item.media_type === 'photo';
               const videoData = isVideo ? parseVideoUrl(item.media_url) : null;
-              const thumbnailSrc = isVideo && videoData ? videoData.thumbnail : (isPhoto ? item.media_url : null);
+              // Grid uses preview (lightweight); falls back to display, then legacy media_url
+              const photoSrc = item.media_preview_url || item.media_display_url || item.media_url;
+              const thumbnailSrc = isVideo && videoData ? videoData.thumbnail : (isPhoto ? photoSrc : null);
 
               return (
                 <div
@@ -264,7 +268,7 @@ export function PortfolioBlock() {
                 </button>
               )}
               <img
-                src={photoItems[viewingPhotoIndex].media_url}
+                src={photoItems[viewingPhotoIndex].media_display_url || photoItems[viewingPhotoIndex].media_url}
                 alt={photoItems[viewingPhotoIndex].title}
                 className="max-w-full max-h-[80vh] object-contain rounded"
               />

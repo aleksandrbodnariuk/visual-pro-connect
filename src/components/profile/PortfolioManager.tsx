@@ -18,17 +18,17 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { uploadToStorage } from "@/lib/storage";
 import {
-  compressImageFromDataUrl,
-  dataUrlToBlob,
-  OUTPUT_FORMAT,
-  OUTPUT_EXTENSION,
-} from "@/lib/imageCompression";
+  uploadPortfolioImageVariants,
+  deletePortfolioVariants,
+} from "@/lib/portfolioMediaPipeline";
 
 interface PortfolioItem {
   id: string;
   title: string;
   description: string | null;
   media_url: string;
+  media_preview_url: string | null;
+  media_display_url: string | null;
   media_type: string;
 }
 
@@ -97,30 +97,13 @@ const getStorageLocationFromUrl = (url: string) => {
 };
 
 /**
- * Prepare an image file for upload: compress to WebP via canvas, validate
- * size limits. Returns the resulting File (always WebP for images).
- * Throws with a user-friendly message if file exceeds caps.
+ * Pre-upload validation. Image processing now happens in the media pipeline,
+ * which generates preview + display variants automatically.
  */
-async function prepareImageForUpload(file: File): Promise<File> {
-  if (file.size > MAX_INPUT_BYTES) {
-    // Per spec: still try to compress (don't reject upfront unless image fails)
-    if (!file.type.startsWith('image/')) {
-      throw new Error('Файл занадто великий (понад 10MB).');
-    }
+function validateForUpload(file: File) {
+  if (file.size > MAX_INPUT_BYTES && !file.type.startsWith('image/')) {
+    throw new Error(`Файл занадто великий (${(file.size / 1024 / 1024).toFixed(1)}MB). Максимум 10MB.`);
   }
-  if (!file.type.startsWith('image/') || file.type === 'image/gif') {
-    return file;
-  }
-  const dataUrl = await readFileAsDataUrl(file);
-  const compressedDataUrl = await compressImageFromDataUrl(dataUrl, 'post');
-  const blob = dataUrlToBlob(compressedDataUrl);
-  if (blob.size > MAX_OUTPUT_BYTES) {
-    throw new Error(
-      `Зображення завелике навіть після стиснення (${(blob.size / 1024 / 1024).toFixed(1)}MB). Максимум 5MB.`
-    );
-  }
-  const newName = file.name.replace(/\.[^/.]+$/, OUTPUT_EXTENSION);
-  return new File([blob], newName, { type: OUTPUT_FORMAT, lastModified: Date.now() });
 }
 
 export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
@@ -247,9 +230,10 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       return;
     }
 
-    // Pre-upload size check (only hard-block for non-images > 10MB; images are compressed)
-    if (file.size > MAX_INPUT_BYTES && !file.type.startsWith('image/')) {
-      toast.error(`Файл занадто великий (${(file.size / 1024 / 1024).toFixed(1)}MB). Максимум 10MB.`);
+    try {
+      validateForUpload(file);
+    } catch (e: any) {
+      toast.error(e?.message || "Файл не відповідає вимогам");
       return;
     }
 
@@ -257,25 +241,22 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       setIsUploading(true);
       const mediaType = getMediaTypeFromFile(file);
 
-      // Compress images to WebP; pass through audio/video as-is
-      let fileToUpload: File;
-      try {
-        fileToUpload = await prepareImageForUpload(file);
-      } catch (prepError: any) {
-        toast.error(prepError?.message || "Не вдалося підготувати файл");
-        setIsUploading(false);
-        return;
-      }
-
-      const bucket = getStorageBucketForMediaType(mediaType);
-      const ext = fileToUpload.name.split(".").pop() || "bin";
-      const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
-      const mediaUrl = await uploadToStorage(bucket, filePath, fileToUpload, fileToUpload.type);
+      // Run through portfolio media pipeline:
+      //  - images → preview (≤400px) + display (≤1600px) WebP variants
+      //  - audio/video → uploaded as-is
+      const variants = await uploadPortfolioImageVariants(file, userId);
 
       const { error: insertError } = await supabase
         .from("portfolio")
-        .insert({ user_id: userId, title, description, media_url: mediaUrl, media_type: mediaType });
+        .insert({
+          user_id: userId,
+          title,
+          description,
+          media_url: variants.originalUrl,
+          media_preview_url: variants.previewUrl,
+          media_display_url: variants.displayUrl,
+          media_type: mediaType,
+        });
       if (insertError) throw insertError;
 
       toast.success("Файл успішно завантажено");
@@ -308,41 +289,32 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
     try {
       setIsUploading(true);
       let updatedMediaUrl = editItem.media_url;
+      let updatedPreviewUrl = editItem.media_preview_url;
+      let updatedDisplayUrl = editItem.media_display_url;
       let updatedMediaType = editItem.media_type;
 
-      // If a new file is selected — compress + upload via uploadToStorage
       if (editFile) {
-        if (editFile.size > MAX_INPUT_BYTES && !editFile.type.startsWith('image/')) {
-          toast.error(`Файл занадто великий (${(editFile.size / 1024 / 1024).toFixed(1)}MB). Максимум 10MB.`);
+        try {
+          validateForUpload(editFile);
+        } catch (e: any) {
+          toast.error(e?.message || "Файл не відповідає вимогам");
           setIsUploading(false);
           return;
         }
 
         updatedMediaType = getMediaTypeFromFile(editFile);
 
-        let fileToUpload: File;
-        try {
-          fileToUpload = await prepareImageForUpload(editFile);
-        } catch (prepError: any) {
-          toast.error(prepError?.message || "Не вдалося підготувати файл");
-          setIsUploading(false);
-          return;
-        }
+        // Best-effort cleanup of old variants before uploading new ones
+        await deletePortfolioVariants([
+          editItem.media_url,
+          editItem.media_preview_url,
+          editItem.media_display_url,
+        ]);
 
-        // Try removing the old file (best-effort)
-        const oldStorageLocation = getStorageLocationFromUrl(editItem.media_url);
-        if (oldStorageLocation) {
-          try {
-            await supabase.storage.from(oldStorageLocation.bucket).remove([oldStorageLocation.path]);
-          } catch (e) {
-            console.warn("Не вдалося видалити старий файл:", e);
-          }
-        }
-
-        const bucket = getStorageBucketForMediaType(updatedMediaType);
-        const ext = fileToUpload.name.split(".").pop() || "bin";
-        const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        updatedMediaUrl = await uploadToStorage(bucket, filePath, fileToUpload, fileToUpload.type);
+        const variants = await uploadPortfolioImageVariants(editFile, userId);
+        updatedMediaUrl = variants.originalUrl;
+        updatedPreviewUrl = variants.previewUrl;
+        updatedDisplayUrl = variants.displayUrl;
       }
 
       const { error: updateError } = await supabase
@@ -351,6 +323,8 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
           title: editTitle,
           description: editDescription,
           media_url: updatedMediaUrl,
+          media_preview_url: updatedPreviewUrl,
+          media_display_url: updatedDisplayUrl,
           media_type: updatedMediaType,
         })
         .eq("id", editItem.id);
@@ -388,8 +362,15 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
 
       if (deleteRecordError) throw deleteRecordError;
 
+      // Clean up all variants (legacy + preview + display) from storage
+      await deletePortfolioVariants([
+        selectedItem.media_url,
+        selectedItem.media_preview_url,
+        selectedItem.media_display_url,
+      ]);
+      // Audio files live in the 'posts' bucket (legacy convention) — fall back to old cleanup
       const storageLocation = getStorageLocationFromUrl(selectedItem.media_url);
-      if (storageLocation) {
+      if (storageLocation && storageLocation.bucket !== 'portfolio') {
         try {
           await supabase.storage.from(storageLocation.bucket).remove([storageLocation.path]);
         } catch (e) {
