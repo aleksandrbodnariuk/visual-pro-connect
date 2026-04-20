@@ -39,11 +39,11 @@ function formatBytes(bytes?: number): string {
 export function PortfolioImageMigration() {
   const [running, setRunning] = useState(false);
   const [dryRun, setDryRun] = useState(true);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(5);
   const [result, setResult] = useState<MigrationResult | null>(null);
 
   const runMigration = async () => {
-    if (!dryRun && !confirm(`Запустити міграцію для ${limit} зображень портфоліо? Це необоротна операція.`)) return;
+    if (!dryRun && !confirm(`Запустити міграцію для ${limit} зображень портфоліо?`)) return;
 
     setRunning(true);
     setResult(null);
@@ -111,9 +111,9 @@ export function PortfolioImageMigration() {
               id="limit"
               type="number"
               min={1}
-              max={20}
+              max={5}
               value={limit}
-              onChange={(e) => setLimit(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
+              onChange={(e) => setLimit(Math.min(5, Math.max(1, parseInt(e.target.value) || 1)))}
             />
           </div>
           <div className="flex items-end gap-2">

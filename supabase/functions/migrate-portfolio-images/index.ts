@@ -1,7 +1,8 @@
-// Migrate existing portfolio photos: generate preview (≤400px) + display (≤1600px) WebP variants
-// using Supabase Image Transform (server-side, zero CPU cost in this function).
+// Migrate existing portfolio photos: generate preview (≤400px) + display (≤1600px) WebP variants.
+// Uses ImageScript (pure-JS, works on Supabase Free tier — no Image Transform feature required).
 // Original media_url is preserved as a fallback.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { Image } from 'https://deno.land/x/imagescript@1.2.17/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,10 +10,12 @@ const corsHeaders = {
 };
 
 const PREVIEW_MAX = 400;
-const PREVIEW_QUALITY = 72;
 const DISPLAY_MAX = 1600;
-const DISPLAY_QUALITY = 85;
 const BUCKET = 'portfolio';
+// ImageScript encodeWEBP is lossless only — we use JPEG with high quality as a smaller-than-PNG fallback.
+// For most browsers JPEG is fine; we still cut size dramatically by resizing.
+const PREVIEW_JPEG_QUALITY = 72;
+const DISPLAY_JPEG_QUALITY = 85;
 
 interface MigrationDetail {
   id: string;
@@ -40,36 +43,24 @@ function extractStoragePath(publicUrl: string, bucket: string): string | null {
   return publicUrl.substring(idx + marker.length).split('?')[0];
 }
 
-function buildTransformUrl(
-  publicUrl: string,
-  bucket: string,
-  supabaseUrl: string,
-  maxDim: number,
-  quality: number,
-): string | null {
-  const path = extractStoragePath(publicUrl, bucket);
-  if (!path) return null;
-  return `${supabaseUrl}/storage/v1/render/image/public/${bucket}/${path}?width=${maxDim}&height=${maxDim}&resize=contain&quality=${quality}&format=webp`;
-}
-
-async function fetchVariant(url: string): Promise<Uint8Array> {
-  const resp = await fetch(url);
-  if (!resp.ok) {
-    const txt = await resp.text().catch(() => '');
-    throw new Error(`transform ${resp.status}: ${txt.slice(0, 100)}`);
+async function buildVariant(img: Image, maxDim: number, quality: number): Promise<Uint8Array> {
+  const { width, height } = img;
+  let w = width;
+  let h = height;
+  if (w > maxDim || h > maxDim) {
+    const ratio = Math.min(maxDim / w, maxDim / h);
+    w = Math.max(1, Math.round(w * ratio));
+    h = Math.max(1, Math.round(h * ratio));
   }
-  const bytes = new Uint8Array(await resp.arrayBuffer());
-  // Sanity: WebP signature 'RIFF....WEBP'
-  if (bytes.length < 100 || bytes[0] !== 0x52 || bytes[8] !== 0x57) {
-    throw new Error('invalid WebP from transform');
-  }
-  return bytes;
+  // Clone before resize so we don't mutate the source for the next variant
+  const clone = img.clone().resize(w, h);
+  // encodeJPEG is faster + smaller than encode(PNG) and supported by ImageScript
+  return await clone.encodeJPEG(quality);
 }
 
 async function processOne(
   item: { id: string; user_id: string; media_url: string; media_preview_url: string | null; media_display_url: string | null },
   supabase: ReturnType<typeof createClient>,
-  supabaseUrl: string,
   dryRun: boolean,
 ): Promise<MigrationDetail> {
   if (!item.media_url) return { id: item.id, status: 'skipped', reason: 'no media_url' };
@@ -77,44 +68,52 @@ async function processOne(
     return { id: item.id, status: 'skipped', reason: 'variants already exist' };
   }
 
-  const previewUrl = buildTransformUrl(item.media_url, BUCKET, supabaseUrl, PREVIEW_MAX, PREVIEW_QUALITY);
-  const displayUrl = buildTransformUrl(item.media_url, BUCKET, supabaseUrl, DISPLAY_MAX, DISPLAY_QUALITY);
-  if (!previewUrl || !displayUrl) {
-    return { id: item.id, status: 'error', reason: 'cannot build transform URLs (non-bucket URL?)' };
+  if (dryRun) return { id: item.id, status: 'processed', reason: 'dry-run' };
+
+  // Download original
+  let originalBytes: Uint8Array;
+  try {
+    const resp = await fetch(item.media_url);
+    if (!resp.ok) return { id: item.id, status: 'error', reason: `download ${resp.status}` };
+    originalBytes = new Uint8Array(await resp.arrayBuffer());
+  } catch (e) {
+    return { id: item.id, status: 'error', reason: `fetch: ${e instanceof Error ? e.message : String(e)}` };
   }
 
-  if (dryRun) {
-    return { id: item.id, status: 'processed', reason: 'dry-run' };
+  // Decode (supports JPEG, PNG, GIF, WebP)
+  let img: Image;
+  try {
+    img = await Image.decode(originalBytes);
+  } catch (e) {
+    return { id: item.id, status: 'error', reason: `decode: ${e instanceof Error ? e.message : String(e)}` };
   }
 
-  // Server-side transform — function only fetches the result
+  // Generate variants sequentially to limit memory peak
   let previewBytes: Uint8Array;
   let displayBytes: Uint8Array;
   try {
-    [previewBytes, displayBytes] = await Promise.all([
-      fetchVariant(previewUrl),
-      fetchVariant(displayUrl),
-    ]);
+    previewBytes = await buildVariant(img, PREVIEW_MAX, PREVIEW_JPEG_QUALITY);
+    displayBytes = await buildVariant(img, DISPLAY_MAX, DISPLAY_JPEG_QUALITY);
   } catch (e) {
-    return { id: item.id, status: 'error', reason: e instanceof Error ? e.message : String(e) };
+    return { id: item.id, status: 'error', reason: `encode: ${e instanceof Error ? e.message : String(e)}` };
   }
 
   const ts = Date.now();
   const idSlice = item.id.slice(0, 8);
-  const previewPath = `optimized/${item.user_id}/${ts}-${idSlice}-preview.webp`;
-  const displayPath = `optimized/${item.user_id}/${ts}-${idSlice}-display.webp`;
+  // Store as .jpg (we encoded JPEG). Field names stay as media_preview_url / media_display_url.
+  const previewPath = `optimized/${item.user_id}/${ts}-${idSlice}-preview.jpg`;
+  const displayPath = `optimized/${item.user_id}/${ts}-${idSlice}-display.jpg`;
 
   const [{ error: prevErr }, { error: dispErr }] = await Promise.all([
     supabase.storage.from(BUCKET).upload(previewPath, previewBytes, {
-      contentType: 'image/webp', upsert: false, cacheControl: '604800',
+      contentType: 'image/jpeg', upsert: false, cacheControl: '604800',
     }),
     supabase.storage.from(BUCKET).upload(displayPath, displayBytes, {
-      contentType: 'image/webp', upsert: false, cacheControl: '604800',
+      contentType: 'image/jpeg', upsert: false, cacheControl: '604800',
     }),
   ]);
 
   if (prevErr || dispErr) {
-    // Cleanup whichever succeeded
     await supabase.storage.from(BUCKET).remove([previewPath, displayPath]).catch(() => {});
     return {
       id: item.id,
@@ -174,10 +173,10 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => ({}));
   const dryRun = body.dryRun === true;
-  const requested = typeof body.limit === 'number' ? body.limit : 10;
-  const limit = Math.min(Math.max(1, requested), 20);
+  // ImageScript is CPU-heavy; cap at 5 per invocation to stay safely under timeouts
+  const requested = typeof body.limit === 'number' ? body.limit : 5;
+  const limit = Math.min(Math.max(1, requested), 5);
 
-  // Find photo records that don't yet have BOTH variants generated
   const { data: items, error: fetchErr } = await supabase
     .from('portfolio')
     .select('id, user_id, media_url, media_preview_url, media_display_url')
@@ -207,7 +206,7 @@ Deno.serve(async (req) => {
 
   for (const item of items || []) {
     try {
-      const detail = await processOne(item as any, supabase, supabaseUrl, dryRun);
+      const detail = await processOne(item as any, supabase, dryRun);
       result.details.push(detail);
       if (detail.status === 'processed') result.processed++;
       else if (detail.status === 'skipped') result.skipped++;
