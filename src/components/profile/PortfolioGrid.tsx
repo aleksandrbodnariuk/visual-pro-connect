@@ -136,6 +136,22 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
     () => filteredItems.filter(i => i.type === 'photo'),
     [filteredItems]
   );
+
+  // Group items by category in a stable order (defined categories first, "Інше" last)
+  const groupedItems = useMemo(() => {
+    const groups = new Map<string, { key: string; label: string; items: PortfolioItem[] }>();
+    PORTFOLIO_CATEGORIES.forEach((c) =>
+      groups.set(c.key, { key: c.key, label: c.label, items: [] })
+    );
+    groups.set("__other", { key: "__other", label: OTHER_CATEGORY_LABEL, items: [] });
+
+    filteredItems.forEach((item) => {
+      const key = item.category && groups.has(item.category) ? item.category : "__other";
+      groups.get(key)!.items.push(item);
+    });
+
+    return Array.from(groups.values()).filter((g) => g.items.length > 0);
+  }, [filteredItems]);
   
   useEffect(() => {
     if (!userId) {
