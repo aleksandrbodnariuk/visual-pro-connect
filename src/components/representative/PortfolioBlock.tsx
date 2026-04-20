@@ -118,7 +118,7 @@ export function PortfolioBlock() {
   // Group items by category in stable order
   const groupedItems = useMemo(() => {
     const groups = new Map<string, { key: string; label: string; items: PortfolioItem[] }>();
-    PORTFOLIO_CATEGORIES.forEach((c) =>
+    portfolioCategories.forEach((c) =>
       groups.set(c.key, { key: c.key, label: c.label, items: [] })
     );
     groups.set('__other', { key: '__other', label: OTHER_CATEGORY_LABEL, items: [] });
@@ -197,7 +197,7 @@ export function PortfolioBlock() {
           <div className="space-y-6">
             {groupedItems.map((group) => {
               const GroupIcon =
-                PORTFOLIO_CATEGORIES.find((c) => c.key === group.key)?.icon ?? OtherCategoryIcon;
+                portfolioCategories.find((c) => c.key === group.key)?.icon ?? OtherCategoryIcon;
               return (
                 <section key={group.key}>
                   <div className="flex items-center gap-2 mb-2">

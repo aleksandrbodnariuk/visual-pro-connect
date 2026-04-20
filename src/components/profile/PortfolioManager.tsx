@@ -496,7 +496,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none">{OTHER_CATEGORY_LABEL} (без категорії)</SelectItem>
-                {PORTFOLIO_CATEGORIES.map((c) => (
+                {portfolioCategories.map((c) => (
                   <SelectItem key={c.key} value={c.key}>
                     <span className="flex items-center gap-2">
                       <c.icon className="h-4 w-4" />
@@ -714,7 +714,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none">{OTHER_CATEGORY_LABEL} (без категорії)</SelectItem>
-                    {PORTFOLIO_CATEGORIES.map((c) => (
+                    {portfolioCategories.map((c) => (
                       <SelectItem key={c.key} value={c.key}>
                         <span className="flex items-center gap-2">
                           <c.icon className="h-4 w-4" />
