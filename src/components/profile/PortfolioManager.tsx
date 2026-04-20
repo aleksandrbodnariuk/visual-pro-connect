@@ -223,12 +223,20 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
         setIsUploading(true);
         const { error: insertError } = await supabase
           .from("portfolio")
-          .insert({ user_id: userId, title, description, media_url: videoLink, media_type: "video" });
+          .insert({
+            user_id: userId,
+            title,
+            description,
+            media_url: videoLink,
+            media_type: "video",
+            category: category || null,
+          });
         if (insertError) throw insertError;
 
         toast.success("Відео успішно додано");
         setTitle("");
         setDescription("");
+        setCategory("");
         setVideoLink("");
         await fetchPortfolioItems();
         onUpdate();
