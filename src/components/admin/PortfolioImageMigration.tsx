@@ -154,9 +154,9 @@ export function PortfolioImageMigration() {
               </div>
             </div>
 
-            {!!totalSaved && totalSaved > 0 && (
+            {!!totalGenerated && totalGenerated > 0 && (
               <div className="rounded-lg bg-success/10 border border-success/30 p-3 text-sm">
-                <strong>Економія місця:</strong> {formatBytes(totalSaved)}
+                <strong>Згенеровано WebP-варіантів:</strong> {formatBytes(totalGenerated)}
               </div>
             )}
 
