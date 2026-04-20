@@ -93,14 +93,14 @@ export function PortfolioImageMigration() {
           Міграція зображень портфоліо
         </CardTitle>
         <CardDescription>
-          Стискає існуючі фото портфоліо у WebP (макс. 1200px, якість 0.8) через серверну трансформацію Supabase. Файли менше 500 КБ пропускаються. Старі файли видаляються після успішної заміни. До 20 за раз.
+          Генерує дві WebP-копії для кожного існуючого фото портфоліо: <strong>preview</strong> (≤400px, для сітки) та <strong>display</strong> (≤1600px, для перегляду). Стиснення виконується серверною трансформацією Supabase. Оригінал зберігається без змін. До 20 за раз.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-lg border border-warning/50 bg-warning/10 p-3 flex gap-2 text-sm">
-          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-warning" />
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex gap-2 text-sm">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
           <div>
-            <strong>Увага:</strong> операція замінює оригінальні файли. Рекомендуємо спочатку запустити в режимі «Тестовий прогін», щоб побачити, що буде оброблено.
+            <strong>Безпечна операція:</strong> створює нові WebP-варіанти, не видаляючи оригінали. У разі помилки можна перезапустити.
           </div>
         </div>
 
