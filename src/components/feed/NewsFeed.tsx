@@ -323,11 +323,35 @@ export function NewsFeed() {
 
   if (loading) {
     return (
-      <div className="w-full space-y-6">
-        <div className="animate-pulse">
-          <div className="h-32 bg-gray-200 rounded-lg mb-4"></div>
-          <div className="space-y-4">{[1, 2, 3].map((i) => (<div key={i} className="h-20 bg-gray-200 rounded-lg"></div>))}</div>
-        </div>
+      <div className="w-full space-y-4 md:space-y-6">
+        {/* Composer skeleton */}
+        <Card>
+          <CardContent className="p-3 md:p-4">
+            <div className="flex items-center gap-3 animate-pulse">
+              <div className="h-10 w-10 rounded-full bg-muted" />
+              <div className="flex-1 h-10 rounded-full bg-muted" />
+            </div>
+          </CardContent>
+        </Card>
+        {/* Post card skeletons */}
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i}>
+            <CardContent className="p-3 md:p-4 space-y-3 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-muted" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-1/3 rounded bg-muted" />
+                  <div className="h-2 w-1/4 rounded bg-muted" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 w-full rounded bg-muted" />
+                <div className="h-3 w-4/5 rounded bg-muted" />
+              </div>
+              <div className="aspect-[4/3] w-full rounded-md bg-muted" />
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
