@@ -1,6 +1,6 @@
-// Migrate existing portfolio photos using Supabase Image Transform to convert directly to WebP.
-// Zero in-function image processing — Supabase Render endpoint does resize + format conversion server-side.
-// This is the most memory-safe approach possible: function only fetches → uploads.
+// Migrate existing portfolio photos: generate preview (≤400px) + display (≤1600px) WebP variants
+// using Supabase Image Transform (server-side, zero CPU cost in this function).
+// Original media_url is preserved as a fallback.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
@@ -8,18 +8,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const MAX_DIM = 1200;
-const QUALITY = 80;
-const SKIP_BELOW_BYTES = 500 * 1024;
+const PREVIEW_MAX = 400;
+const PREVIEW_QUALITY = 72;
+const DISPLAY_MAX = 1600;
+const DISPLAY_QUALITY = 85;
 const BUCKET = 'portfolio';
 
 interface MigrationDetail {
   id: string;
   status: 'processed' | 'skipped' | 'error';
   reason?: string;
-  oldSize?: number;
-  newSize?: number;
-  newUrl?: string;
+  previewSize?: number;
+  displaySize?: number;
+  previewUrl?: string;
+  displayUrl?: string;
 }
 
 interface MigrationResult {
@@ -38,93 +40,113 @@ function extractStoragePath(publicUrl: string, bucket: string): string | null {
   return publicUrl.substring(idx + marker.length).split('?')[0];
 }
 
-/**
- * Build a URL that uses Supabase Image Transform to BOTH resize AND convert to WebP.
- * Format=webp triggers server-side transcode — we never touch raw pixels in the function.
- */
-function buildWebpUrl(publicUrl: string, bucket: string, supabaseUrl: string): string | null {
+function buildTransformUrl(
+  publicUrl: string,
+  bucket: string,
+  supabaseUrl: string,
+  maxDim: number,
+  quality: number,
+): string | null {
   const path = extractStoragePath(publicUrl, bucket);
   if (!path) return null;
-  return `${supabaseUrl}/storage/v1/render/image/public/${bucket}/${path}?width=${MAX_DIM}&height=${MAX_DIM}&resize=contain&quality=${QUALITY}&format=webp`;
+  return `${supabaseUrl}/storage/v1/render/image/public/${bucket}/${path}?width=${maxDim}&height=${maxDim}&resize=contain&quality=${quality}&format=webp`;
+}
+
+async function fetchVariant(url: string): Promise<Uint8Array> {
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    const txt = await resp.text().catch(() => '');
+    throw new Error(`transform ${resp.status}: ${txt.slice(0, 100)}`);
+  }
+  const bytes = new Uint8Array(await resp.arrayBuffer());
+  // Sanity: WebP signature 'RIFF....WEBP'
+  if (bytes.length < 100 || bytes[0] !== 0x52 || bytes[8] !== 0x57) {
+    throw new Error('invalid WebP from transform');
+  }
+  return bytes;
 }
 
 async function processOne(
-  item: { id: string; user_id: string; media_url: string },
+  item: { id: string; user_id: string; media_url: string; media_preview_url: string | null; media_display_url: string | null },
   supabase: ReturnType<typeof createClient>,
   supabaseUrl: string,
   dryRun: boolean,
 ): Promise<MigrationDetail> {
   if (!item.media_url) return { id: item.id, status: 'skipped', reason: 'no media_url' };
-  if (item.media_url.includes('/optimized/')) {
-    return { id: item.id, status: 'skipped', reason: 'already optimized' };
+  if (item.media_preview_url && item.media_display_url) {
+    return { id: item.id, status: 'skipped', reason: 'variants already exist' };
   }
 
-  // HEAD original
-  let oldSize = 0;
-  try {
-    const head = await fetch(item.media_url, { method: 'HEAD' });
-    oldSize = parseInt(head.headers.get('content-length') || '0', 10);
-  } catch { /* ignore */ }
-
-  if (oldSize > 0 && oldSize < SKIP_BELOW_BYTES) {
-    return { id: item.id, status: 'skipped', reason: 'below 500KB', oldSize };
+  const previewUrl = buildTransformUrl(item.media_url, BUCKET, supabaseUrl, PREVIEW_MAX, PREVIEW_QUALITY);
+  const displayUrl = buildTransformUrl(item.media_url, BUCKET, supabaseUrl, DISPLAY_MAX, DISPLAY_QUALITY);
+  if (!previewUrl || !displayUrl) {
+    return { id: item.id, status: 'error', reason: 'cannot build transform URLs (non-bucket URL?)' };
   }
 
   if (dryRun) {
-    return { id: item.id, status: 'processed', reason: 'dry-run', oldSize };
+    return { id: item.id, status: 'processed', reason: 'dry-run' };
   }
 
-  // Server-side: resize + transcode to WebP. We just download the result.
-  const webpUrl = buildWebpUrl(item.media_url, BUCKET, supabaseUrl);
-  if (!webpUrl) {
-    return { id: item.id, status: 'error', reason: 'cannot build transform URL', oldSize };
+  // Server-side transform — function only fetches the result
+  let previewBytes: Uint8Array;
+  let displayBytes: Uint8Array;
+  try {
+    [previewBytes, displayBytes] = await Promise.all([
+      fetchVariant(previewUrl),
+      fetchVariant(displayUrl),
+    ]);
+  } catch (e) {
+    return { id: item.id, status: 'error', reason: e instanceof Error ? e.message : String(e) };
   }
 
-  const resp = await fetch(webpUrl);
-  if (!resp.ok) {
-    const txt = await resp.text().catch(() => '');
-    return { id: item.id, status: 'error', reason: `transform failed ${resp.status}: ${txt.slice(0, 100)}`, oldSize };
+  const ts = Date.now();
+  const idSlice = item.id.slice(0, 8);
+  const previewPath = `optimized/${item.user_id}/${ts}-${idSlice}-preview.webp`;
+  const displayPath = `optimized/${item.user_id}/${ts}-${idSlice}-display.webp`;
+
+  const [{ error: prevErr }, { error: dispErr }] = await Promise.all([
+    supabase.storage.from(BUCKET).upload(previewPath, previewBytes, {
+      contentType: 'image/webp', upsert: false, cacheControl: '604800',
+    }),
+    supabase.storage.from(BUCKET).upload(displayPath, displayBytes, {
+      contentType: 'image/webp', upsert: false, cacheControl: '604800',
+    }),
+  ]);
+
+  if (prevErr || dispErr) {
+    // Cleanup whichever succeeded
+    await supabase.storage.from(BUCKET).remove([previewPath, displayPath]).catch(() => {});
+    return {
+      id: item.id,
+      status: 'error',
+      reason: `upload: ${(prevErr || dispErr)?.message}`,
+    };
   }
 
-  const optimized = new Uint8Array(await resp.arrayBuffer());
-  const newSize = optimized.byteLength;
-
-  // Sanity: WebP signature 'RIFF....WEBP'
-  if (newSize < 100 || optimized[0] !== 0x52 /* R */ || optimized[8] !== 0x57 /* W */) {
-    return { id: item.id, status: 'error', reason: 'invalid WebP from transform', oldSize, newSize };
-  }
-
-  const newPath = `optimized/${item.user_id}/${Date.now()}-${item.id.slice(0, 8)}.webp`;
-  const { error: uploadErr } = await supabase.storage
-    .from(BUCKET)
-    .upload(newPath, optimized, { contentType: 'image/webp', upsert: false, cacheControl: '604800' });
-
-  if (uploadErr) {
-    return { id: item.id, status: 'error', reason: `upload: ${uploadErr.message}`, oldSize };
-  }
-
-  const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(newPath);
-  const newUrl = pub.publicUrl;
+  const previewPublicUrl = supabase.storage.from(BUCKET).getPublicUrl(previewPath).data.publicUrl;
+  const displayPublicUrl = supabase.storage.from(BUCKET).getPublicUrl(displayPath).data.publicUrl;
 
   const { error: updateErr } = await supabase
     .from('portfolio')
-    .update({ media_url: newUrl })
+    .update({
+      media_preview_url: previewPublicUrl,
+      media_display_url: displayPublicUrl,
+    })
     .eq('id', item.id);
 
   if (updateErr) {
-    await supabase.storage.from(BUCKET).remove([newPath]).catch(() => {});
-    return { id: item.id, status: 'error', reason: `db update: ${updateErr.message}`, oldSize };
+    await supabase.storage.from(BUCKET).remove([previewPath, displayPath]).catch(() => {});
+    return { id: item.id, status: 'error', reason: `db update: ${updateErr.message}` };
   }
 
-  // Delete old
-  const oldPath = extractStoragePath(item.media_url, BUCKET);
-  if (oldPath && oldPath !== newPath) {
-    await supabase.storage.from(BUCKET).remove([oldPath]).catch((e) => {
-      console.warn(`Failed to remove old file ${oldPath}:`, e);
-    });
-  }
-
-  return { id: item.id, status: 'processed', oldSize, newSize, newUrl };
+  return {
+    id: item.id,
+    status: 'processed',
+    previewSize: previewBytes.byteLength,
+    displaySize: displayBytes.byteLength,
+    previewUrl: previewPublicUrl,
+    displayUrl: displayPublicUrl,
+  };
 }
 
 Deno.serve(async (req) => {
@@ -152,15 +174,15 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => ({}));
   const dryRun = body.dryRun === true;
-  // Now we can safely process more — no in-function image decoding
   const requested = typeof body.limit === 'number' ? body.limit : 10;
   const limit = Math.min(Math.max(1, requested), 20);
 
+  // Find photo records that don't yet have BOTH variants generated
   const { data: items, error: fetchErr } = await supabase
     .from('portfolio')
-    .select('id, user_id, media_url')
+    .select('id, user_id, media_url, media_preview_url, media_display_url')
     .eq('media_type', 'photo')
-    .not('media_url', 'ilike', '%/optimized/%')
+    .or('media_preview_url.is.null,media_display_url.is.null')
     .order('created_at', { ascending: true })
     .limit(limit);
 
@@ -168,7 +190,7 @@ Deno.serve(async (req) => {
     .from('portfolio')
     .select('id', { count: 'exact', head: true })
     .eq('media_type', 'photo')
-    .not('media_url', 'ilike', '%/optimized/%');
+    .or('media_preview_url.is.null,media_display_url.is.null');
 
   if (fetchErr) {
     return new Response(JSON.stringify({ error: fetchErr.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -183,7 +205,6 @@ Deno.serve(async (req) => {
     details: [],
   };
 
-  // Sequential — keeps things predictable & memory-safe
   for (const item of items || []) {
     try {
       const detail = await processOne(item as any, supabase, supabaseUrl, dryRun);
@@ -191,7 +212,7 @@ Deno.serve(async (req) => {
       if (detail.status === 'processed') result.processed++;
       else if (detail.status === 'skipped') result.skipped++;
       else result.errors++;
-      console.log(`[${detail.status}] ${item.id}: ${detail.reason || `${detail.oldSize || 0}b → ${detail.newSize || 0}b`}`);
+      console.log(`[${detail.status}] ${item.id}: ${detail.reason || `preview=${detail.previewSize || 0}b display=${detail.displaySize || 0}b`}`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       result.errors++;
