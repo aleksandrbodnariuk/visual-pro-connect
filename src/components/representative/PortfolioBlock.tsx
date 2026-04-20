@@ -63,6 +63,7 @@ const TYPE_ICON: Record<string, React.ElementType> = {
 
 export function PortfolioBlock() {
   const [items, setItems] = useState<PortfolioItem[]>([]);
+  const { categories: portfolioCategories } = usePortfolioCategories();
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
