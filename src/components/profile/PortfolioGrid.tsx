@@ -14,6 +14,12 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
+import {
+  PORTFOLIO_CATEGORIES,
+  OTHER_CATEGORY_LABEL,
+  OtherCategoryIcon,
+  getCategoryLabel,
+} from "@/lib/portfolioCategories";
 
 interface PortfolioItem {
   id: string;
@@ -25,6 +31,7 @@ interface PortfolioItem {
   title: string;
   likes: number;
   comments: number;
+  category?: string | null;
 }
 
 interface PortfolioGridProps {
@@ -42,6 +49,7 @@ interface PortfolioRecord {
   media_preview_url?: string | null;
   media_display_url?: string | null;
   media_type: string;
+  category?: string | null;
 }
 
 function parseVideoUrl(url: string) {
@@ -95,6 +103,7 @@ const mapPortfolioRecordToItem = (item: PortfolioRecord): PortfolioItem => {
     title: item.title,
     likes: 0,
     comments: 0,
+    category: item.category ?? null,
   };
 };
 
@@ -127,6 +136,22 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
     () => filteredItems.filter(i => i.type === 'photo'),
     [filteredItems]
   );
+
+  // Group items by category in a stable order (defined categories first, "Інше" last)
+  const groupedItems = useMemo(() => {
+    const groups = new Map<string, { key: string; label: string; items: PortfolioItem[] }>();
+    PORTFOLIO_CATEGORIES.forEach((c) =>
+      groups.set(c.key, { key: c.key, label: c.label, items: [] })
+    );
+    groups.set("__other", { key: "__other", label: OTHER_CATEGORY_LABEL, items: [] });
+
+    filteredItems.forEach((item) => {
+      const key = item.category && groups.has(item.category) ? item.category : "__other";
+      groups.get(key)!.items.push(item);
+    });
+
+    return Array.from(groups.values()).filter((g) => g.items.length > 0);
+  }, [filteredItems]);
   
   useEffect(() => {
     if (!userId) {
@@ -293,8 +318,19 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
           Немає робіт у цій категорії
         </p>
       ) : (
-      <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4", className)}>
-        {filteredItems.map((item) => {
+      <div className="space-y-8">
+        {groupedItems.map((group) => {
+          const GroupIcon =
+            PORTFOLIO_CATEGORIES.find((c) => c.key === group.key)?.icon ?? OtherCategoryIcon;
+          return (
+            <section key={group.key}>
+              <div className="flex items-center gap-2 mb-3">
+                <GroupIcon className="h-5 w-5 text-muted-foreground" />
+                <h3 className="text-base font-semibold text-foreground">{group.label}</h3>
+                <span className="text-xs text-muted-foreground">({group.items.length})</span>
+              </div>
+              <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4", className)}>
+                {group.items.map((item) => {
           const videoData = item.type === "video" ? parseVideoUrl(item.displayUrl) : null;
           const thumbnailSrc = videoData?.thumbnail || item.thumbnailUrl;
           const isVideo = item.type === "video";
@@ -374,6 +410,10 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
                 <h3 className="text-sm font-medium text-white">{item.title}</h3>
               </div>
             </div>
+          );
+                })}
+              </div>
+            </section>
           );
         })}
       </div>

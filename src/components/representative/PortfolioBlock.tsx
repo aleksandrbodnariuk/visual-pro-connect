@@ -6,6 +6,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, Video, Music, ImageIcon, Play, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import {
+  PORTFOLIO_CATEGORIES,
+  OTHER_CATEGORY_LABEL,
+  OtherCategoryIcon,
+} from '@/lib/portfolioCategories';
 
 function parseVideoUrl(url: string) {
   const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([^&\s?/]+)/);
@@ -34,6 +39,7 @@ interface PortfolioItem {
   media_preview_url: string | null;
   media_display_url: string | null;
   media_type: string;
+  category: string | null;
 }
 
 interface Profile {
@@ -74,7 +80,7 @@ export function PortfolioBlock() {
       try {
         const { data, error } = await supabase
           .from('portfolio')
-          .select('id, user_id, title, description, media_url, media_preview_url, media_display_url, media_type')
+          .select('id, user_id, title, description, media_url, media_preview_url, media_display_url, media_type, category')
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -108,6 +114,20 @@ export function PortfolioBlock() {
     () => filtered.filter(i => i.media_type === 'photo'),
     [filtered]
   );
+
+  // Group items by category in stable order
+  const groupedItems = useMemo(() => {
+    const groups = new Map<string, { key: string; label: string; items: PortfolioItem[] }>();
+    PORTFOLIO_CATEGORIES.forEach((c) =>
+      groups.set(c.key, { key: c.key, label: c.label, items: [] })
+    );
+    groups.set('__other', { key: '__other', label: OTHER_CATEGORY_LABEL, items: [] });
+    filtered.forEach((item) => {
+      const key = item.category && groups.has(item.category) ? item.category : '__other';
+      groups.get(key)!.items.push(item);
+    });
+    return Array.from(groups.values()).filter((g) => g.items.length > 0);
+  }, [filtered]);
 
   const handlePrevPhoto = useCallback(() => {
     setViewingPhotoIndex(prev => prev !== null && prev > 0 ? prev - 1 : prev);
@@ -174,8 +194,19 @@ export function PortfolioBlock() {
             Немає робіт у цій категорії
           </p>
         ) : (
-          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-            {filtered.map((item) => {
+          <div className="space-y-6">
+            {groupedItems.map((group) => {
+              const GroupIcon =
+                PORTFOLIO_CATEGORIES.find((c) => c.key === group.key)?.icon ?? OtherCategoryIcon;
+              return (
+                <section key={group.key}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <GroupIcon className="h-4 w-4 text-muted-foreground" />
+                    <h4 className="text-sm font-semibold text-foreground">{group.label}</h4>
+                    <span className="text-xs text-muted-foreground">({group.items.length})</span>
+                  </div>
+                  <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                    {group.items.map((item) => {
               const profile = profiles.get(item.user_id);
               const Icon = TYPE_ICON[item.media_type] || Camera;
               const isVideo = item.media_type === 'video';
@@ -248,6 +279,10 @@ export function PortfolioBlock() {
                     )}
                   </div>
                 </div>
+              );
+                    })}
+                  </div>
+                </section>
               );
             })}
           </div>

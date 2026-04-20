@@ -21,6 +21,14 @@ import {
   uploadPortfolioImageVariants,
   deletePortfolioVariants,
 } from "@/lib/portfolioMediaPipeline";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PORTFOLIO_CATEGORIES, OTHER_CATEGORY_LABEL } from "@/lib/portfolioCategories";
 
 interface PortfolioItem {
   id: string;
@@ -30,6 +38,7 @@ interface PortfolioItem {
   media_preview_url: string | null;
   media_display_url: string | null;
   media_type: string;
+  category?: string | null;
 }
 
 interface PortfolioManagerProps {
@@ -115,6 +124,7 @@ interface UploadProgressItem {
 export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<string>("");
   const [files, setFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgressItem[]>([]);
@@ -125,6 +135,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   const [editItem, setEditItem] = useState<PortfolioItem | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editCategory, setEditCategory] = useState<string>("");
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -213,12 +224,20 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
         setIsUploading(true);
         const { error: insertError } = await supabase
           .from("portfolio")
-          .insert({ user_id: userId, title, description, media_url: videoLink, media_type: "video" });
+          .insert({
+            user_id: userId,
+            title,
+            description,
+            media_url: videoLink,
+            media_type: "video",
+            category: category || null,
+          });
         if (insertError) throw insertError;
 
         toast.success("Відео успішно додано");
         setTitle("");
         setDescription("");
+        setCategory("");
         setVideoLink("");
         await fetchPortfolioItems();
         onUpdate();
@@ -279,6 +298,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
             media_preview_url: variants.previewUrl,
             media_display_url: variants.displayUrl,
             media_type: mediaType,
+            category: category || null,
           });
         if (insertError) throw insertError;
 
@@ -307,6 +327,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       );
       setTitle("");
       setDescription("");
+      setCategory("");
       setFiles([]);
       await fetchPortfolioItems();
       onUpdate();
@@ -323,6 +344,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
     setEditItem(item);
     setEditTitle(item.title);
     setEditDescription(item.description || "");
+    setEditCategory(item.category || "");
     setEditDialogOpen(true);
   };
 
@@ -372,6 +394,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
           media_preview_url: updatedPreviewUrl,
           media_display_url: updatedDisplayUrl,
           media_type: updatedMediaType,
+          category: editCategory || null,
         })
         .eq("id", editItem.id);
       if (updateError) throw updateError;
@@ -461,6 +484,29 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Введіть опис"
             />
+          </div>
+
+          <div>
+            <Label htmlFor="category">Категорія</Label>
+            <Select value={category || "__none"} onValueChange={(v) => setCategory(v === "__none" ? "" : v)}>
+              <SelectTrigger id="category">
+                <SelectValue placeholder="Оберіть категорію (необов'язково)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">{OTHER_CATEGORY_LABEL} (без категорії)</SelectItem>
+                {PORTFOLIO_CATEGORIES.map((c) => (
+                  <SelectItem key={c.key} value={c.key}>
+                    <span className="flex items-center gap-2">
+                      <c.icon className="h-4 w-4" />
+                      {c.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              При завантаженні декількох файлів категорія застосується до всіх.
+            </p>
           </div>
           
           <Tabs value={uploadType} onValueChange={(v) => setUploadType(v as "file" | "link")} className="w-full">
@@ -657,6 +703,25 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
                   onChange={(e) => setEditDescription(e.target.value)}
                   placeholder="Введіть опис"
                 />
+              </div>
+              <div>
+                <Label htmlFor="editCategory">Категорія</Label>
+                <Select value={editCategory || "__none"} onValueChange={(v) => setEditCategory(v === "__none" ? "" : v)}>
+                  <SelectTrigger id="editCategory">
+                    <SelectValue placeholder="Оберіть категорію" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">{OTHER_CATEGORY_LABEL} (без категорії)</SelectItem>
+                    {PORTFOLIO_CATEGORIES.map((c) => (
+                      <SelectItem key={c.key} value={c.key}>
+                        <span className="flex items-center gap-2">
+                          <c.icon className="h-4 w-4" />
+                          {c.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="editFile">Замінити файл (необов'язково)</Label>
