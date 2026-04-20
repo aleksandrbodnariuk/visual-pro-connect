@@ -135,6 +135,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   const [editItem, setEditItem] = useState<PortfolioItem | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editCategory, setEditCategory] = useState<string>("");
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
