@@ -126,6 +126,10 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
   const [viewingPhotoIndex, setViewingPhotoIndex] = useState<number | null>(null);
   const [playingAudio, setPlayingAudio] = useState<{ url: string; title: string } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Cursor for keyset pagination by created_at DESC
+  const [lastCreatedAt, setLastCreatedAt] = useState<string | null>(null);
+  // Dedup set (mirrors loaded items by id)
+  const knownIdsRef = useRef<Set<string>>(new Set());
 
   const filteredItems = useMemo(
     () => filter === 'all' ? portfolioItems : portfolioItems.filter(i => i.type === filter),
@@ -172,7 +176,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
           .select('*')
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
-          .range(0, PAGE_SIZE - 1);
+          .limit(PAGE_SIZE);
 
         if (error) throw error;
 
@@ -182,11 +186,18 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
           ? localItems.map(mapPortfolioRecordToItem)
           : [];
 
-        setPortfolioItems([...fallbackItems, ...remoteItems]);
+        const merged = [...fallbackItems, ...remoteItems];
+        knownIdsRef.current = new Set(merged.map(i => i.id));
+        setPortfolioItems(merged);
         setHasMore(remoteItems.length === PAGE_SIZE);
+        // Cursor = created_at of the last remote record (raw row, not mapped)
+        const lastRow = data && data.length > 0 ? data[data.length - 1] : null;
+        setLastCreatedAt(lastRow?.created_at ?? null);
       } catch (error) {
         console.error("Error fetching portfolio:", error);
-        setPortfolioItems(localItems.map(mapPortfolioRecordToItem));
+        const fallback = localItems.map(mapPortfolioRecordToItem);
+        knownIdsRef.current = new Set(fallback.map(i => i.id));
+        setPortfolioItems(fallback);
         setHasMore(false);
       } finally {
         setLoading(false);
@@ -200,20 +211,25 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
     if (!userId || loadingMore || !hasMore) return;
     setLoadingMore(true);
     try {
-      const offset = portfolioItems.length;
-      const { data, error } = await supabase
+      let query = supabase
         .from('portfolio')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .range(offset, offset + PAGE_SIZE - 1);
+        .limit(PAGE_SIZE);
+      if (lastCreatedAt) query = query.lt('created_at', lastCreatedAt);
+      const { data, error } = await query;
       if (error) throw error;
-      const more = (data || []).map(mapPortfolioRecordToItem);
-      setPortfolioItems(prev => {
-        const existing = new Set(prev.map(p => p.id));
-        return [...prev, ...more.filter(p => !existing.has(p.id))];
-      });
-      setHasMore(more.length === PAGE_SIZE);
+      const rows = data || [];
+      const more = rows.map(mapPortfolioRecordToItem);
+      const fresh = more.filter(m => !knownIdsRef.current.has(m.id));
+      fresh.forEach(m => knownIdsRef.current.add(m.id));
+      if (fresh.length > 0) {
+        setPortfolioItems(prev => [...prev, ...fresh]);
+        const lastRow = rows[rows.length - 1];
+        if (lastRow?.created_at) setLastCreatedAt(lastRow.created_at);
+      }
+      setHasMore(rows.length === PAGE_SIZE);
     } catch (error) {
       console.error('Error loading more portfolio items:', error);
     } finally {
@@ -267,7 +283,13 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
   };
 
   if (loading) {
-    return <div className="text-center py-8">Завантаження портфоліо...</div>;
+    return (
+      <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4", className)}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="aspect-[4/3] w-full rounded-lg bg-muted animate-pulse" />
+        ))}
+      </div>
+    );
   }
 
   if (portfolioItems.length === 0) {
