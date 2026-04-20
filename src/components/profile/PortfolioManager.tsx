@@ -21,6 +21,14 @@ import {
   uploadPortfolioImageVariants,
   deletePortfolioVariants,
 } from "@/lib/portfolioMediaPipeline";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PORTFOLIO_CATEGORIES, OTHER_CATEGORY_LABEL } from "@/lib/portfolioCategories";
 
 interface PortfolioItem {
   id: string;
@@ -30,6 +38,7 @@ interface PortfolioItem {
   media_preview_url: string | null;
   media_display_url: string | null;
   media_type: string;
+  category?: string | null;
 }
 
 interface PortfolioManagerProps {
