@@ -9,6 +9,7 @@ import { StockExchangeTab } from "./tabs/StockExchangeTab";
 import { PostsTab } from "./tabs/PostsTab";
 import { SettingsTab } from "./tabs/SettingsTab";
 import { CategoriesTab } from "./tabs/CategoriesTab";
+import { PortfolioCategoriesTab } from "./tabs/PortfolioCategoriesTab";
 import { AnalyticsTab } from "./tabs/AnalyticsTab";
 import { FinancialStatsTab } from "./tabs/FinancialStatsTab";
 import { CalculationHistoryTab } from "./tabs/CalculationHistoryTab";
@@ -48,6 +49,7 @@ export function AdminTabs() {
 
         <TabsTrigger value="posts">Публікації</TabsTrigger>
         <TabsTrigger value="categories">Категорії</TabsTrigger>
+        <TabsTrigger value="portfolio-categories">Категорії портфоліо</TabsTrigger>
         <TabsTrigger value="analytics">Аналітика</TabsTrigger>
         <TabsTrigger value="notifications-admin">Сповіщення</TabsTrigger>
         <TabsTrigger value="settings">Налаштування</TabsTrigger>
@@ -95,6 +97,10 @@ export function AdminTabs() {
       
       <TabsContent value="categories">
         <CategoriesTab />
+      </TabsContent>
+
+      <TabsContent value="portfolio-categories">
+        <PortfolioCategoriesTab />
       </TabsContent>
       
       <TabsContent value="posts">
