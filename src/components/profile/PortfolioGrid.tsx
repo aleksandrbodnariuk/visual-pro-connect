@@ -28,11 +28,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  PORTFOLIO_CATEGORIES,
   OTHER_CATEGORY_LABEL,
   OtherCategoryIcon,
-  getCategoryLabel,
 } from "@/lib/portfolioCategories";
+import { usePortfolioCategories } from "@/hooks/usePortfolioCategories";
 import { deletePortfolioVariants } from "@/lib/portfolioMediaPipeline";
 
 interface PortfolioItem {

@@ -28,7 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PORTFOLIO_CATEGORIES, OTHER_CATEGORY_LABEL } from "@/lib/portfolioCategories";
+import { OTHER_CATEGORY_LABEL } from "@/lib/portfolioCategories";
+import { usePortfolioCategories } from "@/hooks/usePortfolioCategories";
 
 interface PortfolioItem {
   id: string;
@@ -142,6 +143,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
   const [uploadType, setUploadType] = useState<"file" | "link">("file");
   const [videoLink, setVideoLink] = useState("");
+  const { categories: portfolioCategories } = usePortfolioCategories();
 
   useEffect(() => {
     fetchPortfolioItems();

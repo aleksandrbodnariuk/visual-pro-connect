@@ -7,10 +7,10 @@ import { Camera, Video, Music, ImageIcon, Play, ChevronLeft, ChevronRight } from
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import {
-  PORTFOLIO_CATEGORIES,
   OTHER_CATEGORY_LABEL,
   OtherCategoryIcon,
 } from '@/lib/portfolioCategories';
+import { usePortfolioCategories } from '@/hooks/usePortfolioCategories';
 
 function parseVideoUrl(url: string) {
   const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([^&\s?/]+)/);
