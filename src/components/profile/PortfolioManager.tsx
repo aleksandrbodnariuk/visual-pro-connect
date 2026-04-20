@@ -482,6 +482,29 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
               placeholder="Введіть опис"
             />
           </div>
+
+          <div>
+            <Label htmlFor="category">Категорія</Label>
+            <Select value={category || "__none"} onValueChange={(v) => setCategory(v === "__none" ? "" : v)}>
+              <SelectTrigger id="category">
+                <SelectValue placeholder="Оберіть категорію (необов'язково)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">{OTHER_CATEGORY_LABEL} (без категорії)</SelectItem>
+                {PORTFOLIO_CATEGORIES.map((c) => (
+                  <SelectItem key={c.key} value={c.key}>
+                    <span className="flex items-center gap-2">
+                      <c.icon className="h-4 w-4" />
+                      {c.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              При завантаженні декількох файлів категорія застосується до всіх.
+            </p>
+          </div>
           
           <Tabs value={uploadType} onValueChange={(v) => setUploadType(v as "file" | "link")} className="w-full">
             <TabsList className="w-full grid grid-cols-2">
