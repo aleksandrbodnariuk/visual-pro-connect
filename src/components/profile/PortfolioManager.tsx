@@ -344,6 +344,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
     setEditItem(item);
     setEditTitle(item.title);
     setEditDescription(item.description || "");
+    setEditCategory(item.category || "");
     setEditDialogOpen(true);
   };
 
@@ -393,6 +394,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
           media_preview_url: updatedPreviewUrl,
           media_display_url: updatedDisplayUrl,
           media_type: updatedMediaType,
+          category: editCategory || null,
         })
         .eq("id", editItem.id);
       if (updateError) throw updateError;
