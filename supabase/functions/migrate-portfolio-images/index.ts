@@ -1,8 +1,8 @@
-// Migrate existing portfolio photos: generate preview (≤400px) + display (≤1600px) WebP variants.
-// Uses ImageScript (pure-JS, works on Supabase Free tier — no Image Transform feature required).
+// Migrate existing portfolio photos: generate preview (≤400px) + display (≤1600px) JPEG variants.
+// Uses wsrv.nl (free public image proxy) for resizing — avoids memory-heavy in-function decoding,
+// which previously caused "Memory limit exceeded" with ImageScript on large photos.
 // Original media_url is preserved as a fallback.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { Image } from 'https://deno.land/x/imagescript@1.2.17/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,11 +11,9 @@ const corsHeaders = {
 
 const PREVIEW_MAX = 400;
 const DISPLAY_MAX = 1600;
+const PREVIEW_QUALITY = 72;
+const DISPLAY_QUALITY = 85;
 const BUCKET = 'portfolio';
-// ImageScript encodeWEBP is lossless only — we use JPEG with high quality as a smaller-than-PNG fallback.
-// For most browsers JPEG is fine; we still cut size dramatically by resizing.
-const PREVIEW_JPEG_QUALITY = 72;
-const DISPLAY_JPEG_QUALITY = 85;
 
 interface MigrationDetail {
   id: string;
@@ -36,26 +34,26 @@ interface MigrationResult {
   details: MigrationDetail[];
 }
 
-function extractStoragePath(publicUrl: string, bucket: string): string | null {
-  const marker = `/storage/v1/object/public/${bucket}/`;
-  const idx = publicUrl.indexOf(marker);
-  if (idx === -1) return null;
-  return publicUrl.substring(idx + marker.length).split('?')[0];
+// Build wsrv.nl transform URL. Strip protocol per wsrv requirements.
+function buildResizeUrl(sourceUrl: string, maxDim: number, quality: number): string {
+  const stripped = sourceUrl.replace(/^https?:\/\//, '');
+  const params = new URLSearchParams({
+    url: stripped,
+    w: String(maxDim),
+    h: String(maxDim),
+    fit: 'inside',
+    we: '', // without enlargement
+    output: 'jpg',
+    q: String(quality),
+  });
+  return `https://wsrv.nl/?${params.toString()}`;
 }
 
-async function buildVariant(img: Image, maxDim: number, quality: number): Promise<Uint8Array> {
-  const { width, height } = img;
-  let w = width;
-  let h = height;
-  if (w > maxDim || h > maxDim) {
-    const ratio = Math.min(maxDim / w, maxDim / h);
-    w = Math.max(1, Math.round(w * ratio));
-    h = Math.max(1, Math.round(h * ratio));
-  }
-  // Clone before resize so we don't mutate the source for the next variant
-  const clone = img.clone().resize(w, h);
-  // encodeJPEG is faster + smaller than encode(PNG) and supported by ImageScript
-  return await clone.encodeJPEG(quality);
+async function fetchVariant(sourceUrl: string, maxDim: number, quality: number): Promise<Uint8Array> {
+  const url = buildResizeUrl(sourceUrl, maxDim, quality);
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`wsrv ${resp.status}`);
+  return new Uint8Array(await resp.arrayBuffer());
 }
 
 async function processOne(
@@ -70,37 +68,18 @@ async function processOne(
 
   if (dryRun) return { id: item.id, status: 'processed', reason: 'dry-run' };
 
-  // Download original
-  let originalBytes: Uint8Array;
-  try {
-    const resp = await fetch(item.media_url);
-    if (!resp.ok) return { id: item.id, status: 'error', reason: `download ${resp.status}` };
-    originalBytes = new Uint8Array(await resp.arrayBuffer());
-  } catch (e) {
-    return { id: item.id, status: 'error', reason: `fetch: ${e instanceof Error ? e.message : String(e)}` };
-  }
-
-  // Decode (supports JPEG, PNG, GIF, WebP)
-  let img: Image;
-  try {
-    img = await Image.decode(originalBytes);
-  } catch (e) {
-    return { id: item.id, status: 'error', reason: `decode: ${e instanceof Error ? e.message : String(e)}` };
-  }
-
-  // Generate variants sequentially to limit memory peak
+  // Generate variants via external resize proxy (no in-memory decoding here)
   let previewBytes: Uint8Array;
   let displayBytes: Uint8Array;
   try {
-    previewBytes = await buildVariant(img, PREVIEW_MAX, PREVIEW_JPEG_QUALITY);
-    displayBytes = await buildVariant(img, DISPLAY_MAX, DISPLAY_JPEG_QUALITY);
+    previewBytes = await fetchVariant(item.media_url, PREVIEW_MAX, PREVIEW_QUALITY);
+    displayBytes = await fetchVariant(item.media_url, DISPLAY_MAX, DISPLAY_QUALITY);
   } catch (e) {
-    return { id: item.id, status: 'error', reason: `encode: ${e instanceof Error ? e.message : String(e)}` };
+    return { id: item.id, status: 'error', reason: `resize: ${e instanceof Error ? e.message : String(e)}` };
   }
 
   const ts = Date.now();
   const idSlice = item.id.slice(0, 8);
-  // Store as .jpg (we encoded JPEG). Field names stay as media_preview_url / media_display_url.
   const previewPath = `optimized/${item.user_id}/${ts}-${idSlice}-preview.jpg`;
   const displayPath = `optimized/${item.user_id}/${ts}-${idSlice}-display.jpg`;
 
@@ -115,11 +94,7 @@ async function processOne(
 
   if (prevErr || dispErr) {
     await supabase.storage.from(BUCKET).remove([previewPath, displayPath]).catch(() => {});
-    return {
-      id: item.id,
-      status: 'error',
-      reason: `upload: ${(prevErr || dispErr)?.message}`,
-    };
+    return { id: item.id, status: 'error', reason: `upload: ${(prevErr || dispErr)?.message}` };
   }
 
   const previewPublicUrl = supabase.storage.from(BUCKET).getPublicUrl(previewPath).data.publicUrl;
@@ -173,9 +148,9 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => ({}));
   const dryRun = body.dryRun === true;
-  // ImageScript is CPU-heavy; cap at 5 per invocation to stay safely under timeouts
-  const requested = typeof body.limit === 'number' ? body.limit : 5;
-  const limit = Math.min(Math.max(1, requested), 5);
+  // External resize is lightweight — we can safely process more per call
+  const requested = typeof body.limit === 'number' ? body.limit : 10;
+  const limit = Math.min(Math.max(1, requested), 20);
 
   const { data: items, error: fetchErr } = await supabase
     .from('portfolio')
