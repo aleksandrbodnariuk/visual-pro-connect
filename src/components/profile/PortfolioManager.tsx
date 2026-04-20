@@ -705,6 +705,25 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
                 />
               </div>
               <div>
+                <Label htmlFor="editCategory">Категорія</Label>
+                <Select value={editCategory || "__none"} onValueChange={(v) => setEditCategory(v === "__none" ? "" : v)}>
+                  <SelectTrigger id="editCategory">
+                    <SelectValue placeholder="Оберіть категорію" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">{OTHER_CATEGORY_LABEL} (без категорії)</SelectItem>
+                    {PORTFOLIO_CATEGORIES.map((c) => (
+                      <SelectItem key={c.key} value={c.key}>
+                        <span className="flex items-center gap-2">
+                          <c.icon className="h-4 w-4" />
+                          {c.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label htmlFor="editFile">Замінити файл (необов'язково)</Label>
                 <Input
                   id="editFile"
