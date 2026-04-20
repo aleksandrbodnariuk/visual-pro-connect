@@ -103,6 +103,7 @@ const mapPortfolioRecordToItem = (item: PortfolioRecord): PortfolioItem => {
     title: item.title,
     likes: 0,
     comments: 0,
+    category: item.category ?? null,
   };
 };
 
