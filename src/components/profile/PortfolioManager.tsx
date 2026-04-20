@@ -106,11 +106,18 @@ function validateForUpload(file: File) {
   }
 }
 
+interface UploadProgressItem {
+  name: string;
+  status: "pending" | "uploading" | "done" | "error";
+  error?: string;
+}
+
 export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgressItem[]>([]);
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -179,8 +186,8 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setFile(event.target.files[0]);
+    if (event.target.files && event.target.files.length > 0) {
+      setFiles(Array.from(event.target.files));
     }
   };
 
@@ -224,53 +231,92 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       return;
     }
 
-    // ---- FILE UPLOAD MODE ----
-    if (!file || !title) {
-      toast.error("Будь ласка, заповніть всі обов'язкові поля");
+    // ---- FILE UPLOAD MODE (multi) ----
+    if (files.length === 0 || !title) {
+      toast.error("Будь ласка, заповніть назву та оберіть хоча б один файл");
       return;
     }
 
-    try {
-      validateForUpload(file);
-    } catch (e: any) {
-      toast.error(e?.message || "Файл не відповідає вимогам");
-      return;
+    // Pre-validate
+    for (const f of files) {
+      try {
+        validateForUpload(f);
+      } catch (e: any) {
+        toast.error(`${f.name}: ${e?.message || "Файл не відповідає вимогам"}`);
+        return;
+      }
     }
 
-    try {
-      setIsUploading(true);
-      const mediaType = getMediaTypeFromFile(file);
+    setIsUploading(true);
+    setUploadProgress(
+      files.map((f) => ({ name: f.name, status: "pending" as const }))
+    );
 
-      // Run through portfolio media pipeline:
-      //  - images → preview (≤400px) + display (≤1600px) WebP variants
-      //  - audio/video → uploaded as-is
-      const variants = await uploadPortfolioImageVariants(file, userId);
+    let successCount = 0;
+    let failCount = 0;
+    const isMulti = files.length > 1;
 
-      const { error: insertError } = await supabase
-        .from("portfolio")
-        .insert({
-          user_id: userId,
-          title,
-          description,
-          media_url: variants.originalUrl,
-          media_preview_url: variants.previewUrl,
-          media_display_url: variants.displayUrl,
-          media_type: mediaType,
-        });
-      if (insertError) throw insertError;
+    for (let i = 0; i < files.length; i++) {
+      const currentFile = files[i];
+      setUploadProgress((prev) =>
+        prev.map((p, idx) => (idx === i ? { ...p, status: "uploading" } : p))
+      );
 
-      toast.success("Файл успішно завантажено");
+      try {
+        const mediaType = getMediaTypeFromFile(currentFile);
+        const variants = await uploadPortfolioImageVariants(currentFile, userId);
+
+        // For multi-upload, append index to title for uniqueness
+        const itemTitle = isMulti ? `${title} (${i + 1})` : title;
+
+        const { error: insertError } = await supabase
+          .from("portfolio")
+          .insert({
+            user_id: userId,
+            title: itemTitle,
+            description,
+            media_url: variants.originalUrl,
+            media_preview_url: variants.previewUrl,
+            media_display_url: variants.displayUrl,
+            media_type: mediaType,
+          });
+        if (insertError) throw insertError;
+
+        successCount++;
+        setUploadProgress((prev) =>
+          prev.map((p, idx) => (idx === i ? { ...p, status: "done" } : p))
+        );
+      } catch (error: any) {
+        failCount++;
+        console.error(`Помилка завантаження ${currentFile.name}:`, error);
+        setUploadProgress((prev) =>
+          prev.map((p, idx) =>
+            idx === i
+              ? { ...p, status: "error", error: error?.message || "Помилка" }
+              : p
+          )
+        );
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(
+        failCount === 0
+          ? `Завантажено: ${successCount}`
+          : `Завантажено: ${successCount}, помилок: ${failCount}`
+      );
       setTitle("");
       setDescription("");
-      setFile(null);
+      setFiles([]);
       await fetchPortfolioItems();
       onUpdate();
-    } catch (error: any) {
-      console.error("Помилка при завантаженні файлу:", error);
-      toast.error(error?.message || "Помилка при завантаженні файлу");
-    } finally {
-      setIsUploading(false);
+    } else {
+      toast.error("Не вдалося завантажити жодного файлу");
     }
+
+    // Clear progress after a short delay so user can see results
+    setTimeout(() => setUploadProgress([]), 2500);
+    setIsUploading(false);
   };
 
   const handleOpenEditDialog = (item: PortfolioItem) => {
@@ -431,17 +477,48 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
             
             <TabsContent value="file" className="mt-4 space-y-4">
               <div>
-                <Label htmlFor="file">Файл (фото, відео, аудіо)</Label>
+                <Label htmlFor="file">Файли (фото, відео, аудіо)</Label>
                 <Input
                   id="file"
                   type="file"
                   accept="image/*,video/*,audio/*"
+                  multiple
                   onChange={handleFileChange}
                   disabled={isUploading}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Зображення стискаються в WebP. Максимум 10MB до стиснення / 5MB після.
+                  Можна обрати декілька файлів. Зображення стискаються в WebP. Максимум 10MB до стиснення / 5MB після.
                 </p>
+                {files.length > 0 && uploadProgress.length === 0 && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Обрано файлів: <span className="font-medium text-foreground">{files.length}</span>
+                  </p>
+                )}
+                {uploadProgress.length > 0 && (
+                  <div className="mt-3 space-y-1 max-h-40 overflow-y-auto rounded-md border p-2">
+                    {uploadProgress.map((p, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="truncate flex-1">{p.name}</span>
+                        <span
+                          className={
+                            p.status === "done"
+                              ? "text-green-600"
+                              : p.status === "error"
+                              ? "text-destructive"
+                              : p.status === "uploading"
+                              ? "text-primary"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {p.status === "pending" && "очікує"}
+                          {p.status === "uploading" && "завантаження…"}
+                          {p.status === "done" && "✓ готово"}
+                          {p.status === "error" && `✗ ${p.error || "помилка"}`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </TabsContent>
             
