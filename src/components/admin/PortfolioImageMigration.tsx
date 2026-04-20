@@ -12,10 +12,11 @@ interface MigrationDetail {
   id: string;
   status: 'processed' | 'skipped' | 'error';
   reason?: string;
-  oldSize?: number;
-  newSize?: number;
-  newUrl?: string;
+  previewSize?: number;
+  displaySize?: number;
   previewUrl?: string;
+  displayUrl?: string;
+  thumbUrl?: string;
   title?: string;
 }
 
@@ -58,13 +59,13 @@ export function PortfolioImageMigration() {
       if (ids.length) {
         const { data: rows } = await supabase
           .from('portfolio')
-          .select('id, media_url, title')
+          .select('id, media_url, media_preview_url, title')
           .in('id', ids);
         const map = new Map((rows || []).map((row) => [row.id, row]));
         r.details = r.details.map((d) => {
           const row = map.get(d.id);
           return row
-            ? { ...d, previewUrl: row.media_url, title: row.title }
+            ? { ...d, thumbUrl: row.media_preview_url || row.media_url, title: row.title }
             : d;
         });
       }
@@ -79,8 +80,8 @@ export function PortfolioImageMigration() {
     }
   };
 
-  const totalSaved = result?.details.reduce(
-    (acc, d) => acc + ((d.oldSize || 0) - (d.newSize || 0)),
+  const totalGenerated = result?.details.reduce(
+    (acc, d) => acc + (d.previewSize || 0) + (d.displaySize || 0),
     0
   );
 
@@ -92,14 +93,14 @@ export function PortfolioImageMigration() {
           Міграція зображень портфоліо
         </CardTitle>
         <CardDescription>
-          Стискає існуючі фото портфоліо у WebP (макс. 1200px, якість 0.8) через серверну трансформацію Supabase. Файли менше 500 КБ пропускаються. Старі файли видаляються після успішної заміни. До 20 за раз.
+          Генерує дві WebP-копії для кожного існуючого фото портфоліо: <strong>preview</strong> (≤400px, для сітки) та <strong>display</strong> (≤1600px, для перегляду). Стиснення виконується серверною трансформацією Supabase. Оригінал зберігається без змін. До 20 за раз.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-lg border border-warning/50 bg-warning/10 p-3 flex gap-2 text-sm">
-          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-warning" />
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex gap-2 text-sm">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
           <div>
-            <strong>Увага:</strong> операція замінює оригінальні файли. Рекомендуємо спочатку запустити в режимі «Тестовий прогін», щоб побачити, що буде оброблено.
+            <strong>Безпечна операція:</strong> створює нові WebP-варіанти, не видаляючи оригінали. У разі помилки можна перезапустити.
           </div>
         </div>
 
@@ -153,9 +154,9 @@ export function PortfolioImageMigration() {
               </div>
             </div>
 
-            {!!totalSaved && totalSaved > 0 && (
+            {!!totalGenerated && totalGenerated > 0 && (
               <div className="rounded-lg bg-success/10 border border-success/30 p-3 text-sm">
-                <strong>Економія місця:</strong> {formatBytes(totalSaved)}
+                <strong>Згенеровано WebP-варіантів:</strong> {formatBytes(totalGenerated)}
               </div>
             )}
 
@@ -177,9 +178,9 @@ export function PortfolioImageMigration() {
             <div className="max-h-96 overflow-y-auto border rounded-lg divide-y">
               {result.details.map((d) => (
                 <div key={d.id} className="p-2 flex items-center gap-3 text-xs">
-                  {d.previewUrl ? (
+                  {d.thumbUrl ? (
                     <img
-                      src={d.previewUrl}
+                      src={d.thumbUrl}
                       alt={d.title || d.id}
                       loading="lazy"
                       decoding="async"
@@ -200,9 +201,9 @@ export function PortfolioImageMigration() {
                   >
                     {d.status}
                   </Badge>
-                  <span className="text-muted-foreground truncate text-right shrink-0 max-w-[160px]">
+                  <span className="text-muted-foreground truncate text-right shrink-0 max-w-[200px]">
                     {d.status === 'processed'
-                      ? `${formatBytes(d.oldSize)} → ${formatBytes(d.newSize)}`
+                      ? `prev ${formatBytes(d.previewSize)} · disp ${formatBytes(d.displaySize)}`
                       : d.reason || ''}
                   </span>
                 </div>
