@@ -297,6 +297,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
             media_preview_url: variants.previewUrl,
             media_display_url: variants.displayUrl,
             media_type: mediaType,
+            category: category || null,
           });
         if (insertError) throw insertError;
 
@@ -325,6 +326,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       );
       setTitle("");
       setDescription("");
+      setCategory("");
       setFiles([]);
       await fetchPortfolioItems();
       onUpdate();
