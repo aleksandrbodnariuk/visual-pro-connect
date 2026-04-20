@@ -106,11 +106,18 @@ function validateForUpload(file: File) {
   }
 }
 
+interface UploadProgressItem {
+  name: string;
+  status: "pending" | "uploading" | "done" | "error";
+  error?: string;
+}
+
 export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgressItem[]>([]);
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
