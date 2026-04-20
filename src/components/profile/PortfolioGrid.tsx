@@ -631,6 +631,92 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit dialog */}
+      <Dialog open={!!editingItem} onOpenChange={(open) => { if (!open) closeEditDialog(); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Редагувати елемент</DialogTitle>
+          </DialogHeader>
+          {editingItem && (
+            <div className="space-y-4 pt-2">
+              <div>
+                <Label htmlFor="edit-pf-title">Назва</Label>
+                <Input
+                  id="edit-pf-title"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="Введіть назву"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-pf-category">Категорія</Label>
+                <Select
+                  value={editCategory || "__none"}
+                  onValueChange={(v) => setEditCategory(v === "__none" ? "" : v)}
+                >
+                  <SelectTrigger id="edit-pf-category">
+                    <SelectValue placeholder="Оберіть категорію" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">{OTHER_CATEGORY_LABEL} (без категорії)</SelectItem>
+                    {PORTFOLIO_CATEGORIES.map((c) => (
+                      <SelectItem key={c.key} value={c.key}>
+                        <span className="flex items-center gap-2">
+                          <c.icon className="h-4 w-4" />
+                          {c.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {editingItem.type === "video" && (
+                <div>
+                  <Label htmlFor="edit-pf-video">Посилання на відео</Label>
+                  <Input
+                    id="edit-pf-video"
+                    value={editVideoUrl}
+                    onChange={(e) => setEditVideoUrl(e.target.value)}
+                    placeholder="https://youtube.com/... або vimeo.com/..."
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    YouTube, Vimeo, Facebook, TikTok тощо
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeEditDialog} disabled={savingEdit}>
+              Скасувати
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={savingEdit}>
+              {savingEdit ? "Збереження..." : "Зберегти"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <Dialog open={!!deletingItem} onOpenChange={(open) => { if (!open) setDeletingItem(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Видалити елемент?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Дію не можна скасувати. «{deletingItem?.title}» буде видалено назавжди.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingItem(null)} disabled={isDeleting}>
+              Скасувати
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
+              {isDeleting ? "Видалення..." : "Видалити"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 });
