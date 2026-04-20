@@ -260,13 +260,93 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
     }
   };
   
-  const handleEdit = (id: string) => {
-    toast.info(`Редагування елементу ${id}`);
+  const openEditDialog = (item: PortfolioItem) => {
+    setEditingItem(item);
+    setEditTitle(item.title || "");
+    setEditCategory(item.category || "");
+    setEditVideoUrl(item.type === "video" ? item.displayUrl : "");
   };
-  
-  const handleDelete = (id: string) => {
-    setPortfolioItems(portfolioItems.filter(item => item.id !== id));
-    toast.success("Елемент портфоліо видалено");
+
+  const closeEditDialog = () => {
+    setEditingItem(null);
+    setEditTitle("");
+    setEditCategory("");
+    setEditVideoUrl("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingItem) return;
+    if (!editTitle.trim()) {
+      toast.error("Назва не може бути порожньою");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const updates: Record<string, unknown> = {
+        title: editTitle.trim(),
+        category: editCategory || null,
+      };
+      if (editingItem.type === "video" && editVideoUrl.trim()) {
+        updates.media_url = editVideoUrl.trim();
+        updates.media_display_url = editVideoUrl.trim();
+      }
+
+      const { error } = await supabase
+        .from("portfolio")
+        .update(updates)
+        .eq("id", editingItem.id);
+      if (error) throw error;
+
+      // Optimistic local update — no full refetch
+      setPortfolioItems((prev) =>
+        prev.map((it) =>
+          it.id === editingItem.id
+            ? {
+                ...it,
+                title: editTitle.trim(),
+                category: editCategory || null,
+                ...(editingItem.type === "video" && editVideoUrl.trim()
+                  ? { displayUrl: editVideoUrl.trim(), thumbnailUrl: editVideoUrl.trim() }
+                  : {}),
+              }
+            : it
+        )
+      );
+      toast.success("Зміни збережено");
+      closeEditDialog();
+    } catch (err: any) {
+      console.error("Error updating portfolio item:", err);
+      toast.error(err?.message || "Не вдалося оновити");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingItem) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("portfolio")
+        .delete()
+        .eq("id", deletingItem.id);
+      if (error) throw error;
+
+      // Best-effort storage cleanup (only for uploaded media, not external links)
+      if (deletingItem.type !== "video" || deletingItem.displayUrl.includes("/storage/")) {
+        await deletePortfolioVariants([deletingItem.thumbnailUrl, deletingItem.displayUrl]);
+      }
+
+      knownIdsRef.current.delete(deletingItem.id);
+      setPortfolioItems((prev) => prev.filter((i) => i.id !== deletingItem.id));
+      toast.success("Елемент видалено");
+      setDeletingItem(null);
+    } catch (err: any) {
+      console.error("Error deleting portfolio item:", err);
+      toast.error(err?.message || "Не вдалося видалити");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handlePlayVideo = (item: PortfolioItem) => {
