@@ -231,53 +231,92 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       return;
     }
 
-    // ---- FILE UPLOAD MODE ----
-    if (!file || !title) {
-      toast.error("Будь ласка, заповніть всі обов'язкові поля");
+    // ---- FILE UPLOAD MODE (multi) ----
+    if (files.length === 0 || !title) {
+      toast.error("Будь ласка, заповніть назву та оберіть хоча б один файл");
       return;
     }
 
-    try {
-      validateForUpload(file);
-    } catch (e: any) {
-      toast.error(e?.message || "Файл не відповідає вимогам");
-      return;
+    // Pre-validate
+    for (const f of files) {
+      try {
+        validateForUpload(f);
+      } catch (e: any) {
+        toast.error(`${f.name}: ${e?.message || "Файл не відповідає вимогам"}`);
+        return;
+      }
     }
 
-    try {
-      setIsUploading(true);
-      const mediaType = getMediaTypeFromFile(file);
+    setIsUploading(true);
+    setUploadProgress(
+      files.map((f) => ({ name: f.name, status: "pending" as const }))
+    );
 
-      // Run through portfolio media pipeline:
-      //  - images → preview (≤400px) + display (≤1600px) WebP variants
-      //  - audio/video → uploaded as-is
-      const variants = await uploadPortfolioImageVariants(file, userId);
+    let successCount = 0;
+    let failCount = 0;
+    const isMulti = files.length > 1;
 
-      const { error: insertError } = await supabase
-        .from("portfolio")
-        .insert({
-          user_id: userId,
-          title,
-          description,
-          media_url: variants.originalUrl,
-          media_preview_url: variants.previewUrl,
-          media_display_url: variants.displayUrl,
-          media_type: mediaType,
-        });
-      if (insertError) throw insertError;
+    for (let i = 0; i < files.length; i++) {
+      const currentFile = files[i];
+      setUploadProgress((prev) =>
+        prev.map((p, idx) => (idx === i ? { ...p, status: "uploading" } : p))
+      );
 
-      toast.success("Файл успішно завантажено");
+      try {
+        const mediaType = getMediaTypeFromFile(currentFile);
+        const variants = await uploadPortfolioImageVariants(currentFile, userId);
+
+        // For multi-upload, append index to title for uniqueness
+        const itemTitle = isMulti ? `${title} (${i + 1})` : title;
+
+        const { error: insertError } = await supabase
+          .from("portfolio")
+          .insert({
+            user_id: userId,
+            title: itemTitle,
+            description,
+            media_url: variants.originalUrl,
+            media_preview_url: variants.previewUrl,
+            media_display_url: variants.displayUrl,
+            media_type: mediaType,
+          });
+        if (insertError) throw insertError;
+
+        successCount++;
+        setUploadProgress((prev) =>
+          prev.map((p, idx) => (idx === i ? { ...p, status: "done" } : p))
+        );
+      } catch (error: any) {
+        failCount++;
+        console.error(`Помилка завантаження ${currentFile.name}:`, error);
+        setUploadProgress((prev) =>
+          prev.map((p, idx) =>
+            idx === i
+              ? { ...p, status: "error", error: error?.message || "Помилка" }
+              : p
+          )
+        );
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(
+        failCount === 0
+          ? `Завантажено: ${successCount}`
+          : `Завантажено: ${successCount}, помилок: ${failCount}`
+      );
       setTitle("");
       setDescription("");
-      setFile(null);
+      setFiles([]);
       await fetchPortfolioItems();
       onUpdate();
-    } catch (error: any) {
-      console.error("Помилка при завантаженні файлу:", error);
-      toast.error(error?.message || "Помилка при завантаженні файлу");
-    } finally {
-      setIsUploading(false);
+    } else {
+      toast.error("Не вдалося завантажити жодного файлу");
     }
+
+    // Clear progress after a short delay so user can see results
+    setTimeout(() => setUploadProgress([]), 2500);
+    setIsUploading(false);
   };
 
   const handleOpenEditDialog = (item: PortfolioItem) => {
