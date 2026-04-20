@@ -80,7 +80,7 @@ export function PortfolioBlock() {
       try {
         const { data, error } = await supabase
           .from('portfolio')
-          .select('id, user_id, title, description, media_url, media_preview_url, media_display_url, media_type')
+          .select('id, user_id, title, description, media_url, media_preview_url, media_display_url, media_type, category')
           .order('created_at', { ascending: false });
 
         if (error) throw error;
