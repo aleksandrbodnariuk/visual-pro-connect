@@ -477,17 +477,48 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
             
             <TabsContent value="file" className="mt-4 space-y-4">
               <div>
-                <Label htmlFor="file">Файл (фото, відео, аудіо)</Label>
+                <Label htmlFor="file">Файли (фото, відео, аудіо)</Label>
                 <Input
                   id="file"
                   type="file"
                   accept="image/*,video/*,audio/*"
+                  multiple
                   onChange={handleFileChange}
                   disabled={isUploading}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Зображення стискаються в WebP. Максимум 10MB до стиснення / 5MB після.
+                  Можна обрати декілька файлів. Зображення стискаються в WebP. Максимум 10MB до стиснення / 5MB після.
                 </p>
+                {files.length > 0 && uploadProgress.length === 0 && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Обрано файлів: <span className="font-medium text-foreground">{files.length}</span>
+                  </p>
+                )}
+                {uploadProgress.length > 0 && (
+                  <div className="mt-3 space-y-1 max-h-40 overflow-y-auto rounded-md border p-2">
+                    {uploadProgress.map((p, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="truncate flex-1">{p.name}</span>
+                        <span
+                          className={
+                            p.status === "done"
+                              ? "text-green-600"
+                              : p.status === "error"
+                              ? "text-destructive"
+                              : p.status === "uploading"
+                              ? "text-primary"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {p.status === "pending" && "очікує"}
+                          {p.status === "uploading" && "завантаження…"}
+                          {p.status === "done" && "✓ готово"}
+                          {p.status === "error" && `✗ ${p.error || "помилка"}`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </TabsContent>
             
