@@ -194,8 +194,19 @@ export function PortfolioBlock() {
             Немає робіт у цій категорії
           </p>
         ) : (
-          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-            {filtered.map((item) => {
+          <div className="space-y-6">
+            {groupedItems.map((group) => {
+              const GroupIcon =
+                PORTFOLIO_CATEGORIES.find((c) => c.key === group.key)?.icon ?? OtherCategoryIcon;
+              return (
+                <section key={group.key}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <GroupIcon className="h-4 w-4 text-muted-foreground" />
+                    <h4 className="text-sm font-semibold text-foreground">{group.label}</h4>
+                    <span className="text-xs text-muted-foreground">({group.items.length})</span>
+                  </div>
+                  <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                    {group.items.map((item) => {
               const profile = profiles.get(item.user_id);
               const Icon = TYPE_ICON[item.media_type] || Camera;
               const isVideo = item.media_type === 'video';
@@ -268,6 +279,10 @@ export function PortfolioBlock() {
                     )}
                   </div>
                 </div>
+              );
+                    })}
+                  </div>
+                </section>
               );
             })}
           </div>
