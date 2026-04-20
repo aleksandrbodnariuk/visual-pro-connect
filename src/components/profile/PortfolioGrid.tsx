@@ -13,13 +13,27 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   PORTFOLIO_CATEGORIES,
   OTHER_CATEGORY_LABEL,
   OtherCategoryIcon,
   getCategoryLabel,
 } from "@/lib/portfolioCategories";
+import { deletePortfolioVariants } from "@/lib/portfolioMediaPipeline";
 
 interface PortfolioItem {
   id: string;
@@ -130,6 +144,15 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
   const [lastCreatedAt, setLastCreatedAt] = useState<string | null>(null);
   // Dedup set (mirrors loaded items by id)
   const knownIdsRef = useRef<Set<string>>(new Set());
+  // Edit dialog state
+  const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editCategory, setEditCategory] = useState<string>("");
+  const [editVideoUrl, setEditVideoUrl] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  // Delete confirmation
+  const [deletingItem, setDeletingItem] = useState<PortfolioItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const filteredItems = useMemo(
     () => filter === 'all' ? portfolioItems : portfolioItems.filter(i => i.type === filter),
@@ -237,13 +260,93 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
     }
   };
   
-  const handleEdit = (id: string) => {
-    toast.info(`Редагування елементу ${id}`);
+  const openEditDialog = (item: PortfolioItem) => {
+    setEditingItem(item);
+    setEditTitle(item.title || "");
+    setEditCategory(item.category || "");
+    setEditVideoUrl(item.type === "video" ? item.displayUrl : "");
   };
-  
-  const handleDelete = (id: string) => {
-    setPortfolioItems(portfolioItems.filter(item => item.id !== id));
-    toast.success("Елемент портфоліо видалено");
+
+  const closeEditDialog = () => {
+    setEditingItem(null);
+    setEditTitle("");
+    setEditCategory("");
+    setEditVideoUrl("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingItem) return;
+    if (!editTitle.trim()) {
+      toast.error("Назва не може бути порожньою");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const updates: Record<string, unknown> = {
+        title: editTitle.trim(),
+        category: editCategory || null,
+      };
+      if (editingItem.type === "video" && editVideoUrl.trim()) {
+        updates.media_url = editVideoUrl.trim();
+        updates.media_display_url = editVideoUrl.trim();
+      }
+
+      const { error } = await supabase
+        .from("portfolio")
+        .update(updates)
+        .eq("id", editingItem.id);
+      if (error) throw error;
+
+      // Optimistic local update — no full refetch
+      setPortfolioItems((prev) =>
+        prev.map((it) =>
+          it.id === editingItem.id
+            ? {
+                ...it,
+                title: editTitle.trim(),
+                category: editCategory || null,
+                ...(editingItem.type === "video" && editVideoUrl.trim()
+                  ? { displayUrl: editVideoUrl.trim(), thumbnailUrl: editVideoUrl.trim() }
+                  : {}),
+              }
+            : it
+        )
+      );
+      toast.success("Зміни збережено");
+      closeEditDialog();
+    } catch (err: any) {
+      console.error("Error updating portfolio item:", err);
+      toast.error(err?.message || "Не вдалося оновити");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingItem) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("portfolio")
+        .delete()
+        .eq("id", deletingItem.id);
+      if (error) throw error;
+
+      // Best-effort storage cleanup (only for uploaded media, not external links)
+      if (deletingItem.type !== "video" || deletingItem.displayUrl.includes("/storage/")) {
+        await deletePortfolioVariants([deletingItem.thumbnailUrl, deletingItem.displayUrl]);
+      }
+
+      knownIdsRef.current.delete(deletingItem.id);
+      setPortfolioItems((prev) => prev.filter((i) => i.id !== deletingItem.id));
+      toast.success("Елемент видалено");
+      setDeletingItem(null);
+    } catch (err: any) {
+      console.error("Error deleting portfolio item:", err);
+      toast.error(err?.message || "Не вдалося видалити");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handlePlayVideo = (item: PortfolioItem) => {
@@ -411,12 +514,12 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEdit(item.id)}>
+                      <DropdownMenuItem onClick={() => openEditDialog(item)}>
                         <Edit className="mr-2 h-4 w-4" />
                         Редагувати
                       </DropdownMenuItem>
                       <DropdownMenuItem 
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => setDeletingItem(item)}
                         className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -526,6 +629,92 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
               />
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit dialog */}
+      <Dialog open={!!editingItem} onOpenChange={(open) => { if (!open) closeEditDialog(); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Редагувати елемент</DialogTitle>
+          </DialogHeader>
+          {editingItem && (
+            <div className="space-y-4 pt-2">
+              <div>
+                <Label htmlFor="edit-pf-title">Назва</Label>
+                <Input
+                  id="edit-pf-title"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="Введіть назву"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-pf-category">Категорія</Label>
+                <Select
+                  value={editCategory || "__none"}
+                  onValueChange={(v) => setEditCategory(v === "__none" ? "" : v)}
+                >
+                  <SelectTrigger id="edit-pf-category">
+                    <SelectValue placeholder="Оберіть категорію" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">{OTHER_CATEGORY_LABEL} (без категорії)</SelectItem>
+                    {PORTFOLIO_CATEGORIES.map((c) => (
+                      <SelectItem key={c.key} value={c.key}>
+                        <span className="flex items-center gap-2">
+                          <c.icon className="h-4 w-4" />
+                          {c.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {editingItem.type === "video" && (
+                <div>
+                  <Label htmlFor="edit-pf-video">Посилання на відео</Label>
+                  <Input
+                    id="edit-pf-video"
+                    value={editVideoUrl}
+                    onChange={(e) => setEditVideoUrl(e.target.value)}
+                    placeholder="https://youtube.com/... або vimeo.com/..."
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    YouTube, Vimeo, Facebook, TikTok тощо
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeEditDialog} disabled={savingEdit}>
+              Скасувати
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={savingEdit}>
+              {savingEdit ? "Збереження..." : "Зберегти"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <Dialog open={!!deletingItem} onOpenChange={(open) => { if (!open) setDeletingItem(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Видалити елемент?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Дію не можна скасувати. «{deletingItem?.title}» буде видалено назавжди.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingItem(null)} disabled={isDeleting}>
+              Скасувати
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
+              {isDeleting ? "Видалення..." : "Видалити"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
