@@ -144,6 +144,15 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
   const [lastCreatedAt, setLastCreatedAt] = useState<string | null>(null);
   // Dedup set (mirrors loaded items by id)
   const knownIdsRef = useRef<Set<string>>(new Set());
+  // Edit dialog state
+  const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editCategory, setEditCategory] = useState<string>("");
+  const [editVideoUrl, setEditVideoUrl] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  // Delete confirmation
+  const [deletingItem, setDeletingItem] = useState<PortfolioItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const filteredItems = useMemo(
     () => filter === 'all' ? portfolioItems : portfolioItems.filter(i => i.type === filter),
