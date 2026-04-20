@@ -178,9 +178,9 @@ export function PortfolioImageMigration() {
             <div className="max-h-96 overflow-y-auto border rounded-lg divide-y">
               {result.details.map((d) => (
                 <div key={d.id} className="p-2 flex items-center gap-3 text-xs">
-                  {d.previewUrl ? (
+                  {d.thumbUrl ? (
                     <img
-                      src={d.previewUrl}
+                      src={d.thumbUrl}
                       alt={d.title || d.id}
                       loading="lazy"
                       decoding="async"
@@ -201,9 +201,9 @@ export function PortfolioImageMigration() {
                   >
                     {d.status}
                   </Badge>
-                  <span className="text-muted-foreground truncate text-right shrink-0 max-w-[160px]">
+                  <span className="text-muted-foreground truncate text-right shrink-0 max-w-[200px]">
                     {d.status === 'processed'
-                      ? `${formatBytes(d.oldSize)} → ${formatBytes(d.newSize)}`
+                      ? `prev ${formatBytes(d.previewSize)} · disp ${formatBytes(d.displaySize)}`
                       : d.reason || ''}
                   </span>
                 </div>
