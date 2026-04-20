@@ -749,6 +749,39 @@ export type Database = {
           },
         ]
       }
+      portfolio_categories: {
+        Row: {
+          created_at: string
+          icon: string
+          id: string
+          is_system: boolean
+          is_visible: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string
+          id: string
+          is_system?: boolean
+          is_visible?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string
+          id?: string
+          is_system?: boolean
+          is_visible?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       post_likes: {
         Row: {
           created_at: string | null
