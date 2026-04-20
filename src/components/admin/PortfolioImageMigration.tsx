@@ -39,11 +39,11 @@ function formatBytes(bytes?: number): string {
 export function PortfolioImageMigration() {
   const [running, setRunning] = useState(false);
   const [dryRun, setDryRun] = useState(true);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(5);
   const [result, setResult] = useState<MigrationResult | null>(null);
 
   const runMigration = async () => {
-    if (!dryRun && !confirm(`Запустити міграцію для ${limit} зображень портфоліо? Це необоротна операція.`)) return;
+    if (!dryRun && !confirm(`Запустити міграцію для ${limit} зображень портфоліо?`)) return;
 
     setRunning(true);
     setResult(null);
