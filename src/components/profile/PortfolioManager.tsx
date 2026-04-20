@@ -124,6 +124,7 @@ interface UploadProgressItem {
 export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<string>("");
   const [files, setFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgressItem[]>([]);
