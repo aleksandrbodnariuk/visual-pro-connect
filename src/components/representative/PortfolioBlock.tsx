@@ -6,6 +6,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, Video, Music, ImageIcon, Play, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import {
+  PORTFOLIO_CATEGORIES,
+  OTHER_CATEGORY_LABEL,
+  OtherCategoryIcon,
+} from '@/lib/portfolioCategories';
 
 function parseVideoUrl(url: string) {
   const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([^&\s?/]+)/);
@@ -34,6 +39,7 @@ interface PortfolioItem {
   media_preview_url: string | null;
   media_display_url: string | null;
   media_type: string;
+  category: string | null;
 }
 
 interface Profile {
