@@ -14,6 +14,12 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
+import {
+  PORTFOLIO_CATEGORIES,
+  OTHER_CATEGORY_LABEL,
+  OtherCategoryIcon,
+  getCategoryLabel,
+} from "@/lib/portfolioCategories";
 
 interface PortfolioItem {
   id: string;
@@ -25,6 +31,7 @@ interface PortfolioItem {
   title: string;
   likes: number;
   comments: number;
+  category?: string | null;
 }
 
 interface PortfolioGridProps {
@@ -42,6 +49,7 @@ interface PortfolioRecord {
   media_preview_url?: string | null;
   media_display_url?: string | null;
   media_type: string;
+  category?: string | null;
 }
 
 function parseVideoUrl(url: string) {
