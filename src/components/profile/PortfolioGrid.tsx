@@ -28,11 +28,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  PORTFOLIO_CATEGORIES,
   OTHER_CATEGORY_LABEL,
   OtherCategoryIcon,
-  getCategoryLabel,
 } from "@/lib/portfolioCategories";
+import { usePortfolioCategories } from "@/hooks/usePortfolioCategories";
 import { deletePortfolioVariants } from "@/lib/portfolioMediaPipeline";
 
 interface PortfolioItem {
@@ -132,6 +131,7 @@ const PAGE_SIZE = 12;
 
 export const PortfolioGrid = memo(({ items: initialItems, className, userId, isOwner = false, onAddItem }: PortfolioGridProps) => {
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(initialItems);
+  const { categories: portfolioCategories } = usePortfolioCategories();
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -167,7 +167,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
   // Group items by category in a stable order (defined categories first, "Інше" last)
   const groupedItems = useMemo(() => {
     const groups = new Map<string, { key: string; label: string; items: PortfolioItem[] }>();
-    PORTFOLIO_CATEGORIES.forEach((c) =>
+    portfolioCategories.forEach((c) =>
       groups.set(c.key, { key: c.key, label: c.label, items: [] })
     );
     groups.set("__other", { key: "__other", label: OTHER_CATEGORY_LABEL, items: [] });
@@ -446,7 +446,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
       <div className="space-y-8">
         {groupedItems.map((group) => {
           const GroupIcon =
-            PORTFOLIO_CATEGORIES.find((c) => c.key === group.key)?.icon ?? OtherCategoryIcon;
+            portfolioCategories.find((c) => c.key === group.key)?.icon ?? OtherCategoryIcon;
           return (
             <section key={group.key}>
               <div className="flex items-center gap-2 mb-3">
@@ -660,7 +660,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none">{OTHER_CATEGORY_LABEL} (без категорії)</SelectItem>
-                    {PORTFOLIO_CATEGORIES.map((c) => (
+                    {portfolioCategories.map((c) => (
                       <SelectItem key={c.key} value={c.key}>
                         <span className="flex items-center gap-2">
                           <c.icon className="h-4 w-4" />

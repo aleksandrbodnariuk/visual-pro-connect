@@ -7,10 +7,10 @@ import { Camera, Video, Music, ImageIcon, Play, ChevronLeft, ChevronRight } from
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import {
-  PORTFOLIO_CATEGORIES,
   OTHER_CATEGORY_LABEL,
   OtherCategoryIcon,
 } from '@/lib/portfolioCategories';
+import { usePortfolioCategories } from '@/hooks/usePortfolioCategories';
 
 function parseVideoUrl(url: string) {
   const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([^&\s?/]+)/);
@@ -63,6 +63,7 @@ const TYPE_ICON: Record<string, React.ElementType> = {
 
 export function PortfolioBlock() {
   const [items, setItems] = useState<PortfolioItem[]>([]);
+  const { categories: portfolioCategories } = usePortfolioCategories();
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
@@ -118,7 +119,7 @@ export function PortfolioBlock() {
   // Group items by category in stable order
   const groupedItems = useMemo(() => {
     const groups = new Map<string, { key: string; label: string; items: PortfolioItem[] }>();
-    PORTFOLIO_CATEGORIES.forEach((c) =>
+    portfolioCategories.forEach((c) =>
       groups.set(c.key, { key: c.key, label: c.label, items: [] })
     );
     groups.set('__other', { key: '__other', label: OTHER_CATEGORY_LABEL, items: [] });
@@ -197,7 +198,7 @@ export function PortfolioBlock() {
           <div className="space-y-6">
             {groupedItems.map((group) => {
               const GroupIcon =
-                PORTFOLIO_CATEGORIES.find((c) => c.key === group.key)?.icon ?? OtherCategoryIcon;
+                portfolioCategories.find((c) => c.key === group.key)?.icon ?? OtherCategoryIcon;
               return (
                 <section key={group.key}>
                   <div className="flex items-center gap-2 mb-2">

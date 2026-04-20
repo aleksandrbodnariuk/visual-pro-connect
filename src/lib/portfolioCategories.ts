@@ -1,38 +1,89 @@
-import { Heart, GraduationCap, Camera, Church, Sparkles, Cake, Folder } from "lucide-react";
+import {
+  Heart,
+  GraduationCap,
+  Camera,
+  Church,
+  Sparkles,
+  Cake,
+  Folder,
+  Music,
+  Video,
+  Users,
+  Star,
+  UtensilsCrossed,
+  Car,
+  Flower2,
+  Gift,
+  PartyPopper,
+  Briefcase,
+  Baby,
+  Mic,
+  Plane,
+  Home,
+  Building2,
+  Trophy,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-export type PortfolioCategoryKey =
-  | "wedding"
-  | "graduation"
-  | "photoshoot"
-  | "baptism"
-  | "engagement"
-  | "birthday";
-
 export interface PortfolioCategoryDef {
-  key: PortfolioCategoryKey;
+  key: string;
   label: string;
   icon: LucideIcon;
 }
 
-export const PORTFOLIO_CATEGORIES: PortfolioCategoryDef[] = [
-  { key: "wedding", label: "Весілля", icon: Heart },
-  { key: "graduation", label: "Випуск", icon: GraduationCap },
-  { key: "photoshoot", label: "Фотосесія", icon: Camera },
-  { key: "baptism", label: "Хрестини", icon: Church },
-  { key: "engagement", label: "Вінчання", icon: Sparkles },
-  { key: "birthday", label: "Дні народження", icon: Cake },
-];
+/** All icons available for portfolio categories (admin can choose any). */
+export const PORTFOLIO_ICON_MAP: Record<string, LucideIcon> = {
+  Heart,
+  GraduationCap,
+  Camera,
+  Church,
+  Sparkles,
+  Cake,
+  Folder,
+  Music,
+  Video,
+  Users,
+  Star,
+  UtensilsCrossed,
+  Car,
+  Flower2,
+  Gift,
+  PartyPopper,
+  Briefcase,
+  Baby,
+  Mic,
+  Plane,
+  Home,
+  Building2,
+  Trophy,
+};
+
+export const PORTFOLIO_AVAILABLE_ICONS = Object.keys(PORTFOLIO_ICON_MAP);
 
 export const OTHER_CATEGORY_LABEL = "Інше";
 export const OtherCategoryIcon = Folder;
 
-export function getCategoryLabel(key: string | null | undefined): string {
-  if (!key) return OTHER_CATEGORY_LABEL;
-  return PORTFOLIO_CATEGORIES.find((c) => c.key === key)?.label ?? OTHER_CATEGORY_LABEL;
+export function getPortfolioIconComponent(name: string | null | undefined): LucideIcon {
+  if (!name) return OtherCategoryIcon;
+  return PORTFOLIO_ICON_MAP[name] ?? OtherCategoryIcon;
 }
 
-export function getCategoryIcon(key: string | null | undefined): LucideIcon {
+/**
+ * Helpers that take the dynamically-loaded category list as input.
+ * Components fetch categories via `usePortfolioCategories()` and pass them in.
+ */
+export function getCategoryLabel(
+  categories: PortfolioCategoryDef[],
+  key: string | null | undefined,
+): string {
+  if (!key) return OTHER_CATEGORY_LABEL;
+  return categories.find((c) => c.key === key)?.label ?? OTHER_CATEGORY_LABEL;
+}
+
+export function getCategoryIcon(
+  categories: PortfolioCategoryDef[],
+  key: string | null | undefined,
+): LucideIcon {
   if (!key) return OtherCategoryIcon;
-  return PORTFOLIO_CATEGORIES.find((c) => c.key === key)?.icon ?? OtherCategoryIcon;
+  return categories.find((c) => c.key === key)?.icon ?? OtherCategoryIcon;
 }
