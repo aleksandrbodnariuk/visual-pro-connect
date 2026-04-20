@@ -514,12 +514,12 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEdit(item.id)}>
+                      <DropdownMenuItem onClick={() => openEditDialog(item)}>
                         <Edit className="mr-2 h-4 w-4" />
                         Редагувати
                       </DropdownMenuItem>
                       <DropdownMenuItem 
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => setDeletingItem(item)}
                         className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
