@@ -12,10 +12,11 @@ interface MigrationDetail {
   id: string;
   status: 'processed' | 'skipped' | 'error';
   reason?: string;
-  oldSize?: number;
-  newSize?: number;
-  newUrl?: string;
+  previewSize?: number;
+  displaySize?: number;
   previewUrl?: string;
+  displayUrl?: string;
+  thumbUrl?: string;
   title?: string;
 }
 
