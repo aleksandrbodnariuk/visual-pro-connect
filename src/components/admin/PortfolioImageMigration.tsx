@@ -59,13 +59,13 @@ export function PortfolioImageMigration() {
       if (ids.length) {
         const { data: rows } = await supabase
           .from('portfolio')
-          .select('id, media_url, title')
+          .select('id, media_url, media_preview_url, title')
           .in('id', ids);
         const map = new Map((rows || []).map((row) => [row.id, row]));
         r.details = r.details.map((d) => {
           const row = map.get(d.id);
           return row
-            ? { ...d, previewUrl: row.media_url, title: row.title }
+            ? { ...d, thumbUrl: row.media_preview_url || row.media_url, title: row.title }
             : d;
         });
       }
@@ -80,8 +80,8 @@ export function PortfolioImageMigration() {
     }
   };
 
-  const totalSaved = result?.details.reduce(
-    (acc, d) => acc + ((d.oldSize || 0) - (d.newSize || 0)),
+  const totalGenerated = result?.details.reduce(
+    (acc, d) => acc + (d.previewSize || 0) + (d.displaySize || 0),
     0
   );
 
