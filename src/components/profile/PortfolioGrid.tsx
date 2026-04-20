@@ -318,8 +318,19 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
           Немає робіт у цій категорії
         </p>
       ) : (
-      <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4", className)}>
-        {filteredItems.map((item) => {
+      <div className="space-y-8">
+        {groupedItems.map((group) => {
+          const GroupIcon =
+            PORTFOLIO_CATEGORIES.find((c) => c.key === group.key)?.icon ?? OtherCategoryIcon;
+          return (
+            <section key={group.key}>
+              <div className="flex items-center gap-2 mb-3">
+                <GroupIcon className="h-5 w-5 text-muted-foreground" />
+                <h3 className="text-base font-semibold text-foreground">{group.label}</h3>
+                <span className="text-xs text-muted-foreground">({group.items.length})</span>
+              </div>
+              <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4", className)}>
+                {group.items.map((item) => {
           const videoData = item.type === "video" ? parseVideoUrl(item.displayUrl) : null;
           const thumbnailSrc = videoData?.thumbnail || item.thumbnailUrl;
           const isVideo = item.type === "video";
@@ -399,6 +410,10 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
                 <h3 className="text-sm font-medium text-white">{item.title}</h3>
               </div>
             </div>
+          );
+                })}
+              </div>
+            </section>
           );
         })}
       </div>
