@@ -414,6 +414,80 @@ export type Database = {
         }
         Relationships: []
       }
+      conversation_members: {
+        Row: {
+          conversation_id: string
+          id: string
+          is_archived: boolean
+          is_muted: boolean
+          joined_at: string
+          last_read_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          id?: string
+          is_archived?: boolean
+          is_muted?: boolean
+          joined_at?: string
+          last_read_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          id?: string
+          is_archived?: boolean
+          is_muted?: boolean
+          joined_at?: string
+          last_read_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_members_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          created_by: string
+          id: string
+          last_message_at: string
+          title: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          last_message_at?: string
+          title?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          last_message_at?: string
+          title?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       financial_audit_log: {
         Row: {
           created_at: string
@@ -588,39 +662,53 @@ export type Database = {
           attachment_type: string | null
           attachment_url: string | null
           content: string
+          conversation_id: string | null
           created_at: string | null
           edited_at: string | null
           id: string
           is_edited: boolean | null
           read: boolean | null
-          receiver_id: string
+          receiver_id: string | null
           sender_id: string
+          system_event: Json | null
         }
         Insert: {
           attachment_type?: string | null
           attachment_url?: string | null
           content: string
+          conversation_id?: string | null
           created_at?: string | null
           edited_at?: string | null
           id?: string
           is_edited?: boolean | null
           read?: boolean | null
-          receiver_id: string
+          receiver_id?: string | null
           sender_id: string
+          system_event?: Json | null
         }
         Update: {
           attachment_type?: string | null
           attachment_url?: string | null
           content?: string
+          conversation_id?: string | null
           created_at?: string | null
           edited_at?: string | null
           id?: string
           is_edited?: boolean | null
           read?: boolean | null
-          receiver_id?: string
+          receiver_id?: string | null
           sender_id?: string
+          system_event?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       moderation_actions: {
         Row: {
@@ -1856,6 +1944,10 @@ export type Database = {
         Args: { _invite_id: string }
         Returns: undefined
       }
+      add_members_to_group: {
+        Args: { _conv_id: string; _user_ids: string[] }
+        Returns: undefined
+      }
       admin_force_confirm_payout: {
         Args: { _payout_id: string }
         Returns: undefined
@@ -1885,6 +1977,10 @@ export type Database = {
       confirm_payout: { Args: { _payout_id: string }; Returns: undefined }
       confirm_rep_payout: { Args: { _payout_id: string }; Returns: undefined }
       confirm_spec_payout: { Args: { _payout_id: string }; Returns: undefined }
+      create_group_conversation: {
+        Args: { _member_ids: string[]; _title: string }
+        Returns: string
+      }
       create_share_listing: {
         Args: { _note?: string; _quantity: number }
         Returns: string
@@ -1970,6 +2066,10 @@ export type Database = {
           status: string
           title: string
         }[]
+      }
+      get_conversation_member_role: {
+        Args: { _conv_id: string; _user_id: string }
+        Returns: string
       }
       get_conversion_stats: {
         Args: never
@@ -2074,6 +2174,10 @@ export type Database = {
           total_earnings: number
         }[]
       }
+      get_or_create_direct_conversation: {
+        Args: { _other_user_id: string }
+        Returns: string
+      }
       get_representative_stats: {
         Args: { _user_id: string }
         Returns: {
@@ -2173,6 +2277,22 @@ export type Database = {
           website: string
         }[]
       }
+      get_user_conversations: {
+        Args: { _user_id: string }
+        Returns: {
+          avatar_url: string
+          conversation_id: string
+          last_message_at: string
+          last_message_sender_id: string
+          last_message_text: string
+          member_count: number
+          member_ids: string[]
+          my_role: string
+          title: string
+          type: string
+          unread_count: number
+        }[]
+      }
       get_user_friends: {
         Args: { _user_id: string }
         Returns: {
@@ -2235,6 +2355,10 @@ export type Database = {
       has_stock_market_access: { Args: { _user_id: string }; Returns: boolean }
       is_admin: { Args: { user_id: string }; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
+      is_conversation_member: {
+        Args: { _conv_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_order_creator: {
         Args: { _order_id: string; _user_id: string }
         Returns: boolean
@@ -2244,6 +2368,8 @@ export type Database = {
         Returns: boolean
       }
       is_user_admin: { Args: { _user_id: string }; Returns: boolean }
+      leave_conversation: { Args: { _conv_id: string }; Returns: undefined }
+      mark_conversation_read: { Args: { _conv_id: string }; Returns: undefined }
       mark_payout_paid: {
         Args: { _admin_notes?: string; _payout_id: string }
         Returns: undefined
@@ -2264,6 +2390,10 @@ export type Database = {
       record_visit: { Args: never; Returns: undefined }
       reject_share_transaction: {
         Args: { _transaction_id: string }
+        Returns: undefined
+      }
+      remove_member_from_group: {
+        Args: { _conv_id: string; _user_id: string }
         Returns: undefined
       }
       search_users_public: {
@@ -2295,6 +2425,10 @@ export type Database = {
       }
       sync_all_shareholder_titles: { Args: never; Returns: undefined }
       sync_user_title: { Args: { _user_id: string }; Returns: undefined }
+      update_conversation_title: {
+        Args: { _conv_id: string; _title: string }
+        Returns: undefined
+      }
       user_exists_by_phone: {
         Args: { _phone_number: string }
         Returns: boolean
