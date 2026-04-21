@@ -16,9 +16,11 @@ import { CONDITION_LABELS, DEAL_TYPE_LABELS, type MarketplaceCondition, type Mar
 import { uploadToStorage } from '@/lib/storage';
 import { toast } from 'sonner';
 import { VipBoostToggle } from '@/components/marketplace/VipBoostToggle';
+import { compressImageAsFile, OUTPUT_FORMAT } from '@/lib/imageCompression';
 
 const MAX_IMAGES = 8;
 const MAX_IMAGE_SIZE_MB = 5;
+const HEIC_TYPES = ['image/heic', 'image/heif'];
 
 export default function MarketplaceNew() {
   const navigate = useNavigate();
@@ -52,11 +54,20 @@ export default function MarketplaceNew() {
     const arr = Array.from(files);
     const room = MAX_IMAGES - images.length;
     const accepted = arr.slice(0, room).filter((f) => {
+      const lower = f.name.toLowerCase();
+      if (HEIC_TYPES.includes(f.type) || lower.endsWith('.heic') || lower.endsWith('.heif')) {
+        toast.error(`${f.name}: формат HEIC не підтримується. Конвертуйте у JPEG/PNG.`);
+        return false;
+      }
       if (f.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
         toast.error(`${f.name}: більше ${MAX_IMAGE_SIZE_MB}МБ`);
         return false;
       }
-      return f.type.startsWith('image/');
+      if (!f.type.startsWith('image/')) {
+        toast.error(`${f.name}: підтримуються лише зображення`);
+        return false;
+      }
+      return true;
     });
     setImages((prev) => [...prev, ...accepted]);
     setPreviews((prev) => [...prev, ...accepted.map((f) => URL.createObjectURL(f))]);
@@ -75,13 +86,36 @@ export default function MarketplaceNew() {
     setUploading(true);
     try {
       const imageUrls: string[] = [];
+      const toastId = images.length > 0 ? toast.loading(`Обробка фото 0/${images.length}...`) : undefined;
       for (let i = 0; i < images.length; i++) {
-        const f = images[i];
-        const ext = f.name.split('.').pop() || 'jpg';
-        const path = `${user.id}/${Date.now()}-${i}.${ext}`;
-        const url = await uploadToStorage('marketplace', path, f, f.type);
-        imageUrls.push(url);
+        const original = images[i];
+        if (toastId) toast.loading(`Стискання фото ${i + 1}/${images.length}...`, { id: toastId });
+
+        // Автоматичне стиснення + конвертація в WebP (GIF зберігається як є)
+        let fileToUpload: File = original;
+        let contentType = original.type;
+        try {
+          fileToUpload = await compressImageAsFile(original, 'post');
+          contentType = fileToUpload.type || OUTPUT_FORMAT;
+        } catch (err) {
+          console.warn('[Marketplace] Помилка стиснення, використовую оригінал:', err);
+        }
+
+        const ext = contentType === OUTPUT_FORMAT
+          ? 'webp'
+          : (original.name.split('.').pop() || 'jpg').toLowerCase();
+        const path = `${user.id}/${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+        if (toastId) toast.loading(`Завантаження фото ${i + 1}/${images.length}...`, { id: toastId });
+        try {
+          const url = await uploadToStorage('marketplace', path, fileToUpload, contentType);
+          imageUrls.push(url);
+        } catch (err: any) {
+          if (toastId) toast.dismiss(toastId);
+          throw new Error(`Не вдалося завантажити фото ${i + 1}: ${err?.message || 'невідома помилка'}`);
+        }
       }
+      if (toastId) toast.dismiss(toastId);
 
       await createListing.mutateAsync({
         listing: {
