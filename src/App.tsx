@@ -49,6 +49,7 @@ const VipTools = lazy(() => import("./pages/vip/Tools"));
 const VipNotebook = lazy(() => import("./pages/vip/Notebook"));
 const VipCalculator = lazy(() => import("./pages/vip/Calculator"));
 const VipReminders = lazy(() => import("./pages/vip/Reminders"));
+const VipPlanner = lazy(() => import("./pages/vip/Planner"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
 const MarketplaceListing = lazy(() => import("./pages/MarketplaceListing"));
 const MarketplaceNew = lazy(() => import("./pages/MarketplaceNew"));
@@ -122,6 +123,7 @@ const AppContent = () => {
             <Route path="/vip/notebook" element={<VipNotebook />} />
             <Route path="/vip/calculator" element={<VipCalculator />} />
             <Route path="/vip/reminders" element={<VipReminders />} />
+            <Route path="/vip/planner" element={<VipPlanner />} />
             <Route path="/market" element={<Marketplace />} />
             <Route path="/market/new" element={<MarketplaceNew />} />
             <Route path="/market/moi" element={<MarketplaceMine />} />

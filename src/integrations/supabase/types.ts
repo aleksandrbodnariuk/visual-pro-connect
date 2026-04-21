@@ -2325,6 +2325,54 @@ export type Database = {
         }
         Relationships: []
       }
+      vip_events: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          ends_at: string | null
+          event_type: string
+          id: string
+          linked_order_id: string | null
+          location: string | null
+          starts_at: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          event_type?: string
+          id?: string
+          linked_order_id?: string | null
+          location?: string | null
+          starts_at: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          event_type?: string
+          id?: string
+          linked_order_id?: string | null
+          location?: string | null
+          starts_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       vip_notes: {
         Row: {
           color: string
