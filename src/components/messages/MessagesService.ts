@@ -196,60 +196,113 @@ export class MessagesService {
     }
   }
 
-  static async createNewChat(receiverId: string, existingChats: ChatItem[] = []): Promise<{
-    chats: ChatItem[],
-    activeChat?: ChatItem
-  }> {
-    try {
-      if (import.meta.env.DEV) console.log("Creating new chat with user:", receiverId);
-      
-      // Використовуємо get_safe_public_profiles_by_ids замість видаленої get_safe_user_profile
-      const { data: usersData, error: userError } = await supabase
-        .rpc('get_safe_public_profiles_by_ids', { _ids: [receiverId] });
-        
-      if (userError) {
-        if (import.meta.env.DEV) console.error("Помилка при отриманні даних користувача:", userError);
-        return { chats: existingChats };
-      }
-      
-      const userData = usersData?.[0];
-      
-      if (userData) {
-        if (import.meta.env.DEV) console.log("Found user in Supabase:", userData);
-        // Створюємо новий чат
-        // Fetch last_seen for new chat partner via RPC (bypasses RLS for non-admins)
-        const { data: lastSeenRows } = await supabase
-          .rpc('get_users_last_seen', { _ids: [receiverId] });
-        const lastSeenRow = lastSeenRows?.[0];
-        
-        const newChat: ChatItem = {
-          id: `chat-${receiverId}`,
-          user: {
-            id: receiverId,
-            name: userData.full_name || 'Користувач',
-            username: 'user',
-            avatarUrl: userData.avatar_url || '',
-            lastSeen: lastSeenRow?.last_seen || '',
-            unreadCount: 0
-          },
-          messages: [],
-          lastMessage: {
-            text: "Почніть розмову",
-            timestamp: "Щойно"
-          }
-        };
-        
-        return {
-          chats: [newChat, ...existingChats],
-          activeChat: newChat
-        };
-      }
-      
-      return { chats: existingChats };
-    } catch (error) {
-      if (import.meta.env.DEV) console.error("Помилка при створенні нового чату:", error);
-      return { chats: existingChats };
+  /**
+   * Load all messages for a conversation. Returns Message[] in chronological order.
+   * Also enriches with sender profile info (needed for group chats).
+   */
+  static async loadConversationMessages(conversationId: string, currentUserId: string): Promise<Message[]> {
+    const { data: messageData, error } = await supabase
+      .from('messages')
+      .select('id, sender_id, content, read, created_at, is_edited, edited_at, attachment_url, attachment_type, system_event')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true });
+
+    if (error || !messageData) {
+      if (import.meta.env.DEV) console.error('Помилка завантаження повідомлень:', error);
+      return [];
     }
+
+    // Fetch sender profiles for non-self senders (needed for group chats)
+    const senderIds = Array.from(new Set(messageData.map(m => m.sender_id).filter(id => id !== currentUserId)));
+    const profilesMap = new Map<string, any>();
+    if (senderIds.length > 0) {
+      const { data: profiles } = await supabase
+        .rpc('get_safe_public_profiles_by_ids', { _ids: senderIds });
+      if (profiles) profiles.forEach((p: any) => profilesMap.set(p.id, p));
+    }
+
+    return messageData.map(msg => {
+      const profile = profilesMap.get(msg.sender_id);
+      return {
+        id: msg.id,
+        text: msg.content,
+        timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isSender: msg.sender_id === currentUserId,
+        isEdited: msg.is_edited || false,
+        editedAt: msg.edited_at ? new Date(msg.edited_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
+        attachmentUrl: msg.attachment_url || undefined,
+        attachmentType: msg.attachment_type || undefined,
+        read: msg.read ?? false,
+        senderId: msg.sender_id,
+        senderName: profile?.full_name,
+        senderAvatar: profile?.avatar_url,
+        systemEvent: msg.system_event || undefined,
+      };
+    });
+  }
+
+  /**
+   * Create a new group chat with the given title and member ids.
+   * Returns the new conversation_id.
+   */
+  static async createGroup(title: string, memberIds: string[]): Promise<string | null> {
+    try {
+      const { data, error } = await supabase
+        .rpc('create_group_conversation', { _title: title, _member_ids: memberIds });
+      if (error) {
+        toast.error(error.message || 'Не вдалося створити групу');
+        return null;
+      }
+      toast.success('Групу створено');
+      return data as unknown as string;
+    } catch (e: any) {
+      toast.error(e?.message || 'Помилка створення групи');
+      return null;
+    }
+  }
+
+  static async addMembersToGroup(conversationId: string, userIds: string[]): Promise<boolean> {
+    const { error } = await supabase
+      .rpc('add_members_to_group', { _conv_id: conversationId, _user_ids: userIds });
+    if (error) {
+      toast.error(error.message || 'Не вдалося додати учасників');
+      return false;
+    }
+    toast.success('Учасників додано');
+    return true;
+  }
+
+  static async removeMemberFromGroup(conversationId: string, userId: string): Promise<boolean> {
+    const { error } = await supabase
+      .rpc('remove_member_from_group', { _conv_id: conversationId, _user_id: userId });
+    if (error) {
+      toast.error(error.message || 'Не вдалося видалити учасника');
+      return false;
+    }
+    toast.success('Учасника видалено');
+    return true;
+  }
+
+  static async leaveConversation(conversationId: string): Promise<boolean> {
+    const { error } = await supabase
+      .rpc('leave_conversation', { _conv_id: conversationId });
+    if (error) {
+      toast.error(error.message || 'Не вдалося вийти з чату');
+      return false;
+    }
+    toast.success('Ви покинули чат');
+    return true;
+  }
+
+  static async renameGroup(conversationId: string, title: string): Promise<boolean> {
+    const { error } = await supabase
+      .rpc('update_conversation_title', { _conv_id: conversationId, _title: title });
+    if (error) {
+      toast.error(error.message || 'Не вдалося перейменувати');
+      return false;
+    }
+    toast.success('Назву оновлено');
+    return true;
   }
 
   static async sendMessage(
