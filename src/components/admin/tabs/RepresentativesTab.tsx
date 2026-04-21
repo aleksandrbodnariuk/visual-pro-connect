@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Save, Users, ShoppingCart, Settings2, ChevronDown, ChevronRight, UserX, Package, AlertCircle, Archive, Trash2 } from "lucide-react";
+import { Save, Users, ShoppingCart, Settings2, ChevronDown, ChevronRight, UserX, Package, AlertCircle, Archive, Trash2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminServicesManager } from "@/components/admin/AdminServicesManager";
@@ -23,6 +23,7 @@ interface RepNode {
   parentId: string | null;
   children: RepNode[];
   isActive: boolean;
+  ordersCount: number;
 }
 
 interface RepOrder {
