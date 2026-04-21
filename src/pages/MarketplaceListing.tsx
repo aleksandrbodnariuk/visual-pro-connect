@@ -87,8 +87,19 @@ export default function MarketplaceListing() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-3 md:px-4 py-4 max-w-5xl">
-        <Button variant="ghost" size="sm" asChild className="mb-3">
-          <Link to="/market"><ArrowLeft className="h-4 w-4 mr-1" /> До маркетплейсу</Link>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mb-3"
+          onClick={() => {
+            if (window.history.length > 1) {
+              navigate(-1);
+            } else {
+              navigate('/market');
+            }
+          }}
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" /> Назад до пошуку
         </Button>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
