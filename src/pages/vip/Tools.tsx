@@ -2,12 +2,32 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Sparkles, Crown, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  BookOpen,
+  Sparkles,
+  Crown,
+  Loader2,
+  Calculator,
+  BellRing,
+  CalendarRange,
+  LineChart,
+  Lightbulb,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUserVip } from "@/hooks/vip/useUserVip";
 
-const TOOLS = [
+type Tool = {
+  id: string;
+  title: string;
+  description: string;
+  icon: typeof BookOpen;
+  path: string;
+  available: boolean;
+};
+
+const TOOLS: Tool[] = [
   {
     id: "notebook",
     title: "Приватний нотатник",
@@ -16,6 +36,51 @@ const TOOLS = [
     icon: BookOpen,
     path: "/vip/notebook",
     available: true,
+  },
+  {
+    id: "calculator",
+    title: "Розширений калькулятор",
+    description:
+      "Бюджет проєкту, маржа та ROI, податки й комісії — швидкі розрахунки для зйомок та послуг.",
+    icon: Calculator,
+    path: "/vip/calculator",
+    available: true,
+  },
+  {
+    id: "reminders",
+    title: "Нагадування + push",
+    description:
+      "Особисті нагадування з датою/часом і автоматичні push-сповіщення. Незабаром.",
+    icon: BellRing,
+    path: "/vip/reminders",
+    available: false,
+  },
+  {
+    id: "planner",
+    title: "Планувальник подій",
+    description:
+      "Календар проєктів та подій із синхронізацією з замовленнями. Незабаром.",
+    icon: CalendarRange,
+    path: "/vip/planner",
+    available: false,
+  },
+  {
+    id: "analytics",
+    title: "Особиста аналітика витрат",
+    description:
+      "Графіки витрат на послуги фахівців з фільтрами по періодах і категоріях. Незабаром.",
+    icon: LineChart,
+    path: "/vip/analytics",
+    available: false,
+  },
+  {
+    id: "moodboard",
+    title: "Mood board",
+    description:
+      "Колекції зображень-ідей для майбутніх зйомок із тегами та папками. Незабаром.",
+    icon: Lightbulb,
+    path: "/vip/moodboard",
+    available: false,
   },
 ];
 
