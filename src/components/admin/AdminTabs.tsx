@@ -17,6 +17,7 @@ import { AssetValuationTab } from "./tabs/AssetValuationTab";
 import { PayoutsTab } from "./tabs/PayoutsTab";
 import { NotificationsTab } from "./tabs/NotificationsTab";
 import { SupportTab } from "./tabs/SupportTab";
+import { CertificatesTab } from "./tabs/CertificatesTab";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
