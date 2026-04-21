@@ -29,6 +29,7 @@ export type Database = {
           region: string | null
           session_id: string
           timezone: string | null
+          user_id: string | null
           utm_campaign: string | null
           utm_medium: string | null
           utm_source: string | null
@@ -48,6 +49,7 @@ export type Database = {
           region?: string | null
           session_id: string
           timezone?: string | null
+          user_id?: string | null
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
@@ -67,6 +69,7 @@ export type Database = {
           region?: string | null
           session_id?: string
           timezone?: string | null
+          user_id?: string | null
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
@@ -1921,23 +1924,42 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_analytics_overview: {
-        Args: {
-          _country_filter?: string
-          _end_date: string
-          _path_filter?: string
-          _start_date: string
-        }
-        Returns: {
-          daily_stats: Json
-          top_countries: Json
-          top_pages: Json
-          top_sources: Json
-          total_pageviews: number
-          total_sessions: number
-          unique_visitors: number
-        }[]
-      }
+      get_analytics_overview:
+        | {
+            Args: {
+              _country_filter?: string
+              _end_date: string
+              _path_filter?: string
+              _start_date: string
+            }
+            Returns: {
+              daily_stats: Json
+              top_countries: Json
+              top_pages: Json
+              top_sources: Json
+              total_pageviews: number
+              total_sessions: number
+              unique_visitors: number
+            }[]
+          }
+        | {
+            Args: {
+              _country_filter?: string
+              _end_date: string
+              _path_filter?: string
+              _start_date: string
+              _traffic_filter?: string
+            }
+            Returns: {
+              daily_stats: Json
+              top_countries: Json
+              top_pages: Json
+              top_sources: Json
+              total_pageviews: number
+              total_sessions: number
+              unique_visitors: number
+            }[]
+          }
       get_confirmed_orders_for_forecast: {
         Args: never
         Returns: {

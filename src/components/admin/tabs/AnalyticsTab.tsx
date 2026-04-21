@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart3, Globe, Eye, Users, Activity, Link2, Calendar } from "lucide-react";
+import { BarChart3, Globe, Eye, Users, Activity, Link2, Calendar, Filter, UserCheck, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getCountryNameUk, getFlagEmoji } from "@/lib/countryNames";
 import {
@@ -13,6 +13,7 @@ import {
 } from "recharts";
 
 type Period = 'today' | 'yesterday' | '7d' | '30d' | 'month' | 'year' | 'custom';
+type TrafficFilter = 'all' | 'authenticated' | 'quality';
 
 /** Compute UTC start/end for a period using Europe/Kyiv timezone */
 function getDateRange(period: Period, customStart?: string, customEnd?: string) {
@@ -127,6 +128,7 @@ export function AnalyticsTab() {
   const [customEnd, setCustomEnd] = useState('');
   const [pathFilter, setPathFilter] = useState('');
   const [countryFilter, setCountryFilter] = useState('');
+  const [trafficFilter, setTrafficFilter] = useState<TrafficFilter>('all');
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [subTab, setSubTab] = useState('overview');
@@ -140,6 +142,7 @@ export function AnalyticsTab() {
         _end_date: end,
         _path_filter: pathFilter || null,
         _country_filter: countryFilter || null,
+        _traffic_filter: trafficFilter,
       });
       if (error) {
         console.error('Analytics error:', error);
@@ -167,7 +170,7 @@ export function AnalyticsTab() {
 
   useEffect(() => {
     loadData();
-  }, [period, customStart, customEnd]);
+  }, [period, customStart, customEnd, trafficFilter]);
 
   const periodButtons: { value: Period; label: string }[] = [
     { value: 'today', label: 'Сьогодні' },
@@ -177,6 +180,12 @@ export function AnalyticsTab() {
     { value: 'month', label: 'Місяць' },
     { value: 'year', label: 'Рік' },
     { value: 'custom', label: 'Довільний' },
+  ];
+
+  const trafficButtons: { value: TrafficFilter; label: string; icon: typeof Filter; hint: string }[] = [
+    { value: 'all', label: 'Увесь трафік', icon: Filter, hint: 'Всі відвідування (включно з гостями та випадковими заходами)' },
+    { value: 'quality', label: 'Якісні сесії', icon: ShieldCheck, hint: 'Сесії з ≥2 переглядами сторінок (відсіює одноразові заходи й більшість ботів)' },
+    { value: 'authenticated', label: 'Лише користувачі', icon: UserCheck, hint: 'Тільки авторизовані користувачі (зайшли в акаунт)' },
   ];
 
   // Prepare geo chart data with Ukrainian names
@@ -190,31 +199,76 @@ export function AnalyticsTab() {
     <div className="space-y-4">
       {/* Period Filters */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-2 items-center">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            {periodButtons.map((p) => (
-              <Button
-                key={p.value}
-                variant={period === p.value ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setPeriod(p.value)}
-              >
-                {p.label}
-              </Button>
-            ))}
-          </div>
-          {period === 'custom' && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="w-40" />
-              <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="w-40" />
-              <Button size="sm" onClick={loadData}>Застосувати</Button>
+        <CardContent className="p-4 space-y-4">
+          {/* Traffic toggle */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
+              Тип трафіку
+            </p>
+            <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1 flex-wrap gap-1">
+              {trafficButtons.map((t) => {
+                const Icon = t.icon;
+                const active = trafficFilter === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setTrafficFilter(t.value)}
+                    title={t.hint}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      active
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {t.label}
+                  </button>
+                );
+              })}
             </div>
-          )}
-          <div className="flex flex-wrap gap-2 mt-3">
-            <Input placeholder="Фільтр за шляхом..." value={pathFilter} onChange={(e) => setPathFilter(e.target.value)} className="w-48" />
-            <Input placeholder="Фільтр за країною (ISO)..." value={countryFilter} onChange={(e) => setCountryFilter(e.target.value)} className="w-48" />
-            <Button size="sm" variant="outline" onClick={loadData}>Фільтрувати</Button>
+            <p className="text-xs text-muted-foreground mt-2">
+              {trafficButtons.find((t) => t.value === trafficFilter)?.hint}
+            </p>
+          </div>
+
+          {/* Period buttons */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
+              Період
+            </p>
+            <div className="flex flex-wrap gap-2 items-center">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              {periodButtons.map((p) => (
+                <Button
+                  key={p.value}
+                  variant={period === p.value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPeriod(p.value)}
+                >
+                  {p.label}
+                </Button>
+              ))}
+            </div>
+            {period === 'custom' && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="w-40" />
+                <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="w-40" />
+                <Button size="sm" onClick={loadData}>Застосувати</Button>
+              </div>
+            )}
+          </div>
+
+          {/* Additional filters */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
+              Додаткові фільтри
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Input placeholder="Шлях (напр. /post/123)" value={pathFilter} onChange={(e) => setPathFilter(e.target.value)} className="w-56" />
+              <Input placeholder="Код країни (UA, US...)" value={countryFilter} onChange={(e) => setCountryFilter(e.target.value)} className="w-48" />
+              <Button size="sm" variant="outline" onClick={loadData}>Застосувати</Button>
+            </div>
           </div>
         </CardContent>
       </Card>
