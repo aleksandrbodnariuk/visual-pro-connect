@@ -2,9 +2,10 @@ import { useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Camera, Users } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { MessagesService } from "../MessagesService";
+import { compressImageAsFile, validateImageSize, OUTPUT_FORMAT, OUTPUT_EXTENSION } from "@/lib/imageCompression";
+import { uploadToStorage, deleteOldFile } from "@/lib/storage";
 
 interface Props {
   conversationId: string;
@@ -27,21 +28,27 @@ export function GroupAvatarUpload({ conversationId, avatarUrl, title, canEdit, o
       toast.error("Оберіть зображення");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Розмір не більше 5 МБ");
+    // HEIC unsupported
+    const lower = file.name.toLowerCase();
+    if (["image/heic", "image/heif"].includes(file.type) || lower.endsWith(".heic") || lower.endsWith(".heif")) {
+      toast.error("Формат HEIC не підтримується. Використайте JPEG або PNG.");
+      return;
+    }
+    const sizeCheck = validateImageSize(file, "avatar");
+    if (!sizeCheck.valid) {
+      toast.error(sizeCheck.message);
       return;
     }
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `${conversationId}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from("group-avatars")
-        .upload(path, file, { upsert: true, contentType: file.type });
-      if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("group-avatars").getPublicUrl(path);
-      const ok = await MessagesService.updateGroupAvatar(conversationId, pub.publicUrl);
-      if (ok) onChanged(pub.publicUrl);
+      // Compress to WebP using avatar settings (default 400x400, q=0.8)
+      const compressed = await compressImageAsFile(file, "avatar");
+      // Delete previous group avatar (if any) to keep storage clean
+      await deleteOldFile("group-avatars", avatarUrl);
+      const path = `${conversationId}/${Date.now()}${OUTPUT_EXTENSION}`;
+      const publicUrl = await uploadToStorage("group-avatars", path, compressed, OUTPUT_FORMAT);
+      const ok = await MessagesService.updateGroupAvatar(conversationId, publicUrl);
+      if (ok) onChanged(publicUrl);
     } catch (err: any) {
       toast.error(err?.message || "Не вдалося завантажити аватар");
     } finally {
