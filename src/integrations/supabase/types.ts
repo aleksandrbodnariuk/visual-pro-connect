@@ -460,6 +460,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           created_by: string
+          description: string | null
           id: string
           last_message_at: string
           title: string | null
@@ -470,6 +471,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           created_by: string
+          description?: string | null
           id?: string
           last_message_at?: string
           title?: string | null
@@ -480,6 +482,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           created_by?: string
+          description?: string | null
           id?: string
           last_message_at?: string
           title?: string | null
@@ -2282,8 +2285,8 @@ export type Database = {
         Returns: {
           avatar_url: string
           conversation_id: string
+          description: string
           last_message_at: string
-          last_message_sender_id: string
           last_message_text: string
           member_count: number
           member_ids: string[]
@@ -2425,8 +2428,20 @@ export type Database = {
       }
       sync_all_shareholder_titles: { Args: never; Returns: undefined }
       sync_user_title: { Args: { _user_id: string }; Returns: undefined }
+      update_conversation_avatar: {
+        Args: { _avatar_url: string; _conv_id: string }
+        Returns: undefined
+      }
+      update_conversation_description: {
+        Args: { _conv_id: string; _description: string }
+        Returns: undefined
+      }
       update_conversation_title: {
         Args: { _conv_id: string; _title: string }
+        Returns: undefined
+      }
+      update_member_role: {
+        Args: { _conv_id: string; _new_role: string; _user_id: string }
         Returns: undefined
       }
       user_exists_by_phone: {

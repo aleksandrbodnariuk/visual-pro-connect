@@ -43,6 +43,14 @@ function renderSystemEvent(event: any, fallbackText?: string): string {
       return event.name ? `${event.name} покинув(ла) групу` : 'Учасник покинув групу';
     case 'title_changed':
       return event.title ? `Назву групи змінено на «${event.title}»` : 'Назву групи змінено';
+    case 'avatar_updated':
+      return 'Логотип групи оновлено';
+    case 'rules_updated':
+      return 'Правила групи оновлено';
+    case 'role_changed':
+      return event.new_role === 'admin'
+        ? 'Учасника призначено співвласником/модератором'
+        : 'Учасника знижено до звичайного';
     default:
       return fallbackText || 'Системна подія';
   }
