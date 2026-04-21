@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Users, Settings } from "lucide-react";
 import { isUserOnline, formatLastSeenStatus } from "@/lib/onlineStatus";
 
 interface ChatHeaderProps {
@@ -10,11 +10,14 @@ interface ChatHeaderProps {
     lastSeen: string;
   };
   onBack?: () => void;
+  isGroup?: boolean;
+  memberCount?: number;
+  onOpenGroupInfo?: () => void;
 }
 
-export function ChatHeader({ user, onBack }: ChatHeaderProps) {
-  const online = isUserOnline(user.lastSeen);
-  const statusText = formatLastSeenStatus(user.lastSeen);
+export function ChatHeader({ user, onBack, isGroup, memberCount, onOpenGroupInfo }: ChatHeaderProps) {
+  const online = !isGroup && isUserOnline(user.lastSeen);
+  const statusText = isGroup ? null : formatLastSeenStatus(user.lastSeen);
 
   return (
     <div className="border-b p-3">
@@ -30,14 +33,21 @@ export function ChatHeader({ user, onBack }: ChatHeaderProps) {
           </Button>
         )}
         
-        <div className="relative flex-shrink-0">
+        <div
+          className={`relative flex-shrink-0 ${isGroup && onOpenGroupInfo ? 'cursor-pointer' : ''}`}
+          onClick={isGroup && onOpenGroupInfo ? onOpenGroupInfo : undefined}
+        >
           <Avatar className="h-10 w-10">
             <AvatarImage src={user.avatarUrl} alt={user.name} />
             <AvatarFallback>
-              {user.name
-                .split(" ")
-                .map((n: string) => n[0])
-                .join("")}
+              {isGroup ? (
+                <Users className="h-5 w-5" />
+              ) : (
+                user.name
+                  .split(" ")
+                  .map((n: string) => n[0])
+                  .join("")
+              )}
             </AvatarFallback>
           </Avatar>
           {online && (
@@ -45,14 +55,25 @@ export function ChatHeader({ user, onBack }: ChatHeaderProps) {
           )}
         </div>
         
-        <div>
-          <h3 className="font-semibold">{user.name}</h3>
-          {statusText && (
+        <div
+          className={`flex-1 min-w-0 ${isGroup && onOpenGroupInfo ? 'cursor-pointer' : ''}`}
+          onClick={isGroup && onOpenGroupInfo ? onOpenGroupInfo : undefined}
+        >
+          <h3 className="font-semibold truncate">{user.name}</h3>
+          {isGroup && memberCount ? (
+            <p className="text-xs text-muted-foreground">{memberCount} учасників</p>
+          ) : statusText && (
             <p className={`text-xs ${online ? 'text-green-500' : 'text-muted-foreground'}`}>
               {statusText}
             </p>
           )}
         </div>
+
+        {isGroup && onOpenGroupInfo && (
+          <Button variant="ghost" size="icon" onClick={onOpenGroupInfo} title="Інформація про групу">
+            <Settings className="h-5 w-5" />
+          </Button>
+        )}
       </div>
     </div>
   );

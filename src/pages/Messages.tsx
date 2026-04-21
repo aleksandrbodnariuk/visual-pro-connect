@@ -12,8 +12,7 @@ import { EmptyChat } from "@/components/messages/EmptyChat";
 import { MessagesService, ChatItem, Message } from "@/components/messages/MessagesService";
 import { playNotificationSound } from "@/lib/sounds";
 import { NewChatDialog } from "@/components/messages/NewChatDialog";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { GroupMembersDialog } from "@/components/messages/GroupMembersDialog";
 
 export default function Messages() {
   const [activeChat, setActiveChat] = useState<ChatItem | null>(null);
@@ -21,6 +20,7 @@ export default function Messages() {
   const [chats, setChats] = useState<ChatItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newChatOpen, setNewChatOpen] = useState(false);
+  const [groupInfoOpen, setGroupInfoOpen] = useState(false);
   const navigate = useNavigate();
   const { user: authUser, isAuthenticated, loading: authLoading } = useAuth();
   const currentUser = authUser;
@@ -180,6 +180,17 @@ export default function Messages() {
     }
   };
 
+  // Колбек після створення нового чату через діалог
+  const handleChatCreated = async (conversationId: string) => {
+    if (!currentUser) return;
+    const { chats: refreshed } = await MessagesService.fetchChatsAndMessages(currentUser.id, null);
+    setChats(refreshed);
+    const target = refreshed.find(c => c.conversationId === conversationId);
+    if (target) {
+      await selectChat(target);
+    }
+  };
+
   // Функція перезавантаження повідомлень активного чату з БД
   const reloadActiveChat = useCallback(async () => {
     const uid = currentUserRef.current?.id;
@@ -330,6 +341,7 @@ export default function Messages() {
                 activeChat={activeChat} 
                 onSelectChat={selectChat}
                 onDeleteChat={handleDeleteChat}
+                onNewChat={() => setNewChatOpen(true)}
               />
             </div>
             
@@ -337,7 +349,13 @@ export default function Messages() {
             <div className={`flex h-[calc(100vh-8rem)] md:h-[calc(100vh-6rem)] flex-col md:col-span-2 lg:col-span-3 ${!activeChat ? 'hidden md:flex' : 'flex'}`}>
               {activeChat ? (
                 <>
-                  <ChatHeader user={activeChat.user} onBack={handleBackToList} />
+                  <ChatHeader
+                    user={activeChat.user}
+                    onBack={handleBackToList}
+                    isGroup={activeChat.type === 'group'}
+                    memberCount={activeChat.memberCount}
+                    onOpenGroupInfo={activeChat.type === 'group' ? () => setGroupInfoOpen(true) : undefined}
+                  />
                   
                   <MessageList 
                     messages={messages} 
@@ -345,6 +363,7 @@ export default function Messages() {
                     onEditMessage={handleEditMessage}
                     onDeleteMessage={handleDeleteMessage}
                     recipientAvatarUrl={activeChat.user.avatarUrl}
+                    isGroup={activeChat.type === 'group'}
                   />
                   
                   <MessageInput onSendMessage={handleSendMessage} />
@@ -356,6 +375,32 @@ export default function Messages() {
           </div>
         </div>
       </div>
+
+      <NewChatDialog
+        open={newChatOpen}
+        onOpenChange={setNewChatOpen}
+        onChatCreated={handleChatCreated}
+      />
+
+      {activeChat && activeChat.type === 'group' && activeChat.conversationId && (
+        <GroupMembersDialog
+          open={groupInfoOpen}
+          onOpenChange={setGroupInfoOpen}
+          chat={activeChat}
+          onChanged={async () => {
+            const { chats: refreshed } = await MessagesService.fetchChatsAndMessages(currentUser!.id, null);
+            setChats(refreshed);
+            const updated = refreshed.find(c => c.conversationId === activeChat.conversationId);
+            if (updated) setActiveChat(updated);
+          }}
+          onLeft={async () => {
+            setActiveChat(null);
+            setMessages([]);
+            const { chats: refreshed } = await MessagesService.fetchChatsAndMessages(currentUser!.id, null);
+            setChats(refreshed);
+          }}
+        />
+      )}
     </div>
   );
 }

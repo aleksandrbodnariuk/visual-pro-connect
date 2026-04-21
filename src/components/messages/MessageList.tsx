@@ -18,6 +18,10 @@ interface Message {
   attachmentUrl?: string;
   attachmentType?: string;
   read?: boolean;
+  senderId?: string;
+  senderName?: string;
+  senderAvatar?: string;
+  systemEvent?: any;
 }
 
 interface ReactionData {
@@ -26,12 +30,31 @@ interface ReactionData {
   isOwn: boolean;
 }
 
+function renderSystemEvent(event: any, fallbackText?: string): string {
+  if (!event) return fallbackText || '';
+  switch (event.type) {
+    case 'group_created':
+      return event.title ? `Створено групу «${event.title}»` : 'Групу створено';
+    case 'member_added':
+      return event.name ? `${event.name} приєднався(лась) до групи` : 'Учасник доданий';
+    case 'member_removed':
+      return event.name ? `${event.name} був(ла) видалений(а) з групи` : 'Учасник видалений';
+    case 'member_left':
+      return event.name ? `${event.name} покинув(ла) групу` : 'Учасник покинув групу';
+    case 'title_changed':
+      return event.title ? `Назву групи змінено на «${event.title}»` : 'Назву групи змінено';
+    default:
+      return fallbackText || 'Системна подія';
+  }
+}
+
 interface MessageListProps {
   messages: Message[];
   emptyStateMessage?: ReactNode;
   onEditMessage?: (messageId: string, newText: string) => void;
   onDeleteMessage?: (messageId: string) => void;
   recipientAvatarUrl?: string;
+  isGroup?: boolean;
 }
 
 export function MessageList({ 
@@ -39,7 +62,8 @@ export function MessageList({
   emptyStateMessage,
   onEditMessage,
   onDeleteMessage,
-  recipientAvatarUrl
+  recipientAvatarUrl,
+  isGroup
 }: MessageListProps) {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [reactions, setReactions] = useState<Record<string, ReactionData[]>>({});
@@ -161,6 +185,13 @@ export function MessageList({
           {messages.length > 0 ? (
             messages.map((message) => (
               <div key={message.id}>
+                {message.systemEvent ? (
+                  <div className="flex justify-center my-2">
+                    <div className="text-xs text-muted-foreground bg-muted/60 rounded-full px-3 py-1">
+                      {renderSystemEvent(message.systemEvent, message.text)}
+                    </div>
+                  </div>
+                ) : (
                 <div
                   className={`group flex items-center gap-1 ${message.isSender ? "justify-end" : "justify-start"}`}
                 >
@@ -185,6 +216,20 @@ export function MessageList({
                   )}
 
                   <div className="relative max-w-[80%]">
+                    {isGroup && !message.isSender && message.senderName && (
+                      <div className="flex items-center gap-1.5 mb-1 ml-1">
+                        {message.senderAvatar && (
+                          <img
+                            src={message.senderAvatar}
+                            alt={message.senderName}
+                            className="w-4 h-4 rounded-full object-cover"
+                          />
+                        )}
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {message.senderName}
+                        </span>
+                      </div>
+                    )}
                     <div
                       className={`rounded-2xl px-4 py-2 ${
                         message.isSender
@@ -242,6 +287,7 @@ export function MessageList({
                     </div>
                   )}
                 </div>
+                )}
               </div>
             ))
           ) : (
