@@ -50,10 +50,10 @@ const TOOLS: Tool[] = [
     id: "reminders",
     title: "Нагадування + push",
     description:
-      "Особисті нагадування з датою/часом і автоматичні push-сповіщення. Незабаром.",
+      "Особисті нагадування з датою/часом і автоматичні push-сповіщення.",
     icon: BellRing,
     path: "/vip/reminders",
-    available: false,
+    available: true,
   },
   {
     id: "planner",
