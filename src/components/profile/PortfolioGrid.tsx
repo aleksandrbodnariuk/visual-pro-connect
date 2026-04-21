@@ -127,7 +127,9 @@ const FILTERS = [
   { key: 'audio', label: 'Музика', icon: Music },
 ] as const;
 
-const PAGE_SIZE = 12;
+// Load full portfolio (typically ≤100 items per user) so category grouping
+// shows all sections at once instead of only the most-recent page.
+const PAGE_SIZE = 500;
 
 export const PortfolioGrid = memo(({ items: initialItems, className, userId, isOwner = false, onAddItem }: PortfolioGridProps) => {
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(initialItems);
