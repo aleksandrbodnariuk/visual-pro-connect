@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Search, Bell, MessageSquare, User, Settings, Users, Crown, TrendingUp } from 'lucide-react';
+import { Home, Search, Bell, MessageSquare, User, Settings, Users, Crown, TrendingUp, Award } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 import { useAuthState } from "@/hooks/auth/useAuthState";
@@ -105,6 +105,9 @@ export function Sidebar({ className }: SidebarProps) {
           </Button>
           <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/settings')} data-active={location.pathname === "/settings"}>
             <Settings className="mr-2 h-4 w-4" /> {t.settings}
+          </Button>
+          <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/sertyfikaty')} data-active={location.pathname.startsWith("/sertyfikaty")}>
+            <Award className="mr-2 h-4 w-4 text-amber-500" /> Сертифікати
           </Button>
           {isShareholder && (
             <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/shareholder-panel')} data-active={location.pathname === "/shareholder-panel"}>

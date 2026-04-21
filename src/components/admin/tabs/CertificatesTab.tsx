@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Award, Search, Save, Loader2 } from "lucide-react";
 import { CertificateBadge } from "@/components/certificates/CertificateBadge";
+import { PurchaseRequestsList } from "@/components/admin/certificates/PurchaseRequestsList";
 
 interface UserRow {
   id: string;
@@ -162,6 +163,7 @@ export function CertificatesTab() {
 
   return (
     <div className="space-y-6">
+      <PurchaseRequestsList onApproved={() => load()} />
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
