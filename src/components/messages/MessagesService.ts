@@ -21,6 +21,10 @@ export interface Message {
   attachmentUrl?: string;
   attachmentType?: string;
   read?: boolean;
+  senderId?: string;
+  senderName?: string;
+  senderAvatar?: string;
+  systemEvent?: any;
 }
 
 export interface ChatItem {
@@ -31,6 +35,24 @@ export interface ChatItem {
     text: string;
     timestamp: string;
   };
+  // Group chat extensions
+  type?: 'direct' | 'group';
+  conversationId?: string;
+  title?: string;
+  memberIds?: string[];
+  memberCount?: number;
+  myRole?: 'owner' | 'admin' | 'member';
+}
+
+/**
+ * Format a date for the chat list "last message timestamp" column.
+ * Today = HH:mm, this week = day name, older = DD.MM.YYYY
+ */
+function formatChatListTimestamp(d: Date): string {
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  if (isToday) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString();
 }
 
 export class MessagesService {
