@@ -1,0 +1,2 @@
+ALTER TABLE public.user_certificates DROP CONSTRAINT IF EXISTS user_certificates_discount_type_check;
+ALTER TABLE public.user_certificates ADD CONSTRAINT user_certificates_discount_type_check CHECK (discount_type IN ('fixed', 'percent', 'uah'));
