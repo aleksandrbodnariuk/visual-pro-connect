@@ -12,8 +12,7 @@ import { EmptyChat } from "@/components/messages/EmptyChat";
 import { MessagesService, ChatItem, Message } from "@/components/messages/MessagesService";
 import { playNotificationSound } from "@/lib/sounds";
 import { NewChatDialog } from "@/components/messages/NewChatDialog";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { GroupMembersDialog } from "@/components/messages/GroupMembersDialog";
 
 export default function Messages() {
   const [activeChat, setActiveChat] = useState<ChatItem | null>(null);
@@ -21,6 +20,7 @@ export default function Messages() {
   const [chats, setChats] = useState<ChatItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newChatOpen, setNewChatOpen] = useState(false);
+  const [groupInfoOpen, setGroupInfoOpen] = useState(false);
   const navigate = useNavigate();
   const { user: authUser, isAuthenticated, loading: authLoading } = useAuth();
   const currentUser = authUser;
@@ -177,6 +177,17 @@ export default function Messages() {
         setActiveChat(null);
         setMessages([]);
       }
+    }
+  };
+
+  // Колбек після створення нового чату через діалог
+  const handleChatCreated = async (conversationId: string) => {
+    if (!currentUser) return;
+    const { chats: refreshed } = await MessagesService.fetchChatsAndMessages(currentUser.id, null);
+    setChats(refreshed);
+    const target = refreshed.find(c => c.conversationId === conversationId);
+    if (target) {
+      await selectChat(target);
     }
   };
 
