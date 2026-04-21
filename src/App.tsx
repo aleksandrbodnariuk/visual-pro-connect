@@ -41,6 +41,8 @@ const ModeratorPanel = lazy(() => import("./pages/ModeratorPanel"));
 const ServiceCatalog = lazy(() => import("./pages/ServiceCatalog"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Sertyfikaty = lazy(() => import("./pages/Sertyfikaty"));
+const MoiSertyfikaty = lazy(() => import("./pages/MoiSertyfikaty"));
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -101,6 +103,8 @@ const AppContent = () => {
             <Route path="/moderator-panel" element={<ModeratorPanel />} />
             <Route path="/services" element={<ServiceCatalog />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/sertyfikaty" element={<Sertyfikaty />} />
+            <Route path="/sertyfikaty/moi" element={<MoiSertyfikaty />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
