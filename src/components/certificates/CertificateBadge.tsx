@@ -27,6 +27,8 @@ export function CertificateBadge({ userId, size = "md", className, certificate: 
   const label =
     certificate.discount_type === "percent"
       ? `${certificate.discount_value}%`
+      : certificate.discount_type === "uah"
+      ? `${certificate.discount_value}₴`
       : `$${certificate.discount_value}`;
 
   const tooltipText = `Сертифікат на знижку ${label} на послуги фото, відео та музика${
