@@ -310,6 +310,71 @@ export type Database = {
         }
         Relationships: []
       }
+      certificate_purchase_requests: {
+        Row: {
+          admin_note: string | null
+          amount_uah: number
+          approved_at: string | null
+          approved_by: string | null
+          buyer_id: string
+          buyer_note: string | null
+          certificate_id: string | null
+          created_at: string
+          discount_percent: number
+          id: string
+          is_gift: boolean
+          recipient_id: string | null
+          recipient_phone: string | null
+          status: string
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount_uah: number
+          approved_at?: string | null
+          approved_by?: string | null
+          buyer_id: string
+          buyer_note?: string | null
+          certificate_id?: string | null
+          created_at?: string
+          discount_percent: number
+          id?: string
+          is_gift?: boolean
+          recipient_id?: string | null
+          recipient_phone?: string | null
+          status?: string
+          tier: string
+          updated_at?: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount_uah?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          buyer_id?: string
+          buyer_note?: string | null
+          certificate_id?: string | null
+          created_at?: string
+          discount_percent?: number
+          id?: string
+          is_gift?: boolean
+          recipient_id?: string | null
+          recipient_phone?: string | null
+          status?: string
+          tier?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificate_purchase_requests_certificate_id_fkey"
+            columns: ["certificate_id"]
+            isOneToOne: false
+            referencedRelation: "user_certificates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comment_likes: {
         Row: {
           comment_id: string
@@ -1793,8 +1858,12 @@ export type Database = {
           discount_value: number
           id: string
           is_active: boolean
+          is_gift: boolean
           issued_by: string | null
           note: string | null
+          purchase_amount_uah: number | null
+          purchased_by: string | null
+          tier: string | null
           updated_at: string
           user_id: string
         }
@@ -1804,8 +1873,12 @@ export type Database = {
           discount_value?: number
           id?: string
           is_active?: boolean
+          is_gift?: boolean
           issued_by?: string | null
           note?: string | null
+          purchase_amount_uah?: number | null
+          purchased_by?: string | null
+          tier?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1815,8 +1888,12 @@ export type Database = {
           discount_value?: number
           id?: string
           is_active?: boolean
+          is_gift?: boolean
           issued_by?: string | null
           note?: string | null
+          purchase_amount_uah?: number | null
+          purchased_by?: string | null
+          tier?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1998,6 +2075,10 @@ export type Database = {
       admin_force_confirm_spec_payout: {
         Args: { _payout_id: string }
         Returns: undefined
+      }
+      approve_certificate_purchase: {
+        Args: { _admin_note?: string; _request_id: string }
+        Returns: string
       }
       approve_share_transaction: {
         Args: { _transaction_id: string }
@@ -2427,6 +2508,10 @@ export type Database = {
       }
       process_order_profit: { Args: { _order_id: string }; Returns: Json }
       record_visit: { Args: never; Returns: undefined }
+      reject_certificate_purchase: {
+        Args: { _admin_note?: string; _request_id: string }
+        Returns: undefined
+      }
       reject_share_transaction: {
         Args: { _transaction_id: string }
         Returns: undefined
