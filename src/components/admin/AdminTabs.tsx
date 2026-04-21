@@ -19,6 +19,7 @@ import { NotificationsTab } from "./tabs/NotificationsTab";
 import { SupportTab } from "./tabs/SupportTab";
 import { CertificatesTab } from "./tabs/CertificatesTab";
 import { VipTab } from "./tabs/VipTab";
+import { MarketplaceTab } from "./tabs/MarketplaceTab";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -73,6 +74,7 @@ export function AdminTabs() {
         <TabsTrigger value="support">Підтримка</TabsTrigger>
         <TabsTrigger value="certificates">Сертифікати</TabsTrigger>
         <TabsTrigger value="vip">VIP</TabsTrigger>
+        <TabsTrigger value="marketplace">Маркетплейс</TabsTrigger>
       </TabsList>
       
       <TabsContent value="users">
@@ -149,6 +151,10 @@ export function AdminTabs() {
 
       <TabsContent value="vip">
         <VipTab />
+      </TabsContent>
+
+      <TabsContent value="marketplace">
+        <MarketplaceTab />
       </TabsContent>
     </Tabs>
   );
