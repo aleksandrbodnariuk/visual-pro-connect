@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart3, Globe, Eye, Users, Activity, Link2, Calendar } from "lucide-react";
+import { BarChart3, Globe, Eye, Users, Activity, Link2, Calendar, Filter, UserCheck, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getCountryNameUk, getFlagEmoji } from "@/lib/countryNames";
 import {
@@ -13,6 +13,7 @@ import {
 } from "recharts";
 
 type Period = 'today' | 'yesterday' | '7d' | '30d' | 'month' | 'year' | 'custom';
+type TrafficFilter = 'all' | 'authenticated' | 'quality';
 
 /** Compute UTC start/end for a period using Europe/Kyiv timezone */
 function getDateRange(period: Period, customStart?: string, customEnd?: string) {
@@ -127,6 +128,7 @@ export function AnalyticsTab() {
   const [customEnd, setCustomEnd] = useState('');
   const [pathFilter, setPathFilter] = useState('');
   const [countryFilter, setCountryFilter] = useState('');
+  const [trafficFilter, setTrafficFilter] = useState<TrafficFilter>('all');
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [subTab, setSubTab] = useState('overview');
@@ -140,6 +142,7 @@ export function AnalyticsTab() {
         _end_date: end,
         _path_filter: pathFilter || null,
         _country_filter: countryFilter || null,
+        _traffic_filter: trafficFilter,
       });
       if (error) {
         console.error('Analytics error:', error);
