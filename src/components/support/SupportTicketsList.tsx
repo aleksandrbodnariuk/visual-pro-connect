@@ -82,6 +82,22 @@ export function SupportTicketsList() {
 
             <p className="text-sm text-muted-foreground line-clamp-2">{ticket.message}</p>
 
+            {ticket.attachment_url && (
+              <a
+                href={ticket.attachment_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-fit"
+              >
+                <img
+                  src={ticket.attachment_url}
+                  alt="Скриншот"
+                  className="max-h-32 rounded-md border border-border object-contain hover:opacity-80 transition-opacity"
+                  loading="lazy"
+                />
+              </a>
+            )}
+
             {ticket.admin_response && (
               <div className="mt-2 p-3 rounded-md bg-primary/10 border border-primary/20">
                 <div className="flex items-center gap-1 mb-1">
