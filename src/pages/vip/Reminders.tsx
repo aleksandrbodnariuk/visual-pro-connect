@@ -212,14 +212,16 @@ export default function VipReminders() {
 
         <section className="col-span-12 lg:col-span-9 space-y-5 pb-24 md:pb-8">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-              <BellRing className="h-7 w-7 text-amber-500" /> Нагадування + push
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2 min-w-0">
+              <BellRing className="h-6 w-6 sm:h-7 sm:w-7 text-amber-500 shrink-0" />
+              <span className="truncate">Нагадування + push</span>
             </h1>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => navigate("/vip/tools")}>
-                ← Інструменти
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" size="sm" className="sm:h-10 sm:px-4" onClick={() => navigate("/vip/tools")}>
+                <span className="hidden sm:inline">← Інструменти</span>
+                <span className="sm:hidden">←</span>
               </Button>
-              <Button onClick={() => setOpen(true)}>
+              <Button size="sm" className="sm:h-10 sm:px-4" onClick={() => setOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Нове
               </Button>
             </div>

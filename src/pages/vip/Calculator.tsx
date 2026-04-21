@@ -91,10 +91,16 @@ export default function VipCalculator() {
 
           <Card className="p-4">
             <Tabs defaultValue="budget">
-              <TabsList className="w-full grid grid-cols-3">
-                <TabsTrigger value="budget">Бюджет проєкту</TabsTrigger>
-                <TabsTrigger value="roi">ROI / маржа</TabsTrigger>
-                <TabsTrigger value="tax">Податки</TabsTrigger>
+              <TabsList className="w-full grid grid-cols-3 h-auto">
+                <TabsTrigger value="budget" className="text-xs sm:text-sm px-2 py-2 whitespace-normal leading-tight">
+                  Бюджет<span className="hidden sm:inline"> проєкту</span>
+                </TabsTrigger>
+                <TabsTrigger value="roi" className="text-xs sm:text-sm px-2 py-2 whitespace-normal leading-tight">
+                  ROI<span className="hidden sm:inline"> / маржа</span>
+                </TabsTrigger>
+                <TabsTrigger value="tax" className="text-xs sm:text-sm px-2 py-2 whitespace-normal leading-tight">
+                  Податки
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="budget" className="mt-4">
                 <BudgetCalculator />

@@ -67,7 +67,7 @@ export function BudgetCalculator() {
                   placeholder="Наприклад: оренда студії"
                 />
               </div>
-              <div className="col-span-4 md:col-span-2">
+              <div className="col-span-6 md:col-span-2">
                 <Label className="text-xs">К-сть</Label>
                 <Input
                   type="number"
@@ -76,9 +76,10 @@ export function BudgetCalculator() {
                   onChange={(e) =>
                     update(item.id, { qty: parseFloat(e.target.value) || 0 })
                   }
+                  inputMode="decimal"
                 />
               </div>
-              <div className="col-span-5 md:col-span-3">
+              <div className="col-span-6 md:col-span-3">
                 <Label className="text-xs">Ціна за од., ₴</Label>
                 <Input
                   type="number"
@@ -87,22 +88,23 @@ export function BudgetCalculator() {
                   onChange={(e) =>
                     update(item.id, { price: parseFloat(e.target.value) || 0 })
                   }
+                  inputMode="decimal"
                 />
               </div>
-              <div className="col-span-3 md:col-span-2 flex flex-col">
+              <div className="col-span-12 md:col-span-2 flex flex-col">
                 <Label className="text-xs">Сума</Label>
-                <div className="flex items-center justify-between gap-1">
-                  <span className="font-mono text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-sm truncate">
                     {fmt(item.qty * item.price)}
                   </span>
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-7 w-7 text-destructive"
+                    className="h-8 w-8 shrink-0 text-destructive"
                     onClick={() => remove(item.id)}
                     disabled={items.length <= 1}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
