@@ -24,6 +24,7 @@ import {
   User,
   Filter,
   Inbox,
+  Paperclip,
 } from "lucide-react";
 
 const STATUS_OPTIONS = [
@@ -223,6 +224,11 @@ export function SupportTab() {
                 <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
                   {format(new Date(ticket.created_at), "dd MMM yyyy, HH:mm", { locale: uk })}
+                  {ticket.attachment_url && (
+                    <span className="ml-2 flex items-center gap-1">
+                      <Paperclip className="h-3 w-3" /> Скриншот
+                    </span>
+                  )}
                   {ticket.admin_response && (
                     <span className="ml-2 flex items-center gap-1 text-primary">
                       <CheckCircle2 className="h-3 w-3" /> Є відповідь
@@ -267,6 +273,25 @@ export function SupportTab() {
                   {selectedTicket.message}
                 </p>
               </div>
+
+              {selectedTicket.attachment_url && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Скриншот</p>
+                  <a
+                    href={selectedTicket.attachment_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-fit"
+                  >
+                    <img
+                      src={selectedTicket.attachment_url}
+                      alt="Скриншот користувача"
+                      className="max-h-64 rounded-md border border-border object-contain hover:opacity-80 transition-opacity"
+                      loading="lazy"
+                    />
+                  </a>
+                </div>
+              )}
 
               <div className="text-xs text-muted-foreground">
                 {format(new Date(selectedTicket.created_at), "dd MMMM yyyy, HH:mm", { locale: uk })}
