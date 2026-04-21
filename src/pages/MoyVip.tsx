@@ -4,7 +4,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Crown, Calendar, Sparkles, Palette } from "lucide-react";
+import { Loader2, Crown, Calendar, Sparkles, Palette, Sparkle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUserVip } from "@/hooks/vip/useUserVip";
@@ -92,7 +92,12 @@ export default function MoyVip() {
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
               <Crown className="h-7 w-7 text-amber-500" /> Мій VIP-статус
             </h1>
-            <Button variant="outline" onClick={() => navigate("/vip")}>Тарифи</Button>
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" onClick={() => navigate("/vip/tools")}>
+                <Sparkle className="h-4 w-4 mr-1" /> VIP-інструменти
+              </Button>
+              <Button variant="outline" onClick={() => navigate("/vip")}>Тарифи</Button>
+            </div>
           </div>
 
           {loading ? (

@@ -45,6 +45,8 @@ const Sertyfikaty = lazy(() => import("./pages/Sertyfikaty"));
 const MoiSertyfikaty = lazy(() => import("./pages/MoiSertyfikaty"));
 const Vip = lazy(() => import("./pages/Vip"));
 const MoyVip = lazy(() => import("./pages/MoyVip"));
+const VipTools = lazy(() => import("./pages/vip/Tools"));
+const VipNotebook = lazy(() => import("./pages/vip/Notebook"));
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -109,6 +111,8 @@ const AppContent = () => {
             <Route path="/sertyfikaty/moi" element={<MoiSertyfikaty />} />
             <Route path="/vip" element={<Vip />} />
             <Route path="/vip/moi" element={<MoyVip />} />
+            <Route path="/vip/tools" element={<VipTools />} />
+            <Route path="/vip/notebook" element={<VipNotebook />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
