@@ -86,13 +86,36 @@ export default function MarketplaceNew() {
     setUploading(true);
     try {
       const imageUrls: string[] = [];
+      const toastId = images.length > 0 ? toast.loading(`Обробка фото 0/${images.length}...`) : undefined;
       for (let i = 0; i < images.length; i++) {
-        const f = images[i];
-        const ext = f.name.split('.').pop() || 'jpg';
-        const path = `${user.id}/${Date.now()}-${i}.${ext}`;
-        const url = await uploadToStorage('marketplace', path, f, f.type);
-        imageUrls.push(url);
+        const original = images[i];
+        if (toastId) toast.loading(`Стискання фото ${i + 1}/${images.length}...`, { id: toastId });
+
+        // Автоматичне стиснення + конвертація в WebP (GIF зберігається як є)
+        let fileToUpload: File = original;
+        let contentType = original.type;
+        try {
+          fileToUpload = await compressImageAsFile(original, 'post');
+          contentType = fileToUpload.type || OUTPUT_FORMAT;
+        } catch (err) {
+          console.warn('[Marketplace] Помилка стиснення, використовую оригінал:', err);
+        }
+
+        const ext = contentType === OUTPUT_FORMAT
+          ? 'webp'
+          : (original.name.split('.').pop() || 'jpg').toLowerCase();
+        const path = `${user.id}/${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+        if (toastId) toast.loading(`Завантаження фото ${i + 1}/${images.length}...`, { id: toastId });
+        try {
+          const url = await uploadToStorage('marketplace', path, fileToUpload, contentType);
+          imageUrls.push(url);
+        } catch (err: any) {
+          if (toastId) toast.dismiss(toastId);
+          throw new Error(`Не вдалося завантажити фото ${i + 1}: ${err?.message || 'невідома помилка'}`);
+        }
       }
+      if (toastId) toast.dismiss(toastId);
 
       await createListing.mutateAsync({
         listing: {
