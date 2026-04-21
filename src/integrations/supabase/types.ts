@@ -1786,6 +1786,42 @@ export type Database = {
           },
         ]
       }
+      user_certificates: {
+        Row: {
+          created_at: string
+          discount_type: string
+          discount_value: number
+          id: string
+          is_active: boolean
+          issued_by: string | null
+          note: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean
+          issued_by?: string | null
+          note?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean
+          issued_by?: string | null
+          note?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_files: {
         Row: {
           created_at: string | null
