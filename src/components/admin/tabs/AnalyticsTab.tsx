@@ -170,7 +170,7 @@ export function AnalyticsTab() {
 
   useEffect(() => {
     loadData();
-  }, [period, customStart, customEnd]);
+  }, [period, customStart, customEnd, trafficFilter]);
 
   const periodButtons: { value: Period; label: string }[] = [
     { value: 'today', label: 'Сьогодні' },
@@ -180,6 +180,12 @@ export function AnalyticsTab() {
     { value: 'month', label: 'Місяць' },
     { value: 'year', label: 'Рік' },
     { value: 'custom', label: 'Довільний' },
+  ];
+
+  const trafficButtons: { value: TrafficFilter; label: string; icon: typeof Filter; hint: string }[] = [
+    { value: 'all', label: 'Увесь трафік', icon: Filter, hint: 'Всі відвідування (включно з гостями та випадковими заходами)' },
+    { value: 'quality', label: 'Якісні сесії', icon: ShieldCheck, hint: 'Сесії з ≥2 переглядами сторінок (відсіює одноразові заходи й більшість ботів)' },
+    { value: 'authenticated', label: 'Лише користувачі', icon: UserCheck, hint: 'Тільки авторизовані користувачі (зайшли в акаунт)' },
   ];
 
   // Prepare geo chart data with Ukrainian names
