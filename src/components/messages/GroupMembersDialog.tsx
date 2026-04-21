@@ -149,8 +149,8 @@ export function GroupMembersDialog({ open, onOpenChange, chat, onChanged, onLeft
                       <div className="flex-1 min-w-0">
                         <div className="font-medium truncate flex items-center gap-1">
                           {p.full_name || 'Користувач'}{isMe && ' (Ви)'}
-                          {role === 'owner' && <Crown className="h-3 w-3 text-yellow-500" />}
-                          {role === 'admin' && <Shield className="h-3 w-3 text-blue-500" />}
+                          {role === 'owner' && <Crown className="h-3 w-3 text-primary" />}
+                          {role === 'admin' && <Shield className="h-3 w-3 text-primary" />}
                         </div>
                         <div className="text-xs text-muted-foreground capitalize">
                           {role === 'owner' ? 'Власник' : role === 'admin' ? 'Адмін' : 'Учасник'}
