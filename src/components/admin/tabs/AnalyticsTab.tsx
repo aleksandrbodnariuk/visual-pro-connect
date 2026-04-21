@@ -199,31 +199,76 @@ export function AnalyticsTab() {
     <div className="space-y-4">
       {/* Period Filters */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-2 items-center">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            {periodButtons.map((p) => (
-              <Button
-                key={p.value}
-                variant={period === p.value ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setPeriod(p.value)}
-              >
-                {p.label}
-              </Button>
-            ))}
-          </div>
-          {period === 'custom' && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="w-40" />
-              <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="w-40" />
-              <Button size="sm" onClick={loadData}>Застосувати</Button>
+        <CardContent className="p-4 space-y-4">
+          {/* Traffic toggle */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
+              Тип трафіку
+            </p>
+            <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1 flex-wrap gap-1">
+              {trafficButtons.map((t) => {
+                const Icon = t.icon;
+                const active = trafficFilter === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setTrafficFilter(t.value)}
+                    title={t.hint}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      active
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {t.label}
+                  </button>
+                );
+              })}
             </div>
-          )}
-          <div className="flex flex-wrap gap-2 mt-3">
-            <Input placeholder="Фільтр за шляхом..." value={pathFilter} onChange={(e) => setPathFilter(e.target.value)} className="w-48" />
-            <Input placeholder="Фільтр за країною (ISO)..." value={countryFilter} onChange={(e) => setCountryFilter(e.target.value)} className="w-48" />
-            <Button size="sm" variant="outline" onClick={loadData}>Фільтрувати</Button>
+            <p className="text-xs text-muted-foreground mt-2">
+              {trafficButtons.find((t) => t.value === trafficFilter)?.hint}
+            </p>
+          </div>
+
+          {/* Period buttons */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
+              Період
+            </p>
+            <div className="flex flex-wrap gap-2 items-center">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              {periodButtons.map((p) => (
+                <Button
+                  key={p.value}
+                  variant={period === p.value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPeriod(p.value)}
+                >
+                  {p.label}
+                </Button>
+              ))}
+            </div>
+            {period === 'custom' && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="w-40" />
+                <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="w-40" />
+                <Button size="sm" onClick={loadData}>Застосувати</Button>
+              </div>
+            )}
+          </div>
+
+          {/* Additional filters */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
+              Додаткові фільтри
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Input placeholder="Шлях (напр. /post/123)" value={pathFilter} onChange={(e) => setPathFilter(e.target.value)} className="w-56" />
+              <Input placeholder="Код країни (UA, US...)" value={countryFilter} onChange={(e) => setCountryFilter(e.target.value)} className="w-48" />
+              <Button size="sm" variant="outline" onClick={loadData}>Застосувати</Button>
+            </div>
           </div>
         </CardContent>
       </Card>
