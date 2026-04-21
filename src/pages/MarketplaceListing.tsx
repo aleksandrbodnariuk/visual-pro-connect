@@ -177,8 +177,8 @@ export default function MarketplaceListing() {
                   <Card className="p-3 space-y-2 bg-muted/30">
                     <div className="flex items-center gap-2 text-sm">
                       {myReservation.status === 'accepted'
-                        ? <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                        : <Clock className="h-4 w-4 text-amber-500" />}
+                        ? <CheckCircle2 className="h-4 w-4 text-primary" />
+                        : <Clock className="h-4 w-4 text-muted-foreground" />}
                       <span>Ваш запит: <strong>{RESERVATION_STATUS_LABELS[myReservation.status]}</strong></span>
                     </div>
                     {(myReservation.status === 'pending' || myReservation.status === 'accepted') && (
