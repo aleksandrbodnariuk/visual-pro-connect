@@ -232,12 +232,17 @@ export default function MarketplaceNew() {
             <Label>Фото (до {MAX_IMAGES})</Label>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {previews.map((src, i) => (
-                <div key={i} className="relative aspect-square rounded-md overflow-hidden border group">
-                  <img src={src} alt="" className="w-full h-full object-cover" />
-                  <button onClick={() => removeImage(i)} type="button" className="absolute top-1 right-1 h-6 w-6 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div key={src} className="relative aspect-square rounded-md overflow-hidden border group bg-muted">
+                  <img
+                    src={src}
+                    alt={`Фото ${i + 1}`}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    onError={(e) => console.error('[Marketplace] Помилка превью:', src, e)}
+                  />
+                  <button onClick={() => removeImage(i)} type="button" className="absolute top-1 right-1 h-6 w-6 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
                     <X className="h-3 w-3" />
                   </button>
-                  {i === 0 && <div className="absolute bottom-0 left-0 right-0 bg-primary text-primary-foreground text-xs text-center py-0.5">Обкладинка</div>}
+                  {i === 0 && <div className="absolute bottom-0 left-0 right-0 bg-primary text-primary-foreground text-xs text-center py-0.5 z-10">Обкладинка</div>}
                 </div>
               ))}
               {images.length < MAX_IMAGES && (
