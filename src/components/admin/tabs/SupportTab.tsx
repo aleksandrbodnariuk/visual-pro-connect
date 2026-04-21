@@ -24,6 +24,7 @@ import {
   User,
   Filter,
   Inbox,
+  Paperclip,
 } from "lucide-react";
 
 const STATUS_OPTIONS = [
@@ -223,6 +224,11 @@ export function SupportTab() {
                 <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
                   {format(new Date(ticket.created_at), "dd MMM yyyy, HH:mm", { locale: uk })}
+                  {ticket.attachment_url && (
+                    <span className="ml-2 flex items-center gap-1">
+                      <Paperclip className="h-3 w-3" /> Скриншот
+                    </span>
+                  )}
                   {ticket.admin_response && (
                     <span className="ml-2 flex items-center gap-1 text-primary">
                       <CheckCircle2 className="h-3 w-3" /> Є відповідь
