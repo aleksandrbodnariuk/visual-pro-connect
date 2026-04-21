@@ -33,3 +33,5 @@ type: feature
 **Trigger function:** `set_marketplace_updated_at()` — окрема локальна функція для оновлення `updated_at` (не залежить від `update_updated_at_column`, якої немає в проєкті).
 
 **Категорії за замовчуванням:** Послуги (Briefcase), Цифрові товари (Download), Техніка та обладнання (Camera), Оренда обладнання (Package).
+
+**Етап 2 — Поглиблений пошук:** Хук `useMarketplaceListings` викликає RPC `search_marketplace_listings` (security definer, plpgsql). Функція використовує `websearch_to_tsquery('simple', ...)` з ранжуванням `ts_rank` по полях `title + description`. VIP-бустинг завжди в пріоритеті, далі релевантність, потім обраний `sortBy`. Зображення підвантажуються другим запитом і мапляться в клієнті, щоб не ускладнювати RPC. У `MarketplaceFilters` додано рядок чіпів для типу угоди (Усі/Продаж/Оренда/Послуги/Цифрові) та чіп «Популярні» для миттєвого перемикання сортування.

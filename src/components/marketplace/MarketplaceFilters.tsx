@@ -1,7 +1,8 @@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, X } from 'lucide-react';
+import { Search, X, Sparkles } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { CONDITION_LABELS, DEAL_TYPE_LABELS, type ListingFilters, type MarketplaceCondition, type MarketplaceDealType } from '@/hooks/marketplace/types';
 import { useMarketplaceCategories } from '@/hooks/marketplace/useMarketplaceCategories';
 
@@ -17,16 +18,61 @@ export function MarketplaceFilters({ filters, onChange }: Props) {
   const reset = () => onChange({});
   const hasActive = Object.keys(filters).some((k) => (filters as any)[k] !== undefined && (filters as any)[k] !== '');
 
+  // Швидкі фільтри-чіпи для типу угоди
+  const dealChips: Array<{ value: MarketplaceDealType; label: string }> = [
+    { value: 'sale', label: 'Продаж' },
+    { value: 'rent', label: 'Оренда' },
+    { value: 'service', label: 'Послуги' },
+    { value: 'digital', label: 'Цифрові' },
+  ];
+
   return (
     <div className="space-y-3 p-4 rounded-lg border bg-card">
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Пошук оголошень..."
+          placeholder="Пошук за назвою чи описом..."
           value={filters.search || ''}
           onChange={(e) => update({ search: e.target.value || undefined })}
           className="pl-9"
         />
+        {filters.search && (
+          <button
+            type="button"
+            onClick={() => update({ search: undefined })}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Швидкі чіпи: тип угоди */}
+      <div className="flex flex-wrap gap-2">
+        <Badge
+          variant={!filters.dealType ? 'default' : 'outline'}
+          className="cursor-pointer hover:opacity-80"
+          onClick={() => update({ dealType: undefined })}
+        >
+          Усі
+        </Badge>
+        {dealChips.map((c) => (
+          <Badge
+            key={c.value}
+            variant={filters.dealType === c.value ? 'default' : 'outline'}
+            className="cursor-pointer hover:opacity-80"
+            onClick={() => update({ dealType: filters.dealType === c.value ? undefined : c.value })}
+          >
+            {c.label}
+          </Badge>
+        ))}
+        <Badge
+          variant={filters.sortBy === 'popular' ? 'default' : 'outline'}
+          className="cursor-pointer hover:opacity-80 ml-auto"
+          onClick={() => update({ sortBy: filters.sortBy === 'popular' ? 'newest' : 'popular' })}
+        >
+          <Sparkles className="h-3 w-3 mr-1" /> Популярні
+        </Badge>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">

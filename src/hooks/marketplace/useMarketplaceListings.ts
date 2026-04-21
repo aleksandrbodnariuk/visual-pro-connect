@@ -8,32 +8,38 @@ export function useMarketplaceListings(filters: ListingFilters = {}) {
   return useQuery({
     queryKey: ['marketplace_listings', filters],
     queryFn: async (): Promise<MarketplaceListingWithImages[]> => {
-      let query = (supabase as any)
-        .from('marketplace_listings')
-        .select('*, images:marketplace_listing_images(*)')
-        .in('status', ['active', 'reserved']);
+      // Використовуємо FTS RPC для повнотекстового пошуку з ранжуванням
+      const { data: rpcData, error: rpcErr } = await (supabase as any).rpc('search_marketplace_listings', {
+        p_search: filters.search || null,
+        p_category_id: filters.categoryId || null,
+        p_deal_type: filters.dealType || null,
+        p_condition: filters.condition || null,
+        p_city: filters.city || null,
+        p_min_price: filters.minPrice ?? null,
+        p_max_price: filters.maxPrice ?? null,
+        p_sort_by: filters.sortBy || 'newest',
+        p_limit: 60,
+      });
+      if (rpcErr) throw rpcErr;
+      const listings = (rpcData || []) as MarketplaceListing[];
+      if (listings.length === 0) return [];
 
-      if (filters.categoryId) query = query.eq('category_id', filters.categoryId);
-      if (filters.dealType) query = query.eq('deal_type', filters.dealType);
-      if (filters.condition) query = query.eq('condition', filters.condition);
-      if (filters.city) query = query.ilike('city', `%${filters.city}%`);
-      if (filters.minPrice !== undefined) query = query.gte('price', filters.minPrice);
-      if (filters.maxPrice !== undefined) query = query.lte('price', filters.maxPrice);
-      if (filters.search) {
-        const s = filters.search.replace(/[%,]/g, '');
-        query = query.or(`title.ilike.%${s}%,description.ilike.%${s}%`);
-      }
-
-      switch (filters.sortBy) {
-        case 'price_asc': query = query.order('price', { ascending: true }); break;
-        case 'price_desc': query = query.order('price', { ascending: false }); break;
-        case 'popular': query = query.order('views_count', { ascending: false }); break;
-        default: query = query.order('is_vip_boost', { ascending: false }).order('created_at', { ascending: false });
-      }
-
-      const { data, error } = await query.limit(60);
-      if (error) throw error;
-      return (data || []) as MarketplaceListingWithImages[];
+      // Підвантажуємо зображення окремим запитом (RLS дозволяє доступ до зображень видимих оголошень)
+      const ids = listings.map((l) => l.id);
+      const { data: imgs } = await (supabase as any)
+        .from('marketplace_listing_images')
+        .select('*')
+        .in('listing_id', ids);
+      const imagesByListing = new Map<string, any[]>();
+      (imgs || []).forEach((img: any) => {
+        const arr = imagesByListing.get(img.listing_id) || [];
+        arr.push(img);
+        imagesByListing.set(img.listing_id, arr);
+      });
+      return listings.map((l) => ({
+        ...l,
+        images: (imagesByListing.get(l.id) || []).sort((a, b) => a.sort_order - b.sort_order),
+      })) as MarketplaceListingWithImages[];
     },
     staleTime: 60 * 1000,
   });

@@ -2959,6 +2959,46 @@ export type Database = {
         Args: { _conv_id: string; _user_id: string }
         Returns: undefined
       }
+      search_marketplace_listings: {
+        Args: {
+          p_category_id?: string
+          p_city?: string
+          p_condition?: string
+          p_deal_type?: string
+          p_limit?: number
+          p_max_price?: number
+          p_min_price?: number
+          p_search?: string
+          p_sort_by?: string
+        }
+        Returns: {
+          category_id: string
+          city: string | null
+          condition: string
+          contact_method: string | null
+          contact_phone: string | null
+          cover_image_url: string | null
+          created_at: string
+          currency: string
+          deal_type: string
+          description: string | null
+          id: string
+          is_negotiable: boolean
+          is_vip_boost: boolean
+          price: number
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+          views_count: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "marketplace_listings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       search_users_public: {
         Args: { search_term: string }
         Returns: {
