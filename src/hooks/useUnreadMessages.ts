@@ -56,9 +56,11 @@ function createSharedChannel(uid: string) {
         event: '*',
         schema: 'public',
         table: 'messages',
-        filter: `receiver_id=eq.${uid}`,
       },
-      () => {
+      (payload: any) => {
+        // Filter client-side: ignore my own outgoing messages
+        const newSenderId = payload?.new?.sender_id;
+        if (newSenderId === uid) return;
         console.log('[Unread] Realtime event received — refreshing count');
         cachedCount = null;
         initialFetchPromise = null;
