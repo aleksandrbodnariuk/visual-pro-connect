@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.og-post]
 verify_jwt = false
+
+[functions.send-reminder-pushes]
+verify_jwt = false
