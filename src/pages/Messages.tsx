@@ -11,12 +11,16 @@ import { MessageInput } from "@/components/messages/MessageInput";
 import { EmptyChat } from "@/components/messages/EmptyChat";
 import { MessagesService, ChatItem, Message } from "@/components/messages/MessagesService";
 import { playNotificationSound } from "@/lib/sounds";
+import { NewChatDialog } from "@/components/messages/NewChatDialog";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 export default function Messages() {
   const [activeChat, setActiveChat] = useState<ChatItem | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [chats, setChats] = useState<ChatItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [newChatOpen, setNewChatOpen] = useState(false);
   const navigate = useNavigate();
   const { user: authUser, isAuthenticated, loading: authLoading } = useAuth();
   const currentUser = authUser;
@@ -98,9 +102,10 @@ export default function Messages() {
 
   const handleSendMessage = async (messageText: string, attachmentUrl?: string, attachmentType?: string) => {
     if (!activeChat || !currentUser) return;
-    
-    const { success, newMessage } = 
-      await MessagesService.sendMessage(currentUser, activeChat.user.id, messageText, attachmentUrl, attachmentType);
+    const convId = activeChat.conversationId;
+    if (!convId) return;
+    const { success, newMessage } =
+      await MessagesService.sendMessage(currentUser, convId, messageText, attachmentUrl, attachmentType);
     
     if (success && newMessage) {
       // Оновлюємо локальний стан
@@ -127,11 +132,20 @@ export default function Messages() {
   
   const selectChat = async (chat: ChatItem) => {
     setActiveChat(chat);
-    setMessages(chat.messages);
-    
+    // Lazy-load messages if not yet loaded
+    let chatMessages = chat.messages;
+    if (chat.conversationId && (!chatMessages || chatMessages.length === 0)) {
+      chatMessages = await MessagesService.loadConversationMessages(chat.conversationId, currentUser!.id);
+      setMessages(chatMessages);
+      // also persist into chats array
+      setChats(prev => prev.map(c => c.id === chat.id ? { ...c, messages: chatMessages } : c));
+    } else {
+      setMessages(chatMessages);
+    }
+
     // Позначаємо повідомлення як прочитані в БД
-    if (currentUser) {
-      const success = await MessagesService.markMessagesAsRead(currentUser.id, chat.user.id);
+    if (currentUser && chat.conversationId) {
+      const success = await MessagesService.markMessagesAsRead(currentUser.id, chat.conversationId);
       // Сповіщаємо всі компоненти про оновлення лічильника
       if (success) {
         window.dispatchEvent(new CustomEvent('messages-read'));
@@ -155,7 +169,8 @@ export default function Messages() {
   // Видалення чату
   const handleDeleteChat = async (chat: ChatItem) => {
     if (!currentUser) return;
-    const success = await MessagesService.deleteChat(currentUser.id, chat.user.id);
+    if (!chat.conversationId) return;
+    const success = await MessagesService.deleteChat(currentUser.id, chat.conversationId);
     if (success) {
       setChats(prev => prev.filter(c => c.id !== chat.id));
       if (activeChat?.id === chat.id) {
@@ -171,29 +186,9 @@ export default function Messages() {
     if (!uid) return;
     
     const currentActiveChat = activeChatRef.current;
-    if (!currentActiveChat) return;
-    
-    // Перезавантажуємо повідомлення з БД для активного чату
-    const { data: messageData } = await supabase
-      .from('messages')
-      .select('id, sender_id, receiver_id, content, read, created_at, is_edited, edited_at, attachment_url, attachment_type')
-      .or(`and(sender_id.eq.${uid},receiver_id.eq.${currentActiveChat.user.id}),and(sender_id.eq.${currentActiveChat.user.id},receiver_id.eq.${uid})`)
-      .order('created_at', { ascending: true });
-    
-    if (messageData) {
-      const updatedMessages: Message[] = messageData.map(msg => ({
-        id: msg.id,
-        text: msg.content,
-        timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isSender: msg.sender_id === uid,
-        isEdited: msg.is_edited || false,
-        editedAt: msg.edited_at ? new Date(msg.edited_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
-        attachmentUrl: msg.attachment_url || undefined,
-        attachmentType: msg.attachment_type || undefined,
-        read: msg.read ?? false
-      }));
-      setMessages(updatedMessages);
-    }
+    if (!currentActiveChat?.conversationId) return;
+    const updated = await MessagesService.loadConversationMessages(currentActiveChat.conversationId, uid);
+    setMessages(updated);
   }, []);
 
   // Слухаємо подію від useUnreadMessages (єдина підписка на receiver_id)
@@ -203,8 +198,8 @@ export default function Messages() {
       const myId = currentUserRef.current?.id;
       
       // Якщо чат відкритий — спочатку позначаємо як прочитані, потім оновлюємо списки
-      if (currentActiveChat && myId) {
-        await MessagesService.markMessagesAsRead(myId, currentActiveChat.user.id);
+      if (currentActiveChat?.conversationId && myId) {
+        await MessagesService.markMessagesAsRead(myId, currentActiveChat.conversationId);
         window.dispatchEvent(new CustomEvent('messages-read'));
       }
       
