@@ -4,8 +4,9 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Award, Check, Sparkles, Gift } from "lucide-react";
-import { CERTIFICATE_TIERS, type CertificateTier } from "@/lib/certificateTiers";
+import { Award, Check, Sparkles, Gift, Loader2 } from "lucide-react";
+import { type CertificateTier } from "@/lib/certificateTiers";
+import { useCertificateTiers } from "@/hooks/certificates/useCertificateTiers";
 import { PurchaseCertificateDialog } from "@/components/certificates/PurchaseCertificateDialog";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -16,6 +17,7 @@ export default function Sertyfikaty() {
   const navigate = useNavigate();
   const [selectedTier, setSelectedTier] = useState<CertificateTier | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { tiers, loading } = useCertificateTiers(true);
 
   const onBuy = (tier: CertificateTier) => {
     if (!user) {
@@ -53,8 +55,13 @@ export default function Sertyfikaty() {
           </div>
 
           {/* Tiers grid */}
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {CERTIFICATE_TIERS.map((tier) => (
+            {tiers.map((tier) => (
               <Card
                 key={tier.id}
                 className={cn(
@@ -85,7 +92,7 @@ export default function Sertyfikaty() {
                   <span className="text-xl text-muted-foreground">₴</span>
                 </div>
                 <div className="text-sm text-amber-600 dark:text-amber-400 font-semibold mb-6">
-                  → знижка {tier.discount}% на послуги
+                  → знижка {tier.price}₴ на наші послуги
                 </div>
 
                 <ul className="space-y-2 mb-6 flex-1">
@@ -108,6 +115,7 @@ export default function Sertyfikaty() {
               </Card>
             ))}
           </div>
+          )}
 
           {/* How it works */}
           <Card className="p-6">

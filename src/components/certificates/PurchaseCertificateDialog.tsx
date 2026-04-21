@@ -89,7 +89,8 @@ export function PurchaseCertificateDialog({ tier, open, onOpenChange }: Props) {
       is_gift: mode === "gift",
       tier: tier.id,
       amount_uah: tier.price,
-      discount_percent: tier.discount,
+      // Kept for back-compat; certificate value will be amount_uah, not a percent.
+      discount_percent: 0,
       buyer_note: note.trim() || null,
     });
     setSubmitting(false);
@@ -115,7 +116,7 @@ export function PurchaseCertificateDialog({ tier, open, onOpenChange }: Props) {
             Купівля сертифіката <Badge variant="secondary">{tier.label}</Badge>
           </DialogTitle>
           <DialogDescription>
-            {tier.price}₴ — знижка {tier.discount}% на послуги фахівців
+            {tier.price}₴ — знижка на цю суму на послуги наших фахівців
           </DialogDescription>
         </DialogHeader>
 
