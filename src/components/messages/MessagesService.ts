@@ -307,7 +307,7 @@ export class MessagesService {
 
   static async sendMessage(
     currentUser: any, 
-    receiverId: string, 
+    conversationId: string,
     messageText: string,
     attachmentUrl?: string,
     attachmentType?: string
@@ -323,16 +323,14 @@ export class MessagesService {
       toast.error("Повідомлення не може перевищувати 5000 символів.");
       return { success: false };
     }
-    
-    if (import.meta.env.DEV) console.log("Sending message from", currentUser.id, "to", receiverId);
-    
+
     try {
       const { data, error } = await supabase
         .from('messages')
         .insert([
           {
             sender_id: currentUser?.id,
-            receiver_id: receiverId,
+            conversation_id: conversationId,
             content: messageText,
             read: false,
             attachment_url: attachmentUrl || null,
@@ -347,19 +345,17 @@ export class MessagesService {
         toast.error("Не вдалося надіслати повідомлення. Спробуйте ще раз.");
         return { success: false };
       }
-      
-      // Використовуємо реальний ID з бази даних
+
       const newMessage: Message = {
         id: data.id,
         text: messageText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isSender: true,
         attachmentUrl,
-        attachmentType
+        attachmentType,
+        senderId: currentUser?.id,
       };
-      
-      if (import.meta.env.DEV) console.log("Message sent to Supabase successfully:", data);
-      toast.success("Повідомлення надіслано");
+
       return { success: true, newMessage };
     } catch (err) {
       if (import.meta.env.DEV) console.error("Помилка при відправленні повідомлення:", err);
