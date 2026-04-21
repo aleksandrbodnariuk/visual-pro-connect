@@ -693,6 +693,229 @@ export type Database = {
           },
         ]
       }
+      marketplace_categories: {
+        Row: {
+          created_at: string
+          icon: string
+          id: string
+          is_visible: boolean
+          label: string
+          parent_id: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string
+          id: string
+          is_visible?: boolean
+          label: string
+          parent_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string
+          id?: string
+          is_visible?: boolean
+          label?: string
+          parent_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_favorites: {
+        Row: {
+          created_at: string
+          id: string
+          listing_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          listing_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          listing_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_favorites_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_listing_images: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          is_cover: boolean
+          listing_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          is_cover?: boolean
+          listing_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          is_cover?: boolean
+          listing_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_listing_images_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_listings: {
+        Row: {
+          category_id: string
+          city: string | null
+          condition: string
+          contact_method: string | null
+          contact_phone: string | null
+          cover_image_url: string | null
+          created_at: string
+          currency: string
+          deal_type: string
+          description: string | null
+          id: string
+          is_negotiable: boolean
+          is_vip_boost: boolean
+          price: number
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+          views_count: number
+        }
+        Insert: {
+          category_id: string
+          city?: string | null
+          condition?: string
+          contact_method?: string | null
+          contact_phone?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          currency?: string
+          deal_type?: string
+          description?: string | null
+          id?: string
+          is_negotiable?: boolean
+          is_vip_boost?: boolean
+          price?: number
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+          views_count?: number
+        }
+        Update: {
+          category_id?: string
+          city?: string | null
+          condition?: string
+          contact_method?: string | null
+          contact_phone?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          currency?: string
+          deal_type?: string
+          description?: string | null
+          id?: string
+          is_negotiable?: boolean
+          is_vip_boost?: boolean
+          price?: number
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          views_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_listings_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_reservations: {
+        Row: {
+          buyer_id: string
+          buyer_note: string | null
+          created_at: string
+          id: string
+          listing_id: string
+          seller_id: string
+          seller_note: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          buyer_id: string
+          buyer_note?: string | null
+          created_at?: string
+          id?: string
+          listing_id: string
+          seller_id: string
+          seller_note?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          buyer_id?: string
+          buyer_note?: string | null
+          created_at?: string
+          id?: string
+          listing_id?: string
+          seller_id?: string
+          seller_note?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_reservations_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_reactions: {
         Row: {
           created_at: string
