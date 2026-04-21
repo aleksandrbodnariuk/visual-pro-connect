@@ -14,10 +14,10 @@ import { CURRENCY_SYMBOLS, type MarketplaceCurrency } from '@/hooks/marketplace/
 import { useNavigate } from 'react-router-dom';
 
 const statusColor: Record<string, string> = {
-  pending: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30',
-  accepted: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
+  pending: 'bg-muted text-foreground border-border',
+  accepted: 'bg-primary/10 text-primary border-primary/30',
   rejected: 'bg-destructive/10 text-destructive border-destructive/30',
-  completed: 'bg-primary/10 text-primary border-primary/30',
+  completed: 'bg-secondary text-secondary-foreground border-border',
   cancelled: 'bg-muted text-muted-foreground border-border',
 };
 
