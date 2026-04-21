@@ -70,6 +70,7 @@ export function AdminTabs() {
         <div className="w-px self-stretch bg-border mx-1 shrink-0" />
 
         <TabsTrigger value="support">Підтримка</TabsTrigger>
+        <TabsTrigger value="certificates">Сертифікати</TabsTrigger>
       </TabsList>
       
       <TabsContent value="users">
@@ -138,6 +139,10 @@ export function AdminTabs() {
 
       <TabsContent value="support">
         <SupportTab />
+      </TabsContent>
+
+      <TabsContent value="certificates">
+        <CertificatesTab />
       </TabsContent>
     </Tabs>
   );
