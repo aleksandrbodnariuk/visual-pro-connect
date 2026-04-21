@@ -2078,7 +2078,7 @@ export type Database = {
       }
       approve_certificate_purchase: {
         Args: { _admin_note?: string; _request_id: string }
-        Returns: string
+        Returns: undefined
       }
       approve_share_transaction: {
         Args: { _transaction_id: string }
