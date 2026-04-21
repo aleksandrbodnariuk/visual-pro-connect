@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Users, Loader2, ChevronDown, ChevronRight, CheckCircle2 } from 'lucide-react';
 
 interface TeamMember {
   id: string;
@@ -21,6 +21,7 @@ interface TreeNode {
   avatarUrl: string;
   role: string;
   children: TreeNode[];
+  ordersCount: number;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -67,18 +68,38 @@ export function TeamTree({ representativeId }: TeamTreeProps) {
         childrenByParent.set(m.parent_id, arr);
       }
 
+      // Count non-archived orders per representative.id for the whole team
+      const repIds = members.map((m) => m.id);
+      const ordersCountMap = new Map<string, number>();
+      if (repIds.length > 0) {
+        const { data: orderRows } = await supabase
+          .from('specialist_orders')
+          .select('representative_id')
+          .in('representative_id', repIds)
+          .neq('status', 'archived');
+        (orderRows || []).forEach((row: any) => {
+          if (!row.representative_id) return;
+          ordersCountMap.set(
+            row.representative_id,
+            (ordersCountMap.get(row.representative_id) || 0) + 1,
+          );
+        });
+      }
+
       const treeNodes: TreeNode[] = level1.map((m) => ({
         id: m.id,
         userId: m.user_id,
         fullName: m.full_name,
         avatarUrl: m.avatar_url,
         role: m.role,
+        ordersCount: ordersCountMap.get(m.id) || 0,
         children: (childrenByParent.get(m.id) || []).map((child) => ({
           id: child.id,
           userId: child.user_id,
           fullName: child.full_name,
           avatarUrl: child.avatar_url,
           role: child.role,
+          ordersCount: ordersCountMap.get(child.id) || 0,
           children: [],
         })),
       }));
@@ -170,6 +191,17 @@ function TeamTreeNode({ node, depth }: { node: TreeNode; depth: number }) {
         <span className="font-medium text-sm flex-1 min-w-0 truncate">
           {node.fullName}
         </span>
+
+        {node.ordersCount > 0 && (
+          <Badge
+            className="text-xs shrink-0 gap-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 border-transparent"
+            variant="secondary"
+            title={`Зробив(ла) ${node.ordersCount} замовлень`}
+          >
+            <CheckCircle2 className="h-3 w-3" />
+            Активний · {node.ordersCount}
+          </Badge>
+        )}
 
         <Badge className={`text-xs shrink-0 ${ROLE_COLORS[node.role] || ''}`} variant="secondary">
           {ROLE_LABELS[node.role] || node.role}
