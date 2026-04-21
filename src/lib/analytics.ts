@@ -19,6 +19,12 @@ let lastPath = '';
 let lastTime = 0;
 let eventQueue: any[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
+let currentUserId: string | null = null;
+
+/** Set the authenticated user id (or null on logout). Called from AuthContext. */
+export function setAnalyticsUserId(userId: string | null) {
+  currentUserId = userId;
+}
 
 function getVisitorId(): string {
   const key = '_a_vid';
@@ -130,6 +136,7 @@ export function trackPageView(path?: string) {
     language: navigator.language?.slice(0, 10) || null,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
     occurred_at: new Date().toISOString(),
+    user_id: currentUserId,
     ...utm,
   });
 
