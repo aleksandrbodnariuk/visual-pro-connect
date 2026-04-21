@@ -1,23 +1,22 @@
 export interface CertificateTier {
-  id: "basic" | "standard" | "premium";
+  id: string;
   label: string;
   price: number; // UAH
-  discount: number; // percent
   description: string;
   perks: string[];
   highlight?: boolean;
   gradient: string;
 }
 
-export const CERTIFICATE_TIERS: CertificateTier[] = [
+/** Fallback tiers used while DB is loading or if the table is empty. */
+export const FALLBACK_CERTIFICATE_TIERS: CertificateTier[] = [
   {
     id: "basic",
     label: "Базовий",
     price: 500,
-    discount: 5,
-    description: "Знижка 5% на всі послуги фото, відео та музика",
+    description: "Сертифікат на 500₴ знижки на наші послуги",
     perks: [
-      "5% знижка на послуги наших фахівців",
+      "Знижка 500₴ на послуги наших фахівців",
       "Публічний бейдж біля вашого аватара",
       "Без терміну дії",
     ],
@@ -27,10 +26,9 @@ export const CERTIFICATE_TIERS: CertificateTier[] = [
     id: "standard",
     label: "Стандарт",
     price: 1500,
-    discount: 10,
-    description: "Знижка 10% — найпопулярніший вибір",
+    description: "Сертифікат на 1500₴ знижки — найпопулярніший вибір",
     perks: [
-      "10% знижка на послуги наших фахівців",
+      "Знижка 1500₴ на послуги наших фахівців",
       "Помітний бейдж біля вашого аватара",
       "Пріоритетна підтримка",
       "Без терміну дії",
@@ -42,10 +40,9 @@ export const CERTIFICATE_TIERS: CertificateTier[] = [
     id: "premium",
     label: "Преміум",
     price: 3000,
-    discount: 15,
-    description: "Максимальна знижка 15% для постійних клієнтів",
+    description: "Сертифікат на 3000₴ знижки для постійних клієнтів",
     perks: [
-      "15% знижка на послуги наших фахівців",
+      "Знижка 3000₴ на послуги наших фахівців",
       "Преміум-бейдж біля вашого аватара",
       "Пріоритетна підтримка",
       "Можливість дарувати знижку друзям",
@@ -55,4 +52,8 @@ export const CERTIFICATE_TIERS: CertificateTier[] = [
   },
 ];
 
-export const getTier = (id: string) => CERTIFICATE_TIERS.find((t) => t.id === id);
+/** Backward-compat export. Prefer using `useCertificateTiers()` for live data. */
+export const CERTIFICATE_TIERS = FALLBACK_CERTIFICATE_TIERS;
+
+export const getTier = (id: string, tiers: CertificateTier[] = FALLBACK_CERTIFICATE_TIERS) =>
+  tiers.find((t) => t.id === id);

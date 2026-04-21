@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Award, Search, Save, Loader2 } from "lucide-react";
 import { CertificateBadge } from "@/components/certificates/CertificateBadge";
 import { PurchaseRequestsList } from "@/components/admin/certificates/PurchaseRequestsList";
+import { CertificateTiersEditor } from "@/components/admin/certificates/CertificateTiersEditor";
 
 interface UserRow {
   id: string;
@@ -164,6 +165,7 @@ export function CertificatesTab() {
   return (
     <div className="space-y-6">
       <PurchaseRequestsList onApproved={() => load()} />
+      <CertificateTiersEditor />
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-4">

@@ -1,32 +1,37 @@
 ---
 name: Discount Certificates System
-description: Платні та адмін-видавані сертифікати знижки на послуги фото/відео/музика з публічним бейджем, заявками та подарунками
+description: Платні та адмін-видавані сертифікати знижки на суму номіналу (UAH) з публічним бейджем, динамічними тарифами в БД та подарунками
 type: feature
 ---
-Платформа має систему сертифікатів знижок для послуг фото/відео/музика з ДВОМА шляхами видачі:
-1) **Платний** — користувач купує через `/sertyfikaty` (3 тарифи: 500₴/5%, 1500₴/10%, 3000₴/15%) для себе або в подарунок
+Платформа має систему сертифікатів знижок з ДВОМА шляхами видачі:
+1) **Платний** — користувач купує через `/sertyfikaty` для себе або в подарунок
 2) **Ручний** — адмін видає безкоштовно через адмін-таб «Сертифікати»
 
+**КЛЮЧОВЕ ПРАВИЛО:** Сертифікат = знижка на СУМУ номіналу (НЕ відсоток). Тариф 500₴ → знижка 500₴ на послуги. Тип `discount_type='uah'`, `discount_value = amount_uah`.
+
 **Модель даних:**
-- `user_certificates` (один на user_id) — `is_active`, `discount_type` ('fixed'|'percent'|'uah'), `discount_value`, `note`, `tier`, `purchased_by`, `is_gift`, `purchase_amount_uah`
-- `certificate_purchase_requests` — заявки покупців: `buyer_id`, `recipient_id`, `is_gift`, `tier`, `amount_uah`, `discount_percent`, `status` (pending/approved/rejected/cancelled), `buyer_note`, `admin_note`
+- `certificate_tiers` (динамічно редаговані адміном) — id, label, price_uah, description, perks (jsonb array), gradient, sort_order, is_active, highlight
+- `user_certificates` (один на user_id) — `is_active`, `discount_type` ('uah' для покупок), `discount_value` (в ₴), `note`, `tier`, `purchased_by`, `is_gift`, `purchase_amount_uah`. При повторному апруві суми ДОДАЮТЬСЯ.
+- `certificate_purchase_requests` — `buyer_id`, `recipient_id`, `is_gift`, `tier`, `amount_uah`, `discount_percent` (legacy=0), `status`, `buyer_note`, `admin_note`
 
 **RPC (SECURITY DEFINER):**
-- `approve_certificate_purchase(_request_id, _admin_note)` — атомарно створює/оновлює сертифікат (ON CONFLICT user_id), відправляє push-сповіщення отримувачу та покупцю (для подарунків)
-- `reject_certificate_purchase(_request_id, _admin_note)` — відхиляє з нотифікацією покупцю
+- `approve_certificate_purchase(_request_id, _admin_note)` — створює сертифікат `discount_type='uah'`, `discount_value=amount_uah`. При існуючому активному uah-сертифікаті суми складаються (накопичення). Push-сповіщення.
+- `reject_certificate_purchase(_request_id, _admin_note)` — відхиляє з нотифікацією
 
-**RLS:** користувачі бачать свої заявки (як buyer або recipient), створюють/скасовують власні pending; адмін має повний доступ. На `user_certificates` усі автентифіковані можуть читати.
+**RLS:** користувачі бачать свої заявки (як buyer/recipient). На `certificate_tiers` усі читають активні, адміни — повний доступ.
 
 **UI:**
-- `/sertyfikaty` — публічна вітрина 3 тарифів з модалкою купівлі (Tabs: «Для себе» / «В подарунок» з пошуком отримувача за імʼям/телефоном)
-- `/sertyfikaty/moi` — особистий кабінет: активний сертифікат + історія заявок + кнопка скасування pending
-- Sidebar: пункт «Сертифікати» з іконкою Award (text-amber-500) між Settings та панеллю акціонера
-- Адмін-таб «Сертифікати»: зверху `PurchaseRequestsList` (pending з кнопками Підтвердити/Відхилити + realtime), знизу — ручне керування
-- `<CertificateBadge userId certificate?>` — золотий бейдж біля аватара (sizes: sm/md/lg), розміщується absolute -bottom-1 -right-1
-- Realtime-підписки: на `user_certificates` (для бейджа) і на `certificate_purchase_requests` (для адмінського списку)
+- `/sertyfikaty` — публічна вітрина (з БД через `useCertificateTiers`), показує «знижка {price}₴ на наші послуги»
+- `/sertyfikaty/moi` — особистий кабінет
+- Адмін-таб «Сертифікати» (3 секції): `PurchaseRequestsList` (заявки), `CertificateTiersEditor` (CRUD тарифів), ручне керування
+- `<CertificateBadge>` — для type='uah' показує `{value}₴`, для 'percent' — `{value}%`
+
+**Хуки:**
+- `useCertificateTiers(activeOnly = true)` — реалтайм-завантаження з БД з fallback на хардкод
+- `useUserCertificate(userId)` — реалтайм поточного сертифіката
 
 **Бізнес-правила:**
-- Без онлайн-оплати на старті: користувач створює заявку → адмін звʼязується → отримує оплату вручну (карта/IBAN) → натискає «Підтвердити»
-- Один активний сертифікат на користувача (при апруві нової заявки оновлюється з GREATEST discount_value)
-- Подарункові сертифікати: отримувач отримує push «🎁 Вам подарували сертифікат», покупець — підтвердження
-- Без терміну дії — деактивується лише вручну адміном
+- Без онлайн-оплати: заявка → адмін отримує оплату вручну → «Підтвердити»
+- Один активний сертифікат на користувача; нова покупка додає суму
+- Без терміну дії — деактивується лише вручну
+- Адмін може CRUD тарифи в реальному часі без редеплою

@@ -22,7 +22,7 @@ interface PurchaseRequest {
   is_gift: boolean;
   tier: string;
   amount_uah: number;
-  discount_percent: number;
+  discount_percent: number; // legacy field, ignored
   status: "pending" | "approved" | "rejected" | "cancelled";
   buyer_note: string | null;
   admin_note: string | null;
@@ -136,7 +136,7 @@ export default function MoiSertyfikaty() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <Badge variant="secondary" className="font-semibold">{tier?.label || r.tier}</Badge>
                               <span className="font-bold">{r.amount_uah}₴</span>
-                              <span className="text-sm text-muted-foreground">→ {r.discount_percent}% знижка</span>
+                              <span className="text-sm text-muted-foreground">→ знижка {r.amount_uah}₴ на послуги</span>
                               {r.is_gift && (
                                 <Badge variant="outline" className="gap-1">
                                   <Gift className="h-3 w-3" />

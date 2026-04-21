@@ -171,7 +171,7 @@ export function PurchaseRequestsList({ onApproved }: Props) {
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="secondary">{tier?.label || r.tier}</Badge>
                         <span className="font-bold">{r.amount_uah}₴</span>
-                        <span className="text-xs text-muted-foreground">→ {r.discount_percent}%</span>
+                        <span className="text-xs text-muted-foreground">→ знижка {r.amount_uah}₴</span>
                       </div>
                       <p className="text-[11px] text-muted-foreground mt-1">
                         {format(new Date(r.created_at), "d MMM yyyy, HH:mm", { locale: uk })}
