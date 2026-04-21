@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, ArrowLeft, Package2, Bell, Send } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useMyListings } from '@/hooks/marketplace/useMarketplaceListings';
-import { ListingCard } from '@/components/marketplace/ListingCard';
+import { MyListingCard } from '@/components/marketplace/MyListingCard';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { IncomingReservationsList, OutgoingReservationsList } from '@/components/marketplace/ReservationsList';
 import { useIncomingReservations, useOutgoingReservations } from '@/hooks/marketplace/useMarketplaceReservations';
@@ -77,7 +77,7 @@ export default function MarketplaceMine() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {items.map((l) => <ListingCard key={l.id} listing={l} />)}
+                  {items.map((l) => <MyListingCard key={l.id} listing={l} />)}
                 </div>
               )}
             </TabsContent>
