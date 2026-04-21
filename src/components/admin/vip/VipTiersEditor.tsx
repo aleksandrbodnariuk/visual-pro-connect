@@ -43,6 +43,9 @@ interface DraftForm {
   sort_order: string;
   is_active: boolean;
   highlight: boolean;
+  discount_percent: string;
+  monthly_bonus_uah: string;
+  birthday_bonus_uah: string;
 }
 
 const empty = (): DraftForm => ({
@@ -59,6 +62,9 @@ const empty = (): DraftForm => ({
   sort_order: "10",
   is_active: true,
   highlight: false,
+  discount_percent: "10",
+  monthly_bonus_uah: "200",
+  birthday_bonus_uah: "500",
 });
 
 const toDraft = (r: VipTierRow): DraftForm => ({
@@ -75,6 +81,9 @@ const toDraft = (r: VipTierRow): DraftForm => ({
   sort_order: String(r.sort_order),
   is_active: r.is_active,
   highlight: r.highlight,
+  discount_percent: String(r.discount_percent ?? 0),
+  monthly_bonus_uah: String(r.monthly_bonus_uah ?? 0),
+  birthday_bonus_uah: String(r.birthday_bonus_uah ?? 0),
 });
 
 export function VipTiersEditor() {
