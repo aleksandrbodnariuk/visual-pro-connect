@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Save, Users, ShoppingCart, Settings2, ChevronDown, ChevronRight, UserX, Package, AlertCircle, Archive, Trash2 } from "lucide-react";
+import { Save, Users, ShoppingCart, Settings2, ChevronDown, ChevronRight, UserX, Package, AlertCircle, Archive, Trash2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminServicesManager } from "@/components/admin/AdminServicesManager";
@@ -23,6 +23,7 @@ interface RepNode {
   parentId: string | null;
   children: RepNode[];
   isActive: boolean;
+  ordersCount: number;
 }
 
 interface RepOrder {
@@ -114,6 +115,22 @@ export function RepresentativesTab() {
         blockedMap[u.id] = Boolean(u.is_blocked);
       });
 
+      // Count non-archived orders per representative
+      const repIds = reps.map((r) => r.id);
+      const ordersCountMap: Record<string, number> = {};
+      if (repIds.length > 0) {
+        const { data: orderRows } = await supabase
+          .from("specialist_orders")
+          .select("representative_id")
+          .in("representative_id", repIds)
+          .neq("status", "archived");
+        (orderRows || []).forEach((row: any) => {
+          if (!row.representative_id) return;
+          ordersCountMap[row.representative_id] =
+            (ordersCountMap[row.representative_id] || 0) + 1;
+        });
+      }
+
       // Build tree
       const nodeMap: Record<string, RepNode> = {};
       reps.forEach((r) => {
@@ -127,6 +144,7 @@ export function RepresentativesTab() {
           parentId: r.parent_id,
           children: [],
           isActive: !blockedMap[r.user_id],
+          ordersCount: ordersCountMap[r.id] || 0,
         };
       });
 
@@ -650,6 +668,17 @@ function TreeNode({
         )}
 
         <span className="font-medium text-sm flex-1 min-w-0 truncate">{node.fullName}</span>
+
+        {node.ordersCount > 0 && (
+          <Badge
+            className="text-xs shrink-0 gap-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 border-transparent"
+            variant="secondary"
+            title={`Зробив(ла) ${node.ordersCount} замовлень`}
+          >
+            <CheckCircle2 className="h-3 w-3" />
+            Активний · {node.ordersCount}
+          </Badge>
+        )}
 
         <Badge className={`text-xs ${ROLE_COLORS[node.role] || ""}`} variant="secondary">
           {ROLE_LABELS[node.role] || node.role}
