@@ -18,6 +18,10 @@ interface Message {
   attachmentUrl?: string;
   attachmentType?: string;
   read?: boolean;
+  senderId?: string;
+  senderName?: string;
+  senderAvatar?: string;
+  systemEvent?: any;
 }
 
 interface ReactionData {
@@ -32,6 +36,7 @@ interface MessageListProps {
   onEditMessage?: (messageId: string, newText: string) => void;
   onDeleteMessage?: (messageId: string) => void;
   recipientAvatarUrl?: string;
+  isGroup?: boolean;
 }
 
 export function MessageList({ 
@@ -39,7 +44,8 @@ export function MessageList({
   emptyStateMessage,
   onEditMessage,
   onDeleteMessage,
-  recipientAvatarUrl
+  recipientAvatarUrl,
+  isGroup
 }: MessageListProps) {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [reactions, setReactions] = useState<Record<string, ReactionData[]>>({});
