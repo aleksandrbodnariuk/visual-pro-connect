@@ -39,6 +39,8 @@ export interface ChatItem {
   type?: 'direct' | 'group';
   conversationId?: string;
   title?: string;
+  description?: string;
+  avatarUrl?: string;
   memberIds?: string[];
   memberCount?: number;
   myRole?: 'owner' | 'admin' | 'member';
@@ -113,6 +115,8 @@ export class MessagesService {
           conversationId: c.conversation_id,
           type: isGroup ? 'group' : 'direct',
           title: c.title,
+          description: c.description,
+          avatarUrl: c.avatar_url,
           memberIds: c.member_ids || [],
           memberCount: Number(c.member_count || 0),
           myRole: c.my_role,
@@ -302,6 +306,43 @@ export class MessagesService {
       return false;
     }
     toast.success('Назву оновлено');
+    return true;
+  }
+
+  static async updateGroupAvatar(conversationId: string, avatarUrl: string): Promise<boolean> {
+    const { error } = await supabase
+      .rpc('update_conversation_avatar', { _conv_id: conversationId, _avatar_url: avatarUrl });
+    if (error) {
+      toast.error(error.message || 'Не вдалося оновити аватар');
+      return false;
+    }
+    toast.success('Аватар оновлено');
+    return true;
+  }
+
+  static async updateGroupDescription(conversationId: string, description: string): Promise<boolean> {
+    const { error } = await supabase
+      .rpc('update_conversation_description', { _conv_id: conversationId, _description: description });
+    if (error) {
+      toast.error(error.message || 'Не вдалося оновити правила');
+      return false;
+    }
+    toast.success('Правила оновлено');
+    return true;
+  }
+
+  static async updateMemberRole(
+    conversationId: string,
+    userId: string,
+    newRole: 'admin' | 'member'
+  ): Promise<boolean> {
+    const { error } = await supabase
+      .rpc('update_member_role', { _conv_id: conversationId, _user_id: userId, _new_role: newRole });
+    if (error) {
+      toast.error(error.message || 'Не вдалося змінити роль');
+      return false;
+    }
+    toast.success(newRole === 'admin' ? 'Призначено співвласником/модератором' : 'Знижено до учасника');
     return true;
   }
 
