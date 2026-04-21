@@ -2102,6 +2102,42 @@ export type Database = {
         }
         Relationships: []
       }
+      vip_notes: {
+        Row: {
+          color: string
+          content: string
+          created_at: string
+          id: string
+          is_pinned: boolean
+          tags: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       vip_purchase_requests: {
         Row: {
           admin_note: string | null
