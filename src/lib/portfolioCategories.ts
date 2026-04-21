@@ -22,6 +22,9 @@ import {
   Home,
   Building2,
   Trophy,
+  BookOpen,
+  Book,
+  BookImage,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -56,6 +59,9 @@ export const PORTFOLIO_ICON_MAP: Record<string, LucideIcon> = {
   Home,
   Building2,
   Trophy,
+  BookOpen,
+  Book,
+  BookImage,
 };
 
 export const PORTFOLIO_AVAILABLE_ICONS = Object.keys(PORTFOLIO_ICON_MAP);
