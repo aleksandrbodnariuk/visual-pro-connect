@@ -239,13 +239,14 @@ export function CertificatesTab() {
                     <div className="flex flex-1 flex-wrap items-center gap-2">
                       <Select
                         value={draft.discount_type}
-                        onValueChange={(v) => updateDraft(u.id, { discount_type: v as "fixed" | "percent" })}
+                        onValueChange={(v) => updateDraft(u.id, { discount_type: v as "fixed" | "percent" | "uah" })}
                       >
                         <SelectTrigger className="w-32">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="fixed">Сума ($)</SelectItem>
+                          <SelectItem value="uah">Сума (₴)</SelectItem>
                           <SelectItem value="percent">Відсоток (%)</SelectItem>
                         </SelectContent>
                       </Select>
