@@ -27,6 +27,7 @@ import type { Area } from "react-easy-crop";
 const profileSchema = z.object({
   country: z.string().max(100, "Країна не може перевищувати 100 символів").optional(),
   city: z.string().max(100, "Місто не може перевищувати 100 символів").optional(),
+  date_of_birth: z.string().optional().nullable(),
   categories: z.array(z.string()).optional()
 });
 
@@ -40,6 +41,7 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
   const { categories: CATEGORIES } = useDynamicCategories();
   const [country, setCountry] = useState(user?.country || "");
   const [city, setCity] = useState(user?.city || "");
+  const [dateOfBirth, setDateOfBirth] = useState<string>(user?.date_of_birth || "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar_url || user?.avatarUrl || null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -83,6 +85,7 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
     if (user) {
       setCountry(user.country || "");
       setCity(user.city || "");
+      setDateOfBirth(user.date_of_birth || "");
       setAvatarUrl(user.avatar_url || user.avatarUrl || null);
       setSelectedCategories(user.categories || []);
     }
@@ -92,6 +95,7 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
     const userData = {
       country: country.trim(),
       city: city.trim(),
+      date_of_birth: dateOfBirth || null,
       categories: selectedCategories
     };
 
@@ -391,7 +395,21 @@ export function ProfileEditor({ user, onUpdate = () => {}, onSave = () => {} }: 
                   maxLength={100}
                 />
               </div>
-              
+
+              <div>
+                <Label htmlFor="dob">Дата народження</Label>
+                <Input
+                  id="dob"
+                  type="date"
+                  value={dateOfBirth}
+                  max={new Date().toISOString().split("T")[0]}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Потрібна для подарунку на день народження (для VIP-учасників).
+                </p>
+              </div>
+
               <div>
                 <Label>Професійні категорії</Label>
                 <div className="grid grid-cols-2 gap-2 mt-2">

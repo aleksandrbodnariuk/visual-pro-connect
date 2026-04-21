@@ -13,6 +13,8 @@ import { uk } from "date-fns/locale";
 import { getTier } from "@/lib/certificateTiers";
 import { useUserCertificate } from "@/hooks/certificates/useUserCertificate";
 import { CertificateBadge } from "@/components/certificates/CertificateBadge";
+import { useVipBenefits } from "@/hooks/vip/useVipBenefits";
+import { Crown, Percent } from "lucide-react";
 import { toast } from "sonner";
 
 interface PurchaseRequest {
@@ -43,6 +45,7 @@ export default function MoiSertyfikaty() {
   const [requests, setRequests] = useState<PurchaseRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const { certificate } = useUserCertificate(user?.id);
+  const vipBenefits = useVipBenefits(user?.id);
 
   const load = async () => {
     if (!user) return;
@@ -106,6 +109,30 @@ export default function MoiSertyfikaty() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">{certificate.note}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* VIP discount notice (cumulative with certificate) */}
+          {vipBenefits.hasVip && vipBenefits.discountPercent > 0 && (
+            <Card className="border-amber-500/40 bg-gradient-to-br from-amber-500/10 to-yellow-500/5">
+              <CardContent className="pt-6 flex items-center gap-3 flex-wrap">
+                <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                  <Crown className="h-6 w-6 text-amber-600" />
+                </div>
+                <div className="flex-1 min-w-[200px]">
+                  <div className="font-bold flex items-center gap-2 flex-wrap">
+                    Активна VIP-знижка <Badge className="bg-amber-500 text-amber-950 border-0 gap-1"><Percent className="h-3 w-3" />{vipBenefits.discountPercent}%</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {certificate
+                      ? `Сумується з вашим сертифікатом (${certificate.discount_value}${certificate.discount_type === "percent" ? "%" : "₴"}).`
+                      : "Знижка застосовується автоматично до послуг наших фахівців."}
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => navigate("/vip/moi")}>
+                  Мій VIP
+                </Button>
               </CardContent>
             </Card>
           )}

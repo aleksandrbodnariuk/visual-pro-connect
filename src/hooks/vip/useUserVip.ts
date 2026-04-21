@@ -10,6 +10,8 @@ export interface UserVipMembership {
   is_lifetime: boolean;
   custom_name_color: string | null;
   custom_banner_url: string | null;
+  last_monthly_bonus_at: string | null;
+  last_birthday_gift_year: number | null;
 }
 
 /**

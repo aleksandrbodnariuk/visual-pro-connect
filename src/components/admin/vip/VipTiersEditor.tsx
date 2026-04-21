@@ -43,6 +43,9 @@ interface DraftForm {
   sort_order: string;
   is_active: boolean;
   highlight: boolean;
+  discount_percent: string;
+  monthly_bonus_uah: string;
+  birthday_bonus_uah: string;
 }
 
 const empty = (): DraftForm => ({
@@ -59,6 +62,9 @@ const empty = (): DraftForm => ({
   sort_order: "10",
   is_active: true,
   highlight: false,
+  discount_percent: "10",
+  monthly_bonus_uah: "200",
+  birthday_bonus_uah: "500",
 });
 
 const toDraft = (r: VipTierRow): DraftForm => ({
@@ -75,6 +81,9 @@ const toDraft = (r: VipTierRow): DraftForm => ({
   sort_order: String(r.sort_order),
   is_active: r.is_active,
   highlight: r.highlight,
+  discount_percent: String(r.discount_percent ?? 0),
+  monthly_bonus_uah: String(r.monthly_bonus_uah ?? 0),
+  birthday_bonus_uah: String(r.birthday_bonus_uah ?? 0),
 });
 
 export function VipTiersEditor() {
@@ -114,6 +123,9 @@ export function VipTiersEditor() {
       sort_order: parseInt(d.sort_order) || 0,
       is_active: d.is_active,
       highlight: d.highlight,
+      discount_percent: parseFloat(d.discount_percent) || 0,
+      monthly_bonus_uah: parseFloat(d.monthly_bonus_uah) || 0,
+      birthday_bonus_uah: parseFloat(d.birthday_bonus_uah) || 0,
     };
 
     const { error } = editing.mode === "create"
@@ -179,6 +191,11 @@ export function VipTiersEditor() {
                     </div>
                     <div className="text-sm text-muted-foreground mt-0.5 truncate">{r.description || "—"}</div>
                     <div className="text-sm font-bold mt-1">{r.price_uah}₴ <span className="text-xs font-normal text-muted-foreground">за {r.duration_days} днів</span></div>
+                    <div className="flex flex-wrap gap-1 mt-1.5 text-[10px]">
+                      {r.discount_percent > 0 && <Badge variant="outline">-{r.discount_percent}%</Badge>}
+                      {r.monthly_bonus_uah > 0 && <Badge variant="outline">+{r.monthly_bonus_uah}₴/міс</Badge>}
+                      {r.birthday_bonus_uah > 0 && <Badge variant="outline">🎂 {r.birthday_bonus_uah}₴</Badge>}
+                    </div>
                   </div>
                   <div className="flex items-center gap-1">
                     <Button size="icon" variant="ghost" onClick={() => toggleActive(r)}>
@@ -244,6 +261,28 @@ export function VipTiersEditor() {
                 <Label className="mb-1 block">Переваги (по одній в рядок)</Label>
                 <Textarea rows={4} value={editing.draft.perks}
                   onChange={(e) => setEditing({ ...editing, draft: { ...editing.draft, perks: e.target.value } })} />
+              </div>
+              <div className="rounded-lg border bg-amber-500/5 p-3 space-y-2">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Економічні переваги
+                </Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label className="mb-1 block text-xs">Знижка %</Label>
+                    <Input type="number" min="0" max="100" value={editing.draft.discount_percent}
+                      onChange={(e) => setEditing({ ...editing, draft: { ...editing.draft, discount_percent: e.target.value } })} />
+                  </div>
+                  <div>
+                    <Label className="mb-1 block text-xs">Бонус ₴/міс</Label>
+                    <Input type="number" min="0" value={editing.draft.monthly_bonus_uah}
+                      onChange={(e) => setEditing({ ...editing, draft: { ...editing.draft, monthly_bonus_uah: e.target.value } })} />
+                  </div>
+                  <div>
+                    <Label className="mb-1 block text-xs">ДН ₴</Label>
+                    <Input type="number" min="0" value={editing.draft.birthday_bonus_uah}
+                      onChange={(e) => setEditing({ ...editing, draft: { ...editing.draft, birthday_bonus_uah: e.target.value } })} />
+                  </div>
+                </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>

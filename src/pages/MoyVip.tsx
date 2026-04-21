@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useUserVip } from "@/hooks/vip/useUserVip";
 import { useVipTiers } from "@/hooks/vip/useVipTiers";
 import { getVipTier } from "@/lib/vipTiers";
+import { VipBenefitsCard } from "@/components/vip/VipBenefitsCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -157,6 +158,8 @@ export default function MoyVip() {
                   </div>
                 )}
               </Card>
+
+              <VipBenefitsCard userId={user.id} />
             </>
           ) : (
             <Card className="p-8 text-center">

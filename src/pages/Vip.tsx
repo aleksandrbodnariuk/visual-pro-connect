@@ -111,6 +111,24 @@ export default function Vip() {
                         <span>{p}</span>
                       </li>
                     ))}
+                    {tier.discount_percent > 0 && (
+                      <li className="flex items-start gap-2 text-sm font-semibold">
+                        <Check className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                        <span>Постійна знижка <strong>{tier.discount_percent}%</strong> на всі послуги</span>
+                      </li>
+                    )}
+                    {tier.monthly_bonus_uah > 0 && (
+                      <li className="flex items-start gap-2 text-sm font-semibold">
+                        <Check className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                        <span>Щомісячний бонус <strong>{tier.monthly_bonus_uah}₴</strong> сертифікатом</span>
+                      </li>
+                    )}
+                    {tier.birthday_bonus_uah > 0 && (
+                      <li className="flex items-start gap-2 text-sm font-semibold">
+                        <Check className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                        <span>🎂 Подарунок на ДН: <strong>{tier.birthday_bonus_uah}₴</strong></span>
+                      </li>
+                    )}
                   </ul>
 
                   <div className="grid grid-cols-2 gap-2">
