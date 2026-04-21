@@ -2,7 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { User, Search, LogOut, Crown, TrendingUp } from "lucide-react";
+import { User, Search, LogOut, Crown, TrendingUp, Sparkles, BookOpen } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +18,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
 import { User as UserType } from "@/hooks/users/types";
 import { useSupabaseAuth } from "@/hooks/auth/useSupabaseAuth";
+import { useUserVip } from "@/hooks/vip/useUserVip";
 
 interface UserMenuProps {
   currentUser: UserType | null;
@@ -28,6 +29,8 @@ export function UserMenu({ currentUser }: UserMenuProps) {
   const { language } = useLanguage();
   const t = translations[language];
   const { signOut } = useSupabaseAuth();
+  const { vip } = useUserVip(currentUser?.id);
+  const hasActiveVip = !!vip && (vip.is_lifetime || (vip.expires_at && new Date(vip.expires_at) > new Date()));
   const [avatar, setAvatar] = useState<string | null | undefined>(currentUser?.avatarUrl || currentUser?.avatar_url);
   
   // Listen for avatar updates
@@ -145,6 +148,19 @@ export function UserMenu({ currentUser }: UserMenuProps) {
               <DropdownMenuItem onClick={() => handleNavigate('/stock-market')}>
                 <TrendingUp className="mr-2 h-4 w-4" />
                 <span>Ринок акцій</span>
+              </DropdownMenuItem>
+            </>
+          )}
+
+          {hasActiveVip && (
+            <>
+              <DropdownMenuItem onClick={() => handleNavigate('/vip/moi')}>
+                <Sparkles className="mr-2 h-4 w-4 text-amber-500" />
+                <span>Мій VIP</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleNavigate('/vip/tools')}>
+                <BookOpen className="mr-2 h-4 w-4 text-amber-500" />
+                <span>VIP-інструменти</span>
               </DropdownMenuItem>
             </>
           )}
