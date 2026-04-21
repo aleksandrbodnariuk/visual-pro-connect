@@ -5,7 +5,7 @@ export interface UserCertificate {
   id: string;
   user_id: string;
   is_active: boolean;
-  discount_type: "fixed" | "percent";
+  discount_type: "fixed" | "percent" | "uah";
   discount_value: number;
   note: string | null;
 }
