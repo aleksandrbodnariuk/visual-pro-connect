@@ -43,6 +43,8 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Sertyfikaty = lazy(() => import("./pages/Sertyfikaty"));
 const MoiSertyfikaty = lazy(() => import("./pages/MoiSertyfikaty"));
+const Vip = lazy(() => import("./pages/Vip"));
+const MoyVip = lazy(() => import("./pages/MoyVip"));
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -105,6 +107,8 @@ const AppContent = () => {
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/sertyfikaty" element={<Sertyfikaty />} />
             <Route path="/sertyfikaty/moi" element={<MoiSertyfikaty />} />
+            <Route path="/vip" element={<Vip />} />
+            <Route path="/vip/moi" element={<MoyVip />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

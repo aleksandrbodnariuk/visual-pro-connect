@@ -209,6 +209,132 @@
   }
 }
 
+/* ============ VIP / Premium Effects ============ */
+@layer utilities {
+  /* Glowing badge */
+  .vip-badge-glow {
+    animation: vip-glow 2.4s ease-in-out infinite;
+  }
+
+  /* Banner shimmer (Silver) */
+  .vip-anim-shimmer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      115deg,
+      transparent 30%,
+      hsl(0 0% 100% / 0.18) 50%,
+      transparent 70%
+    );
+    background-size: 200% 100%;
+    animation: vip-shimmer 3.5s linear infinite;
+    mix-blend-mode: overlay;
+  }
+
+  /* Banner gold-shimmer (Gold) */
+  .vip-anim-gold-shimmer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(
+        115deg,
+        transparent 25%,
+        hsl(45 100% 70% / 0.35) 50%,
+        transparent 75%
+      );
+    background-size: 200% 100%;
+    animation: vip-shimmer 2.8s linear infinite;
+    mix-blend-mode: screen;
+  }
+  .vip-anim-gold-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      circle at 30% 50%,
+      hsl(40 100% 60% / 0.28),
+      transparent 60%
+    );
+    animation: vip-pulse 4s ease-in-out infinite;
+    mix-blend-mode: screen;
+  }
+
+  /* Banner platinum-aurora (Platinum) */
+  .vip-anim-platinum-aurora::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(
+        130deg,
+        hsl(190 95% 70% / 0.35),
+        hsl(280 90% 70% / 0.35),
+        hsl(330 95% 70% / 0.35)
+      );
+    background-size: 250% 250%;
+    animation: vip-aurora 8s ease-in-out infinite;
+    mix-blend-mode: screen;
+  }
+  .vip-anim-platinum-aurora::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(
+        115deg,
+        transparent 35%,
+        hsl(0 0% 100% / 0.25) 50%,
+        transparent 65%
+      );
+    background-size: 200% 100%;
+    animation: vip-shimmer 3s linear infinite;
+    mix-blend-mode: overlay;
+  }
+
+  /* Animated VIP name (text gradient flow) */
+  .vip-name-animated {
+    background: linear-gradient(
+      90deg,
+      hsl(45 95% 60%),
+      hsl(35 100% 70%),
+      hsl(50 100% 75%),
+      hsl(45 95% 60%)
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: vip-name-flow 4s ease-in-out infinite;
+  }
+}
+
+@keyframes vip-glow {
+  0%, 100% { box-shadow: 0 0 12px hsl(45 95% 60% / 0.45); }
+  50% { box-shadow: 0 0 22px hsl(45 100% 70% / 0.75); }
+}
+
+@keyframes vip-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes vip-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes vip-aurora {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes vip-name-flow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
 @media (min-width: 768px) {
   /* На десктопі не потрібен цей відступ */
   .pb-safe-nav {
