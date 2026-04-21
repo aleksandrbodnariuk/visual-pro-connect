@@ -2,16 +2,20 @@ import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft, Package2 } from 'lucide-react';
+import { Plus, ArrowLeft, Package2, Bell, Send } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useMyListings } from '@/hooks/marketplace/useMarketplaceListings';
 import { ListingCard } from '@/components/marketplace/ListingCard';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { IncomingReservationsList, OutgoingReservationsList } from '@/components/marketplace/ReservationsList';
+import { useIncomingReservations, useOutgoingReservations } from '@/hooks/marketplace/useMarketplaceReservations';
 
 export default function MarketplaceMine() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { data: listings = [], isLoading } = useMyListings();
+  const { data: incoming = [] } = useIncomingReservations();
+  const { data: outgoing = [] } = useOutgoingReservations();
 
   useEffect(() => { document.title = 'Мої оголошення — Маркетплейс'; }, []);
   useEffect(() => { if (!isAuthenticated) navigate('/auth'); }, [isAuthenticated, navigate]);
@@ -19,6 +23,8 @@ export default function MarketplaceMine() {
   const active = listings.filter((l) => l.status === 'active' || l.status === 'reserved');
   const sold = listings.filter((l) => l.status === 'sold');
   const archived = listings.filter((l) => l.status === 'archived' || l.status === 'draft');
+
+  const pendingIncoming = incoming.filter((r) => r.status === 'pending').length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -38,10 +44,23 @@ export default function MarketplaceMine() {
         </h1>
 
         <Tabs defaultValue="active">
-          <TabsList>
+          <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="active">Активні ({active.length})</TabsTrigger>
             <TabsTrigger value="sold">Продані ({sold.length})</TabsTrigger>
             <TabsTrigger value="archived">Архів ({archived.length})</TabsTrigger>
+            <TabsTrigger value="incoming" className="gap-1">
+              <Bell className="h-3.5 w-3.5" />
+              Запити на резервування ({incoming.length})
+              {pendingIncoming > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-destructive text-destructive-foreground">
+                  {pendingIncoming}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="outgoing" className="gap-1">
+              <Send className="h-3.5 w-3.5" />
+              Мої резервування ({outgoing.length})
+            </TabsTrigger>
           </TabsList>
 
           {[
@@ -63,6 +82,13 @@ export default function MarketplaceMine() {
               )}
             </TabsContent>
           ))}
+
+          <TabsContent value="incoming" className="mt-4">
+            <IncomingReservationsList />
+          </TabsContent>
+          <TabsContent value="outgoing" className="mt-4">
+            <OutgoingReservationsList />
+          </TabsContent>
         </Tabs>
       </div>
     </div>

@@ -4,13 +4,14 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MapPin, Eye, MessageSquare, Phone, ArrowLeft, User as UserIcon, Edit, Trash2 } from 'lucide-react';
+import { Heart, MapPin, Eye, MessageSquare, Phone, ArrowLeft, User as UserIcon, Trash2, Clock, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useMarketplaceListing, useUpdateListingStatus, useDeleteListing } from '@/hooks/marketplace/useMarketplaceListings';
 import { useFavoriteIds, useToggleFavorite } from '@/hooks/marketplace/useMarketplaceFavorites';
+import { useMyReservationForListing, useUpdateReservation, RESERVATION_STATUS_LABELS } from '@/hooks/marketplace/useMarketplaceReservations';
+import { ReserveDialog } from '@/components/marketplace/ReserveDialog';
 import { CONDITION_LABELS, CURRENCY_SYMBOLS, DEAL_TYPE_LABELS, STATUS_LABELS } from '@/hooks/marketplace/types';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export default function MarketplaceListing() {
@@ -24,6 +25,9 @@ export default function MarketplaceListing() {
   const deleteListing = useDeleteListing();
   const [activeImg, setActiveImg] = useState(0);
   const [seller, setSeller] = useState<any>(null);
+  const [reserveOpen, setReserveOpen] = useState(false);
+  const { data: myReservation } = useMyReservationForListing(id);
+  const updateReservation = useUpdateReservation();
 
   const isOwner = user?.id === listing?.user_id;
   const isFav = listing ? favIds?.has(listing.id) ?? false : false;
@@ -71,20 +75,9 @@ export default function MarketplaceListing() {
     navigate(`/messages?to=${listing.user_id}&topic=${encodeURIComponent('Цікавить ваше оголошення: ' + listing.title)}`);
   };
 
-  const handleReserve = async () => {
+  const handleReserveClick = () => {
     if (!isAuthenticated || !user?.id) { navigate('/auth'); return; }
-    try {
-      const { error } = await (supabase as any).from('marketplace_reservations').insert({
-        listing_id: listing.id,
-        buyer_id: user.id,
-        seller_id: listing.user_id,
-        status: 'pending',
-      });
-      if (error) throw error;
-      toast.success('Запит на резервування надіслано');
-    } catch (e: any) {
-      toast.error(e.message || 'Помилка резервування');
-    }
+    setReserveOpen(true);
   };
 
   return (
@@ -174,14 +167,37 @@ export default function MarketplaceListing() {
               </Card>
             )}
 
-            {!isOwner && listing.status === 'active' && (
+            {!isOwner && (listing.status === 'active' || listing.status === 'reserved') && (
               <div className="space-y-2">
                 <Button className="w-full" size="lg" onClick={handleContactSeller}>
                   <MessageSquare className="h-4 w-4 mr-1" /> Написати продавцю
                 </Button>
-                <Button variant="outline" className="w-full" onClick={handleReserve}>
-                  Зарезервувати
-                </Button>
+
+                {myReservation ? (
+                  <Card className="p-3 space-y-2 bg-muted/30">
+                    <div className="flex items-center gap-2 text-sm">
+                      {myReservation.status === 'accepted'
+                        ? <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        : <Clock className="h-4 w-4 text-amber-500" />}
+                      <span>Ваш запит: <strong>{RESERVATION_STATUS_LABELS[myReservation.status]}</strong></span>
+                    </div>
+                    {(myReservation.status === 'pending' || myReservation.status === 'accepted') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => updateReservation.mutate({ id: myReservation.id, status: 'cancelled', listing_id: listing.id })}
+                      >
+                        Скасувати резервування
+                      </Button>
+                    )}
+                  </Card>
+                ) : listing.status === 'active' ? (
+                  <Button variant="outline" className="w-full" onClick={handleReserveClick}>
+                    Зарезервувати
+                  </Button>
+                ) : null}
+
                 {listing.contact_phone && (listing.contact_method === 'phone' || listing.contact_method === 'both') && (
                   <Button variant="ghost" className="w-full" asChild>
                     <a href={`tel:${listing.contact_phone}`}><Phone className="h-4 w-4 mr-1" />{listing.contact_phone}</a>
@@ -220,6 +236,16 @@ export default function MarketplaceListing() {
           </div>
         </div>
       </div>
+
+      {!isOwner && (
+        <ReserveDialog
+          open={reserveOpen}
+          onOpenChange={setReserveOpen}
+          listingId={listing.id}
+          sellerId={listing.user_id}
+          listingTitle={listing.title}
+        />
+      )}
     </div>
   );
 }
