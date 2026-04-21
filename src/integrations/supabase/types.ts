@@ -1979,6 +1979,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_vip_memberships: {
+        Row: {
+          created_at: string
+          custom_banner_url: string | null
+          custom_name_color: string | null
+          expires_at: string | null
+          granted_by: string | null
+          id: string
+          is_lifetime: boolean
+          started_at: string
+          tier: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_banner_url?: string | null
+          custom_name_color?: string | null
+          expires_at?: string | null
+          granted_by?: string | null
+          id?: string
+          is_lifetime?: boolean
+          started_at?: string
+          tier: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_banner_url?: string | null
+          custom_name_color?: string | null
+          expires_at?: string | null
+          granted_by?: string | null
+          id?: string
+          is_lifetime?: boolean
+          started_at?: string
+          tier?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           avatar_url: string | null
@@ -2051,6 +2093,117 @@ export type Database = {
         }
         Relationships: []
       }
+      vip_purchase_requests: {
+        Row: {
+          admin_note: string | null
+          amount_uah: number
+          approved_at: string | null
+          approved_by: string | null
+          buyer_id: string
+          buyer_note: string | null
+          created_at: string
+          duration_days: number
+          id: string
+          is_gift: boolean
+          membership_id: string | null
+          recipient_id: string | null
+          recipient_phone: string | null
+          status: string
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount_uah: number
+          approved_at?: string | null
+          approved_by?: string | null
+          buyer_id: string
+          buyer_note?: string | null
+          created_at?: string
+          duration_days: number
+          id?: string
+          is_gift?: boolean
+          membership_id?: string | null
+          recipient_id?: string | null
+          recipient_phone?: string | null
+          status?: string
+          tier: string
+          updated_at?: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount_uah?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          buyer_id?: string
+          buyer_note?: string | null
+          created_at?: string
+          duration_days?: number
+          id?: string
+          is_gift?: boolean
+          membership_id?: string | null
+          recipient_id?: string | null
+          recipient_phone?: string | null
+          status?: string
+          tier?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vip_tiers: {
+        Row: {
+          badge_icon: string
+          banner_animation: string
+          created_at: string
+          description: string | null
+          duration_days: number
+          gradient: string
+          highlight: boolean
+          id: string
+          is_active: boolean
+          label: string
+          name_color: string | null
+          perks: Json
+          price_uah: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          badge_icon?: string
+          banner_animation?: string
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          gradient?: string
+          highlight?: boolean
+          id: string
+          is_active?: boolean
+          label: string
+          name_color?: string | null
+          perks?: Json
+          price_uah?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          badge_icon?: string
+          banner_animation?: string
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          gradient?: string
+          highlight?: boolean
+          id?: string
+          is_active?: boolean
+          label?: string
+          name_color?: string | null
+          perks?: Json
+          price_uah?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -2083,6 +2236,10 @@ export type Database = {
       approve_share_transaction: {
         Args: { _transaction_id: string }
         Returns: undefined
+      }
+      approve_vip_purchase: {
+        Args: { _admin_note?: string; _request_id: string }
+        Returns: string
       }
       assign_default_role: { Args: { _user_id: string }; Returns: undefined }
       can_access_user_public_data: {
@@ -2422,6 +2579,7 @@ export type Database = {
         }[]
       }
       get_user_roles_array: { Args: { user_id: string }; Returns: string[] }
+      get_user_vip_tier: { Args: { _user_id: string }; Returns: string }
       get_users_for_admin: {
         Args: never
         Returns: {
@@ -2465,6 +2623,7 @@ export type Database = {
           visits_year: number
         }[]
       }
+      has_active_vip: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
