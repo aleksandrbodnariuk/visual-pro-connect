@@ -16,9 +16,11 @@ import { CONDITION_LABELS, DEAL_TYPE_LABELS, type MarketplaceCondition, type Mar
 import { uploadToStorage } from '@/lib/storage';
 import { toast } from 'sonner';
 import { VipBoostToggle } from '@/components/marketplace/VipBoostToggle';
+import { compressImageAsFile, OUTPUT_FORMAT, OUTPUT_EXTENSION } from '@/lib/imageCompression';
 
 const MAX_IMAGES = 8;
 const MAX_IMAGE_SIZE_MB = 5;
+const HEIC_TYPES = ['image/heic', 'image/heif'];
 
 export default function MarketplaceNew() {
   const navigate = useNavigate();
@@ -52,11 +54,20 @@ export default function MarketplaceNew() {
     const arr = Array.from(files);
     const room = MAX_IMAGES - images.length;
     const accepted = arr.slice(0, room).filter((f) => {
+      const lower = f.name.toLowerCase();
+      if (HEIC_TYPES.includes(f.type) || lower.endsWith('.heic') || lower.endsWith('.heif')) {
+        toast.error(`${f.name}: формат HEIC не підтримується. Конвертуйте у JPEG/PNG.`);
+        return false;
+      }
       if (f.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
         toast.error(`${f.name}: більше ${MAX_IMAGE_SIZE_MB}МБ`);
         return false;
       }
-      return f.type.startsWith('image/');
+      if (!f.type.startsWith('image/')) {
+        toast.error(`${f.name}: підтримуються лише зображення`);
+        return false;
+      }
+      return true;
     });
     setImages((prev) => [...prev, ...accepted]);
     setPreviews((prev) => [...prev, ...accepted.map((f) => URL.createObjectURL(f))]);
