@@ -59,10 +59,10 @@ const TOOLS: Tool[] = [
     id: "planner",
     title: "Планувальник подій",
     description:
-      "Календар проєктів та подій із синхронізацією з замовленнями. Незабаром.",
+      "Календар подій із типами (зйомки, зустрічі, дедлайни) та швидким переглядом по днях.",
     icon: CalendarRange,
     path: "/vip/planner",
-    available: false,
+    available: true,
   },
   {
     id: "analytics",
