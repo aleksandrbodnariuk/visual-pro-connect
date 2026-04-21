@@ -93,11 +93,11 @@ export default function MarketplaceListing() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <div className="aspect-square bg-muted rounded-lg overflow-hidden">
+            <div className="aspect-square bg-black rounded-lg overflow-hidden flex items-center justify-center">
               {cover ? (
-                <img src={cover} alt={listing.title} className="w-full h-full object-cover" />
+                <img src={cover} alt={listing.title} className="max-w-full max-h-full w-auto h-auto object-contain" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground">Без фото</div>
+                <div className="text-muted-foreground">Без фото</div>
               )}
             </div>
             {images.length > 1 && (
@@ -107,11 +107,11 @@ export default function MarketplaceListing() {
                     key={img.id}
                     onClick={() => setActiveImg(i)}
                     className={cn(
-                      'aspect-square rounded overflow-hidden border-2',
+                      'aspect-square rounded overflow-hidden border-2 bg-black flex items-center justify-center',
                       activeImg === i ? 'border-primary' : 'border-transparent'
                     )}
                   >
-                    <img src={img.image_url} alt="" className="w-full h-full object-cover" />
+                    <img src={img.image_url} alt="" className="max-w-full max-h-full object-contain" />
                   </button>
                 ))}
               </div>
