@@ -83,6 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('Auth state changed:', event, session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
+        // Update analytics tracker so future page views include user_id
+        import('@/lib/analytics').then((m) => m.setAnalyticsUserId(session?.user?.id ?? null));
 
         if (session?.user) {
           // Defer to avoid deadlock in auth callback
@@ -102,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('Initial session:', session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
+      import('@/lib/analytics').then((m) => m.setAnalyticsUserId(session?.user?.id ?? null));
       if (!session?.user) {
         setLoading(false);
       }
