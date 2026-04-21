@@ -208,7 +208,9 @@ export function CertificatesTab() {
                 return (
                   <div
                     key={u.id}
-                    className="flex flex-col gap-3 rounded-lg border bg-card p-4 md:flex-row md:items-center md:gap-4"
+                    className={`flex flex-col gap-3 rounded-lg border bg-card p-4 md:flex-row md:items-center md:gap-4 transition-colors ${
+                      draft.dirty ? "border-amber-500/60 bg-amber-500/5" : ""
+                    }`}
                   >
                     <div className="flex items-center gap-3 min-w-0 md:w-64">
                       <div className="relative">
