@@ -144,12 +144,22 @@ export default function VipTools() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {TOOLS.map((tool) => {
               const Icon = tool.icon;
-              const locked = !vip;
+              const lockedByVip = !vip;
+              const comingSoon = !tool.available;
+              const disabled = lockedByVip || comingSoon;
               return (
                 <Card
                   key={tool.id}
-                  className="p-6 hover:shadow-md transition-shadow flex flex-col gap-3"
+                  className="p-6 hover:shadow-md transition-shadow flex flex-col gap-3 relative"
                 >
+                  {comingSoon && (
+                    <Badge
+                      variant="outline"
+                      className="absolute top-3 right-3 text-[10px] uppercase tracking-wider"
+                    >
+                      Незабаром
+                    </Badge>
+                  )}
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-xl bg-amber-500/15 flex items-center justify-center">
                       <Icon className="h-6 w-6 text-amber-600" />
@@ -159,11 +169,11 @@ export default function VipTools() {
                   <p className="text-sm text-muted-foreground flex-1">{tool.description}</p>
                   <Button
                     onClick={() => navigate(tool.path)}
-                    disabled={locked}
-                    variant={locked ? "outline" : "default"}
+                    disabled={disabled}
+                    variant={disabled ? "outline" : "default"}
                     className="w-full"
                   >
-                    {locked ? "Потрібен VIP" : "Відкрити"}
+                    {lockedByVip ? "Потрібен VIP" : comingSoon ? "Незабаром" : "Відкрити"}
                   </Button>
                 </Card>
               );
