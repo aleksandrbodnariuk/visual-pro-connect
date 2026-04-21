@@ -8,6 +8,11 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { CertificateBadge } from "@/components/certificates/CertificateBadge";
+import { VipBadge } from "@/components/vip/VipBadge";
+import { useUserVip } from "@/hooks/vip/useUserVip";
+import { useVipTiers } from "@/hooks/vip/useVipTiers";
+import { getVipTier } from "@/lib/vipTiers";
+import { cn } from "@/lib/utils";
 
 export interface ProfileHeaderProps {
   user: {
@@ -51,6 +56,11 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
     profession,
     isCurrentUser
   } = user;
+
+  const { vip } = useUserVip(userId);
+  const { tiers } = useVipTiers(false);
+  const vipTier = vip ? getVipTier(vip.tier, tiers) : null;
+  const customNameColor = vip?.custom_name_color || vipTier?.name_color || null;
 
   // Перевіряємо, чи профільований користувач вже є в друзях
   useEffect(() => {
@@ -109,6 +119,9 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
           }}
           onError={handleCoverError}
         />
+        {vipTier && (
+          <div className={cn("absolute inset-0 pointer-events-none", `vip-anim-${vipTier.banner_animation}`)} />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
       </div>
 
@@ -133,9 +146,20 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
                 size="md"
                 className="absolute -bottom-1 -right-1 z-10"
               />
+              <VipBadge
+                userId={userId}
+                size="md"
+                membership={vip}
+                className="absolute -top-1 -right-1 z-10"
+              />
             </div>
             <div className="mt-4">
-              <h1 className="text-2xl font-bold">{name !== "undefined undefined" ? name : "Користувач"}</h1>
+              <h1
+                className="text-2xl font-bold"
+                style={customNameColor ? { color: customNameColor } : undefined}
+              >
+                {name !== "undefined undefined" ? name : "Користувач"}
+              </h1>
               <div className="flex items-center gap-2">
                 {username && !username.startsWith('user_') && (
                   <span className="text-muted-foreground">@{username}</span>
