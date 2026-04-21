@@ -1,8 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Heart, MapPin, Eye } from 'lucide-react';
+import { Heart, MapPin, Eye, Crown } from 'lucide-react';
 import { CONDITION_LABELS, CURRENCY_SYMBOLS, STATUS_LABELS, type MarketplaceListingWithImages } from '@/hooks/marketplace/types';
 import { useFavoriteIds, useToggleFavorite } from '@/hooks/marketplace/useMarketplaceFavorites';
 import { cn } from '@/lib/utils';
@@ -18,9 +17,15 @@ export function ListingCard({ listing }: Props) {
 
   const cover = listing.cover_image_url || listing.images?.[0]?.image_url;
   const isReserved = listing.status === 'reserved';
+  const isVip = listing.is_vip_boost;
 
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow group relative flex flex-col">
+    <Card
+      className={cn(
+        'overflow-hidden hover:shadow-md transition-all group relative flex flex-col',
+        isVip && 'ring-2 ring-amber-500/40 shadow-amber-500/10 shadow-lg hover:shadow-amber-500/20'
+      )}
+    >
       <Link to={`/market/${listing.id}`} className="block">
         <div className="aspect-square bg-muted relative overflow-hidden">
           {cover ? (
@@ -35,8 +40,10 @@ export function ListingCard({ listing }: Props) {
               Без фото
             </div>
           )}
-          {listing.is_vip_boost && (
-            <Badge className="absolute top-2 left-2 bg-amber-500 hover:bg-amber-500 text-white">VIP</Badge>
+          {isVip && (
+            <Badge className="absolute top-2 left-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-600 text-white border-0 shadow-md gap-1">
+              <Crown className="h-3 w-3" /> VIP
+            </Badge>
           )}
           {isReserved && (
             <Badge variant="secondary" className="absolute bottom-2 left-2">{STATUS_LABELS.reserved}</Badge>

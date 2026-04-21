@@ -15,6 +15,7 @@ import { useCreateListing } from '@/hooks/marketplace/useMarketplaceListings';
 import { CONDITION_LABELS, DEAL_TYPE_LABELS, type MarketplaceCondition, type MarketplaceCurrency, type MarketplaceDealType } from '@/hooks/marketplace/types';
 import { uploadToStorage } from '@/lib/storage';
 import { toast } from 'sonner';
+import { VipBoostToggle } from '@/components/marketplace/VipBoostToggle';
 
 const MAX_IMAGES = 8;
 const MAX_IMAGE_SIZE_MB = 5;
@@ -38,6 +39,7 @@ export default function MarketplaceNew() {
   const [images, setImages] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [vipBoost, setVipBoost] = useState(false);
 
   useEffect(() => { document.title = 'Подати оголошення — Маркетплейс'; }, []);
 
@@ -95,6 +97,7 @@ export default function MarketplaceNew() {
           contact_phone: contactPhone.trim() || null,
           contact_method: contactPhone.trim() ? 'both' : 'chat',
           status: 'active',
+          is_vip_boost: vipBoost,
         },
         imageUrls,
       });
@@ -188,6 +191,8 @@ export default function MarketplaceNew() {
             <Label>Контактний телефон (опціонально)</Label>
             <Input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+380..." />
           </div>
+
+          <VipBoostToggle value={vipBoost} onChange={setVipBoost} />
 
           <div className="space-y-2">
             <Label>Фото (до {MAX_IMAGES})</Label>
