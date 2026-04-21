@@ -19,6 +19,9 @@ const rowToTier = (r: any): VipTier => ({
   name_color: r.name_color,
   banner_animation: r.banner_animation || "shimmer",
   highlight: !!r.highlight,
+  discount_percent: Number(r.discount_percent || 0),
+  monthly_bonus_uah: Number(r.monthly_bonus_uah || 0),
+  birthday_bonus_uah: Number(r.birthday_bonus_uah || 0),
 });
 
 /**

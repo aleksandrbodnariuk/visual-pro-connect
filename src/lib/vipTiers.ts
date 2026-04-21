@@ -10,6 +10,9 @@ export interface VipTier {
   name_color: string | null;
   banner_animation: string;
   highlight: boolean;
+  discount_percent: number;
+  monthly_bonus_uah: number;
+  birthday_bonus_uah: number;
 }
 
 export const FALLBACK_VIP_TIERS: VipTier[] = [
@@ -29,6 +32,9 @@ export const FALLBACK_VIP_TIERS: VipTier[] = [
     name_color: "#94a3b8",
     banner_animation: "shimmer",
     highlight: false,
+    discount_percent: 10,
+    monthly_bonus_uah: 200,
+    birthday_bonus_uah: 500,
   },
   {
     id: "gold",
@@ -47,6 +53,9 @@ export const FALLBACK_VIP_TIERS: VipTier[] = [
     name_color: "#f59e0b",
     banner_animation: "gold-shimmer",
     highlight: true,
+    discount_percent: 15,
+    monthly_bonus_uah: 500,
+    birthday_bonus_uah: 1000,
   },
   {
     id: "platinum",
@@ -66,6 +75,9 @@ export const FALLBACK_VIP_TIERS: VipTier[] = [
     name_color: "#a855f7",
     banner_animation: "platinum-aurora",
     highlight: false,
+    discount_percent: 20,
+    monthly_bonus_uah: 1000,
+    birthday_bonus_uah: 2000,
   },
 ];
 
