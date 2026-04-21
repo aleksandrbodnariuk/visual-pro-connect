@@ -58,25 +58,34 @@ export function VipManualGrant() {
     const d = draft(uid);
     setGranting(uid);
     const expires = d.lifetime ? null : new Date(Date.now() + (parseInt(d.days) || 30) * 86400000).toISOString();
-    const { error } = await supabase.from("user_vip_memberships" as any).upsert({
+    const payload = {
       user_id: uid,
       tier: d.tier,
       started_at: new Date().toISOString(),
       expires_at: expires,
       is_lifetime: d.lifetime,
-    }, { onConflict: "user_id" });
+    };
+    console.log("[VIP grant] payload:", payload);
+    const { data, error } = await supabase
+      .from("user_vip_memberships" as any)
+      .upsert(payload, { onConflict: "user_id" })
+      .select()
+      .single();
     setGranting(null);
-    if (error) toast.error("Помилка: " + error.message);
-    else {
-      toast.success("VIP видано");
+    if (error) {
+      console.error("[VIP grant] error:", error);
+      toast.error("Помилка: " + (error.message || error.code || "невідома"));
+      return;
+    }
+    console.log("[VIP grant] saved:", data);
+    toast.success("VIP видано та збережено");
       // notify
       await supabase.from("notifications").insert({
         user_id: uid,
         message: `🏆 Адміністратор видав вам ${tiers.find(t => t.id === d.tier)?.label || d.tier}`,
         link: "/vip/moi",
       });
-      load();
-    }
+    load();
   };
 
   const revoke = async (uid: string) => {
