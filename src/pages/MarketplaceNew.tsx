@@ -49,6 +49,16 @@ export default function MarketplaceNew() {
     if (!isAuthenticated) navigate('/auth');
   }, [isAuthenticated, navigate]);
 
+  // Очищаємо blob URL при розмонтуванні
+  useEffect(() => {
+    return () => {
+      previews.forEach((url) => {
+        if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+      });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
     const arr = Array.from(files);
