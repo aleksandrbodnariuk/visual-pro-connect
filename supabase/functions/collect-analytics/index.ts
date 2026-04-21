@@ -174,6 +174,7 @@ Deno.serve(async (req) => {
       utm_campaign: e.utm_campaign ? String(e.utm_campaign).slice(0, 200) : null,
       visitor_id: String(e.visitor_id || "unknown").slice(0, 100),
       session_id: String(e.session_id || "unknown").slice(0, 100),
+      user_id: e.user_id && typeof e.user_id === "string" ? e.user_id : null,
       country_code: geo.country_code || null,
       country: geo.country || null,
       region: geo.region || null,
