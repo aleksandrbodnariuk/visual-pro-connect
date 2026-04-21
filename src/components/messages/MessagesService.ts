@@ -60,150 +60,138 @@ export class MessagesService {
     chats: ChatItem[],
     activeChat?: ChatItem
   }> {
-    // Зберігаємо userId для підрахунку непрочитаних
     try {
-      if (import.meta.env.DEV) console.log("Fetching chats for user:", userId, "with receiver:", receiverId);
-      
-      // Отримуємо всі повідомлення користувача з Supabase (без join)
-      const { data: messageData, error: messagesError } = await supabase
-        .from('messages')
-        .select('id, sender_id, receiver_id, content, read, created_at, is_edited, edited_at, attachment_url, attachment_type')
-        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-        .order('created_at', { ascending: true });
-        
-      if (messagesError) {
-        if (import.meta.env.DEV) console.error("Помилка при завантаженні повідомлень:", messagesError);
-        if (receiverId) {
-          return MessagesService.createNewChat(receiverId, []);
-        }
+      // 1. Fetch all conversations the user is a member of
+      const { data: convs, error: convError } = await supabase
+        .rpc('get_user_conversations', { _user_id: userId });
+
+      if (convError) {
+        if (import.meta.env.DEV) console.error('Помилка при завантаженні бесід:', convError);
         return { chats: [] };
       }
-      
-      // Якщо є повідомлення в Supabase
-      if (messageData && messageData.length > 0) {
-        if (import.meta.env.DEV) console.log("Found messages in Supabase:", messageData);
-        
-        // Збираємо унікальні ID користувачів (крім поточного)
-        const userIds = new Set<string>();
-        messageData.forEach(msg => {
-          if (msg.sender_id !== userId) userIds.add(msg.sender_id);
-          if (msg.receiver_id !== userId) userIds.add(msg.receiver_id);
-        });
-        
-        // Отримуємо профілі користувачів через RPC
-        const { data: profilesData, error: profilesError } = await supabase
-          .rpc('get_safe_public_profiles_by_ids', { _ids: Array.from(userIds) });
-        
-        if (profilesError) {
-          if (import.meta.env.DEV) console.error("Помилка при отриманні профілів:", profilesError);
-        }
-        
-        // Створюємо Map профілів для швидкого доступу
-        const profilesMap = new Map<string, any>();
-        if (profilesData) {
-          profilesData.forEach((profile: any) => {
-            profilesMap.set(profile.id, profile);
-          });
-        }
-        
-        // Fetch last_seen for chat partners via RPC (bypasses RLS for non-admins)
-        const { data: lastSeenData } = await supabase
-          .rpc('get_users_last_seen', { _ids: Array.from(userIds) });
-        
-        const lastSeenMap = new Map<string, string | null>();
-        if (lastSeenData) {
-          lastSeenData.forEach((u: any) => {
-            lastSeenMap.set(u.id, u.last_seen);
-          });
-        }
-        
-        // Групуємо повідомлення по користувачам
-        const chatUsers = new Map<string, { id: string; messages: any[] }>();
-        
-        messageData.forEach(message => {
-          const chatPartnerId = message.sender_id === userId ? message.receiver_id : message.sender_id;
-          
-          if (!chatUsers.has(chatPartnerId)) {
-            chatUsers.set(chatPartnerId, {
-              id: chatPartnerId,
-              messages: []
-            });
-          }
-          
-          chatUsers.get(chatPartnerId)!.messages.push(message);
-        });
-        
-        // Перетворюємо Map в масив чатів
-        const chatsArray: ChatItem[] = Array.from(chatUsers.values()).map(chat => {
-          const profile = profilesMap.get(chat.id);
-          
-          // Сортуємо повідомлення за часом
-          const sortedMessages = chat.messages.sort((a, b) => 
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-          );
-          
-          const lastMessage = sortedMessages[sortedMessages.length - 1];
-          
-          // Підрахунок непрочитаних повідомлень (де receiver = поточний користувач, read = false)
-          const unreadMessages = sortedMessages.filter(
-            msg => msg.receiver_id === userId && msg.read === false
-          );
-          
-          const userLastSeen = lastSeenMap.get(chat.id) || null;
-          
-          return {
-            id: `chat-${chat.id}`,
-            user: {
-              id: chat.id,
-              name: profile?.full_name || 'Користувач',
-              username: 'user',
-              avatarUrl: profile?.avatar_url || '',
-              lastSeen: userLastSeen || '',
-              unreadCount: unreadMessages.length
-            },
-            messages: sortedMessages.map((msg) => ({
-              id: msg.id,
-              text: msg.content,
-              timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              isSender: msg.sender_id === userId,
-              isEdited: msg.is_edited || false,
-              editedAt: msg.edited_at ? new Date(msg.edited_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
-              attachmentUrl: msg.attachment_url || undefined,
-              attachmentType: msg.attachment_type || undefined,
-              read: msg.read ?? false
-            })),
-            lastMessage: {
-              text: lastMessage.content,
-              timestamp: new Date(lastMessage.created_at).toLocaleDateString()
-            }
-          };
-        });
-        
-        let selectedChat: ChatItem | undefined;
 
-        if (receiverId) {
-          selectedChat = chatsArray.find(chat => chat.user.id === receiverId);
-          if (!selectedChat) {
-            return MessagesService.createNewChat(receiverId, chatsArray);
-          }
-        }
+      const conversationsList = (convs || []) as any[];
 
+      // 2. Collect all member ids across all conversations to fetch profiles in one shot
+      const allMemberIds = new Set<string>();
+      conversationsList.forEach(c => {
+        (c.member_ids || []).forEach((id: string) => {
+          if (id !== userId) allMemberIds.add(id);
+        });
+      });
+
+      let profilesMap = new Map<string, any>();
+      let lastSeenMap = new Map<string, string | null>();
+      if (allMemberIds.size > 0) {
+        const ids = Array.from(allMemberIds);
+        const [{ data: profilesData }, { data: lastSeenData }] = await Promise.all([
+          supabase.rpc('get_safe_public_profiles_by_ids', { _ids: ids }),
+          supabase.rpc('get_users_last_seen', { _ids: ids }),
+        ]);
+        if (profilesData) profilesData.forEach((p: any) => profilesMap.set(p.id, p));
+        if (lastSeenData) lastSeenData.forEach((u: any) => lastSeenMap.set(u.id, u.last_seen));
+      }
+
+      // 3. Build chat items (without messages — they are loaded on demand)
+      const chatsArray: ChatItem[] = conversationsList.map((c: any) => {
+        const isGroup = c.type === 'group';
+        const otherIds = (c.member_ids || []).filter((id: string) => id !== userId);
+        const partnerId = otherIds[0];
+        const partnerProfile = partnerId ? profilesMap.get(partnerId) : null;
+
+        const displayName = isGroup
+          ? (c.title || 'Група')
+          : (partnerProfile?.full_name || 'Користувач');
+        const displayAvatar = isGroup
+          ? (c.avatar_url || '')
+          : (partnerProfile?.avatar_url || '');
+        const partnerLastSeen = isGroup ? '' : (lastSeenMap.get(partnerId) || '');
+
+        const ts = c.last_message_at ? new Date(c.last_message_at) : new Date();
         return {
-          chats: chatsArray,
-          // Відкриваємо активний чат лише при явному receiverId (наприклад, кнопка "Написати")
-          activeChat: selectedChat
+          id: c.conversation_id,
+          conversationId: c.conversation_id,
+          type: isGroup ? 'group' : 'direct',
+          title: c.title,
+          memberIds: c.member_ids || [],
+          memberCount: Number(c.member_count || 0),
+          myRole: c.my_role,
+          user: {
+            id: isGroup ? c.conversation_id : (partnerId || ''),
+            name: displayName,
+            username: 'user',
+            avatarUrl: displayAvatar,
+            lastSeen: partnerLastSeen,
+            unreadCount: Number(c.unread_count || 0),
+          },
+          messages: [],
+          lastMessage: {
+            text: c.last_message_text || (isGroup ? 'Група створена' : 'Почніть розмову'),
+            timestamp: formatChatListTimestamp(ts),
+          },
         };
-      } else {
-        if (receiverId) {
-          return MessagesService.createNewChat(receiverId, []);
+      });
+
+      // 4. If receiverId provided, ensure direct conversation exists and load it
+      let selectedChat: ChatItem | undefined;
+      if (receiverId) {
+        // First, check if it's an existing conversation_id (group chat link)
+        let convId: string | null = null;
+        const existingByConvId = chatsArray.find(c => c.conversationId === receiverId);
+        if (existingByConvId) {
+          convId = existingByConvId.conversationId!;
+        } else {
+          // Try to find direct chat with this user
+          const existingDirect = chatsArray.find(c => c.type === 'direct' && c.user.id === receiverId);
+          if (existingDirect) {
+            convId = existingDirect.conversationId!;
+          } else {
+            // Create a new direct conversation
+            const { data: newConvId, error: rpcErr } = await supabase
+              .rpc('get_or_create_direct_conversation', { _other_user_id: receiverId });
+            if (rpcErr) {
+              if (import.meta.env.DEV) console.error('Не вдалося створити бесіду:', rpcErr);
+            } else if (newConvId) {
+              convId = newConvId as unknown as string;
+              // Build a placeholder chat item for the new conversation
+              const { data: prof } = await supabase
+                .rpc('get_safe_public_profiles_by_ids', { _ids: [receiverId] });
+              const p = prof?.[0];
+              const newChat: ChatItem = {
+                id: convId,
+                conversationId: convId,
+                type: 'direct',
+                memberIds: [userId, receiverId],
+                memberCount: 2,
+                myRole: 'member',
+                user: {
+                  id: receiverId,
+                  name: p?.full_name || 'Користувач',
+                  username: 'user',
+                  avatarUrl: p?.avatar_url || '',
+                  lastSeen: '',
+                  unreadCount: 0,
+                },
+                messages: [],
+                lastMessage: { text: 'Почніть розмову', timestamp: 'Щойно' },
+              };
+              chatsArray.unshift(newChat);
+            }
+          }
         }
-        return { chats: [] };
+
+        if (convId) {
+          const chat = chatsArray.find(c => c.conversationId === convId);
+          if (chat) {
+            chat.messages = await MessagesService.loadConversationMessages(convId, userId);
+            selectedChat = chat;
+          }
+        }
       }
+
+      return { chats: chatsArray, activeChat: selectedChat };
     } catch (error) {
       if (import.meta.env.DEV) console.error("Помилка при завантаженні чатів та повідомлень:", error);
-      if (receiverId) {
-        return MessagesService.createNewChat(receiverId, []);
-      }
       return { chats: [] };
     }
   }
