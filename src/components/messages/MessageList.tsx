@@ -30,6 +30,24 @@ interface ReactionData {
   isOwn: boolean;
 }
 
+function renderSystemEvent(event: any, fallbackText?: string): string {
+  if (!event) return fallbackText || '';
+  switch (event.type) {
+    case 'group_created':
+      return event.title ? `Створено групу «${event.title}»` : 'Групу створено';
+    case 'member_added':
+      return event.name ? `${event.name} приєднався(лась) до групи` : 'Учасник доданий';
+    case 'member_removed':
+      return event.name ? `${event.name} був(ла) видалений(а) з групи` : 'Учасник видалений';
+    case 'member_left':
+      return event.name ? `${event.name} покинув(ла) групу` : 'Учасник покинув групу';
+    case 'title_changed':
+      return event.title ? `Назву групи змінено на «${event.title}»` : 'Назву групи змінено';
+    default:
+      return fallbackText || 'Системна подія';
+  }
+}
+
 interface MessageListProps {
   messages: Message[];
   emptyStateMessage?: ReactNode;
