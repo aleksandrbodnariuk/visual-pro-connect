@@ -111,23 +111,36 @@ export function GroupMembersDialog({ open, onOpenChange, chat, onChanged, onLeft
               canEdit={isAdmin}
               onChanged={() => onChanged()}
             />
-            <div className="flex items-center gap-2 w-full justify-center">
+            <div className="flex items-center gap-2 w-full justify-center flex-wrap">
               {editingTitle ? (
                 <>
                   <Input
                     value={titleDraft}
                     onChange={(e) => setTitleDraft(e.target.value.slice(0, 100))}
                     className="max-w-xs"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveTitle();
+                      if (e.key === 'Escape') { setEditingTitle(false); setTitleDraft(chat.title || ''); }
+                    }}
                   />
-                  <Button size="sm" onClick={handleSaveTitle}>OK</Button>
-                  <Button size="sm" variant="ghost" onClick={() => { setEditingTitle(false); setTitleDraft(chat.title || ''); }}>×</Button>
+                  <Button size="sm" onClick={handleSaveTitle}>Зберегти</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setEditingTitle(false); setTitleDraft(chat.title || ''); }}>Скасувати</Button>
                 </>
               ) : (
                 <>
-                  <div className="font-semibold text-lg">{chat.title}</div>
+                  <button
+                    type="button"
+                    onClick={() => isAdmin && setEditingTitle(true)}
+                    className={`font-semibold text-lg ${isAdmin ? 'hover:underline cursor-pointer' : 'cursor-default'}`}
+                    title={isAdmin ? 'Редагувати назву' : undefined}
+                  >
+                    {chat.title || 'Без назви'}
+                  </button>
                   {isAdmin && (
-                    <Button size="icon" variant="ghost" onClick={() => setEditingTitle(true)}>
-                      <Pencil className="h-4 w-4" />
+                    <Button size="sm" variant="outline" onClick={() => setEditingTitle(true)}>
+                      <Pencil className="h-3.5 w-3.5 mr-1" />
+                      Перейменувати
                     </Button>
                   )}
                 </>
