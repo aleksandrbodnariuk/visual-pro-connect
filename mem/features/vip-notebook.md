@@ -1,6 +1,6 @@
 ---
-name: VIP Notebook (Stage 3 — VIP Tools)
-description: Приватний нотатник для VIP-користувачів з тегами, кольорами, закріпленням та пошуком. Перший інструмент у хабі /vip/tools. Доступ обмежено активним VIP-статусом через RLS.
+name: VIP Tools Hub (Stage 3 — Notebook + Calculator)
+description: Хаб /vip/tools з ексклюзивними інструментами для VIP. Готові: приватний нотатник (/vip/notebook, з RLS) та розширений калькулятор (/vip/calculator, frontend-only). Плейсхолдер-картки «Незабаром» для нагадувань, планувальника, аналітики, mood board.
 type: feature
 ---
 **Концепція:** Етап 3 VIP-системи — ексклюзивні інструменти. Хаб `/vip/tools` об'єднує VIP-only утиліти. Перша — приватний нотатник.
@@ -30,3 +30,13 @@ type: feature
 - Закріплені нотатки завжди зверху (сортування is_pinned DESC, updated_at DESC)
 
 **Інтеграція:** Кнопка «VIP-інструменти» додана в `/vip/moi` (header).
+
+**Калькулятор (`/vip/calculator`):**
+- 3 вкладки: Бюджет проєкту (статті витрат, накладні %, резерв %), ROI/маржа (дохід/витрати/години → прибуток, маржа, націнка, ROI, дохід/година), Податки (ФОП 1/2/3 без ПДВ, ФОП 3 з ПДВ, загальна система 18%+1.5%, комісія платформи)
+- Frontend-only, без БД. Gating через `useUserVip` — не-VIP бачать paywall-картку
+- Компоненти: `BudgetCalculator`, `RoiCalculator`, `TaxCalculator` у `src/components/vip/calculator/`
+
+**Хаб /vip/tools:**
+- Картки інструментів з типом `Tool { available: boolean }`
+- Недоступні мають Badge «Незабаром» + disabled-кнопку
+- Якщо немає VIP — кнопка «Потрібен VIP»
