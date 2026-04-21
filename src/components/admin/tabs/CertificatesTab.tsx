@@ -22,14 +22,14 @@ interface UserRow {
 interface Cert {
   user_id: string;
   is_active: boolean;
-  discount_type: "fixed" | "percent";
+  discount_type: "fixed" | "percent" | "uah";
   discount_value: number;
   note: string | null;
 }
 
 interface DraftState {
   is_active: boolean;
-  discount_type: "fixed" | "percent";
+  discount_type: "fixed" | "percent" | "uah";
   discount_value: string;
   note: string;
   dirty: boolean;
