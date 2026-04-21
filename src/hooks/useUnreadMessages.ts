@@ -105,17 +105,18 @@ function destroySharedChannel() {
 }
 
 async function fetchUnreadFromDb(uid: string): Promise<number> {
-  const { count, error } = await supabase
-    .from('messages')
-    .select('*', { count: 'exact', head: true })
-    .eq('receiver_id', uid)
-    .eq('read', false);
-  
-  if (error) {
-    console.warn('[Unread] Failed to fetch unread count:', error.message);
+  // Sum unread_count across all the user's conversations (covers both direct + group chats).
+  const { data, error } = await supabase
+    .rpc('get_user_conversations', { _user_id: uid });
+  if (error || !data) {
+    console.warn('[Unread] Failed to fetch unread count:', error?.message);
     return 0;
   }
-  return count ?? 0;
+  let total = 0;
+  for (const row of data as any[]) {
+    total += Number(row.unread_count || 0);
+  }
+  return total;
 }
 
 async function fetchUnreadNotifications(uid: string): Promise<number> {
