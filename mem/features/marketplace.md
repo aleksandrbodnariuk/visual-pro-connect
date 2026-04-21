@@ -1,0 +1,35 @@
+---
+name: marketplace
+description: Універсальний маркетплейс «як OLX» для креативів — продаж/оренда/послуги/цифрові товари з обраним та резервуванням через чат
+type: feature
+---
+
+Універсальний маркетплейс на маршруті `/market` для всіх типів оголошень: послуги, цифрові товари, техніка, оренда обладнання. Усі авторизовані користувачі можуть подавати оголошення безкоштовно.
+
+**Сторінки:**
+- `/market` — стрічка з категоріями, фільтрами (пошук, ціна, стан, місто, тип угоди) та сортуванням
+- `/market/:id` — деталі оголошення, контакт через чат, кнопка резервування
+- `/market/new` — створення оголошення (до 8 фото, ліміт 5МБ кожне)
+- `/market/moi` — мої оголошення (Активні / Продані / Архів)
+- `/market/favorites` — обране (серце)
+
+**Таблиці БД:**
+- `marketplace_categories` (id text PK, parent_id, label, icon, sort_order, is_visible)
+- `marketplace_listings` (status: draft/active/reserved/sold/archived; deal_type: sale/rent/service/digital; condition: new/used/for_rent/service)
+- `marketplace_listing_images` (до 8 на оголошення, is_cover для обкладинки)
+- `marketplace_favorites` (унікальна пара user_id+listing_id)
+- `marketplace_reservations` (статуси: pending/accepted/rejected/completed/cancelled)
+
+**Storage:** бакет `marketplace` (публічний), шлях `<user_id>/<timestamp>-<idx>.<ext>`. RLS дозволяє завантаження лише у власну папку.
+
+**Доступ (RLS):** усі бачать оголошення зі статусом active/reserved/sold; власник бачить свої будь-якого статусу; редагує/видаляє лише власник або адмін. Обране — приватне. Резервування — бачать покупець і продавець.
+
+**Інтеграція з чатом:** кнопка «Написати продавцю» переходить на `/messages?to=<seller_id>&topic=<title>` (використовує існуючу систему conversations/messages, окремої таблиці не створено).
+
+**VIP-бейдж:** поле `is_vip_boost` на оголошенні дає золотий бейдж і пріоритет у сортуванні (на цьому етапі — лише візуально, авто-логіка боусту не реалізована).
+
+**Лічильник переглядів:** інкрементується при відкритті деталей через хук `useMarketplaceListing`.
+
+**Trigger function:** `set_marketplace_updated_at()` — окрема локальна функція для оновлення `updated_at` (не залежить від `update_updated_at_column`, якої немає в проєкті).
+
+**Категорії за замовчуванням:** Послуги (Briefcase), Цифрові товари (Download), Техніка та обладнання (Camera), Оренда обладнання (Package).
