@@ -669,6 +669,17 @@ function TreeNode({
 
         <span className="font-medium text-sm flex-1 min-w-0 truncate">{node.fullName}</span>
 
+        {node.ordersCount > 0 && (
+          <Badge
+            className="text-xs shrink-0 gap-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 border-transparent"
+            variant="secondary"
+            title={`Зробив(ла) ${node.ordersCount} замовлень`}
+          >
+            <CheckCircle2 className="h-3 w-3" />
+            Активний · {node.ordersCount}
+          </Badge>
+        )}
+
         <Badge className={`text-xs ${ROLE_COLORS[node.role] || ""}`} variant="secondary">
           {ROLE_LABELS[node.role] || node.role}
         </Badge>
