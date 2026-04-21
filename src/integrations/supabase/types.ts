@@ -1988,6 +1988,8 @@ export type Database = {
           granted_by: string | null
           id: string
           is_lifetime: boolean
+          last_birthday_gift_year: number | null
+          last_monthly_bonus_at: string | null
           started_at: string
           tier: string
           updated_at: string
@@ -2001,6 +2003,8 @@ export type Database = {
           granted_by?: string | null
           id?: string
           is_lifetime?: boolean
+          last_birthday_gift_year?: number | null
+          last_monthly_bonus_at?: string | null
           started_at?: string
           tier: string
           updated_at?: string
@@ -2014,6 +2018,8 @@ export type Database = {
           granted_by?: string | null
           id?: string
           is_lifetime?: boolean
+          last_birthday_gift_year?: number | null
+          last_monthly_bonus_at?: string | null
           started_at?: string
           tier?: string
           updated_at?: string
@@ -2030,6 +2036,7 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string | null
+          date_of_birth: string | null
           facebook: string | null
           founder_admin: boolean | null
           full_name: string | null
@@ -2053,6 +2060,7 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string | null
+          date_of_birth?: string | null
           facebook?: string | null
           founder_admin?: boolean | null
           full_name?: string | null
@@ -2076,6 +2084,7 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string | null
+          date_of_birth?: string | null
           facebook?: string | null
           founder_admin?: boolean | null
           full_name?: string | null
@@ -2154,14 +2163,17 @@ export type Database = {
         Row: {
           badge_icon: string
           banner_animation: string
+          birthday_bonus_uah: number
           created_at: string
           description: string | null
+          discount_percent: number
           duration_days: number
           gradient: string
           highlight: boolean
           id: string
           is_active: boolean
           label: string
+          monthly_bonus_uah: number
           name_color: string | null
           perks: Json
           price_uah: number
@@ -2171,14 +2183,17 @@ export type Database = {
         Insert: {
           badge_icon?: string
           banner_animation?: string
+          birthday_bonus_uah?: number
           created_at?: string
           description?: string | null
+          discount_percent?: number
           duration_days?: number
           gradient?: string
           highlight?: boolean
           id: string
           is_active?: boolean
           label: string
+          monthly_bonus_uah?: number
           name_color?: string | null
           perks?: Json
           price_uah?: number
@@ -2188,14 +2203,17 @@ export type Database = {
         Update: {
           badge_icon?: string
           banner_animation?: string
+          birthday_bonus_uah?: number
           created_at?: string
           description?: string | null
+          discount_percent?: number
           duration_days?: number
           gradient?: string
           highlight?: boolean
           id?: string
           is_active?: boolean
           label?: string
+          monthly_bonus_uah?: number
           name_color?: string | null
           perks?: Json
           price_uah?: number
@@ -2251,6 +2269,8 @@ export type Database = {
         Returns: undefined
       }
       check_admin_access: { Args: never; Returns: boolean }
+      claim_vip_birthday_gift: { Args: { _user_id: string }; Returns: Json }
+      claim_vip_monthly_bonus: { Args: { _user_id: string }; Returns: Json }
       confirm_payout: { Args: { _payout_id: string }; Returns: undefined }
       confirm_rep_payout: { Args: { _payout_id: string }; Returns: undefined }
       confirm_spec_payout: { Args: { _payout_id: string }; Returns: undefined }
@@ -2615,6 +2635,7 @@ export type Database = {
           last_seen: string
         }[]
       }
+      get_vip_discount_percent: { Args: { _user_id: string }; Returns: number }
       get_visit_stats: {
         Args: never
         Returns: {
