@@ -115,6 +115,22 @@ export function RepresentativesTab() {
         blockedMap[u.id] = Boolean(u.is_blocked);
       });
 
+      // Count non-archived orders per representative
+      const repIds = reps.map((r) => r.id);
+      const ordersCountMap: Record<string, number> = {};
+      if (repIds.length > 0) {
+        const { data: orderRows } = await supabase
+          .from("specialist_orders")
+          .select("representative_id")
+          .in("representative_id", repIds)
+          .neq("status", "archived");
+        (orderRows || []).forEach((row: any) => {
+          if (!row.representative_id) return;
+          ordersCountMap[row.representative_id] =
+            (ordersCountMap[row.representative_id] || 0) + 1;
+        });
+      }
+
       // Build tree
       const nodeMap: Record<string, RepNode> = {};
       reps.forEach((r) => {
@@ -128,6 +144,7 @@ export function RepresentativesTab() {
           parentId: r.parent_id,
           children: [],
           isActive: !blockedMap[r.user_id],
+          ordersCount: ordersCountMap[r.id] || 0,
         };
       });
 
