@@ -16,7 +16,7 @@ import { CONDITION_LABELS, DEAL_TYPE_LABELS, type MarketplaceCondition, type Mar
 import { uploadToStorage } from '@/lib/storage';
 import { toast } from 'sonner';
 import { VipBoostToggle } from '@/components/marketplace/VipBoostToggle';
-import { compressImageAsFile, OUTPUT_FORMAT, OUTPUT_EXTENSION } from '@/lib/imageCompression';
+import { compressImageAsFile, OUTPUT_FORMAT } from '@/lib/imageCompression';
 
 const MAX_IMAGES = 8;
 const MAX_IMAGE_SIZE_MB = 5;
