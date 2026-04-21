@@ -1580,6 +1580,7 @@ export type Database = {
       support_tickets: {
         Row: {
           admin_response: string | null
+          attachment_url: string | null
           category: string
           closed_at: string | null
           created_at: string
@@ -1595,6 +1596,7 @@ export type Database = {
         }
         Insert: {
           admin_response?: string | null
+          attachment_url?: string | null
           category?: string
           closed_at?: string | null
           created_at?: string
@@ -1610,6 +1612,7 @@ export type Database = {
         }
         Update: {
           admin_response?: string | null
+          attachment_url?: string | null
           category?: string
           closed_at?: string | null
           created_at?: string
