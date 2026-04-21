@@ -412,53 +412,38 @@ export class MessagesService {
     }
   }
 
-  static async deleteChat(userId: string, chatUserId: string): Promise<boolean> {
-    try {
-      // Delete all messages between the two users (only ones the current user can delete via RLS)
-      const { error: error1 } = await supabase
-        .from('messages')
-        .delete()
-        .eq('sender_id', userId)
-        .eq('receiver_id', chatUserId);
-
-      const { error: error2 } = await supabase
-        .from('messages')
-        .delete()
-        .eq('sender_id', chatUserId)
-        .eq('receiver_id', userId);
-
-      if (error1 || error2) {
-        if (import.meta.env.DEV) console.error("Помилка при видаленні чату:", error1 || error2);
-        toast.error("Не вдалося видалити чат");
-        return false;
-      }
-
-      toast.success("Чат видалено");
-      return true;
-    } catch (err) {
-      if (import.meta.env.DEV) console.error("Помилка при видаленні чату:", err);
-      toast.error("Помилка видалення чату");
-      return false;
-    }
+  /**
+   * Delete or leave a chat. For direct chats — leave (which deletes if alone).
+   * For groups — leave the conversation.
+   */
+  static async deleteChat(_userId: string, conversationId: string): Promise<boolean> {
+    return MessagesService.leaveConversation(conversationId);
   }
 
-  static async markMessagesAsRead(userId: string, chatUserId: string): Promise<boolean> {
+  /**
+   * Mark conversation as read by updating the member's last_read_at.
+   * Also updates legacy messages.read flag for direct chats (so old read receipts still work).
+   */
+  static async markMessagesAsRead(_userId: string, conversationId: string): Promise<boolean> {
     try {
       const { error } = await supabase
-        .from('messages')
-        .update({ read: true })
-        .eq('receiver_id', userId)
-        .eq('sender_id', chatUserId)
-        .eq('read', false);
-
+        .rpc('mark_conversation_read', { _conv_id: conversationId });
       if (error) {
-        if (import.meta.env.DEV) console.error("Помилка при позначенні повідомлень:", error);
+        if (import.meta.env.DEV) console.error('Помилка mark_conversation_read:', error);
         return false;
       }
 
+      // Also update legacy messages.read for backward compatibility (direct chats)
+      await supabase
+        .from('messages')
+        .update({ read: true })
+        .eq('conversation_id', conversationId)
+        .neq('sender_id', _userId)
+        .eq('read', false);
+
       return true;
     } catch (err) {
-      if (import.meta.env.DEV) console.error("Помилка при позначенні повідомлень:", err);
+      if (import.meta.env.DEV) console.error('Помилка markMessagesAsRead:', err);
       return false;
     }
   }
