@@ -47,6 +47,11 @@ const Vip = lazy(() => import("./pages/Vip"));
 const MoyVip = lazy(() => import("./pages/MoyVip"));
 const VipTools = lazy(() => import("./pages/vip/Tools"));
 const VipNotebook = lazy(() => import("./pages/vip/Notebook"));
+const Marketplace = lazy(() => import("./pages/Marketplace"));
+const MarketplaceListing = lazy(() => import("./pages/MarketplaceListing"));
+const MarketplaceNew = lazy(() => import("./pages/MarketplaceNew"));
+const MarketplaceMine = lazy(() => import("./pages/MarketplaceMine"));
+const MarketplaceFavorites = lazy(() => import("./pages/MarketplaceFavorites"));
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -113,6 +118,11 @@ const AppContent = () => {
             <Route path="/vip/moi" element={<MoyVip />} />
             <Route path="/vip/tools" element={<VipTools />} />
             <Route path="/vip/notebook" element={<VipNotebook />} />
+            <Route path="/market" element={<Marketplace />} />
+            <Route path="/market/new" element={<MarketplaceNew />} />
+            <Route path="/market/moi" element={<MarketplaceMine />} />
+            <Route path="/market/favorites" element={<MarketplaceFavorites />} />
+            <Route path="/market/:id" element={<MarketplaceListing />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
