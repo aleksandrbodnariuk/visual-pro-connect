@@ -2418,6 +2418,45 @@ export type Database = {
         }
         Relationships: []
       }
+      vip_reminders: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          notified_at: string | null
+          push_enabled: boolean
+          remind_at: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          notified_at?: string | null
+          push_enabled?: boolean
+          remind_at: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          notified_at?: string | null
+          push_enabled?: boolean
+          remind_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       vip_tiers: {
         Row: {
           badge_icon: string
