@@ -167,6 +167,13 @@ export function MessageList({
           {messages.length > 0 ? (
             messages.map((message) => (
               <div key={message.id}>
+                {message.systemEvent ? (
+                  <div className="flex justify-center my-2">
+                    <div className="text-xs text-muted-foreground bg-muted/60 rounded-full px-3 py-1">
+                      {renderSystemEvent(message.systemEvent, message.text)}
+                    </div>
+                  </div>
+                ) : (
                 <div
                   className={`group flex items-center gap-1 ${message.isSender ? "justify-end" : "justify-start"}`}
                 >
@@ -191,6 +198,20 @@ export function MessageList({
                   )}
 
                   <div className="relative max-w-[80%]">
+                    {isGroup && !message.isSender && message.senderName && (
+                      <div className="flex items-center gap-1.5 mb-1 ml-1">
+                        {message.senderAvatar && (
+                          <img
+                            src={message.senderAvatar}
+                            alt={message.senderName}
+                            className="w-4 h-4 rounded-full object-cover"
+                          />
+                        )}
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {message.senderName}
+                        </span>
+                      </div>
+                    )}
                     <div
                       className={`rounded-2xl px-4 py-2 ${
                         message.isSender
@@ -248,6 +269,7 @@ export function MessageList({
                     </div>
                   )}
                 </div>
+                )}
               </div>
             ))
           ) : (
