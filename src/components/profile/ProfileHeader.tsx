@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { CertificateBadge } from "@/components/certificates/CertificateBadge";
 
 export interface ProfileHeaderProps {
   user: {
@@ -115,17 +116,24 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
       <div className="relative -mt-16 px-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="flex flex-col items-start gap-4 md:flex-row md:items-end">
-            <Avatar className="h-40 w-40 border-4 border-background shadow-lg">
-              <AvatarImage src={avatarUrl ? `${avatarUrl}?t=${Date.now()}` : avatarUrl} alt={name} />
-              <AvatarFallback className="text-5xl">
-                {name && name !== "undefined undefined"
-                  ? name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                  : "U"}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-40 w-40 border-4 border-background shadow-lg">
+                <AvatarImage src={avatarUrl ? `${avatarUrl}?t=${Date.now()}` : avatarUrl} alt={name} />
+                <AvatarFallback className="text-5xl">
+                  {name && name !== "undefined undefined"
+                    ? name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                    : "U"}
+                </AvatarFallback>
+              </Avatar>
+              <CertificateBadge
+                userId={userId}
+                size="md"
+                className="absolute -bottom-1 -right-1 z-10"
+              />
+            </div>
             <div className="mt-4">
               <h1 className="text-2xl font-bold">{name !== "undefined undefined" ? name : "Користувач"}</h1>
               <div className="flex items-center gap-2">
