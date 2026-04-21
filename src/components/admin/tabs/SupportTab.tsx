@@ -268,6 +268,25 @@ export function SupportTab() {
                 </p>
               </div>
 
+              {selectedTicket.attachment_url && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Скриншот</p>
+                  <a
+                    href={selectedTicket.attachment_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-fit"
+                  >
+                    <img
+                      src={selectedTicket.attachment_url}
+                      alt="Скриншот користувача"
+                      className="max-h-64 rounded-md border border-border object-contain hover:opacity-80 transition-opacity"
+                      loading="lazy"
+                    />
+                  </a>
+                </div>
+              )}
+
               <div className="text-xs text-muted-foreground">
                 {format(new Date(selectedTicket.created_at), "dd MMMM yyyy, HH:mm", { locale: uk })}
               </div>
