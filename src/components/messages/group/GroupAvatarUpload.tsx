@@ -71,7 +71,7 @@ export function GroupAvatarUpload({ conversationId, avatarUrl, title, canEdit, o
             type="button"
             size="icon"
             variant="secondary"
-            className="absolute top-1/2 -translate-y-1/2 -left-10 h-8 w-8 rounded-full shadow-md"
+            className="absolute top-1/2 -translate-y-1/2 -left-16 h-8 w-8 rounded-full shadow-md"
             onClick={handlePick}
             disabled={uploading}
             title="Змінити логотип"
