@@ -15,6 +15,7 @@ export default function Marketplace() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const createListingPath = isAuthenticated ? '/market/new' : '/auth';
 
   const [filters, setFilters] = useState<ListingFilters>(() => ({
     categoryId: searchParams.get('category') || undefined,
@@ -51,7 +52,7 @@ export default function Marketplace() {
                   </Button>
                 </>
               )}
-              <Button size="sm" onClick={() => navigate(isAuthenticated ? '/market/new' : '/auth')}>
+              <Button size="sm" onClick={() => navigate(createListingPath)}>
                 <Plus className="h-4 w-4 mr-1" /> Подати оголошення
               </Button>
             </div>
@@ -72,7 +73,7 @@ export default function Marketplace() {
               <Store className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
               <h3 className="text-lg font-semibold mb-1">Немає оголошень</h3>
               <p className="text-muted-foreground mb-4">Будьте першими, хто розмістить тут оголошення</p>
-              <Button onClick={() => navigate(isAuthenticated ? '/market/new' : '/auth')}>
+              <Button onClick={() => navigate(createListingPath)}>
                 <Plus className="h-4 w-4 mr-1" /> Подати оголошення
               </Button>
             </div>
@@ -81,6 +82,16 @@ export default function Marketplace() {
               {listings.map((l) => <ListingCard key={l.id} listing={l} />)}
             </div>
           )}
+
+          <div className="sticky bottom-4 z-20 flex justify-end sm:hidden pointer-events-none">
+            <Button
+              size="sm"
+              className="pointer-events-auto shadow-lg"
+              onClick={() => navigate(createListingPath)}
+            >
+              <Plus className="h-4 w-4 mr-1" /> Подати оголошення
+            </Button>
+          </div>
         </main>
       </div>
     </div>
