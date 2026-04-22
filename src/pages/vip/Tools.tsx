@@ -68,10 +68,10 @@ const TOOLS: Tool[] = [
     id: "analytics",
     title: "Особиста аналітика витрат",
     description:
-      "Графіки витрат на послуги фахівців з фільтрами по періодах і категоріях. Незабаром.",
+      "Графіки витрат на послуги фахівців з фільтрами по періодах і категоріях.",
     icon: LineChart,
     path: "/vip/analytics",
-    available: false,
+    available: true,
   },
   {
     id: "moodboard",
