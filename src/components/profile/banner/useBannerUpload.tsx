@@ -43,8 +43,8 @@ export function useBannerUpload(
       // Delete old banner from storage before uploading new one
       await deleteOldFile('banners', bannerUrl);
       
-      // Create unique file name
-      const uniqueFileName = `${userId}-${Date.now()}${OUTPUT_EXTENSION}`;
+      // Store banner inside the user's folder to satisfy storage RLS policies
+      const uniqueFileName = `${userId}/${Date.now()}${OUTPUT_EXTENSION}`;
       
       // Upload to storage
       const publicUrl = await uploadToStorage('banners', uniqueFileName, file, OUTPUT_FORMAT);
@@ -68,8 +68,15 @@ export function useBannerUpload(
         console.warn('Не вдалося оновити в базі даних:', dbError);
       }
 
-      // Clear old cache
-      localStorage.removeItem('currentUser');
+       // Keep local cached profile in sync with the new banner URL
+       const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+       if (currentUser && currentUser.id === userId) {
+         currentUser.banner_url = publicUrl;
+         currentUser.bannerUrl = publicUrl;
+         localStorage.setItem('currentUser', JSON.stringify(currentUser));
+       } else {
+         localStorage.removeItem('currentUser');
+       }
       
       // Update URL with timestamp for cache busting
       const urlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
