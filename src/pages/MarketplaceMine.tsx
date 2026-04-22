@@ -16,6 +16,7 @@ export default function MarketplaceMine() {
   const { data: listings = [], isLoading } = useMyListings();
   const { data: incoming = [] } = useIncomingReservations();
   const { data: outgoing = [] } = useOutgoingReservations();
+  const hasAnyListings = listings.length > 0;
 
   useEffect(() => { document.title = 'Мої оголошення — Маркетплейс'; }, []);
   useEffect(() => { if (!isAuthenticated) navigate('/auth'); }, [isAuthenticated, navigate]);
@@ -30,7 +31,7 @@ export default function MarketplaceMine() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-3 md:px-4 py-4 max-w-5xl">
-        <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
           <Button variant="ghost" size="sm" asChild>
             <Link to="/market"><ArrowLeft className="h-4 w-4 mr-1" /> Маркетплейс</Link>
           </Button>
@@ -72,8 +73,15 @@ export default function MarketplaceMine() {
               {isLoading ? (
                 <div className="text-center py-8 text-muted-foreground">Завантаження...</div>
               ) : items.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed rounded-lg text-muted-foreground">
-                  Порожньо
+                <div className="text-center py-12 border-2 border-dashed rounded-lg text-muted-foreground space-y-4">
+                  <div>Порожньо</div>
+                  {!hasAnyListings && (
+                    <div className="flex justify-center">
+                      <Button size="sm" onClick={() => navigate('/market/new')}>
+                        <Plus className="h-4 w-4 mr-1" /> Створити оголошення
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -90,6 +98,16 @@ export default function MarketplaceMine() {
             <OutgoingReservationsList />
           </TabsContent>
         </Tabs>
+
+        <div className="sticky bottom-4 z-20 flex justify-end sm:hidden pointer-events-none mt-4">
+          <Button
+            size="sm"
+            className="pointer-events-auto shadow-lg"
+            onClick={() => navigate('/market/new')}
+          >
+            <Plus className="h-4 w-4 mr-1" /> Нове оголошення
+          </Button>
+        </div>
       </div>
     </div>
   );
