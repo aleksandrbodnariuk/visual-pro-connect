@@ -18,6 +18,12 @@ interface Props {
 export function VipBoostToggle({ value, onChange }: Props) {
   const { user } = useAuth();
   const { vip, loading } = useUserVip(user?.id);
+  const hasActiveVip = Boolean(vip);
+
+  const handleCheckedChange = (checked: boolean) => {
+    if (!hasActiveVip) return;
+    onChange(checked);
+  };
 
   if (loading) {
     return <div className="h-20 rounded-md bg-muted animate-pulse" />;
@@ -64,7 +70,7 @@ export function VipBoostToggle({ value, onChange }: Props) {
             </p>
           </div>
         </div>
-        <Switch checked={value} onCheckedChange={onChange} />
+        <Switch checked={value} onCheckedChange={handleCheckedChange} disabled={!hasActiveVip} />
       </div>
     </Card>
   );
