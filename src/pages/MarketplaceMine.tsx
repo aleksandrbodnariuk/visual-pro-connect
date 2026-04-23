@@ -30,7 +30,7 @@ export default function MarketplaceMine() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-3 md:px-4 py-4 max-w-5xl">
+      <div className="container mx-auto px-3 md:px-4 pt-20 pb-4 max-w-5xl">
         <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
           <Button variant="ghost" size="sm" asChild>
             <Link to="/market"><ArrowLeft className="h-4 w-4 mr-1" /> Маркетплейс</Link>

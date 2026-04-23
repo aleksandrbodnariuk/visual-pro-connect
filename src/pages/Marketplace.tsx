@@ -32,7 +32,7 @@ export default function Marketplace() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-3 md:px-4 py-4 grid grid-cols-12 gap-4">
+      <div className="container mx-auto px-3 md:px-4 pt-20 pb-4 grid grid-cols-12 gap-4">
         <Sidebar className="hidden lg:block col-span-3 sticky top-20 self-start max-h-[calc(100vh-6rem)] overflow-y-auto" />
 
         <main className="col-span-12 lg:col-span-9 space-y-4">
