@@ -12,18 +12,47 @@ import { useAuth } from '@/context/AuthContext';
 import type { ListingFilters } from '@/hooks/marketplace/types';
 
 export default function Marketplace() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const createListingPath = isAuthenticated ? '/market/new' : '/auth';
+  const initialCategoryId = searchParams.get('category') || undefined;
 
   const [filters, setFilters] = useState<ListingFilters>(() => ({
-    categoryId: searchParams.get('category') || undefined,
+    categoryId: initialCategoryId,
   }));
 
   useEffect(() => {
     document.title = 'Маркетплейс — товари, послуги, оренда';
   }, []);
+
+  useEffect(() => {
+    const categoryId = searchParams.get('category') || undefined;
+    setFilters((prev) => (prev.categoryId === categoryId ? prev : { ...prev, categoryId }));
+  }, [searchParams]);
+
+  const handleFiltersChange = (next: ListingFilters | ((prev: ListingFilters) => ListingFilters)) => {
+    setFilters((prev) => {
+      const resolved = typeof next === 'function' ? next(prev) : next;
+      const params = new URLSearchParams(searchParams);
+
+      if (resolved.categoryId) {
+        params.set('category', resolved.categoryId);
+      } else {
+        params.delete('category');
+      }
+
+      setSearchParams(params, { replace: true });
+      return resolved;
+    });
+  };
+
+  const handleCategorySelect = (categoryId: string) => {
+    handleFiltersChange((prev) => ({
+      ...prev,
+      categoryId: prev.categoryId === categoryId ? undefined : categoryId,
+    }));
+  };
 
   const { data: listings = [], isLoading } = useMarketplaceListings(filters);
 
@@ -58,9 +87,11 @@ export default function Marketplace() {
             </div>
           </div>
 
-          {showCategoriesHero && <CategoryGrid />}
+          {showCategoriesHero && (
+            <CategoryGrid activeCategoryId={filters.categoryId} onSelect={handleCategorySelect} />
+          )}
 
-          <MarketplaceFilters filters={filters} onChange={setFilters} />
+          <MarketplaceFilters filters={filters} onChange={handleFiltersChange} />
 
           {isLoading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
