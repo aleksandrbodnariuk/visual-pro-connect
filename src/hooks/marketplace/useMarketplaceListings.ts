@@ -92,9 +92,20 @@ export function useCreateListing() {
     }) => {
       if (!user?.id) throw new Error('Не авторизовано');
       const { listing, imageUrls } = input;
+      const { data: vipMembership } = await (supabase as any)
+        .from('user_vip_memberships')
+        .select('expires_at, is_lifetime')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const hasActiveVip = Boolean(
+        vipMembership && (vipMembership.is_lifetime || (vipMembership.expires_at && new Date(vipMembership.expires_at) > new Date()))
+      );
+
       const insertPayload = {
         ...listing,
         user_id: user.id,
+        is_vip_boost: hasActiveVip,
         cover_image_url: imageUrls[0] || null,
       };
       const { data: created, error } = await (supabase as any)
