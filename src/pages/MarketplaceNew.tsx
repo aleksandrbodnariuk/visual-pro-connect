@@ -89,19 +89,22 @@ export default function MarketplaceNew() {
 
     if (accepted.length === 0) return;
 
-    const nextPreviews = await Promise.all(
+    const prepared = await Promise.all(
       accepted.map(async (file) => {
         try {
-          return await readFileAsDataUrl(file);
+          const preview = await readFileAsDataUrl(file);
+          return { file, preview };
         } catch (error) {
           console.error('[Marketplace] Помилка підготовки прев’ю:', error);
-          return '';
+          return null;
         }
       })
     );
 
-    setImages((prev) => [...prev, ...accepted]);
-    setPreviews((prev) => [...prev, ...nextPreviews.filter(Boolean)]);
+    const successful = prepared.filter((item): item is { file: File; preview: string } => Boolean(item?.preview));
+
+    setImages((prev) => [...prev, ...successful.map((item) => item.file)]);
+    setPreviews((prev) => [...prev, ...successful.map((item) => item.preview)]);
   };
 
   const removeImage = (i: number) => {
