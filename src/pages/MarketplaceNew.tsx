@@ -17,6 +17,7 @@ import { uploadToStorage } from '@/lib/storage';
 import { toast } from 'sonner';
 import { VipBoostToggle } from '@/components/marketplace/VipBoostToggle';
 import { compressImageAsFile, OUTPUT_FORMAT } from '@/lib/imageCompression';
+import { useUserVip } from '@/hooks/vip/useUserVip';
 
 const MAX_IMAGES = 8;
 const MAX_IMAGE_SIZE_MB = 5;
@@ -27,6 +28,7 @@ export default function MarketplaceNew() {
   const { user, isAuthenticated } = useAuth();
   const { data: categories = [] } = useMarketplaceCategories();
   const createListing = useCreateListing();
+  const { vip } = useUserVip(user?.id);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -43,23 +45,28 @@ export default function MarketplaceNew() {
   const [uploading, setUploading] = useState(false);
   const [vipBoost, setVipBoost] = useState(false);
 
+  const hasActiveVip = Boolean(vip);
+
   useEffect(() => { document.title = 'Подати оголошення — Маркетплейс'; }, []);
 
   useEffect(() => {
     if (!isAuthenticated) navigate('/auth');
   }, [isAuthenticated, navigate]);
 
-  // Очищаємо blob URL при розмонтуванні
   useEffect(() => {
-    return () => {
-      previews.forEach((url) => {
-        if (url.startsWith('blob:')) URL.revokeObjectURL(url);
-      });
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!hasActiveVip && vipBoost) {
+      setVipBoost(false);
+    }
+  }, [hasActiveVip, vipBoost]);
 
-  const handleFiles = (files: FileList | null) => {
+  const readFileAsDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error(`Не вдалося прочитати файл ${file.name}`));
+    reader.readAsDataURL(file);
+  });
+
+  const handleFiles = async (files: FileList | null) => {
     if (!files) return;
     const arr = Array.from(files);
     const room = MAX_IMAGES - images.length;
@@ -79,8 +86,22 @@ export default function MarketplaceNew() {
       }
       return true;
     });
+
+    if (accepted.length === 0) return;
+
+    const nextPreviews = await Promise.all(
+      accepted.map(async (file) => {
+        try {
+          return await readFileAsDataUrl(file);
+        } catch (error) {
+          console.error('[Marketplace] Помилка підготовки прев’ю:', error);
+          return '';
+        }
+      })
+    );
+
     setImages((prev) => [...prev, ...accepted]);
-    setPreviews((prev) => [...prev, ...accepted.map((f) => URL.createObjectURL(f))]);
+    setPreviews((prev) => [...prev, ...nextPreviews.filter(Boolean)]);
   };
 
   const removeImage = (i: number) => {
@@ -240,6 +261,7 @@ export default function MarketplaceNew() {
 
           <div className="space-y-2">
             <Label>Фото (до {MAX_IMAGES})</Label>
+            <p className="text-xs text-muted-foreground">Після вибору фото одразу з’явиться мініатюра перед публікацією.</p>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {previews.map((src, i) => (
                 <div key={src} className="relative aspect-square rounded-md overflow-hidden border group bg-muted">
