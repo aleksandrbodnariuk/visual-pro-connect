@@ -75,23 +75,13 @@ export function MarketplaceFilters({ filters, onChange }: Props) {
         </Badge>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         <Select value={filters.categoryId || 'all'} onValueChange={(v) => update({ categoryId: v === 'all' ? undefined : v })}>
           <SelectTrigger><SelectValue placeholder="Категорія" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Усі категорії</SelectItem>
             {categories.map((c) => (
               <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={filters.dealType || 'all'} onValueChange={(v) => update({ dealType: v === 'all' ? undefined : (v as MarketplaceDealType) })}>
-          <SelectTrigger><SelectValue placeholder="Тип угоди" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Будь-який</SelectItem>
-            {Object.entries(DEAL_TYPE_LABELS).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v}</SelectItem>
             ))}
           </SelectContent>
         </Select>
