@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -7,7 +7,6 @@ import { Plus, Heart, Package2, Store } from 'lucide-react';
 import { useMarketplaceListings } from '@/hooks/marketplace/useMarketplaceListings';
 import { ListingCard } from '@/components/marketplace/ListingCard';
 import { MarketplaceFilters } from '@/components/marketplace/MarketplaceFilters';
-import { CategoryGrid } from '@/components/marketplace/CategoryGrid';
 import { useAuth } from '@/context/AuthContext';
 import type { ListingFilters } from '@/hooks/marketplace/types';
 
@@ -47,16 +46,7 @@ export default function Marketplace() {
     });
   };
 
-  const handleCategorySelect = (categoryId: string) => {
-    handleFiltersChange((prev) => ({
-      ...prev,
-      categoryId: prev.categoryId === categoryId ? undefined : categoryId,
-    }));
-  };
-
   const { data: listings = [], isLoading } = useMarketplaceListings(filters);
-
-  const showCategoriesHero = useMemo(() => !filters.categoryId && !filters.search, [filters]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -86,10 +76,6 @@ export default function Marketplace() {
               </Button>
             </div>
           </div>
-
-          {showCategoriesHero && (
-            <CategoryGrid activeCategoryId={filters.categoryId} onSelect={handleCategorySelect} />
-          )}
 
           <MarketplaceFilters filters={filters} onChange={handleFiltersChange} />
 

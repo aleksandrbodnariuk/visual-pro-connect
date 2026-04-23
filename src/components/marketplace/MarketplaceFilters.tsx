@@ -1,9 +1,8 @@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, X, Sparkles } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { CONDITION_LABELS, DEAL_TYPE_LABELS, type ListingFilters, type MarketplaceCondition, type MarketplaceDealType } from '@/hooks/marketplace/types';
+import { Search, X } from 'lucide-react';
+import { CONDITION_LABELS, type ListingFilters, type MarketplaceCondition } from '@/hooks/marketplace/types';
 import { useMarketplaceCategories } from '@/hooks/marketplace/useMarketplaceCategories';
 
 interface Props {
@@ -17,14 +16,6 @@ export function MarketplaceFilters({ filters, onChange }: Props) {
   const update = (patch: Partial<ListingFilters>) => onChange({ ...filters, ...patch });
   const reset = () => onChange({});
   const hasActive = Object.keys(filters).some((k) => (filters as any)[k] !== undefined && (filters as any)[k] !== '');
-
-  // Швидкі фільтри-чіпи для типу угоди
-  const dealChips: Array<{ value: MarketplaceDealType; label: string }> = [
-    { value: 'sale', label: 'Продаж' },
-    { value: 'rent', label: 'Оренда' },
-    { value: 'service', label: 'Послуги' },
-    { value: 'digital', label: 'Цифрові' },
-  ];
 
   return (
     <div className="space-y-3 p-4 rounded-lg border bg-card">
@@ -45,34 +36,6 @@ export function MarketplaceFilters({ filters, onChange }: Props) {
             <X className="h-4 w-4" />
           </button>
         )}
-      </div>
-
-      {/* Швидкі чіпи: тип угоди */}
-      <div className="flex flex-wrap gap-2">
-        <Badge
-          variant={!filters.dealType ? 'default' : 'outline'}
-          className="cursor-pointer hover:opacity-80"
-          onClick={() => update({ dealType: undefined })}
-        >
-          Усі
-        </Badge>
-        {dealChips.map((c) => (
-          <Badge
-            key={c.value}
-            variant={filters.dealType === c.value ? 'default' : 'outline'}
-            className="cursor-pointer hover:opacity-80"
-            onClick={() => update({ dealType: filters.dealType === c.value ? undefined : c.value })}
-          >
-            {c.label}
-          </Badge>
-        ))}
-        <Badge
-          variant={filters.sortBy === 'popular' ? 'default' : 'outline'}
-          className="cursor-pointer hover:opacity-80 ml-auto"
-          onClick={() => update({ sortBy: filters.sortBy === 'popular' ? 'newest' : 'popular' })}
-        >
-          <Sparkles className="h-3 w-3 mr-1" /> Популярні
-        </Badge>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
