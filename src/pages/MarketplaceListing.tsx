@@ -4,7 +4,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MapPin, Eye, MessageSquare, Phone, ArrowLeft, User as UserIcon, Trash2, Clock, CheckCircle2 } from 'lucide-react';
+import { Heart, MapPin, Eye, MessageSquare, Phone, ArrowLeft, User as UserIcon, Trash2, Clock, CheckCircle2, Pencil } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useMarketplaceListing, useUpdateListingStatus, useDeleteListing } from '@/hooks/marketplace/useMarketplaceListings';
@@ -275,6 +275,14 @@ export default function MarketplaceListing() {
                     onChange={(v) => toggleBoost.mutate({ id: listing.id, boost: v })}
                   />
                 )}
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => navigate(`/market/${listing.id}/edit`)}
+                >
+                  <Pencil className="h-4 w-4 mr-1" /> Редагувати оголошення
+                </Button>
                 <div className="grid grid-cols-2 gap-2">
                   {listing.status === 'active' && (
                     <Button variant="outline" size="sm" onClick={() => updateStatus.mutate({ id: listing.id, status: 'sold' })}>

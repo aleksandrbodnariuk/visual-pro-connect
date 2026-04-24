@@ -2,7 +2,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Crown, Eye, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Crown, Eye, Sparkles, Pencil } from 'lucide-react';
 import { CONDITION_LABELS, CURRENCY_SYMBOLS, STATUS_LABELS, type MarketplaceListingWithImages } from '@/hooks/marketplace/types';
 import { useToggleVipBoost } from '@/hooks/marketplace/useVipBoost';
 import { useUserVip } from '@/hooks/vip/useUserVip';
@@ -74,6 +75,12 @@ export function MyListingCard({ listing }: Props) {
             />
           </div>
         )}
+
+        <Button asChild variant="outline" size="sm" className="w-full mt-2">
+          <Link to={`/market/${listing.id}/edit`}>
+            <Pencil className="h-3.5 w-3.5 mr-1" /> Редагувати
+          </Link>
+        </Button>
       </div>
     </Card>
   );

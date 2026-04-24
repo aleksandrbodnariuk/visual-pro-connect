@@ -156,6 +156,60 @@ export function useUpdateListingStatus() {
   });
 }
 
+export function useUpdateListing() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      listing: Partial<MarketplaceListing>;
+      // Повний бажаний набір URL зображень у потрібному порядку (перше = обкладинка).
+      // Якщо undefined — зображення не змінюються.
+      imageUrls?: string[];
+    }) => {
+      const { id, listing, imageUrls } = input;
+      const updatePayload: Record<string, any> = { ...listing };
+      if (imageUrls) {
+        updatePayload.cover_image_url = imageUrls[0] || null;
+      }
+      const { error } = await (supabase as any)
+        .from('marketplace_listings')
+        .update(updatePayload)
+        .eq('id', id);
+      if (error) throw error;
+
+      if (imageUrls) {
+        // Перезаписуємо набір зображень: видаляємо старі та вставляємо нові
+        const { error: delErr } = await (supabase as any)
+          .from('marketplace_listing_images')
+          .delete()
+          .eq('listing_id', id);
+        if (delErr) throw delErr;
+
+        if (imageUrls.length > 0) {
+          const rows = imageUrls.map((url, idx) => ({
+            listing_id: id,
+            image_url: url,
+            sort_order: idx,
+            is_cover: idx === 0,
+          }));
+          const { error: insErr } = await (supabase as any)
+            .from('marketplace_listing_images')
+            .insert(rows);
+          if (insErr) throw insErr;
+        }
+      }
+      return { id };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['marketplace_listings'] });
+      qc.invalidateQueries({ queryKey: ['marketplace_my_listings'] });
+      qc.invalidateQueries({ queryKey: ['marketplace_listing'] });
+      toast.success('Оголошення оновлено');
+    },
+    onError: (e: any) => toast.error(e.message || 'Помилка оновлення'),
+  });
+}
+
 export function useDeleteListing() {
   const qc = useQueryClient();
   return useMutation({
