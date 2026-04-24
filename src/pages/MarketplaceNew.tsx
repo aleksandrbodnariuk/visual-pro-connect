@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Upload, X, ArrowLeft } from 'lucide-react';
+import { Upload, X, ArrowLeft, Crown, Video } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useMarketplaceCategories } from '@/hooks/marketplace/useMarketplaceCategories';
 import { useCreateListing } from '@/hooks/marketplace/useMarketplaceListings';
@@ -253,6 +253,30 @@ export default function MarketplaceNew() {
             <Label>Контактний телефон (опціонально)</Label>
             <Input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+380..." />
           </div>
+
+          {hasActiveVip && (
+            <div className="space-y-2 rounded-md border border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent p-3">
+              <Label className="flex items-center gap-2">
+                <Crown className="h-4 w-4 text-amber-500" />
+                Відео-посилання
+                <span className="text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400 font-semibold">VIP</span>
+              </Label>
+              <div className="relative">
+                <Video className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  className="pl-9"
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  placeholder="YouTube, Instagram, TikTok, Facebook…"
+                  type="url"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Додайте посилання на відео з соцмереж — воно відобразиться у вашому оголошенні плеєром.
+              </p>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label>Фото (до {MAX_IMAGES})</Label>
             <p className="text-xs text-muted-foreground">Після вибору фото одразу з’явиться мініатюра перед публікацією.</p>
