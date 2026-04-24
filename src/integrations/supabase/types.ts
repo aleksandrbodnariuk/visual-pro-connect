@@ -818,6 +818,7 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          video_url: string | null
           views_count: number
         }
         Insert: {
@@ -839,6 +840,7 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
+          video_url?: string | null
           views_count?: number
         }
         Update: {
@@ -860,6 +862,7 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          video_url?: string | null
           views_count?: number
         }
         Relationships: [
@@ -3077,6 +3080,7 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          video_url: string | null
           views_count: number
         }[]
         SetofOptions: {

@@ -1,0 +1,1 @@
+ALTER TABLE public.marketplace_listings ADD COLUMN IF NOT EXISTS video_url text;
