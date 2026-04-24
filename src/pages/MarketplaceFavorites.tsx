@@ -18,9 +18,9 @@ export default function MarketplaceFavorites() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-3 md:px-4 py-4 max-w-5xl">
+      <div className="container mx-auto px-3 md:px-4 pt-20 pb-4 max-w-5xl">
         <Button variant="ghost" size="sm" asChild className="mb-3">
-          <Link to="/market"><ArrowLeft className="h-4 w-4 mr-1" /> Маркетплейс</Link>
+          <Link to="/market"><ArrowLeft className="h-4 w-4 mr-1" /> Назад до пошуку</Link>
         </Button>
 
         <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">

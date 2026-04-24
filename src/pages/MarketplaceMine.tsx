@@ -33,7 +33,7 @@ export default function MarketplaceMine() {
       <div className="container mx-auto px-3 md:px-4 pt-20 pb-4 max-w-5xl">
         <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
           <Button variant="ghost" size="sm" asChild>
-            <Link to="/market"><ArrowLeft className="h-4 w-4 mr-1" /> Маркетплейс</Link>
+            <Link to="/market"><ArrowLeft className="h-4 w-4 mr-1" /> Назад до пошуку</Link>
           </Button>
           <Button size="sm" onClick={() => navigate('/market/new')}>
             <Plus className="h-4 w-4 mr-1" /> Нове оголошення
