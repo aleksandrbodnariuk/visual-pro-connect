@@ -54,6 +54,7 @@ const VipAnalytics = lazy(() => import("./pages/vip/Analytics"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
 const MarketplaceListing = lazy(() => import("./pages/MarketplaceListing"));
 const MarketplaceNew = lazy(() => import("./pages/MarketplaceNew"));
+const MarketplaceEdit = lazy(() => import("./pages/MarketplaceEdit"));
 const MarketplaceMine = lazy(() => import("./pages/MarketplaceMine"));
 const MarketplaceFavorites = lazy(() => import("./pages/MarketplaceFavorites"));
 
@@ -130,6 +131,7 @@ const AppContent = () => {
             <Route path="/market/new" element={<MarketplaceNew />} />
             <Route path="/market/moi" element={<MarketplaceMine />} />
             <Route path="/market/favorites" element={<MarketplaceFavorites />} />
+            <Route path="/market/:id/edit" element={<MarketplaceEdit />} />
             <Route path="/market/:id" element={<MarketplaceListing />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
