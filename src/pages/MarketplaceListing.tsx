@@ -14,6 +14,7 @@ import { ReserveDialog } from '@/components/marketplace/ReserveDialog';
 import { VipBoostToggle } from '@/components/marketplace/VipBoostToggle';
 import { useToggleVipBoost } from '@/hooks/marketplace/useVipBoost';
 import { CONDITION_LABELS, CURRENCY_SYMBOLS, DEAL_TYPE_LABELS, STATUS_LABELS } from '@/hooks/marketplace/types';
+import { extractVideoEmbed } from '@/lib/videoEmbed';
 import { cn } from '@/lib/utils';
 
 export default function MarketplaceListing() {
@@ -166,6 +167,43 @@ export default function MarketplaceListing() {
                 <p className="text-sm whitespace-pre-wrap">{listing.description}</p>
               </Card>
             )}
+
+            {listing.video_url && (() => {
+              const embed = extractVideoEmbed(listing.video_url);
+              if (!embed) return null;
+              if (embed.platform === 'link' || !embed.embedUrl) {
+                return (
+                  <Card className="p-4">
+                    <h3 className="font-medium mb-2">Відео</h3>
+                    <a
+                      href={embed.originalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline break-all"
+                    >
+                      {embed.originalUrl}
+                    </a>
+                  </Card>
+                );
+              }
+              return (
+                <Card className="p-2 overflow-hidden">
+                  <div className={cn(
+                    'relative w-full overflow-hidden rounded-md bg-black',
+                    embed.isVertical ? 'aspect-[9/16] max-w-sm mx-auto' : 'aspect-video'
+                  )}>
+                    <iframe
+                      src={embed.embedUrl}
+                      title="Відео оголошення"
+                      className="absolute inset-0 w-full h-full"
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                </Card>
+              );
+            })()}
 
             {seller && (
               <Card className="p-4">
