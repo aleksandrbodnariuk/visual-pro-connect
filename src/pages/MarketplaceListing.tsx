@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 export default function MarketplaceListing() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { data: listing, isLoading } = useMarketplaceListing(id);
   const { data: favIds } = useFavoriteIds();
@@ -35,6 +36,13 @@ export default function MarketplaceListing() {
 
   const isOwner = user?.id === listing?.user_id;
   const isFav = listing ? favIds?.has(listing.id) ?? false : false;
+
+  const backTarget = useMemo(() => {
+    const from = (location.state as { from?: string } | null)?.from || document.referrer || '';
+    if (from.includes('/market/moi')) return { path: '/market/moi', label: 'Назад до моїх оголошень' };
+    if (from.includes('/market/favorites')) return { path: '/market/favorites', label: 'Назад до обраного' };
+    return { path: '/market', label: 'Назад до пошуку' };
+  }, [location.state]);
 
   useEffect(() => {
     if (listing) document.title = `${listing.title} — Маркетплейс`;
@@ -96,11 +104,11 @@ export default function MarketplaceListing() {
             if (window.history.length > 1) {
               navigate(-1);
             } else {
-              navigate('/market');
+              navigate(backTarget.path);
             }
           }}
         >
-          <ArrowLeft className="h-4 w-4 mr-1" /> Назад до пошуку
+          <ArrowLeft className="h-4 w-4 mr-1" /> {backTarget.label}
         </Button>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
