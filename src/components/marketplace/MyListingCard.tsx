@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -23,6 +23,8 @@ export function MyListingCard({ listing }: Props) {
   const toggleBoost = useToggleVipBoost();
   const isVip = listing.is_vip_boost;
   const cover = listing.cover_image_url || listing.images?.[0]?.image_url;
+  const location = useLocation();
+  const linkState = { from: location.pathname };
 
   return (
     <Card
@@ -31,7 +33,7 @@ export function MyListingCard({ listing }: Props) {
         isVip && 'ring-2 ring-amber-500/40'
       )}
     >
-      <Link to={`/market/${listing.id}`} className="block">
+      <Link to={`/market/${listing.id}`} state={linkState} className="block">
         <div className="aspect-square bg-muted relative overflow-hidden">
           {cover ? (
             <img src={cover} alt={listing.title} loading="lazy" className="w-full h-full object-cover" />
@@ -48,7 +50,7 @@ export function MyListingCard({ listing }: Props) {
       </Link>
 
       <div className="p-3 flex-1 flex flex-col gap-1.5">
-        <Link to={`/market/${listing.id}`} className="font-medium line-clamp-2 hover:text-primary text-sm">
+        <Link to={`/market/${listing.id}`} state={linkState} className="font-medium line-clamp-2 hover:text-primary text-sm">
           {listing.title}
         </Link>
         <div className="text-base font-semibold text-primary">
