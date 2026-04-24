@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Heart, MapPin, Eye, Crown } from 'lucide-react';
@@ -14,6 +14,8 @@ export function ListingCard({ listing }: Props) {
   const { data: favIds } = useFavoriteIds();
   const toggleFav = useToggleFavorite();
   const isFav = favIds?.has(listing.id) ?? false;
+  const location = useLocation();
+  const linkState = { from: location.pathname };
 
   const cover = listing.cover_image_url || listing.images?.[0]?.image_url;
   const isReserved = listing.status === 'reserved';
@@ -26,7 +28,7 @@ export function ListingCard({ listing }: Props) {
         isVip && 'ring-2 ring-amber-500/40 shadow-amber-500/10 shadow-lg hover:shadow-amber-500/20'
       )}
     >
-      <Link to={`/market/${listing.id}`} className="block">
+      <Link to={`/market/${listing.id}`} state={linkState} className="block">
         <div className="aspect-square bg-muted relative overflow-hidden">
           {cover ? (
             <img
@@ -61,7 +63,7 @@ export function ListingCard({ listing }: Props) {
       </button>
 
       <div className="p-3 flex-1 flex flex-col gap-1">
-        <Link to={`/market/${listing.id}`} className="font-medium line-clamp-2 hover:text-primary transition-colors">
+        <Link to={`/market/${listing.id}`} state={linkState} className="font-medium line-clamp-2 hover:text-primary transition-colors">
           {listing.title}
         </Link>
         <div className="text-lg font-semibold text-primary">
