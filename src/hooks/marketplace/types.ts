@@ -34,6 +34,7 @@ export interface MarketplaceListing {
   cover_image_url: string | null;
   created_at: string;
   updated_at: string;
+  video_url?: string | null;
 }
 
 export interface MarketplaceListingImage {

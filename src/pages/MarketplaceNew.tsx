@@ -39,6 +39,7 @@ export default function MarketplaceNew() {
   const [isNegotiable, setIsNegotiable] = useState(false);
   const [city, setCity] = useState('');
   const [contactPhone, setContactPhone] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
   const [images, setImages] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -158,6 +159,7 @@ export default function MarketplaceNew() {
           contact_method: contactPhone.trim() ? 'both' : 'chat',
           status: 'active',
           is_vip_boost: hasActiveVip,
+          video_url: hasActiveVip && videoUrl.trim() ? videoUrl.trim() : null,
         },
         imageUrls,
       });
