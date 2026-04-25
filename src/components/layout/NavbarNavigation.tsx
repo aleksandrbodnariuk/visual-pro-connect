@@ -66,33 +66,37 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
       >
         Знайти професіоналів
       </Link>
-      <Link
-        to="/friends"
-        className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
-          isActive("/friends") ? "text-foreground" : "text-foreground/60"
-        }`}
-      >
-        Друзі
-      </Link>
-      <Link
-        to="/messages"
-        onClick={(e) => {
-          if (location.pathname === '/messages') {
-            e.preventDefault();
-            window.dispatchEvent(new CustomEvent('messages-force-reload'));
-          }
-        }}
-        className={`relative text-sm font-medium transition-colors hover:text-foreground/80 ${
-          isActive("/messages") ? "text-foreground" : "text-foreground/60"
-        }`}
-      >
-        Повідомлення
-        {unreadCount > 0 && (
-          <span className="absolute -top-2 -right-4 bg-destructive text-destructive-foreground text-xs rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </Link>
+      {user && (
+        <>
+          <Link
+            to="/friends"
+            className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
+              isActive("/friends") ? "text-foreground" : "text-foreground/60"
+            }`}
+          >
+            Друзі
+          </Link>
+          <Link
+            to="/messages"
+            onClick={(e) => {
+              if (location.pathname === '/messages') {
+                e.preventDefault();
+                window.dispatchEvent(new CustomEvent('messages-force-reload'));
+              }
+            }}
+            className={`relative text-sm font-medium transition-colors hover:text-foreground/80 ${
+              isActive("/messages") ? "text-foreground" : "text-foreground/60"
+            }`}
+          >
+            Повідомлення
+            {unreadCount > 0 && (
+              <span className="absolute -top-2 -right-4 bg-destructive text-destructive-foreground text-xs rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </Link>
+        </>
+      )}
       {(hasStockAccess || isAdmin) && (
         <Link
           to="/stock-market"
