@@ -11,8 +11,6 @@ import { useMarketplaceListing, useUpdateListingStatus, useDeleteListing } from 
 import { useFavoriteIds, useToggleFavorite } from '@/hooks/marketplace/useMarketplaceFavorites';
 import { useMyReservationForListing, useUpdateReservation, RESERVATION_STATUS_LABELS } from '@/hooks/marketplace/useMarketplaceReservations';
 import { ReserveDialog } from '@/components/marketplace/ReserveDialog';
-import { VipBoostToggle } from '@/components/marketplace/VipBoostToggle';
-import { useToggleVipBoost } from '@/hooks/marketplace/useVipBoost';
 import { CONDITION_LABELS, CURRENCY_SYMBOLS, DEAL_TYPE_LABELS, STATUS_LABELS } from '@/hooks/marketplace/types';
 import { extractVideoEmbed } from '@/lib/videoEmbed';
 import { cn } from '@/lib/utils';
@@ -32,7 +30,6 @@ export default function MarketplaceListing() {
   const [reserveOpen, setReserveOpen] = useState(false);
   const { data: myReservation } = useMyReservationForListing(id);
   const updateReservation = useUpdateReservation();
-  const toggleBoost = useToggleVipBoost();
 
   const isOwner = user?.id === listing?.user_id;
   const isFav = listing ? favIds?.has(listing.id) ?? false : false;
@@ -269,12 +266,6 @@ export default function MarketplaceListing() {
             {isOwner && (
               <Card className="p-4 space-y-2">
                 <h3 className="font-medium">Керування оголошенням</h3>
-                {(listing.status === 'active' || listing.status === 'reserved') && (
-                  <VipBoostToggle
-                    value={listing.is_vip_boost}
-                    onChange={(v) => toggleBoost.mutate({ id: listing.id, boost: v })}
-                  />
-                )}
                 <Button
                   variant="default"
                   size="sm"
