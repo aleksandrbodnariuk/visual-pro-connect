@@ -601,7 +601,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
                   <div className="aspect-video bg-muted relative">
                     {item.media_type === "photo" ? (
                       <img 
-                        src={item.media_url} 
+                        src={item.media_preview_url || item.media_display_url || item.media_url} 
                         alt={item.title}
                         className="object-contain w-full h-full"
                         loading="lazy"
