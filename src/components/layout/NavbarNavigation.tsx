@@ -50,24 +50,24 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
 
   return (
     <div className="hidden md:flex items-center space-x-6">
-      <Link
-        to="/"
-        className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
-          isActive("/") ? "text-foreground" : "text-foreground/60"
-        }`}
-      >
-        Головна
-      </Link>
-      <Link
-        to="/search"
-        className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
-          isActive("/search") ? "text-foreground" : "text-foreground/60"
-        }`}
-      >
-        Знайти професіоналів
-      </Link>
       {user && (
         <>
+          <Link
+            to="/"
+            className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
+              isActive("/") ? "text-foreground" : "text-foreground/60"
+            }`}
+          >
+            Головна
+          </Link>
+          <Link
+            to="/search"
+            className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
+              isActive("/search") ? "text-foreground" : "text-foreground/60"
+            }`}
+          >
+            Знайти професіоналів
+          </Link>
           <Link
             to="/friends"
             className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
