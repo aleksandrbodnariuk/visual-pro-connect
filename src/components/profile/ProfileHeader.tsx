@@ -146,14 +146,14 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
                 size="md"
                 className="absolute -bottom-1 -right-1 z-10"
               />
+            </div>
+            <div className="mt-4">
               <VipBadge
                 userId={userId}
                 size="md"
                 membership={vip}
-                className="absolute -top-1 -right-1 z-10"
+                className="mb-1"
               />
-            </div>
-            <div className="mt-4">
               <h1
                 className="text-2xl font-bold"
                 style={customNameColor ? { color: customNameColor } : undefined}
