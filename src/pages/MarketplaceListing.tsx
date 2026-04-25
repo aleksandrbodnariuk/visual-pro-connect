@@ -55,7 +55,7 @@ export default function MarketplaceListing() {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="container mx-auto px-3 md:px-4 py-6">
+        <div className="container mx-auto px-3 md:px-4 pt-20 pb-6">
           <div className="h-96 rounded-lg bg-muted animate-pulse" />
         </div>
       </div>
@@ -92,7 +92,7 @@ export default function MarketplaceListing() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-3 md:px-4 py-4 max-w-5xl">
+      <div className="container mx-auto px-3 md:px-4 pt-20 pb-4 max-w-5xl">
         <Button
           variant="ghost"
           size="sm"
