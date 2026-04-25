@@ -45,10 +45,21 @@ export function ChatList({ chats, activeChat, onSelectChat, onDeleteChat, isLoad
   const [searchTerm, setSearchTerm] = useState("");
   const [chatToDelete, setChatToDelete] = useState<ChatItem | null>(null);
 
-  const filteredChats = chats.filter(chat => 
-    chat.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    chat.user.username.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredChats = chats
+    .filter(chat =>
+      chat.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      chat.user.username.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    // Закріплюємо групи зверху (як у Viber), зберігаючи відносний порядок
+    .sort((a, b) => {
+      const aGroup = a.type === 'group' ? 1 : 0;
+      const bGroup = b.type === 'group' ? 1 : 0;
+      return bGroup - aGroup;
+    });
+
+  const hasGroups = filteredChats.some(c => c.type === 'group');
+  const hasDirects = filteredChats.some(c => c.type !== 'group');
+  let directSectionRendered = false;
 
   if (isLoading) {
     return (
@@ -91,11 +102,29 @@ export function ChatList({ chats, activeChat, onSelectChat, onDeleteChat, isLoad
           filteredChats.map((chat) => {
             const online = isUserOnline(chat.user.lastSeen);
             const isGroup = chat.type === 'group';
+            let sectionHeader: JSX.Element | null = null;
+            if (isGroup && !sectionHeader && filteredChats.indexOf(chat) === 0 && hasGroups) {
+              sectionHeader = (
+                <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground bg-muted/30 border-b">
+                  Групи
+                </div>
+              );
+            }
+            if (!isGroup && !directSectionRendered && hasGroups && hasDirects) {
+              directSectionRendered = true;
+              sectionHeader = (
+                <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground bg-muted/30 border-b border-t">
+                  Чати
+                </div>
+              );
+            }
             return (
-              <ContextMenu key={chat.id}>
+              <div key={chat.id}>
+                {sectionHeader}
+                <ContextMenu>
                 <ContextMenuTrigger asChild>
                   <div 
-                    className={`flex items-start gap-3 border-b p-3 transition-colors hover:bg-muted/50 cursor-pointer ${activeChat?.id === chat.id ? 'bg-muted/80' : ''}`}
+                    className={`flex items-start gap-3 border-b p-3 transition-colors hover:bg-muted/50 cursor-pointer ${activeChat?.id === chat.id ? 'bg-muted/80' : ''} ${isGroup ? 'bg-primary/5 hover:bg-primary/10 border-l-2 border-l-primary' : ''}`}
                     onClick={() => onSelectChat(chat)}
                   >
                     <div className="relative flex-shrink-0">
@@ -149,7 +178,8 @@ export function ChatList({ chats, activeChat, onSelectChat, onDeleteChat, isLoad
                     {chat.type === 'group' ? 'Вийти з групи' : 'Видалити чат'}
                   </ContextMenuItem>
                 </ContextMenuContent>
-              </ContextMenu>
+                </ContextMenu>
+              </div>
             );
           })
         ) : (
