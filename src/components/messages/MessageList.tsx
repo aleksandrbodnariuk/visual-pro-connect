@@ -3,7 +3,7 @@ import { MessageActions } from "./MessageActions";
 import { MessageReactionPicker } from "./MessageReactionPicker";
 import { MessageReactions } from "./MessageReactions";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, CheckCheck } from "lucide-react";
+import { CheckCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
