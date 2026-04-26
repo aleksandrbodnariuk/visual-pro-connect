@@ -179,15 +179,7 @@ export function MessageList({
     bottomRef.current?.scrollIntoView();
   }, []);
 
-  // Find the last sender message that was read — show avatar there
-  const lastReadSenderMsgId = (() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].isSender && messages[i].read) return messages[i].id;
-    }
-    return null;
-  })();
-
-  // Find the very last sender message (for delivered/sent indicator when not yet read)
+  // Find the very last sender message (for delivered/seen indicator)
   const lastSenderMsgId = (() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].isSender && !messages[i].systemEvent) return messages[i].id;
