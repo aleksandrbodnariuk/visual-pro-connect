@@ -277,22 +277,27 @@ export function MessageList({
                     </div>
                     
                     {/* Read receipt avatar */}
-                    {message.id === lastReadSenderMsgId && recipientAvatarUrl && (
-                      <div className="flex justify-end items-center gap-1 mt-1 pr-1">
-                        <img
-                          src={recipientAvatarUrl}
-                          alt="Прочитано"
-                          title="Прочитано"
-                          className="w-4 h-4 rounded-full object-cover ring-1 ring-background"
-                        />
-                      </div>
-                    )}
-
-                    {/* Delivered indicator (last own message that hasn't been read yet, only in direct chats) */}
-                    {!isGroup && message.isSender && message.id === lastSenderMsgId && message.id !== lastReadSenderMsgId && (
-                      <div className="flex justify-end items-center gap-0.5 mt-1 pr-1 text-muted-foreground" title="Доставлено">
-                        <CheckCheck className="w-3.5 h-3.5" />
-                      </div>
+                    {!isGroup && message.isSender && message.id === lastSenderMsgId && (
+                      message.read ? (
+                        recipientAvatarUrl ? (
+                          <div className="flex justify-end items-center gap-1 mt-1 pr-1">
+                            <img
+                              src={recipientAvatarUrl}
+                              alt="Переглянуто"
+                              title="Переглянуто"
+                              className="w-[18px] h-[18px] rounded-full object-cover ring-1 ring-background"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex justify-end items-center gap-0.5 mt-1 pr-1 text-primary" title="Переглянуто">
+                            <CheckCheck className="w-3.5 h-3.5" />
+                          </div>
+                        )
+                      ) : (
+                        <div className="flex justify-end items-center gap-0.5 mt-1 pr-1 text-muted-foreground" title="Доставлено">
+                          <CheckCheck className="w-3.5 h-3.5" />
+                        </div>
+                      )
                     )}
 
                     {/* Reactions display */}
