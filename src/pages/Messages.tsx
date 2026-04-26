@@ -249,6 +249,30 @@ export default function Messages() {
     };
   }, [currentUser?.id, reloadActiveChat]);
 
+  // Канал для read-receipts: коли отримувач читає чат, оновлюється conversation_members.last_read_at
+  // і одночасно messages.read=true для моїх повідомлень. Слухаємо UPDATE по моїх відправлених повідомленнях.
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const uid = currentUser.id;
+    const suffix = Math.random().toString(36).substring(7);
+
+    const readChannel = supabase
+      .channel(`msg-read-${uid}-${suffix}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'messages',
+        filter: `sender_id=eq.${uid}`
+      }, async () => {
+        // Перезавантажуємо активний чат, щоб поле read оновилося в локальному стані
+        await reloadActiveChat();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(readChannel);
+    };
+  }, [currentUser?.id, reloadActiveChat]);
+
   // ── Polling fallback (30s) — only as safety net if realtime fails ──
   useEffect(() => {
     if (!currentUser?.id) return;
