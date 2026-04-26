@@ -3,6 +3,7 @@ import { MessageActions } from "./MessageActions";
 import { MessageReactionPicker } from "./MessageReactionPicker";
 import { MessageReactions } from "./MessageReactions";
 import { supabase } from "@/integrations/supabase/client";
+import { CheckCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -186,6 +187,14 @@ export function MessageList({
     return null;
   })();
 
+  // Find the very last sender message (for delivered/sent indicator when not yet read)
+  const lastSenderMsgId = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].isSender && !messages[i].systemEvent) return messages[i].id;
+    }
+    return null;
+  })();
+
   return (
     <>
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 min-h-0">
@@ -269,12 +278,20 @@ export function MessageList({
                     
                     {/* Read receipt avatar */}
                     {message.id === lastReadSenderMsgId && recipientAvatarUrl && (
-                      <div className="flex justify-end mt-0.5 pr-1">
+                      <div className="flex justify-end items-center gap-1 mt-1 pr-1">
                         <img
                           src={recipientAvatarUrl}
                           alt="Прочитано"
-                          className="w-4 h-4 rounded-full object-cover"
+                          title="Прочитано"
+                          className="w-4 h-4 rounded-full object-cover ring-1 ring-background"
                         />
+                      </div>
+                    )}
+
+                    {/* Delivered indicator (last own message that hasn't been read yet, only in direct chats) */}
+                    {!isGroup && message.isSender && message.id === lastSenderMsgId && message.id !== lastReadSenderMsgId && (
+                      <div className="flex justify-end items-center gap-0.5 mt-1 pr-1 text-muted-foreground" title="Доставлено">
+                        <CheckCheck className="w-3.5 h-3.5" />
                       </div>
                     )}
 
