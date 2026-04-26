@@ -179,10 +179,20 @@ export function MessageList({
     bottomRef.current?.scrollIntoView();
   }, []);
 
-  // Find the very last sender message (for delivered/seen indicator)
+  // Find the very last sender message (for delivered indicator if not read)
   const lastSenderMsgId = (() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].isSender && !messages[i].systemEvent) return messages[i].id;
+    }
+    return null;
+  })();
+
+  // Find the last *read* sender message (where to show recipient's avatar)
+  // Only show avatar on the most-recent read message, like Messenger
+  const lastReadSenderMsgId = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.isSender && !m.systemEvent && m.read === true) return m.id;
     }
     return null;
   })();
@@ -268,28 +278,31 @@ export function MessageList({
                       </div>
                     </div>
                     
-                    {/* Read receipt avatar */}
-                    {!isGroup && message.isSender && message.id === lastSenderMsgId && (
-                      message.read ? (
-                        recipientAvatarUrl ? (
-                          <div className="flex justify-end items-center gap-1 mt-1 pr-1">
-                            <img
-                              src={recipientAvatarUrl}
-                              alt="Переглянуто"
-                              title="Переглянуто"
-                              className="w-[18px] h-[18px] rounded-full object-cover ring-1 ring-background"
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex justify-end items-center gap-0.5 mt-1 pr-1 text-primary" title="Переглянуто">
+                    {/* Read receipt: avatar only on the latest READ message; CheckCheck on the latest UNREAD sender message */}
+                    {!isGroup && message.isSender && !message.systemEvent && (
+                      <>
+                        {message.id === lastReadSenderMsgId && (
+                          recipientAvatarUrl ? (
+                            <div className="flex justify-end items-center gap-1 mt-1 pr-1">
+                              <img
+                                src={recipientAvatarUrl}
+                                alt="Переглянуто"
+                                title="Переглянуто"
+                                className="w-[18px] h-[18px] rounded-full object-cover ring-1 ring-background"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex justify-end items-center gap-0.5 mt-1 pr-1 text-primary" title="Переглянуто">
+                              <CheckCheck className="w-3.5 h-3.5" />
+                            </div>
+                          )
+                        )}
+                        {message.id === lastSenderMsgId && message.id !== lastReadSenderMsgId && (
+                          <div className="flex justify-end items-center gap-0.5 mt-1 pr-1 text-muted-foreground" title="Доставлено">
                             <CheckCheck className="w-3.5 h-3.5" />
                           </div>
-                        )
-                      ) : (
-                        <div className="flex justify-end items-center gap-0.5 mt-1 pr-1 text-muted-foreground" title="Доставлено">
-                          <CheckCheck className="w-3.5 h-3.5" />
-                        </div>
-                      )
+                        )}
+                      </>
                     )}
 
                     {/* Reactions display */}
