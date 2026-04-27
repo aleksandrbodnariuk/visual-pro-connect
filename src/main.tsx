@@ -21,6 +21,12 @@ if ("serviceWorker" in navigator) {
           if (!newWorker) return;
 
           newWorker.addEventListener("statechange", () => {
+            // As soon as the new worker is installed and there's an existing
+            // controller, ask it to skip waiting so the update applies on next reload.
+            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+              console.log("[PWA] New version installed, activating...");
+              newWorker.postMessage({ type: "SKIP_WAITING" });
+            }
             if (newWorker.state === "activated") {
               console.log("[PWA] New version activated");
             }
