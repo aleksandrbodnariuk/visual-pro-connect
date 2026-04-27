@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'bc-v6';
+const CACHE_VERSION = 'bc-v7';
 const STATIC_CACHE = `bc-static-${CACHE_VERSION}`;
 const IMAGE_CACHE = `bc-images-${CACHE_VERSION}`;
 const API_CACHE = `bc-api-${CACHE_VERSION}`;
@@ -7,11 +7,15 @@ const OFFLINE_URL = '/';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/favicon.ico',
-  '/favicon-16x16.png',
-  '/favicon-32x32.png',
-  '/apple-touch-icon.png',
-  '/manifest.json',
+  '/favicon.ico?v=2',
+  '/favicon-16x16.png?v=2',
+  '/favicon-32x32.png?v=2',
+  '/apple-touch-icon.png?v=2',
+  '/android-chrome-192x192.png?v=2',
+  '/android-chrome-512x512.png?v=2',
+  '/android-chrome-192x192-maskable.png?v=2',
+  '/android-chrome-512x512-maskable.png?v=2',
+  '/manifest.json?v=2',
   '/sounds/notification.mp3',
 ];
 
@@ -238,6 +242,11 @@ self.addEventListener('notificationclick', (event) => {
 
 // ── Message from client to manage badge ─────────────────
 self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
+
   if (event.data && event.data.type === 'SET_BADGE') {
     const count = event.data.count || 0;
 
