@@ -462,8 +462,11 @@ export class MessagesService {
   }
 
   /**
-   * Mark conversation as read by updating the member's last_read_at.
-   * Also updates legacy messages.read flag for direct chats (so old read receipts still work).
+   * Mark conversation as read.
+   * The RPC `mark_conversation_read` runs as SECURITY DEFINER and updates
+   * BOTH `conversation_members.last_read_at` AND `messages.read = true`
+   * for messages from other senders. This is the single source of truth
+   * for read-receipts, and bypasses RLS on the `messages` table.
    */
   static async markMessagesAsRead(_userId: string, conversationId: string): Promise<boolean> {
     try {
@@ -473,15 +476,6 @@ export class MessagesService {
         if (import.meta.env.DEV) console.error('Помилка mark_conversation_read:', error);
         return false;
       }
-
-      // Also update legacy messages.read for backward compatibility (direct chats)
-      await supabase
-        .from('messages')
-        .update({ read: true })
-        .eq('conversation_id', conversationId)
-        .neq('sender_id', _userId)
-        .eq('read', false);
-
       return true;
     } catch (err) {
       if (import.meta.env.DEV) console.error('Помилка markMessagesAsRead:', err);
