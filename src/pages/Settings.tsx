@@ -17,6 +17,7 @@ import { useDynamicCategories, getIconComponent } from '@/hooks/useDynamicCatego
 import { toast } from 'sonner';
 import { Check } from 'lucide-react';
 import { NotificationSettings } from '@/components/settings/NotificationSettings';
+import { UpdateAppButton } from '@/components/pwa/UpdateAppButton';
 
 export default function Settings() {
   const { language } = useLanguage();
@@ -121,6 +122,19 @@ export default function Settings() {
                   }}
                 />
               )}
+
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Оновлення застосунка</CardTitle>
+                  <CardDescription>
+                    Якщо ви помітили, що інтерфейс застарів або іконка не оновилась — натисніть кнопку нижче,
+                    щоб примусово оновити застосунок до останньої версії.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <UpdateAppButton />
+                </CardContent>
+              </Card>
             </TabsContent>
             
             <TabsContent value="appearance">
