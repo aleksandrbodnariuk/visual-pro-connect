@@ -14,6 +14,7 @@ import { usePushAutoSubscribe } from "./hooks/usePushSubscription";
 import { useBadgeClear } from "./hooks/useBadgeClear";
 import { useAnalyticsTracker } from "./hooks/useAnalyticsTracker";
 import { FaviconUpdater } from "./components/layout/FaviconUpdater";
+import { DynamicManifest } from "./components/layout/DynamicManifest";
 import { MobileNavigation } from "./components/layout/MobileNavigation";
 import { InstallPrompt } from "./components/pwa/InstallPrompt";
 import { PushOnboarding } from "./components/pwa/PushOnboarding";
@@ -153,6 +154,7 @@ const App = () => (
           <SiteSettingsProvider>
             <TooltipProvider>
               <FaviconUpdater />
+              <DynamicManifest />
               <Toaster />
               <Sonner />
               <AppContent />

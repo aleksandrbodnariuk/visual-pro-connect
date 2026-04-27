@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, RefreshCw, Save } from "lucide-react";
 import { toast } from "sonner";
 import { LogoUpload } from "@/components/settings/LogoUpload";
+import { AppLogoUpload } from "@/components/settings/AppLogoUpload";
 import { DatabaseDiagnostics } from "@/components/admin/DatabaseDiagnostics";
 import { ImageCompressionSettings } from "@/components/admin/ImageCompressionSettings";
 import { PortfolioImageMigration } from "@/components/admin/PortfolioImageMigration";
@@ -82,7 +83,9 @@ export function SettingsTab() {
   return (
     <div className="space-y-6">
       <LogoUpload />
-      
+
+      <AppLogoUpload />
+
       <ImageCompressionSettings />
       
       <PortfolioImageMigration />
