@@ -7,8 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export function DynamicManifest() {
   useEffect(() => {
-    let manifestObjectUrl: string | null = null;
-
     const apply = async () => {
       try {
         const { data, error } = await supabase
@@ -69,7 +67,11 @@ export function DynamicManifest() {
         };
 
         const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
-        manifestObjectUrl = URL.createObjectURL(blob);
+        // IMPORTANT: Chrome/Android refuses to install a PWA when the manifest
+        // is served from a blob: URL (cross-origin restriction). Use a data: URL
+        // which is treated as same-origin and is accepted by the install prompt.
+        const json = JSON.stringify(manifest);
+        const dataUrl = "data:application/manifest+json;charset=utf-8," + encodeURIComponent(json);
 
         let link = document.querySelector("link[rel='manifest']") as HTMLLinkElement | null;
         if (!link) {
@@ -77,7 +79,8 @@ export function DynamicManifest() {
           link.rel = "manifest";
           document.head.appendChild(link);
         }
-        link.href = manifestObjectUrl;
+        // crossOrigin must be "use-credentials" only when needed; default is fine for data URLs
+        link.href = dataUrl;
 
         // Apple touch icon override
         if (map["app-icon-apple-180"]) {
@@ -97,14 +100,12 @@ export function DynamicManifest() {
     apply();
 
     const onUpdate = () => {
-      if (manifestObjectUrl) URL.revokeObjectURL(manifestObjectUrl);
       apply();
     };
     window.addEventListener("app-icon-updated", onUpdate);
 
     return () => {
       window.removeEventListener("app-icon-updated", onUpdate);
-      if (manifestObjectUrl) URL.revokeObjectURL(manifestObjectUrl);
     };
   }, []);
 
