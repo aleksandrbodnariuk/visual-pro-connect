@@ -22,20 +22,42 @@ const ICON_SIZES: Array<{ size: number; purpose: "any" | "maskable" | "apple"; f
 const SAFE_ZONE_RATIO = 0.76; // 24% padding around for maskable safe zone
 const BACKGROUND_COLOR = "#0b0b0b";
 
-function loadImage(file: File): Promise<HTMLImageElement> {
+type LoadedImage =
+  | { kind: "bitmap"; bitmap: ImageBitmap; width: number; height: number }
+  | { kind: "img"; img: HTMLImageElement; width: number; height: number };
+
+function loadImageViaDataURL(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img);
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("FileReader не зміг прочитати файл"));
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () =>
+        reject(
+          new Error(
+            `Браузер не зміг декодувати зображення (${file.type || "невідомий тип"}). Спробуйте PNG або JPG.`
+          )
+        );
+      img.src = dataUrl;
     };
-    img.onerror = (err) => {
-      URL.revokeObjectURL(url);
-      reject(err);
-    };
-    img.src = url;
+    reader.readAsDataURL(file);
   });
+}
+
+async function loadImage(file: File): Promise<LoadedImage> {
+  // Prefer createImageBitmap — supports more formats and avoids CORS/taint issues
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bitmap = await createImageBitmap(file);
+      return { kind: "bitmap", bitmap, width: bitmap.width, height: bitmap.height };
+    } catch (e) {
+      console.warn("[iconGenerator] createImageBitmap failed, falling back to <img>:", e);
+    }
+  }
+  const img = await loadImageViaDataURL(file);
+  return { kind: "img", img, width: img.naturalWidth, height: img.naturalHeight };
 }
 
 function canvasToBlob(canvas: HTMLCanvasElement, type = "image/png", quality = 0.95): Promise<Blob> {
@@ -49,7 +71,7 @@ function canvasToBlob(canvas: HTMLCanvasElement, type = "image/png", quality = 0
 }
 
 function renderIcon(
-  img: HTMLImageElement,
+  source: LoadedImage,
   size: number,
   purpose: "any" | "maskable" | "apple"
 ): HTMLCanvasElement {
@@ -71,7 +93,7 @@ function renderIcon(
   const offset = (size - targetSize) / 2;
 
   // Preserve aspect ratio (contain)
-  const aspect = img.width / img.height;
+  const aspect = source.width / source.height;
   let drawW = targetSize;
   let drawH = targetSize;
   if (aspect > 1) {
@@ -82,16 +104,20 @@ function renderIcon(
   const dx = offset + (targetSize - drawW) / 2;
   const dy = offset + (targetSize - drawH) / 2;
 
-  ctx.drawImage(img, dx, dy, drawW, drawH);
+  if (source.kind === "bitmap") {
+    ctx.drawImage(source.bitmap, dx, dy, drawW, drawH);
+  } else {
+    ctx.drawImage(source.img, dx, dy, drawW, drawH);
+  }
   return canvas;
 }
 
 export async function generateAppIcons(file: File): Promise<GeneratedIcon[]> {
-  const img = await loadImage(file);
+  const source = await loadImage(file);
   const results: GeneratedIcon[] = [];
 
   for (const spec of ICON_SIZES) {
-    const canvas = renderIcon(img, spec.size, spec.purpose);
+    const canvas = renderIcon(source, spec.size, spec.purpose);
     const blob = await canvasToBlob(canvas, "image/png");
     results.push({
       size: spec.size,
@@ -100,6 +126,8 @@ export async function generateAppIcons(file: File): Promise<GeneratedIcon[]> {
       fileName: spec.fileName,
     });
   }
+
+  if (source.kind === "bitmap") source.bitmap.close();
 
   return results;
 }
