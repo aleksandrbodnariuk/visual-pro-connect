@@ -112,7 +112,10 @@ export function AppLogoUpload() {
       setPreviewUrl(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
 
-      toast.success("Іконку застосунка оновлено! Користувачі побачать зміни після оновлення.");
+      toast.success(
+        "Іконку оновлено! На вже встановлених PWA іконка зміниться лише після перевстановлення застосунка (видалити з домашнього екрану та додати знову).",
+        { duration: 8000 }
+      );
 
       // Notify other components
       window.dispatchEvent(new CustomEvent("app-icon-updated"));
