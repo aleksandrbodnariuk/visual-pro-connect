@@ -382,6 +382,7 @@ export default function Messages() {
                   />
                   
                   <MessageList 
+                    key={activeChat.id}
                     messages={messages} 
                     emptyStateMessage={`Початок розмови з ${activeChat.user.name}`}
                     onEditMessage={handleEditMessage}
