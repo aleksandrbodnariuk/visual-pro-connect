@@ -60,21 +60,31 @@ export function AppLogoUpload() {
     setIsUploading(true);
     try {
       toast.info("Генеруємо іконки різних розмірів...");
-      const icons = await generateAppIcons(file);
+      let icons;
+      try {
+        icons = await generateAppIcons(file);
+      } catch (genErr: any) {
+        console.error("[AppLogoUpload] generateAppIcons failed:", genErr);
+        throw new Error(`Не вдалося обробити зображення: ${genErr?.message ?? genErr}`);
+      }
 
       const timestamp = Date.now();
       const uploaded: Record<string, string> = {};
 
       for (const icon of icons) {
         const path = `app-icons/${timestamp}-${icon.fileName}`;
-        const { error: upErr } = await supabase.storage
+        const { data: upData, error: upErr } = await supabase.storage
           .from("logos")
           .upload(path, icon.blob, {
             upsert: true,
             contentType: "image/png",
             cacheControl: "31536000",
           });
-        if (upErr) throw upErr;
+        if (upErr) {
+          console.error("[AppLogoUpload] storage upload failed:", { path, upErr });
+          throw new Error(`Storage: ${upErr.message ?? JSON.stringify(upErr)}`);
+        }
+        console.log("[AppLogoUpload] uploaded:", path, upData);
         const { data: urlData } = supabase.storage.from("logos").getPublicUrl(path);
         uploaded[icon.fileName] = urlData.publicUrl;
       }
@@ -91,8 +101,11 @@ export function AppLogoUpload() {
       for (const s of settingsToSave) {
         const { error } = await supabase
           .from("site_settings")
-          .upsert({ id: s.id, value: s.value, updated_at: new Date().toISOString() });
-        if (error) throw error;
+          .upsert({ id: s.id, value: s.value, updated_at: new Date().toISOString() }, { onConflict: "id" });
+        if (error) {
+          console.error("[AppLogoUpload] DB upsert failed:", { id: s.id, error });
+          throw new Error(`DB (${s.id}): ${error.message ?? JSON.stringify(error)}`);
+        }
       }
 
       setCurrentIcon(uploaded["app-icon-512.png"]);
@@ -105,7 +118,8 @@ export function AppLogoUpload() {
       window.dispatchEvent(new CustomEvent("app-icon-updated"));
     } catch (err: any) {
       console.error("Помилка завантаження іконки:", err);
-      toast.error(`Не вдалося оновити іконку: ${err.message ?? "невідома помилка"}`);
+      const msg = err?.message || err?.error_description || err?.error || (typeof err === "string" ? err : JSON.stringify(err));
+      toast.error(`Не вдалося оновити іконку: ${msg}`);
     } finally {
       setIsUploading(false);
     }
