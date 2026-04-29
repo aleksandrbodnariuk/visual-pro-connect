@@ -9,7 +9,7 @@ interface ShareholderToggleProps {
 export function ShareholderToggle({ user, onToggleShareholder }: ShareholderToggleProps) {
   // Засновник завжди є акціонером
   const getShareholderStatus = (user: any) => {
-    const isFounder = user.founder_admin || user.phone_number === '0507068007';
+    const isFounder = user.founder_admin;
     if (isFounder) {
       return true;
     }
@@ -18,7 +18,7 @@ export function ShareholderToggle({ user, onToggleShareholder }: ShareholderTogg
 
   // Перемикач неактивний тільки для засновника
   const isToggleDisabled = (user: any) => {
-    return user.founder_admin || user.phone_number === '0507068007';
+    return user.founder_admin;
   };
 
   return (

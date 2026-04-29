@@ -268,7 +268,7 @@ export function UsersTab() {
       console.log("Поточний користувач:", currentUser);
       
       // Перевіряємо, чи це засновник
-      if (currentUser.phone_number === '0507068007' || currentUser.founder_admin) {
+      if (currentUser.founder_admin) {
         console.log("Це засновник - статус акціонера незмінний (завжди true)");
         toast.error("Неможливо змінити статус акціонера для засновника");
         return;

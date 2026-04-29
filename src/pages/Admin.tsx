@@ -28,7 +28,7 @@ export default function Admin() {
       setUsers(data || []);
       
       const shareholdersData = (data || []).filter((user: any) => {
-        const isFounder = user.founder_admin || user.phone_number === '0507068007';
+        const isFounder = user.founder_admin;
         const isShareholder = user.is_shareholder === true;
         return isFounder || isShareholder;
       });
