@@ -3002,6 +3002,10 @@ export type Database = {
         Returns: boolean
       }
       has_stock_market_access: { Args: { _user_id: string }; Returns: boolean }
+      invoke_push_notification: {
+        Args: { _body: string; _title: string; _url: string; _user_id: string }
+        Returns: undefined
+      }
       is_admin: { Args: { user_id: string }; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
       is_conversation_member: {
