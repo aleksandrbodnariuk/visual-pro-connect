@@ -3,7 +3,7 @@ import webpush from "https://esm.sh/web-push@3.6.7";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-internal-secret, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 Deno.serve(async (req) => {
@@ -21,6 +21,49 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // AUTH: require either valid internal secret (server-to-server / triggers)
+    // or an authenticated admin user JWT.
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const internalSecretHeader = req.headers.get('x-internal-secret') || '';
+
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    let authorized = false;
+
+    // 1. Internal secret check (used by DB triggers via pg_net)
+    if (internalSecretHeader) {
+      const { data: secretRow } = await adminClient
+        .from('app_secrets')
+        .select('value')
+        .eq('key', 'push_internal_secret')
+        .maybeSingle();
+      if (secretRow?.value && secretRow.value === internalSecretHeader) {
+        authorized = true;
+      }
+    }
+
+    // 2. Admin JWT fallback (for in-app admin broadcast tool)
+    if (!authorized) {
+      const authHeader = req.headers.get('Authorization') || '';
+      if (authHeader.startsWith('Bearer ')) {
+        const token = authHeader.replace('Bearer ', '');
+        const { data: userData } = await adminClient.auth.getUser(token);
+        const callerId = userData?.user?.id;
+        if (callerId) {
+          const { data: isAdmin } = await adminClient.rpc('is_user_admin', { _user_id: callerId });
+          if (isAdmin === true) authorized = true;
+        }
+      }
+    }
+
+    if (!authorized) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { user_id, title, body, url } = await req.json();
 
     if (!user_id) {
@@ -47,10 +90,7 @@ Deno.serve(async (req) => {
       vapidPrivateKey
     );
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+    const supabase = adminClient;
 
     // Get all push subscriptions for the user
     const { data: subscriptions, error } = await supabase
