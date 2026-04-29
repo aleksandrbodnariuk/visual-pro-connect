@@ -8,7 +8,7 @@ interface UserTitleProps {
 
 export function UserTitle({ user }: UserTitleProps) {
   const getShareholderStatus = (user: any) => {
-    if (user.founder_admin || user.phone_number === '0507068007') {
+    if (user.founder_admin) {
       return true;
     }
     return Boolean(user.is_shareholder);

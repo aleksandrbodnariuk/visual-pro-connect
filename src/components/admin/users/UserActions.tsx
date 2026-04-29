@@ -11,7 +11,7 @@ interface UserActionsProps {
 }
 
 export function UserActions({ user, onDeleteUser, onToggleBlock }: UserActionsProps) {
-  const isFounder = user.founder_admin || user.phone_number === '0507068007';
+  const isFounder = user.founder_admin;
   const isBlocked = Boolean(user.is_blocked);
   const [sendingMagicLink, setSendingMagicLink] = useState(false);
 

@@ -25,7 +25,7 @@ interface UserRoleProps {
 
 export function UserRole({ user, userRoles, onRoleChange }: UserRoleProps) {
   const getUserRole = () => {
-    if (user.founder_admin || user.phone_number === '0507068007') return "Засновник";
+    if (user.founder_admin) return "Засновник";
     if (userRoles && userRoles.length > 0) {
       return dbRoleToUiLabel(userRoles);
     }
@@ -34,7 +34,7 @@ export function UserRole({ user, userRoles, onRoleChange }: UserRoleProps) {
     return "Учасник";
   };
 
-  const isFounder = user.founder_admin || user.phone_number === '0507068007';
+  const isFounder = user.founder_admin;
 
   return (
     <div>

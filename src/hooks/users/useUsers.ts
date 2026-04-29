@@ -20,8 +20,7 @@ export function useUsers(): UseUsersReturnType {
       
       // Check if this is founder
       const isFounderAdmin = currentUser.role === "admin-founder" || 
-                            currentUser.isFounder || 
-                            (currentUser.phoneNumber === "0507068007");
+                            currentUser.isFounder;
       
       setIsFounder(isFounderAdmin);
       
@@ -53,7 +52,7 @@ export function useUsers(): UseUsersReturnType {
         
         // Make sure founder has correct status
         const updatedUsers = supabaseUsers.map(user => {
-          if (user.phone_number === "0507068007") {
+          if (user.founder_admin) {
             // Founder status is managed by database triggers and functions
             // No need to manually update here
             

@@ -130,7 +130,7 @@ export function UserMenu({ currentUser }: UserMenuProps) {
           
           {/* Доступ до адмін-панелі для адміністраторів */}
           {(currentUser.isAdmin || currentUser.role === "admin" || 
-            currentUser.role === "admin-founder" || currentUser.phoneNumber === "0507068007") && (
+            currentUser.role === "admin-founder") && (
             <DropdownMenuItem onClick={() => handleNavigate('/admin')}>
               <User className="mr-2 h-4 w-4" />
               <span>Панель адміністратора</span>
@@ -139,7 +139,7 @@ export function UserMenu({ currentUser }: UserMenuProps) {
           
           {/* Доступ до панелі акціонера та ринку акцій */}
           {(currentUser.isShareHolder || currentUser.role === "shareholder" || 
-            currentUser.status === "Акціонер" || currentUser.phoneNumber === "0507068007") && (
+            currentUser.status === "Акціонер") && (
             <>
               <DropdownMenuItem onClick={() => handleNavigate('/shareholder-panel')}>
                 <Crown className="mr-2 h-4 w-4" />
