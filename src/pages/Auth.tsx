@@ -6,6 +6,8 @@ import { translations } from '@/lib/translations';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from "@/components/ui/button";
 import { AuthStepManager, AuthStep } from '@/components/auth/AuthStepManager';
+import { GuestSupportDialog } from '@/components/support/GuestSupportDialog';
+import { MessageCircleQuestion } from 'lucide-react';
 
 export default function Auth() {
   const { language } = useLanguage();
@@ -14,6 +16,7 @@ export default function Auth() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [authStep, setAuthStep] = useState<AuthStep>(AuthStep.LOGIN_REGISTER);
+  const [supportOpen, setSupportOpen] = useState(false);
   const { isAuthenticated, loading } = useAuth();
   
   useEffect(() => {
@@ -50,6 +53,10 @@ export default function Auth() {
                 <Button size="lg" onClick={() => navigate("/search")}>
                   Пошук
                 </Button>
+                <Button size="lg" variant="outline" onClick={() => setSupportOpen(true)}>
+                  <MessageCircleQuestion className="w-5 h-5 mr-2" />
+                  Написати в підтримку
+                </Button>
               </div>
             </div>
             
@@ -61,10 +68,22 @@ export default function Auth() {
                 setIsLogin={setIsLogin}
                 setAuthStep={setAuthStep}
               />
+              <div className="mt-4 text-center">
+                <Button
+                  variant="link"
+                  className="text-sm text-muted-foreground"
+                  onClick={() => setSupportOpen(true)}
+                >
+                  <MessageCircleQuestion className="w-4 h-4 mr-1" />
+                  Не вдається увійти? Написати в підтримку
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      <GuestSupportDialog open={supportOpen} onOpenChange={setSupportOpen} />
     </div>
   );
 }
