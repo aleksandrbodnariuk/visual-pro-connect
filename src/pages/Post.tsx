@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Heart, MessageCircle, Share2, Bookmark, Trash2 } from "lucide-react";
+import { ArrowLeft, MessageCircle, Share2, Bookmark, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,6 +13,8 @@ import { usePostLikes } from "@/hooks/usePostLikes";
 import { Navbar } from "@/components/layout/Navbar";
 import { extractVideoEmbed } from "@/lib/videoEmbed";
 import { VideoPreview } from "@/components/feed/VideoPreview";
+import { ReactionPicker, ReactionType, getReactionEmoji } from "@/components/feed/ReactionPicker";
+import { LikersTooltip } from "@/components/feed/LikersTooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,7 +67,8 @@ export default function PostPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const { liked, likesCount, toggleLike } = usePostLikes(postId || "", post?.likes_count || 0);
+  const { liked, likesCount, toggleLike, toggleReaction, reactionType, topReactions, likerNames } =
+    usePostLikes(postId || "", post?.likes_count || 0);
 
   useEffect(() => {
     if (postId) {
@@ -264,21 +267,64 @@ export default function PostPage() {
             )}
 
             {/* Actions */}
-            <div className="flex items-center gap-4 pt-4 border-t">
-              <Button variant="ghost" size="sm" onClick={toggleLike}>
-                <Heart className={`h-5 w-5 mr-1 ${liked ? 'fill-red-500 text-red-500' : ''}`} />
-                {likesCount}
-              </Button>
-              <Button variant="ghost" size="sm">
-                <MessageCircle className="h-5 w-5 mr-1" />
-                {comments.length}
-              </Button>
-              <Button variant="ghost" size="sm">
-                <Share2 className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="sm" className="ml-auto">
-                <Bookmark className="h-5 w-5" />
-              </Button>
+            <div className="pt-4 border-t">
+              <div className="flex items-center gap-2">
+                <ReactionPicker onSelect={(type) => toggleReaction(type)}>
+                  <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleLike}>
+                    {liked ? (
+                      <span className="text-xl leading-none">{getReactionEmoji(reactionType || 'like')}</span>
+                    ) : (
+                      <span className="text-xl leading-none opacity-60">👍</span>
+                    )}
+                  </Button>
+                </ReactionPicker>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <MessageCircle className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <Share2 className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="rounded-full ml-auto">
+                  <Bookmark className="h-5 w-5" />
+                </Button>
+              </div>
+
+              {/* Підсумок лайків / коментарів */}
+              {(likesCount > 0 || comments.length > 0) && (
+                <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground">
+                  {likesCount > 0 ? (
+                    <LikersTooltip names={(() => {
+                      const all: string[] = [];
+                      if (liked) all.push('Ви');
+                      likerNames.forEach((n) => all.push(n));
+                      return all;
+                    })()}>
+                      <div className="flex items-center gap-1 min-w-0 flex-1 cursor-pointer">
+                        {topReactions.length > 0 && topReactions.map((type, i) => (
+                          <span key={i} className="text-sm -ml-0.5 first:ml-0">
+                            {getReactionEmoji(type as ReactionType)}
+                          </span>
+                        ))}
+                        <span className="truncate ml-0.5">
+                          {(() => {
+                            const parts: string[] = [];
+                            if (liked) parts.push('Ви');
+                            likerNames.slice(0, 2).forEach((n) => parts.push(n));
+                            const shown = parts.length;
+                            const remaining = likesCount - shown;
+                            if (shown === 0 && remaining > 0) return `${remaining}`;
+                            if (remaining > 0) return `${parts.join(', ')} та ще ${remaining}`;
+                            return parts.join(', ');
+                          })()}
+                        </span>
+                      </div>
+                    </LikersTooltip>
+                  ) : <div />}
+                  {comments.length > 0 && (
+                    <span className="shrink-0 ml-2">{comments.length} коментарів</span>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
