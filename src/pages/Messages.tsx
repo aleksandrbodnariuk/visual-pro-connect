@@ -374,7 +374,7 @@ export default function Messages() {
               {activeChat ? (
                 <>
                   <ChatHeader
-                    user={activeChat.user}
+                    user={activeChat.type === 'group' ? activeChat.user : { ...activeChat.user, id: activeChat.user.id }}
                     onBack={handleBackToList}
                     isGroup={activeChat.type === 'group'}
                     memberCount={activeChat.memberCount}
