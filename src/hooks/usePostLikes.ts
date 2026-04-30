@@ -9,6 +9,7 @@ export function usePostLikes(postId: string, initialLikesCount: number) {
   const [likesCount, setLikesCount] = useState(initialLikesCount);
   const [reactionType, setReactionType] = useState<ReactionType | null>(null);
   const [topReactions, setTopReactions] = useState<string[]>([]);
+  const [likerNames, setLikerNames] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
   const userId = user?.id;
@@ -16,7 +17,7 @@ export function usePostLikes(postId: string, initialLikesCount: number) {
   const loadTopReactions = useCallback(async () => {
     const { data } = await supabase
       .from('post_likes')
-      .select('reaction_type')
+      .select('reaction_type, user_id')
       .eq('post_id', postId);
 
     if (data && data.length > 0) {
@@ -30,8 +31,29 @@ export function usePostLikes(postId: string, initialLikesCount: number) {
         .slice(0, 3)
         .map(([type]) => type);
       setTopReactions(sorted);
+
+      // Завантажити імена лайкерів (виключаючи поточного користувача)
+      const otherUserIds = data
+        .map((l: any) => l.user_id)
+        .filter((id: string) => id && id !== userId);
+      const uniqueIds = [...new Set(otherUserIds)] as string[];
+      if (uniqueIds.length > 0) {
+        const { data: profiles } = await supabase
+          .rpc('get_safe_public_profiles_by_ids', { _ids: uniqueIds });
+        if (profiles) {
+          const names = (profiles as any[])
+            .map((p) => p.full_name)
+            .filter((n: string) => n && n.trim().length > 0);
+          setLikerNames(names);
+        }
+      } else {
+        setLikerNames([]);
+      }
+    } else {
+      setTopReactions([]);
+      setLikerNames([]);
     }
-  }, [postId]);
+  }, [postId, userId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -122,5 +144,5 @@ export function usePostLikes(postId: string, initialLikesCount: number) {
     }
   };
 
-  return { liked, likesCount, toggleLike, isLoading, reactionType, topReactions, toggleReaction };
+  return { liked, likesCount, toggleLike, isLoading, reactionType, topReactions, likerNames, toggleReaction };
 }
