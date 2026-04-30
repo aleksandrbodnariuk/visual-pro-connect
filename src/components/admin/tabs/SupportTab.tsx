@@ -16,6 +16,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   MessageCircle,
   Clock,
   CheckCircle2,
@@ -25,6 +35,9 @@ import {
   Filter,
   Inbox,
   Paperclip,
+  Archive,
+  Trash2,
+  ArchiveRestore,
 } from "lucide-react";
 
 const STATUS_OPTIONS = [
@@ -32,12 +45,14 @@ const STATUS_OPTIONS = [
   { value: "open", label: "Відкриті" },
   { value: "in_progress", label: "В роботі" },
   { value: "closed", label: "Закриті" },
+  { value: "archived", label: "Архів" },
 ];
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   open: { label: "Відкрито", variant: "default" },
   in_progress: { label: "В роботі", variant: "secondary" },
   closed: { label: "Закрито", variant: "outline" },
+  archived: { label: "В архіві", variant: "outline" },
 };
 
 const CATEGORY_MAP: Record<string, string> = {
@@ -57,6 +72,8 @@ export function SupportTab() {
   const [newStatus, setNewStatus] = useState("");
   const [responding, setResponding] = useState(false);
   const [users, setUsers] = useState<Record<string, any>>({});
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     loadTickets();
@@ -139,6 +156,66 @@ export function SupportTab() {
       toast.error("Помилка оновлення тікета");
     } finally {
       setResponding(false);
+    }
+  };
+
+  const handleArchive = async (ticket: any, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from("support_tickets")
+        .update({ status: "archived", updated_at: new Date().toISOString() } as any)
+        .eq("id", ticket.id) as any;
+      if (error) throw error;
+      toast.success("Звернення переміщено в архів");
+      setSelectedTicket(null);
+      loadTickets();
+    } catch (err) {
+      console.error(err);
+      toast.error("Не вдалося архівувати");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUnarchive = async (ticket: any, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from("support_tickets")
+        .update({ status: "closed", updated_at: new Date().toISOString() } as any)
+        .eq("id", ticket.id) as any;
+      if (error) throw error;
+      toast.success("Звернення відновлено");
+      setSelectedTicket(null);
+      loadTickets();
+    } catch (err) {
+      console.error(err);
+      toast.error("Не вдалося відновити");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from("support_tickets")
+        .delete()
+        .eq("id", id) as any;
+      if (error) throw error;
+      toast.success("Звернення видалено");
+      setConfirmDeleteId(null);
+      setSelectedTicket(null);
+      loadTickets();
+    } catch (err) {
+      console.error(err);
+      toast.error("Не вдалося видалити");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -235,6 +312,43 @@ export function SupportTab() {
                     </span>
                   )}
                 </div>
+                <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-border">
+                  {ticket.status !== "archived" ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => handleArchive(ticket, e)}
+                      disabled={actionLoading}
+                    >
+                      <Archive className="h-3.5 w-3.5 mr-1" />
+                      В архів
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => handleUnarchive(ticket, e)}
+                        disabled={actionLoading}
+                      >
+                        <ArchiveRestore className="h-3.5 w-3.5 mr-1" />
+                        Відновити
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDeleteId(ticket.id);
+                        }}
+                        disabled={actionLoading}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
+                        Видалити
+                      </Button>
+                    </>
+                  )}
+                </div>
               </Card>
             );
           })}
@@ -310,6 +424,7 @@ export function SupportTab() {
                       <SelectItem value="open">Відкрито</SelectItem>
                       <SelectItem value="in_progress">В роботі</SelectItem>
                       <SelectItem value="closed">Закрито</SelectItem>
+                      <SelectItem value="archived">В архіві</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -329,11 +444,67 @@ export function SupportTab() {
                   <Send className="w-4 h-4 mr-2" />
                   {responding ? "Збереження..." : "Зберегти"}
                 </Button>
+
+                <div className="flex gap-2 pt-2 border-t border-border">
+                  {selectedTicket.status !== "archived" ? (
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => handleArchive(selectedTicket)}
+                      disabled={actionLoading}
+                    >
+                      <Archive className="w-4 h-4 mr-2" />
+                      В архів
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => handleUnarchive(selectedTicket)}
+                        disabled={actionLoading}
+                      >
+                        <ArchiveRestore className="w-4 h-4 mr-2" />
+                        Відновити
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        className="flex-1"
+                        onClick={() => setConfirmDeleteId(selectedTicket.id)}
+                        disabled={actionLoading}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Видалити
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!confirmDeleteId} onOpenChange={(o) => !o && setConfirmDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Видалити звернення назавжди?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Цю дію неможливо скасувати. Звернення та прикріплені файли будуть остаточно видалені.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionLoading}>Скасувати</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+              disabled={actionLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {actionLoading ? "Видалення..." : "Видалити"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
