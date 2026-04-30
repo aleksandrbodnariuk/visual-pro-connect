@@ -2,9 +2,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Users, Settings } from "lucide-react";
 import { isUserOnline, formatLastSeenStatus } from "@/lib/onlineStatus";
+import { useNavigate } from "react-router-dom";
 
 interface ChatHeaderProps {
   user: {
+    id?: string;
     name: string;
     avatarUrl: string;
     lastSeen: string;
@@ -16,8 +18,19 @@ interface ChatHeaderProps {
 }
 
 export function ChatHeader({ user, onBack, isGroup, memberCount, onOpenGroupInfo }: ChatHeaderProps) {
+  const navigate = useNavigate();
   const online = !isGroup && isUserOnline(user.lastSeen);
   const statusText = isGroup ? null : formatLastSeenStatus(user.lastSeen);
+
+  const handleUserClick = () => {
+    if (isGroup) {
+      onOpenGroupInfo?.();
+    } else if (user.id) {
+      navigate(`/profile/${user.id}`);
+    }
+  };
+
+  const isClickable = isGroup ? !!onOpenGroupInfo : !!user.id;
 
   return (
     <div className="border-b p-3">
@@ -34,8 +47,16 @@ export function ChatHeader({ user, onBack, isGroup, memberCount, onOpenGroupInfo
         )}
         
         <div
-          className={`relative flex-shrink-0 ${isGroup && onOpenGroupInfo ? 'cursor-pointer' : ''}`}
-          onClick={isGroup && onOpenGroupInfo ? onOpenGroupInfo : undefined}
+          className={`relative flex-shrink-0 ${isClickable ? 'cursor-pointer' : ''}`}
+          onClick={isClickable ? handleUserClick : undefined}
+          role={isClickable ? 'button' : undefined}
+          tabIndex={isClickable ? 0 : undefined}
+          onKeyDown={(e) => {
+            if (isClickable && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault();
+              handleUserClick();
+            }
+          }}
         >
           <Avatar className="h-10 w-10">
             <AvatarImage src={user.avatarUrl} alt={user.name} />
@@ -56,10 +77,10 @@ export function ChatHeader({ user, onBack, isGroup, memberCount, onOpenGroupInfo
         </div>
         
         <div
-          className={`flex-1 min-w-0 ${isGroup && onOpenGroupInfo ? 'cursor-pointer' : ''}`}
-          onClick={isGroup && onOpenGroupInfo ? onOpenGroupInfo : undefined}
+          className={`flex-1 min-w-0 ${isClickable ? 'cursor-pointer' : ''}`}
+          onClick={isClickable ? handleUserClick : undefined}
         >
-          <h3 className="font-semibold truncate">{user.name}</h3>
+          <h3 className={`font-semibold truncate ${isClickable ? 'hover:underline' : ''}`}>{user.name}</h3>
           {isGroup && memberCount ? (
             <p className="text-xs text-muted-foreground">{memberCount} учасників</p>
           ) : statusText && (
