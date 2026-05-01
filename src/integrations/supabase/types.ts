@@ -14,6 +14,133 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_earnings: {
+        Row: {
+          ad_order_id: string
+          amount: number
+          created_at: string
+          id: string
+          percent: number
+          position_label: string
+          representative_id: string
+          role_snapshot: string
+          user_id: string
+        }
+        Insert: {
+          ad_order_id: string
+          amount?: number
+          created_at?: string
+          id?: string
+          percent?: number
+          position_label: string
+          representative_id: string
+          role_snapshot: string
+          user_id: string
+        }
+        Update: {
+          ad_order_id?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          percent?: number
+          position_label?: string
+          representative_id?: string
+          role_snapshot?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_earnings_ad_order_id_fkey"
+            columns: ["ad_order_id"]
+            isOneToOne: false
+            referencedRelation: "ad_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_network_revenue: {
+        Row: {
+          ad_order_id: string
+          amount: number
+          bonus_from_unfilled_uplines: number
+          created_at: string
+          id: string
+          network_percent: number
+        }
+        Insert: {
+          ad_order_id: string
+          amount?: number
+          bonus_from_unfilled_uplines?: number
+          created_at?: string
+          id?: string
+          network_percent?: number
+        }
+        Update: {
+          ad_order_id?: string
+          amount?: number
+          bonus_from_unfilled_uplines?: number
+          created_at?: string
+          id?: string
+          network_percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_network_revenue_ad_order_id_fkey"
+            columns: ["ad_order_id"]
+            isOneToOne: false
+            referencedRelation: "ad_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_orders: {
+        Row: {
+          ad_date: string
+          ad_price: number
+          advertiser_contact: string | null
+          advertiser_name: string
+          created_at: string
+          finder_role: string
+          finder_user_id: string
+          id: string
+          notes: string | null
+          processed: boolean
+          processed_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ad_date: string
+          ad_price?: number
+          advertiser_contact?: string | null
+          advertiser_name: string
+          created_at?: string
+          finder_role: string
+          finder_user_id: string
+          id?: string
+          notes?: string | null
+          processed?: boolean
+          processed_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ad_date?: string
+          ad_price?: number
+          advertiser_contact?: string | null
+          advertiser_name?: string
+          created_at?: string
+          finder_role?: string
+          finder_user_id?: string
+          id?: string
+          notes?: string | null
+          processed?: boolean
+          processed_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           city: string | null
@@ -3063,6 +3190,7 @@ export type Database = {
         Args: { _link?: string; _message: string }
         Returns: undefined
       }
+      process_ad_order: { Args: { _ad_order_id: string }; Returns: Json }
       process_order_profit: { Args: { _order_id: string }; Returns: Json }
       record_visit: { Args: never; Returns: undefined }
       reject_certificate_purchase: {
