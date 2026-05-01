@@ -9,11 +9,14 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Users, UserPlus, CalendarPlus, Loader2, Settings, Archive, Trash2 } from 'lucide-react';
+import { Megaphone } from 'lucide-react';
 import { InviteFriendDialog } from '@/components/representative/InviteFriendDialog';
 import { InvitesList } from '@/components/representative/InvitesList';
 import { TeamTree } from '@/components/representative/TeamTree';
 import { RepBookingCalendar } from '@/components/representative/RepBookingCalendar';
 import { CreateBookingDialog } from '@/components/representative/CreateBookingDialog';
+import { CreateAdOrderDialog } from '@/components/representative/CreateAdOrderDialog';
+import { AdOrdersBlock } from '@/components/representative/AdOrdersBlock';
 import { EarningsBlock } from '@/components/representative/EarningsBlock';
 import { ServiceCalculator } from '@/components/representative/ServiceCalculator';
 import { PortfolioBlock } from '@/components/representative/PortfolioBlock';
@@ -52,6 +55,8 @@ export default function RepresentativePanel() {
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [adOpen, setAdOpen] = useState(false);
+  const [adRefreshKey, setAdRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -223,6 +228,15 @@ export default function RepresentativePanel() {
                 <span className="hidden sm:inline">Бронювання</span>
               </Button>
               <Button
+                onClick={() => setAdOpen(true)}
+                size="sm"
+                variant="outline"
+                className="min-h-[44px] min-w-[44px] text-xs sm:text-sm"
+              >
+                <Megaphone className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Нова реклама</span>
+              </Button>
+              <Button
                 onClick={() => setInviteOpen(true)}
                 size="sm"
                 className="min-h-[44px] min-w-[44px] text-xs sm:text-sm"
@@ -267,6 +281,7 @@ export default function RepresentativePanel() {
 
                 <ServiceCalculator />
                 <PortfolioBlock />
+                <AdOrdersBlock userId={user!.id} refreshKey={adRefreshKey} />
               </div>
             </TabsContent>
 
@@ -369,6 +384,13 @@ export default function RepresentativePanel() {
             userId={user!.id}
             initialDate={selectedDate}
             onCreated={loadBookings}
+          />
+          <CreateAdOrderDialog
+            open={adOpen}
+            onOpenChange={setAdOpen}
+            userId={user!.id}
+            finderRole={repRecord.role}
+            onCreated={() => setAdRefreshKey(k => k + 1)}
           />
           {/* Archive dialog */}
           <Dialog open={!!archiveDialog} onOpenChange={() => setArchiveDialog(null)}>
