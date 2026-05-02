@@ -79,6 +79,7 @@ export function MessageList({
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const didInitialScrollRef = useRef(false);
 
   // Get current user
   useEffect(() => {
@@ -164,20 +165,47 @@ export function MessageList({
     return own?.emoji || null;
   };
 
-  // Auto-scroll to bottom when new messages arrive (only if near bottom)
+  // Reset initial-scroll flag when chat changes (messages array reference changes drastically)
+  // We detect "first load" as the first time messages.length becomes > 0.
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
+
+    if (messages.length === 0) {
+      didInitialScrollRef.current = false;
+      return;
+    }
+
+    if (!didInitialScrollRef.current) {
+      // Initial jump to bottom — do it now, then again after layout/images settle
+      const jump = () => {
+        container.scrollTop = container.scrollHeight;
+      };
+      jump();
+      requestAnimationFrame(jump);
+      const t1 = setTimeout(jump, 100);
+      const t2 = setTimeout(jump, 400);
+      // Re-jump as images inside load
+      const imgs = Array.from(container.querySelectorAll('img'));
+      imgs.forEach(img => {
+        if (!(img as HTMLImageElement).complete) {
+          img.addEventListener('load', jump, { once: true });
+          img.addEventListener('error', jump, { once: true });
+        }
+      });
+      didInitialScrollRef.current = true;
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
+    }
+
+    // Subsequent updates: only scroll if user is near bottom
     const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
     if (isNearBottom) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages.length]);
-
-  // Scroll to bottom on initial mount
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView();
-  }, []);
 
   // Find the very last sender message (for delivered indicator if not read)
   const lastSenderMsgId = (() => {
