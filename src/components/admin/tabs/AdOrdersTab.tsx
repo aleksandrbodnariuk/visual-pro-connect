@@ -35,7 +35,7 @@ export function AdOrdersTab() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('ad_orders')
         .select('*')
         .order('created_at', { ascending: false });
@@ -45,7 +45,7 @@ export function AdOrdersTab() {
 
       const ids = Array.from(new Set(list.map(o => o.finder_user_id)));
       if (ids.length) {
-        const { data: profiles } = await supabase
+        const { data: profiles } = await (supabase as any)
           .from('profiles')
           .select('id, first_name, last_name')
           .in('id', ids);
