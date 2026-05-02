@@ -7,6 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { compressImageAsFile, validateImageSize, OUTPUT_FORMAT, OUTPUT_EXTENSION } from "@/lib/imageCompression";
+import { VoiceRecorder } from "./VoiceRecorder";
 
 const HEIC_TYPES = ['image/heic', 'image/heif'];
 
@@ -139,8 +140,48 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
     setMessageText(prev => prev + emoji);
   };
 
+  const uploadVoiceFile = async (file: File): Promise<string | null> => {
+    try {
+      const ext = file.name.split('.').pop() || 'webm';
+      const fileName = `${crypto.randomUUID()}.${ext}`;
+      const filePath = `voice/${fileName}`;
+      const { error: uploadError } = await supabase.storage
+        .from('message-attachments')
+        .upload(filePath, file, {
+          contentType: file.type || 'audio/webm',
+          cacheControl: '86400'
+        });
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage
+        .from('message-attachments')
+        .getPublicUrl(filePath);
+      return data.publicUrl;
+    } catch (error) {
+      console.error("Помилка завантаження голосового:", error);
+      toast.error("Не вдалося надіслати голосове повідомлення");
+      return null;
+    }
+  };
+
+  const handleVoiceRecorded = async (file: File, durationSec: number) => {
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Голосове повідомлення занадто велике");
+      return;
+    }
+    setIsUploading(true);
+    try {
+      const url = await uploadVoiceFile(file);
+      if (!url) return;
+      // Передаємо тривалість через query-параметр, щоб не змінювати схему БД
+      const urlWithMeta = `${url}#d=${durationSec}`;
+      onSendMessage("", urlWithMeta, "audio");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
-    <div className="border-t p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] md:pb-3">
+    <div className="border-t p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] md:pb-3 relative">
       {/* Превʼю вибраного файлу */}
       {previewUrl && (
         <div className="mb-2 relative inline-block">
@@ -211,14 +252,19 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
         {/* Емодзі — десктоп */}
         {!isMobile && <EmojiPicker onSelectEmoji={handleEmojiSelect} />}
 
-        <Button 
-          className="bg-gradient-purple rounded-full flex-shrink-0" 
-          size="icon"
-          onClick={handleSendMessage}
-          disabled={isUploading || (!messageText.trim() && !selectedFile)}
-        >
-          <Send className="h-4 w-4" />
-        </Button>
+        {/* Якщо є текст або файл — кнопка надіслати; інакше — голосове */}
+        {(messageText.trim() || selectedFile) ? (
+          <Button
+            className="bg-gradient-purple rounded-full flex-shrink-0"
+            size="icon"
+            onClick={handleSendMessage}
+            disabled={isUploading}
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        ) : (
+          <VoiceRecorder onRecorded={handleVoiceRecorded} disabled={isUploading} />
+        )}
       </div>
     </div>
   );
