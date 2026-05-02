@@ -5,6 +5,7 @@ import { ShareholdersTab } from "./tabs/ShareholdersTab";
 import { SpecialistsTab } from "./tabs/SpecialistsTab";
 import { RepresentativesTab } from "./tabs/RepresentativesTab";
 import { AdminOrdersTab } from "./tabs/AdminOrdersTab";
+import { AdOrdersTab } from "./tabs/AdOrdersTab";
 import { StockExchangeTab } from "./tabs/StockExchangeTab";
 import { PostsTab } from "./tabs/PostsTab";
 import { SettingsTab } from "./tabs/SettingsTab";
@@ -60,6 +61,7 @@ export function AdminTabs() {
         <div className="w-px self-stretch bg-border mx-1 shrink-0" />
 
         <TabsTrigger value="orders">Замовлення</TabsTrigger>
+        <TabsTrigger value="ad-orders">Реклама</TabsTrigger>
         <TabsTrigger value="finances">Фінанси</TabsTrigger>
         <TabsTrigger value="payouts">Виплати</TabsTrigger>
         <TabsTrigger value="history">Історія розрахунків</TabsTrigger>
@@ -95,6 +97,10 @@ export function AdminTabs() {
       
       <TabsContent value="orders">
         <AdminOrdersTab />
+      </TabsContent>
+
+      <TabsContent value="ad-orders">
+        <AdOrdersTab />
       </TabsContent>
       
       <TabsContent value="stock-exchange">
