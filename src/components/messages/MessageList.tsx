@@ -293,7 +293,16 @@ export function MessageList({
                           onClick={() => setZoomedImage(message.attachmentUrl!)}
                         />
                       )}
-                      
+                      {message.attachmentUrl && message.attachmentType === 'audio' && (
+                        <audio
+                          controls
+                          preload="metadata"
+                          src={message.attachmentUrl}
+                          className="max-w-[260px] w-[260px] mb-1 rounded-full"
+                          style={{ height: 40 }}
+                        />
+                      )}
+
                       {message.text && <p className="text-sm">{message.text}</p>}
                       
                       <div className={`mt-1 flex items-center gap-1 text-xs ${
