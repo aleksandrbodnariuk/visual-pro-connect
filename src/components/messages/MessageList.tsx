@@ -34,6 +34,15 @@ interface ReactionData {
 function renderSystemEvent(event: any, fallbackText?: string): string {
   if (!event) return fallbackText || '';
   switch (event.type) {
+    case 'call': {
+      const dur = event.duration || 0;
+      const mm = Math.floor(dur / 60);
+      const ss = String(dur % 60).padStart(2, '0');
+      if (event.status === 'completed') return `📞 Аудіодзвінок · ${mm}:${ss}`;
+      if (event.status === 'missed') return '📞 Пропущений дзвінок';
+      if (event.status === 'declined') return '📞 Дзвінок відхилено';
+      return '📞 Аудіодзвінок';
+    }
     case 'group_created':
       return event.title ? `Створено групу «${event.title}»` : 'Групу створено';
     case 'member_added':
