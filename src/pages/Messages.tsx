@@ -379,6 +379,7 @@ export default function Messages() {
                     isGroup={activeChat.type === 'group'}
                     memberCount={activeChat.memberCount}
                     onOpenGroupInfo={activeChat.type === 'group' ? () => setGroupInfoOpen(true) : undefined}
+                    conversationId={activeChat.conversationId}
                   />
                   
                   <MessageList 
