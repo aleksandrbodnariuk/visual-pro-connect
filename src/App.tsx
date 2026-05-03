@@ -9,6 +9,8 @@ import { LanguageProvider } from "./context/LanguageContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
 import { SiteSettingsProvider } from "./context/SiteSettingsContext";
+import { CallProvider } from "./context/CallContext";
+import { CallDialog } from "./components/messages/CallDialog";
 import { useDataSync } from "./hooks/useDataSync";
 import { usePushAutoSubscribe } from "./hooks/usePushSubscription";
 import { useBadgeClear } from "./hooks/useBadgeClear";
@@ -142,6 +144,7 @@ const AppContent = () => {
       <SupportButton />
       <InstallPrompt />
       <PushOnboarding />
+      <CallDialog />
     </BrowserRouter>
   );
 };
@@ -153,11 +156,13 @@ const App = () => (
         <LanguageProvider>
           <SiteSettingsProvider>
             <TooltipProvider>
-              <FaviconUpdater />
-              <DynamicManifest />
-              <Toaster />
-              <Sonner />
-              <AppContent />
+              <CallProvider>
+                <FaviconUpdater />
+                <DynamicManifest />
+                <Toaster />
+                <Sonner />
+                <AppContent />
+              </CallProvider>
             </TooltipProvider>
           </SiteSettingsProvider>
         </LanguageProvider>
