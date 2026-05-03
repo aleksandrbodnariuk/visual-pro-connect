@@ -1,8 +1,9 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Users, Settings } from "lucide-react";
+import { ArrowLeft, Users, Settings, Phone } from "lucide-react";
 import { isUserOnline, formatLastSeenStatus } from "@/lib/onlineStatus";
 import { useNavigate } from "react-router-dom";
+import { useCall } from "@/context/CallContext";
 
 interface ChatHeaderProps {
   user: {
@@ -15,10 +16,12 @@ interface ChatHeaderProps {
   isGroup?: boolean;
   memberCount?: number;
   onOpenGroupInfo?: () => void;
+  conversationId?: string;
 }
 
-export function ChatHeader({ user, onBack, isGroup, memberCount, onOpenGroupInfo }: ChatHeaderProps) {
+export function ChatHeader({ user, onBack, isGroup, memberCount, onOpenGroupInfo, conversationId }: ChatHeaderProps) {
   const navigate = useNavigate();
+  const { startCall, call } = useCall();
   const online = !isGroup && isUserOnline(user.lastSeen);
   const statusText = isGroup ? null : formatLastSeenStatus(user.lastSeen);
 
@@ -93,6 +96,21 @@ export function ChatHeader({ user, onBack, isGroup, memberCount, onOpenGroupInfo
         {isGroup && onOpenGroupInfo && (
           <Button variant="ghost" size="icon" onClick={onOpenGroupInfo} title="Інформація про групу">
             <Settings className="h-5 w-5" />
+          </Button>
+        )}
+
+        {!isGroup && user.id && (
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Аудіодзвінок"
+            disabled={!!call}
+            onClick={() => startCall(
+              { id: user.id!, name: user.name, avatarUrl: user.avatarUrl },
+              conversationId
+            )}
+          >
+            <Phone className="h-5 w-5" />
           </Button>
         )}
       </div>
