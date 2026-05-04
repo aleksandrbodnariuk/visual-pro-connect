@@ -85,7 +85,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
     stops.forEach((stop) => {
       try { stop(); } catch {}
     });
-    try { toneCtxRef.current?.suspend().catch(() => {}); } catch {}
+    const ctx = toneCtxRef.current;
+    toneCtxRef.current = null;
+    try { ctx?.close().catch(() => {}); } catch {}
   }, []);
 
   const ensureToneCtx = useCallback(() => {
