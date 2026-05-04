@@ -34,6 +34,7 @@ interface ActiveCall {
   status: CallStatus;
   startedAt?: number;
   muted: boolean;
+  speakerOn: boolean;
 }
 
 interface CallContextValue {
@@ -43,6 +44,7 @@ interface CallContextValue {
   declineCall: () => void;
   endCall: () => void;
   toggleMute: () => void;
+  toggleSpeaker: () => void;
   remoteAudioRef: React.RefObject<HTMLAudioElement>;
 }
 
