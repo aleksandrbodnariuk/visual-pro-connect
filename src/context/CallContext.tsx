@@ -77,11 +77,15 @@ export function CallProvider({ children }: { children: ReactNode }) {
 
   // ===== Ring tones via WebAudio =====
   const toneCtxRef = useRef<AudioContext | null>(null);
-  const toneNodesRef = useRef<{ stop: () => void } | null>(null);
+  const toneStopsRef = useRef<Set<() => void>>(new Set());
 
   const stopTone = useCallback(() => {
-    try { toneNodesRef.current?.stop(); } catch {}
-    toneNodesRef.current = null;
+    const stops = Array.from(toneStopsRef.current);
+    toneStopsRef.current.clear();
+    stops.forEach((stop) => {
+      try { stop(); } catch {}
+    });
+    try { toneCtxRef.current?.suspend().catch(() => {}); } catch {}
   }, []);
 
   const ensureToneCtx = useCallback(() => {
@@ -121,16 +125,16 @@ export function CallProvider({ children }: { children: ReactNode }) {
     };
     cycle();
     const interval = setInterval(cycle, 4000);
-    toneNodesRef.current = {
-      stop: () => {
-        active = false;
-        clearInterval(interval);
-        try { gain.gain.cancelScheduledValues(ctx.currentTime); gain.gain.value = 0; } catch {}
-        try { osc1.stop(); } catch {}
-        try { osc2.stop(); } catch {}
-        try { osc1.disconnect(); osc2.disconnect(); gain.disconnect(); } catch {}
-      },
+    const stop = () => {
+      active = false;
+      clearInterval(interval);
+      try { gain.gain.cancelScheduledValues(ctx.currentTime); gain.gain.value = 0; } catch {}
+      try { osc1.stop(); } catch {}
+      try { osc2.stop(); } catch {}
+      try { osc1.disconnect(); osc2.disconnect(); gain.disconnect(); } catch {}
+      toneStopsRef.current.delete(stop);
     };
+    toneStopsRef.current.add(stop);
   }, [ensureToneCtx, stopTone]);
 
   const playRingtone = useCallback(() => {
@@ -161,15 +165,15 @@ export function CallProvider({ children }: { children: ReactNode }) {
     };
     ring();
     const interval = setInterval(ring, 2000);
-    toneNodesRef.current = {
-      stop: () => {
-        active = false;
-        clearInterval(interval);
-        try { gain.gain.cancelScheduledValues(ctx.currentTime); gain.gain.value = 0; } catch {}
-        try { osc.stop(); } catch {}
-        try { osc.disconnect(); gain.disconnect(); } catch {}
-      },
+    const stop = () => {
+      active = false;
+      clearInterval(interval);
+      try { gain.gain.cancelScheduledValues(ctx.currentTime); gain.gain.value = 0; } catch {}
+      try { osc.stop(); } catch {}
+      try { osc.disconnect(); gain.disconnect(); } catch {}
+      toneStopsRef.current.delete(stop);
     };
+    toneStopsRef.current.add(stop);
   }, [ensureToneCtx, stopTone]);
 
   const cleanup = useCallback(() => {
