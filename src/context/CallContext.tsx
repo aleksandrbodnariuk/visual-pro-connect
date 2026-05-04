@@ -257,10 +257,18 @@ export function CallProvider({ children }: { children: ReactNode }) {
     };
 
     pc.ontrack = (e) => {
+      stopTone();
       const [stream] = e.streams;
       if (remoteAudioRef.current && stream) {
         remoteAudioRef.current.srcObject = stream;
         remoteAudioRef.current.play().catch(() => {});
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+        stopTone();
+        setCall(prev => prev ? { ...prev, status: "active", startedAt: prev.startedAt || Date.now() } : prev);
       }
     };
 
@@ -269,6 +277,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
       if (state === "connected") {
         stopTone();
         setCall(prev => prev ? { ...prev, status: "active", startedAt: prev.startedAt || Date.now() } : prev);
+      } else if (state === "connecting") {
+        const c = callRef.current;
+        if (c?.status === "active") stopTone();
       } else if (state === "failed" || state === "disconnected" || state === "closed") {
         if (state === "failed") {
           toast.error("З'єднання втрачено");
