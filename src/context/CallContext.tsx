@@ -176,6 +176,10 @@ export function CallProvider({ children }: { children: ReactNode }) {
     toneStopsRef.current.add(stop);
   }, [ensureToneCtx, stopTone]);
 
+  useEffect(() => {
+    if (call?.status === "active") stopTone();
+  }, [call?.status, stopTone]);
+
   const cleanup = useCallback(() => {
     stopTone();
     try { pcRef.current?.close(); } catch {}
