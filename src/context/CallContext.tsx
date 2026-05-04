@@ -329,6 +329,12 @@ export function CallProvider({ children }: { children: ReactNode }) {
       } catch (e) { console.error(e); }
     });
 
+    channel.on("broadcast", { event: "accepted" }, ({ payload }) => {
+      if (payload.from === user?.id) return;
+      stopTone();
+      setCall(prev => prev ? { ...prev, status: "active", startedAt: prev.startedAt || Date.now() } : prev);
+    });
+
     channel.on("broadcast", { event: "ice" }, async ({ payload }) => {
       if (payload.from === user?.id) return;
       const pc = pcRef.current;
