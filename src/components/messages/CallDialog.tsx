@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Phone, PhoneOff, Mic, MicOff } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { useCall } from "@/context/CallContext";
 
 function fmt(sec: number) {
@@ -12,7 +12,7 @@ function fmt(sec: number) {
 }
 
 export function CallDialog() {
-  const { call, acceptCall, declineCall, endCall, toggleMute } = useCall();
+  const { call, acceptCall, declineCall, endCall, toggleMute, toggleSpeaker } = useCall();
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -82,15 +82,26 @@ export function CallDialog() {
             ) : (
               <>
                 {call.status === "active" && (
-                  <Button
-                    size="icon"
-                    variant={call.muted ? "default" : "secondary"}
-                    className="h-14 w-14 rounded-full"
-                    onClick={toggleMute}
-                    title={call.muted ? "Увімкнути мікрофон" : "Вимкнути мікрофон"}
-                  >
-                    {call.muted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
-                  </Button>
+                  <>
+                    <Button
+                      size="icon"
+                      variant={call.muted ? "default" : "secondary"}
+                      className="h-14 w-14 rounded-full"
+                      onClick={toggleMute}
+                      title={call.muted ? "Увімкнути мікрофон" : "Вимкнути мікрофон"}
+                    >
+                      {call.muted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant={call.speakerOn ? "secondary" : "default"}
+                      className="h-14 w-14 rounded-full"
+                      onClick={toggleSpeaker}
+                      title={call.speakerOn ? "Вимкнути гучний зв'язок" : "Увімкнути гучний зв'язок"}
+                    >
+                      {call.speakerOn ? <Volume2 className="h-6 w-6" /> : <VolumeX className="h-6 w-6" />}
+                    </Button>
+                  </>
                 )}
                 <Button
                   size="icon"
