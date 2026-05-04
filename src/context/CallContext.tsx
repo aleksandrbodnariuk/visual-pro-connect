@@ -34,6 +34,7 @@ interface ActiveCall {
   status: CallStatus;
   startedAt?: number;
   muted: boolean;
+  speakerOn: boolean;
 }
 
 interface CallContextValue {
@@ -43,6 +44,7 @@ interface CallContextValue {
   declineCall: () => void;
   endCall: () => void;
   toggleMute: () => void;
+  toggleSpeaker: () => void;
   remoteAudioRef: React.RefObject<HTMLAudioElement>;
 }
 
@@ -73,7 +75,105 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const pendingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
   const queuedRemoteIceRef = useRef<RTCIceCandidateInit[]>([]);
 
+  // ===== Ring tones via WebAudio =====
+  const toneCtxRef = useRef<AudioContext | null>(null);
+  const toneNodesRef = useRef<{ stop: () => void } | null>(null);
+
+  const stopTone = useCallback(() => {
+    try { toneNodesRef.current?.stop(); } catch {}
+    toneNodesRef.current = null;
+  }, []);
+
+  const ensureToneCtx = useCallback(() => {
+    if (!toneCtxRef.current) {
+      const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return null;
+      toneCtxRef.current = new Ctx();
+    }
+    if (toneCtxRef.current!.state === "suspended") {
+      toneCtxRef.current!.resume().catch(() => {});
+    }
+    return toneCtxRef.current!;
+  }, []);
+
+  const playRingback = useCallback(() => {
+    stopTone();
+    const ctx = ensureToneCtx();
+    if (!ctx) return;
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    gain.connect(ctx.destination);
+    const osc1 = ctx.createOscillator();
+    osc1.type = "sine"; osc1.frequency.value = 440;
+    const osc2 = ctx.createOscillator();
+    osc2.type = "sine"; osc2.frequency.value = 480;
+    osc1.connect(gain); osc2.connect(gain);
+    osc1.start(); osc2.start();
+    let active = true;
+    const cycle = () => {
+      if (!active) return;
+      const t = ctx.currentTime;
+      gain.gain.cancelScheduledValues(t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.15, t + 0.05);
+      gain.gain.setValueAtTime(0.15, t + 1.0);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.05);
+    };
+    cycle();
+    const interval = setInterval(cycle, 4000);
+    toneNodesRef.current = {
+      stop: () => {
+        active = false;
+        clearInterval(interval);
+        try { gain.gain.cancelScheduledValues(ctx.currentTime); gain.gain.value = 0; } catch {}
+        try { osc1.stop(); } catch {}
+        try { osc2.stop(); } catch {}
+        try { osc1.disconnect(); osc2.disconnect(); gain.disconnect(); } catch {}
+      },
+    };
+  }, [ensureToneCtx, stopTone]);
+
+  const playRingtone = useCallback(() => {
+    stopTone();
+    const ctx = ensureToneCtx();
+    if (!ctx) return;
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    gain.connect(ctx.destination);
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.connect(gain);
+    osc.start();
+    let active = true;
+    const ring = () => {
+      if (!active) return;
+      const t = ctx.currentTime;
+      osc.frequency.cancelScheduledValues(t);
+      osc.frequency.setValueAtTime(880, t);
+      osc.frequency.setValueAtTime(660, t + 0.25);
+      osc.frequency.setValueAtTime(880, t + 0.5);
+      osc.frequency.setValueAtTime(660, t + 0.75);
+      gain.gain.cancelScheduledValues(t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.2, t + 0.05);
+      gain.gain.setValueAtTime(0.2, t + 1.0);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.05);
+    };
+    ring();
+    const interval = setInterval(ring, 2000);
+    toneNodesRef.current = {
+      stop: () => {
+        active = false;
+        clearInterval(interval);
+        try { gain.gain.cancelScheduledValues(ctx.currentTime); gain.gain.value = 0; } catch {}
+        try { osc.stop(); } catch {}
+        try { osc.disconnect(); gain.disconnect(); } catch {}
+      },
+    };
+  }, [ensureToneCtx, stopTone]);
+
   const cleanup = useCallback(() => {
+    stopTone();
     try { pcRef.current?.close(); } catch {}
     pcRef.current = null;
     localStreamRef.current?.getTracks().forEach(t => t.stop());
@@ -87,7 +187,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = null;
     }
-  }, []);
+  }, [stopTone]);
 
   const logSystemMessage = useCallback(async (durationMs: number, status: "completed" | "missed" | "declined") => {
     const c = callRef.current;
@@ -163,6 +263,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
     pc.onconnectionstatechange = () => {
       const state = pc.connectionState;
       if (state === "connected") {
+        stopTone();
         setCall(prev => prev ? { ...prev, status: "active", startedAt: prev.startedAt || Date.now() } : prev);
       } else if (state === "failed" || state === "disconnected" || state === "closed") {
         if (state === "failed") {
@@ -173,7 +274,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
     };
 
     return pc;
-  }, [user?.id, endCall]);
+  }, [user?.id, endCall, stopTone]);
 
   const getMic = useCallback(async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -259,7 +360,8 @@ export function CallProvider({ children }: { children: ReactNode }) {
       : "Користувач";
     const fromAvatar = appUser?.avatarUrl || "";
 
-    setCall({ callId, peer, isCaller: true, conversationId, status: "outgoing", muted: false });
+    setCall({ callId, peer, isCaller: true, conversationId, status: "outgoing", muted: false, speakerOn: true });
+    playRingback();
 
     try {
       const stream = await getMic();
@@ -325,6 +427,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const acceptCall = useCallback(async () => {
     const c = callRef.current;
     if (!c || c.status !== "incoming") return;
+    stopTone();
     try {
       const stream = await getMic();
       // already subscribed to call channel from incoming flow
@@ -360,7 +463,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       cleanup();
       setCall(null);
     }
-  }, [getMic, setupPeerConnection, user?.id, cleanup]);
+  }, [getMic, setupPeerConnection, user?.id, cleanup, stopTone]);
 
   const declineCall = useCallback(() => {
     callChannelRef.current?.send({
@@ -378,6 +481,17 @@ export function CallProvider({ children }: { children: ReactNode }) {
     const enabled = stream.getAudioTracks()[0]?.enabled;
     stream.getAudioTracks().forEach(t => (t.enabled = !enabled));
     setCall(prev => prev ? { ...prev, muted: !!enabled } : prev);
+  }, []);
+
+  const toggleSpeaker = useCallback(() => {
+    const audio = remoteAudioRef.current;
+    if (!audio) return;
+    setCall(prev => {
+      if (!prev) return prev;
+      const next = !prev.speakerOn;
+      audio.volume = next ? 1.0 : 0.35;
+      return { ...prev, speakerOn: next };
+    });
   }, []);
 
   // Listen for incoming calls on personal inbox
@@ -401,9 +515,11 @@ export function CallProvider({ children }: { children: ReactNode }) {
         conversationId: payload.conversationId,
         status: "incoming",
         muted: false,
+        speakerOn: true,
       });
       // Subscribe to call channel right away so we can buffer offer/ICE
       await subscribeToCallChannel(payload.callId, false);
+      playRingtone();
     });
     inbox.subscribe();
     return () => {
@@ -412,7 +528,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
   }, [user?.id, subscribeToCallChannel]);
 
   return (
-    <CallContext.Provider value={{ call, startCall, acceptCall, declineCall, endCall, toggleMute, remoteAudioRef }}>
+    <CallContext.Provider value={{ call, startCall, acceptCall, declineCall, endCall, toggleMute, toggleSpeaker, remoteAudioRef }}>
       {children}
       <audio ref={remoteAudioRef} autoPlay playsInline />
     </CallContext.Provider>
