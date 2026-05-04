@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
@@ -47,6 +47,8 @@ export function CallDialog() {
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
+        <DialogTitle className="sr-only">Аудіодзвінок</DialogTitle>
+        <DialogDescription className="sr-only">Керування поточним аудіодзвінком</DialogDescription>
         <div className="flex flex-col items-center gap-4 py-4">
           <Avatar className="h-24 w-24">
             <AvatarImage src={call.peer.avatarUrl} alt={call.peer.name} />
