@@ -299,6 +299,8 @@ export function CallProvider({ children }: { children: ReactNode }) {
       if (!pc) return;
       try {
         await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+        stopTone();
+        setCall(prev => prev ? { ...prev, status: "active", startedAt: prev.startedAt || Date.now() } : prev);
         for (const c of queuedRemoteIceRef.current) {
           try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch {}
         }
@@ -346,7 +348,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         if (status === "SUBSCRIBED") resolve();
       });
     });
-  }, [user?.id, cleanup, logSystemMessage]);
+  }, [user?.id, cleanup, logSystemMessage, stopTone]);
 
   const startCall = useCallback(async (peer: PeerInfo, conversationId?: string) => {
     if (!user) return;
