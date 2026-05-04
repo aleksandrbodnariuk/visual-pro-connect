@@ -77,11 +77,17 @@ export function CallProvider({ children }: { children: ReactNode }) {
 
   // ===== Ring tones via WebAudio =====
   const toneCtxRef = useRef<AudioContext | null>(null);
-  const toneNodesRef = useRef<{ stop: () => void } | null>(null);
+  const toneStopsRef = useRef<Set<() => void>>(new Set());
 
   const stopTone = useCallback(() => {
-    try { toneNodesRef.current?.stop(); } catch {}
-    toneNodesRef.current = null;
+    const stops = Array.from(toneStopsRef.current);
+    toneStopsRef.current.clear();
+    stops.forEach((stop) => {
+      try { stop(); } catch {}
+    });
+    const ctx = toneCtxRef.current;
+    toneCtxRef.current = null;
+    try { ctx?.close().catch(() => {}); } catch {}
   }, []);
 
   const ensureToneCtx = useCallback(() => {
@@ -121,16 +127,16 @@ export function CallProvider({ children }: { children: ReactNode }) {
     };
     cycle();
     const interval = setInterval(cycle, 4000);
-    toneNodesRef.current = {
-      stop: () => {
-        active = false;
-        clearInterval(interval);
-        try { gain.gain.cancelScheduledValues(ctx.currentTime); gain.gain.value = 0; } catch {}
-        try { osc1.stop(); } catch {}
-        try { osc2.stop(); } catch {}
-        try { osc1.disconnect(); osc2.disconnect(); gain.disconnect(); } catch {}
-      },
+    const stop = () => {
+      active = false;
+      clearInterval(interval);
+      try { gain.gain.cancelScheduledValues(ctx.currentTime); gain.gain.value = 0; } catch {}
+      try { osc1.stop(); } catch {}
+      try { osc2.stop(); } catch {}
+      try { osc1.disconnect(); osc2.disconnect(); gain.disconnect(); } catch {}
+      toneStopsRef.current.delete(stop);
     };
+    toneStopsRef.current.add(stop);
   }, [ensureToneCtx, stopTone]);
 
   const playRingtone = useCallback(() => {
@@ -161,16 +167,20 @@ export function CallProvider({ children }: { children: ReactNode }) {
     };
     ring();
     const interval = setInterval(ring, 2000);
-    toneNodesRef.current = {
-      stop: () => {
-        active = false;
-        clearInterval(interval);
-        try { gain.gain.cancelScheduledValues(ctx.currentTime); gain.gain.value = 0; } catch {}
-        try { osc.stop(); } catch {}
-        try { osc.disconnect(); gain.disconnect(); } catch {}
-      },
+    const stop = () => {
+      active = false;
+      clearInterval(interval);
+      try { gain.gain.cancelScheduledValues(ctx.currentTime); gain.gain.value = 0; } catch {}
+      try { osc.stop(); } catch {}
+      try { osc.disconnect(); gain.disconnect(); } catch {}
+      toneStopsRef.current.delete(stop);
     };
+    toneStopsRef.current.add(stop);
   }, [ensureToneCtx, stopTone]);
+
+  useEffect(() => {
+    if (call?.status === "active") stopTone();
+  }, [call?.status, stopTone]);
 
   const cleanup = useCallback(() => {
     stopTone();
@@ -253,10 +263,18 @@ export function CallProvider({ children }: { children: ReactNode }) {
     };
 
     pc.ontrack = (e) => {
+      stopTone();
       const [stream] = e.streams;
       if (remoteAudioRef.current && stream) {
         remoteAudioRef.current.srcObject = stream;
         remoteAudioRef.current.play().catch(() => {});
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+        stopTone();
+        setCall(prev => prev ? { ...prev, status: "active", startedAt: prev.startedAt || Date.now() } : prev);
       }
     };
 
@@ -265,6 +283,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
       if (state === "connected") {
         stopTone();
         setCall(prev => prev ? { ...prev, status: "active", startedAt: prev.startedAt || Date.now() } : prev);
+      } else if (state === "connecting") {
+        const c = callRef.current;
+        if (c?.status === "active") stopTone();
       } else if (state === "failed" || state === "disconnected" || state === "closed") {
         if (state === "failed") {
           toast.error("З'єднання втрачено");
@@ -306,6 +327,12 @@ export function CallProvider({ children }: { children: ReactNode }) {
         }
         queuedRemoteIceRef.current = [];
       } catch (e) { console.error(e); }
+    });
+
+    channel.on("broadcast", { event: "accepted" }, ({ payload }) => {
+      if (payload.from === user?.id) return;
+      stopTone();
+      setCall(prev => prev ? { ...prev, status: "active", startedAt: prev.startedAt || Date.now() } : prev);
     });
 
     channel.on("broadcast", { event: "ice" }, async ({ payload }) => {
@@ -430,6 +457,11 @@ export function CallProvider({ children }: { children: ReactNode }) {
     const c = callRef.current;
     if (!c || c.status !== "incoming") return;
     stopTone();
+    callChannelRef.current?.send({
+      type: "broadcast",
+      event: "accepted",
+      payload: { from: user?.id },
+    });
     try {
       const stream = await getMic();
       // already subscribed to call channel from incoming flow
