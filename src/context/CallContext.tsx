@@ -457,6 +457,11 @@ export function CallProvider({ children }: { children: ReactNode }) {
     const c = callRef.current;
     if (!c || c.status !== "incoming") return;
     stopTone();
+    callChannelRef.current?.send({
+      type: "broadcast",
+      event: "accepted",
+      payload: { from: user?.id },
+    });
     try {
       const stream = await getMic();
       // already subscribed to call channel from incoming flow
