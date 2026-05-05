@@ -400,7 +400,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      // 1) Notify callee inbox
+      // 1) Notify callee inbox (works only if their app is open)
       const inbox = supabase.channel(`inbox:${peer.id}`);
       await new Promise<void>((resolve) => {
         inbox.subscribe((status) => { if (status === "SUBSCRIBED") resolve(); });
@@ -417,6 +417,20 @@ export function CallProvider({ children }: { children: ReactNode }) {
         },
       });
       try { supabase.removeChannel(inbox); } catch {}
+
+      // 1b) Send push notification (works when callee's app is closed/backgrounded)
+      // Fire-and-forget — failures shouldn't block the call.
+      supabase.functions
+        .invoke("send-call-notification", {
+          body: {
+            to_user_id: peer.id,
+            call_id: callId,
+            from_name: fromName,
+            from_avatar: fromAvatar,
+            conversation_id: conversationId,
+          },
+        })
+        .catch((e) => console.warn("[Call] push notification failed:", e));
 
       // 2) Send offer on call channel (callee will subscribe after accept)
       // Wait a moment so the callee can pick up; resend a couple of times.
@@ -528,38 +542,157 @@ export function CallProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // Listen for incoming calls on personal inbox
+  // Receive an incoming call (from inbox broadcast OR push notification)
+  const receiveIncomingCall = useCallback(async (payload: {
+    callId: string;
+    fromUserId: string;
+    fromName?: string;
+    fromAvatar?: string;
+    conversationId?: string;
+  }, opts: { autoAccept?: boolean } = {}) => {
+    if (!payload?.callId || !payload?.fromUserId) return;
+    const existing = callRef.current;
+    if (existing && existing.callId === payload.callId) {
+      // Same call already known. Maybe just auto-accept.
+      if (opts.autoAccept && existing.status === "incoming") {
+        // delay slightly to ensure subscription is ready
+        setTimeout(() => { acceptCallRef.current?.(); }, 100);
+      }
+      return;
+    }
+    if (existing) {
+      // Already busy in a different call — ignore.
+      return;
+    }
+    const peer: PeerInfo = {
+      id: payload.fromUserId,
+      name: payload.fromName || "Користувач",
+      avatarUrl: payload.fromAvatar,
+    };
+    setCall({
+      callId: payload.callId,
+      peer,
+      isCaller: false,
+      conversationId: payload.conversationId,
+      status: "incoming",
+      muted: false,
+      speakerOn: true,
+    });
+    await subscribeToCallChannel(payload.callId, false);
+    if (opts.autoAccept) {
+      // Skip ringtone and auto-pick-up after subscribe is ready
+      setTimeout(() => { acceptCallRef.current?.(); }, 200);
+    } else {
+      playRingtone();
+    }
+  }, [subscribeToCallChannel, playRingtone]);
+
+  // Stable ref to acceptCall (defined above) so receiveIncomingCall can call it
+  const acceptCallRef = useRef<typeof acceptCall>(acceptCall);
+  useEffect(() => { acceptCallRef.current = acceptCall; }, [acceptCall]);
+
+  // Listen for incoming calls on personal inbox (realtime broadcast)
   useEffect(() => {
     if (!user) return;
     const inbox = supabase.channel(`inbox:${user.id}`);
     inbox.on("broadcast", { event: "incoming-call" }, async ({ payload }) => {
-      if (callRef.current) {
-        // already in a call — auto-decline
-        return;
-      }
-      const peer: PeerInfo = {
-        id: payload.from,
-        name: payload.fromName || "Користувач",
-        avatarUrl: payload.fromAvatar,
-      };
-      setCall({
+      await receiveIncomingCall({
         callId: payload.callId,
-        peer,
-        isCaller: false,
+        fromUserId: payload.from,
+        fromName: payload.fromName,
+        fromAvatar: payload.fromAvatar,
         conversationId: payload.conversationId,
-        status: "incoming",
-        muted: false,
-        speakerOn: true,
       });
-      // Subscribe to call channel right away so we can buffer offer/ICE
-      await subscribeToCallChannel(payload.callId, false);
-      playRingtone();
     });
     inbox.subscribe();
     return () => {
       try { supabase.removeChannel(inbox); } catch {}
     };
-  }, [user?.id, subscribeToCallChannel]);
+  }, [user?.id, receiveIncomingCall]);
+
+  // Listen for messages from the Service Worker (push notification taps)
+  useEffect(() => {
+    if (!user) return;
+    if (!("serviceWorker" in navigator)) return;
+
+    const handler = (event: MessageEvent) => {
+      const msg = event.data;
+      if (!msg || typeof msg !== "object") return;
+      if (msg.type === "INCOMING_CALL_FROM_PUSH" && msg.call) {
+        receiveIncomingCall(
+          {
+            callId: msg.call.callId,
+            fromUserId: msg.call.fromUserId,
+            fromName: msg.call.fromName,
+            fromAvatar: msg.call.fromAvatar,
+            conversationId: msg.call.conversationId,
+          },
+          { autoAccept: !!msg.autoAccept }
+        );
+      } else if (msg.type === "CALL_DECLINED_FROM_PUSH" && msg.call) {
+        // Best-effort: send decline broadcast on the call channel
+        const ch = supabase.channel(`call:${msg.call.callId}`);
+        ch.subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            ch.send({ type: "broadcast", event: "decline", payload: { from: user.id } })
+              .finally(() => { try { supabase.removeChannel(ch); } catch {} });
+          }
+        });
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () => {
+      navigator.serviceWorker.removeEventListener("message", handler);
+    };
+  }, [user?.id, receiveIncomingCall]);
+
+  // Fallback: if the app was opened cold by a push tap, the SW couldn't
+  // postMessage to a non-existent client. Recover state from URL params.
+  useEffect(() => {
+    if (!user) return;
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const callId = params.get("incoming_call");
+    const fromUserId = params.get("from");
+    if (!callId || !fromUserId) return;
+    if (callRef.current) return;
+
+    const autoAccept = params.get("accept") === "1";
+
+    // Strip these params from the URL so refresh doesn't re-trigger
+    params.delete("incoming_call");
+    params.delete("from");
+    params.delete("accept");
+    const newSearch = params.toString();
+    const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : "") + window.location.hash;
+    window.history.replaceState({}, "", newUrl);
+
+    (async () => {
+      // Try to enrich peer info from DB
+      let fromName = "Користувач";
+      let fromAvatar: string | undefined;
+      try {
+        const { data } = await supabase
+          .from("users")
+          .select("full_name, avatar_url")
+          .eq("id", fromUserId)
+          .maybeSingle();
+        if (data) {
+          const full = ((data as any).full_name || "").trim();
+          if (full) fromName = full;
+          fromAvatar = (data as any).avatar_url || undefined;
+        }
+      } catch { /* ignore */ }
+
+      await receiveIncomingCall(
+        { callId, fromUserId, fromName, fromAvatar },
+        { autoAccept }
+      );
+    })();
+    // Run only once when user becomes available
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   return (
     <CallContext.Provider value={{ call, startCall, acceptCall, declineCall, endCall, toggleMute, toggleSpeaker, remoteAudioRef }}>

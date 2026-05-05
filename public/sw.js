@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'bc-v8';
+const CACHE_VERSION = 'bc-v9';
 const STATIC_CACHE = `bc-static-${CACHE_VERSION}`;
 const IMAGE_CACHE = `bc-images-${CACHE_VERSION}`;
 const API_CACHE = `bc-api-${CACHE_VERSION}`;
@@ -177,15 +177,22 @@ self.addEventListener('push', (event) => {
 
   const badgeCount = typeof data.badgeCount === 'number' ? data.badgeCount : 1;
 
+  const isCall = data.type === 'incoming_call';
+
   const options = {
     body: data.body,
-    icon: '/android-chrome-192x192.png',
+    icon: data.icon || '/android-chrome-192x192.png',
     badge: '/favicon-32x32.png',
-    vibrate: [200, 100, 200],
+    vibrate: isCall ? [400, 200, 400, 200, 400, 200, 400] : [200, 100, 200],
     ...(data.tag ? { tag: data.tag, renotify: true } : {}),
-    data: { url: data.url || '/' },
+    data: {
+      url: data.url || '/',
+      type: data.type || 'message',
+      call: data.call || null,
+    },
     actions: data.actions || [],
     silent: false,
+    requireInteraction: !!data.requireInteraction,
   };
 
   console.log('[SW] Showing notification:', data.title, '| badge:', badgeCount);
@@ -194,8 +201,8 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(data.title, options)
       .then(() => {
         console.log('[SW] showNotification succeeded');
-        // Set badge — safe guard for missing API
-        if (typeof self.registration.setAppBadge === 'function') {
+        // Set badge — skip for call notifications (they're transient)
+        if (!isCall && typeof self.registration.setAppBadge === 'function') {
           return self.registration.setAppBadge(badgeCount).catch((err) => {
             console.warn('[SW] setAppBadge failed:', err);
           });
@@ -220,17 +227,50 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const targetUrl = event.notification.data?.url || '/';
+  const data = event.notification.data || {};
+  const isCall = data.type === 'incoming_call';
+  const action = event.action || '';
 
-  // Clear badge when user taps notification
-  if (self.registration.clearAppBadge) {
+  // For non-call notifications: clear badge on tap
+  if (!isCall && self.registration.clearAppBadge) {
     self.registration.clearAppBadge().catch(() => {});
+  }
+
+  // Build target URL — for call decline, just dismiss without opening
+  if (isCall && action === 'decline_call') {
+    // Notify any open client to broadcast decline (best-effort)
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+        windowClients.forEach((client) => {
+          client.postMessage({ type: 'CALL_DECLINED_FROM_PUSH', call: data.call });
+        });
+      })
+    );
+    return;
+  }
+
+  let targetUrl = data.url || '/';
+  if (isCall && data.call?.callId) {
+    // Always route to messages with call params; action accept_call adds &accept=1
+    const sep = targetUrl.includes('?') ? '&' : '?';
+    if (action === 'accept_call') {
+      targetUrl = `${targetUrl}${sep}accept=1`;
+    }
   }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
+          // For calls, also message the client with full call payload so it can
+          // restore incoming-call state even if the realtime broadcast was missed.
+          if (isCall && data.call) {
+            client.postMessage({
+              type: 'INCOMING_CALL_FROM_PUSH',
+              call: data.call,
+              autoAccept: action === 'accept_call',
+            });
+          }
           client.navigate(targetUrl);
           return client.focus();
         }
