@@ -227,17 +227,50 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const targetUrl = event.notification.data?.url || '/';
+  const data = event.notification.data || {};
+  const isCall = data.type === 'incoming_call';
+  const action = event.action || '';
 
-  // Clear badge when user taps notification
-  if (self.registration.clearAppBadge) {
+  // For non-call notifications: clear badge on tap
+  if (!isCall && self.registration.clearAppBadge) {
     self.registration.clearAppBadge().catch(() => {});
+  }
+
+  // Build target URL — for call decline, just dismiss without opening
+  if (isCall && action === 'decline_call') {
+    // Notify any open client to broadcast decline (best-effort)
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+        windowClients.forEach((client) => {
+          client.postMessage({ type: 'CALL_DECLINED_FROM_PUSH', call: data.call });
+        });
+      })
+    );
+    return;
+  }
+
+  let targetUrl = data.url || '/';
+  if (isCall && data.call?.callId) {
+    // Always route to messages with call params; action accept_call adds &accept=1
+    const sep = targetUrl.includes('?') ? '&' : '?';
+    if (action === 'accept_call') {
+      targetUrl = `${targetUrl}${sep}accept=1`;
+    }
   }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
+          // For calls, also message the client with full call payload so it can
+          // restore incoming-call state even if the realtime broadcast was missed.
+          if (isCall && data.call) {
+            client.postMessage({
+              type: 'INCOMING_CALL_FROM_PUSH',
+              call: data.call,
+              autoAccept: action === 'accept_call',
+            });
+          }
           client.navigate(targetUrl);
           return client.focus();
         }
