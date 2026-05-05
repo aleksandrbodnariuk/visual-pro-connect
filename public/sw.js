@@ -177,15 +177,22 @@ self.addEventListener('push', (event) => {
 
   const badgeCount = typeof data.badgeCount === 'number' ? data.badgeCount : 1;
 
+  const isCall = data.type === 'incoming_call';
+
   const options = {
     body: data.body,
-    icon: '/android-chrome-192x192.png',
+    icon: data.icon || '/android-chrome-192x192.png',
     badge: '/favicon-32x32.png',
-    vibrate: [200, 100, 200],
+    vibrate: isCall ? [400, 200, 400, 200, 400, 200, 400] : [200, 100, 200],
     ...(data.tag ? { tag: data.tag, renotify: true } : {}),
-    data: { url: data.url || '/' },
+    data: {
+      url: data.url || '/',
+      type: data.type || 'message',
+      call: data.call || null,
+    },
     actions: data.actions || [],
     silent: false,
+    requireInteraction: !!data.requireInteraction,
   };
 
   console.log('[SW] Showing notification:', data.title, '| badge:', badgeCount);
@@ -194,8 +201,8 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(data.title, options)
       .then(() => {
         console.log('[SW] showNotification succeeded');
-        // Set badge — safe guard for missing API
-        if (typeof self.registration.setAppBadge === 'function') {
+        // Set badge — skip for call notifications (they're transient)
+        if (!isCall && typeof self.registration.setAppBadge === 'function') {
           return self.registration.setAppBadge(badgeCount).catch((err) => {
             console.warn('[SW] setAppBadge failed:', err);
           });
