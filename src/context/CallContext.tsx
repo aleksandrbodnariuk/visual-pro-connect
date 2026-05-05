@@ -647,6 +647,55 @@ export function CallProvider({ children }: { children: ReactNode }) {
     };
   }, [user?.id, receiveIncomingCall]);
 
+  // Fallback: if the app was opened cold by a push tap, the SW couldn't
+  // postMessage to a non-existent client. Recover state from URL params.
+  useEffect(() => {
+    if (!user) return;
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const callId = params.get("incoming_call");
+    const fromUserId = params.get("from");
+    if (!callId || !fromUserId) return;
+    if (callRef.current) return;
+
+    const autoAccept = params.get("accept") === "1";
+
+    // Strip these params from the URL so refresh doesn't re-trigger
+    params.delete("incoming_call");
+    params.delete("from");
+    params.delete("accept");
+    const newSearch = params.toString();
+    const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : "") + window.location.hash;
+    window.history.replaceState({}, "", newUrl);
+
+    (async () => {
+      // Try to enrich peer info from DB
+      let fromName = "Користувач";
+      let fromAvatar: string | undefined;
+      try {
+        const { data } = await supabase
+          .from("profiles")
+          .select("first_name, last_name, avatar_url")
+          .eq("id", fromUserId)
+          .maybeSingle();
+        if (data) {
+          const fn = (data as any).first_name || "";
+          const ln = (data as any).last_name || "";
+          const full = `${fn} ${ln}`.trim();
+          if (full) fromName = full;
+          fromAvatar = (data as any).avatar_url || undefined;
+        }
+      } catch { /* ignore */ }
+
+      await receiveIncomingCall(
+        { callId, fromUserId, fromName, fromAvatar },
+        { autoAccept }
+      );
+    })();
+    // Run only once when user becomes available
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   return (
     <CallContext.Provider value={{ call, startCall, acceptCall, declineCall, endCall, toggleMute, toggleSpeaker, remoteAudioRef }}>
       {children}
