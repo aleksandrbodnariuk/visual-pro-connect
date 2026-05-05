@@ -400,7 +400,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      // 1) Notify callee inbox
+      // 1) Notify callee inbox (works only if their app is open)
       const inbox = supabase.channel(`inbox:${peer.id}`);
       await new Promise<void>((resolve) => {
         inbox.subscribe((status) => { if (status === "SUBSCRIBED") resolve(); });
@@ -417,6 +417,20 @@ export function CallProvider({ children }: { children: ReactNode }) {
         },
       });
       try { supabase.removeChannel(inbox); } catch {}
+
+      // 1b) Send push notification (works when callee's app is closed/backgrounded)
+      // Fire-and-forget — failures shouldn't block the call.
+      supabase.functions
+        .invoke("send-call-notification", {
+          body: {
+            to_user_id: peer.id,
+            call_id: callId,
+            from_name: fromName,
+            from_avatar: fromAvatar,
+            conversation_id: conversationId,
+          },
+        })
+        .catch((e) => console.warn("[Call] push notification failed:", e));
 
       // 2) Send offer on call channel (callee will subscribe after accept)
       // Wait a moment so the callee can pick up; resend a couple of times.
