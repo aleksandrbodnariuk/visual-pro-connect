@@ -674,14 +674,12 @@ export function CallProvider({ children }: { children: ReactNode }) {
       let fromAvatar: string | undefined;
       try {
         const { data } = await supabase
-          .from("profiles")
-          .select("first_name, last_name, avatar_url")
+          .from("users")
+          .select("full_name, avatar_url")
           .eq("id", fromUserId)
           .maybeSingle();
         if (data) {
-          const fn = (data as any).first_name || "";
-          const ln = (data as any).last_name || "";
-          const full = `${fn} ${ln}`.trim();
+          const full = ((data as any).full_name || "").trim();
           if (full) fromName = full;
           fromAvatar = (data as any).avatar_url || undefined;
         }
