@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'bc-v8';
+const CACHE_VERSION = 'bc-v9';
 const STATIC_CACHE = `bc-static-${CACHE_VERSION}`;
 const IMAGE_CACHE = `bc-images-${CACHE_VERSION}`;
 const API_CACHE = `bc-api-${CACHE_VERSION}`;
