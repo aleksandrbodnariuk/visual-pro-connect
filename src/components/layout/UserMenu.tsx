@@ -87,7 +87,7 @@ export function UserMenu({ currentUser }: UserMenuProps) {
   if (!currentUser) {
     return (
       <Button variant="secondary" size="sm" onClick={() => handleNavigate('/auth')}>
-        Увійти
+        {t.login}
       </Button>
     );
   }
@@ -115,7 +115,7 @@ export function UserMenu({ currentUser }: UserMenuProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>Мій акаунт</DropdownMenuLabel>
+        <DropdownMenuLabel>{t.myAccount}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={handleProfileNavigation}>
@@ -125,7 +125,7 @@ export function UserMenu({ currentUser }: UserMenuProps) {
           
           <DropdownMenuItem onClick={() => handleNavigate('/search')}>
             <Search className="mr-2 h-4 w-4" />
-            <span>Знайти професіоналів</span>
+            <span>{t.findProfessionals}</span>
           </DropdownMenuItem>
           
           {/* Доступ до адмін-панелі для адміністраторів */}
@@ -133,7 +133,7 @@ export function UserMenu({ currentUser }: UserMenuProps) {
             currentUser.role === "admin-founder") && (
             <DropdownMenuItem onClick={() => handleNavigate('/admin')}>
               <User className="mr-2 h-4 w-4" />
-              <span>Панель адміністратора</span>
+              <span>{t.adminPanel}</span>
             </DropdownMenuItem>
           )}
           
@@ -143,11 +143,11 @@ export function UserMenu({ currentUser }: UserMenuProps) {
             <>
               <DropdownMenuItem onClick={() => handleNavigate('/shareholder-panel')}>
                 <Crown className="mr-2 h-4 w-4" />
-                <span>Панель акціонера</span>
+                <span>{t.shareholderPanel}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleNavigate('/stock-market')}>
                 <TrendingUp className="mr-2 h-4 w-4" />
-                <span>Ринок акцій</span>
+                <span>{t.stockMarket}</span>
               </DropdownMenuItem>
             </>
           )}
@@ -168,7 +168,7 @@ export function UserMenu({ currentUser }: UserMenuProps) {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Вийти</span>
+          <span>{t.logout}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

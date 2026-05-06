@@ -44,18 +44,18 @@ export default function Auth() {
             {/* Ліва частина - привітальний текст */}
             <div className="text-center lg:text-left space-y-6">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
-                Вітаємо у Спільноті B&C!
+                {t.welcomeTitle}
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-2xl">
-                Соціальна платформа творчих людей!
+                {t.socialPlatformSubtitle}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Button size="lg" onClick={() => navigate("/search")}>
-                  Пошук
+                  {t.search}
                 </Button>
                 <Button size="lg" variant="outline" onClick={() => setSupportOpen(true)}>
                   <MessageCircleQuestion className="w-5 h-5 mr-2" />
-                  Написати в підтримку
+                  {t.writeToSupport}
                 </Button>
               </div>
             </div>
@@ -75,7 +75,7 @@ export default function Auth() {
                   onClick={() => setSupportOpen(true)}
                 >
                   <MessageCircleQuestion className="w-4 h-4 mr-1" />
-                  Не вдається увійти? Написати в підтримку
+                  {t.cantLogin}
                 </Button>
               </div>
             </div>
