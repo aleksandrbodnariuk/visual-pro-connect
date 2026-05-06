@@ -87,7 +87,7 @@ export function UserMenu({ currentUser }: UserMenuProps) {
   if (!currentUser) {
     return (
       <Button variant="secondary" size="sm" onClick={() => handleNavigate('/auth')}>
-        Увійти
+        {t.login}
       </Button>
     );
   }
