@@ -40,8 +40,8 @@ export function AuthStepManager({
         </div>
         <div className="w-full max-w-md space-y-6">
           <div className="text-center">
-            <h1 className="text-2xl font-bold">Скидання паролю</h1>
-            <p className="mt-2 text-muted-foreground">Введіть вашу email адресу для скидання паролю</p>
+            <h1 className="text-2xl font-bold">{t.passwordResetTitle}</h1>
+            <p className="mt-2 text-muted-foreground">{t.passwordResetSubtitle}</p>
           </div>
           
           <SupabaseResetPasswordForm 
