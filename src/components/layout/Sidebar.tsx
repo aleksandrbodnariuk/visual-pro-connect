@@ -101,33 +101,33 @@ export function Sidebar({ className }: SidebarProps) {
             <User className="mr-2 h-4 w-4" /> {t.profile}
           </Button>
           <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/friends')} data-active={location.pathname.startsWith("/friends")}>
-            <Users className="mr-2 h-4 w-4" /> Друзі
+            <Users className="mr-2 h-4 w-4" /> {t.friends}
           </Button>
           <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/settings')} data-active={location.pathname === "/settings"}>
             <Settings className="mr-2 h-4 w-4" /> {t.settings}
           </Button>
           <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/sertyfikaty')} data-active={location.pathname.startsWith("/sertyfikaty")}>
-            <Award className="mr-2 h-4 w-4 text-amber-500" /> Сертифікати
+            <Award className="mr-2 h-4 w-4 text-amber-500" /> {t.certificates}
           </Button>
           <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/market')} data-active={location.pathname.startsWith("/market")}>
-            <Store className="mr-2 h-4 w-4 text-primary" /> Маркетплейс
+            <Store className="mr-2 h-4 w-4 text-primary" /> {t.marketplace}
           </Button>
           {isShareholder && (
             <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/shareholder-panel')} data-active={location.pathname === "/shareholder-panel"}>
-              <Crown className="mr-2 h-4 w-4" /> Панель акціонера
+              <Crown className="mr-2 h-4 w-4" /> {t.shareholderPanel}
             </Button>
           )}
           {hasStockAccess && (
             <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/stock-market')} data-active={location.pathname === "/stock-market"}>
-              <TrendingUp className="mr-2 h-4 w-4" /> Ринок акцій
+              <TrendingUp className="mr-2 h-4 w-4" /> {t.stockMarket}
             </Button>
           )}
         </nav>
       </div>
 
       <div className="border-t p-3 md:p-4 3xl:p-5">
-        <h2 className="text-base md:text-lg 3xl:text-xl font-semibold mb-1">Знайти послугу</h2>
-        <p className="text-xs text-muted-foreground mb-3 md:mb-4">Категорії</p>
+        <h2 className="text-base md:text-lg 3xl:text-xl font-semibold mb-1">{t.findService}</h2>
+        <p className="text-xs text-muted-foreground mb-3 md:mb-4">{t.categories}</p>
         <nav className="space-y-1 md:space-y-2">
           {categories.map(cat => {
             const Icon = getIconComponent(cat.icon);
@@ -142,7 +142,7 @@ export function Sidebar({ className }: SidebarProps) {
 
       <div className="border-t p-4">
         <div className="rounded-lg bg-muted p-4">
-          <h3 className="font-medium mb-2">Знаходьте нових друзів</h3>
+          <h3 className="font-medium mb-2">{t.findFriendsTitle}</h3>
           <Button size="sm" className="w-full" onClick={() => handleNavigate('/connect')}>{t.findContacts}</Button>
         </div>
       </div>
