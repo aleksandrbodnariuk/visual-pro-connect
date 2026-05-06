@@ -10,17 +10,19 @@ import { useAuthState } from "@/hooks/auth/useAuthState";
 import { CreatePublicationModal } from "@/components/publications/CreatePublicationModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useLanguage } from "@/context/LanguageContext";
+import { translations } from "@/lib/translations";
 
 const CATEGORY_LINKS = [
-  { id: "photographer", name: "Фотографи", icon: Camera, color: "from-pink-500 to-rose-500" },
-  { id: "videographer", name: "Відеографи", icon: Video, color: "from-purple-500 to-indigo-500" },
-  { id: "musician", name: "Музиканти", icon: Music, color: "from-blue-500 to-cyan-500" },
-  { id: "host", name: "Ведучі", icon: Mic, color: "from-amber-500 to-orange-500" },
-  { id: "pyrotechnician", name: "Піротехніки", icon: Sparkles, color: "from-red-500 to-orange-500" },
-  { id: "restaurant", name: "Ресторани", icon: UtensilsCrossed, color: "from-emerald-500 to-teal-500" },
-  { id: "transport", name: "Транспорт", icon: Car, color: "from-slate-500 to-gray-500" },
-  { id: "florist", name: "Флористи", icon: Flower2, color: "from-pink-400 to-rose-400" },
-];
+  { id: "photographer", nameKey: "photographers", icon: Camera, color: "from-pink-500 to-rose-500" },
+  { id: "videographer", nameKey: "videographers", icon: Video, color: "from-purple-500 to-indigo-500" },
+  { id: "musician", nameKey: "musicians", icon: Music, color: "from-blue-500 to-cyan-500" },
+  { id: "host", nameKey: "hosts", icon: Mic, color: "from-amber-500 to-orange-500" },
+  { id: "pyrotechnician", nameKey: "pyrotechnicians", icon: Sparkles, color: "from-red-500 to-orange-500" },
+  { id: "restaurant", nameKey: "restaurants", icon: UtensilsCrossed, color: "from-emerald-500 to-teal-500" },
+  { id: "transport", nameKey: "transport", icon: Car, color: "from-slate-500 to-gray-500" },
+  { id: "florist", nameKey: "florists", icon: Flower2, color: "from-pink-400 to-rose-400" },
+] as const;
 
 export function MobileNavigation() {
   const location = useLocation();
@@ -28,6 +30,8 @@ export function MobileNavigation() {
   const { unreadCount } = useUnreadMessages();
   const { getCurrentUser } = useAuthState();
   const currentUser = getCurrentUser();
+  const { language } = useLanguage();
+  const t = translations[language];
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [isSpecialist, setIsSpecialist] = useState(false);
@@ -85,11 +89,11 @@ export function MobileNavigation() {
   };
 
   const navItems = [
-    { path: "/", icon: Home, label: "Головна" },
-    { path: "/friends", icon: Users, label: "Друзі" },
-    { path: "create", icon: Plus, label: "Нове", isAction: true },
-    { path: "/messages", icon: MessageSquare, label: "Чати", badge: unreadCount },
-    { path: "menu", icon: Menu, label: "Меню", isSheet: true },
+    { path: "/", icon: Home, label: t.home },
+    { path: "/friends", icon: Users, label: t.friends },
+    { path: "create", icon: Plus, label: t.new, isAction: true },
+    { path: "/messages", icon: MessageSquare, label: t.chats, badge: unreadCount },
+    { path: "menu", icon: Menu, label: t.menu, isSheet: true },
   ];
 
   return (
@@ -125,7 +129,7 @@ export function MobileNavigation() {
                   </SheetTrigger>
                   <SheetContent side="right" className="w-[300px] sm:w-[350px] overflow-y-auto">
                     <SheetHeader>
-                      <SheetTitle>Меню</SheetTitle>
+                      <SheetTitle>{t.menu}</SheetTitle>
                     </SheetHeader>
                     
                     <div className="mt-6 space-y-2">
@@ -136,7 +140,7 @@ export function MobileNavigation() {
                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
                       >
                         <User className="h-5 w-5" />
-                        <span>Мій профіль</span>
+                        <span>{t.myProfile}</span>
                       </Link>
                       
                       <Link
@@ -145,7 +149,7 @@ export function MobileNavigation() {
                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
                       >
                         <Bell className="h-5 w-5" />
-                        <span>Сповіщення</span>
+                        <span>{t.notifications}</span>
                       </Link>
                       
                       <Link
@@ -154,7 +158,7 @@ export function MobileNavigation() {
                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
                       >
                         <UserPlus className="h-5 w-5" />
-                        <span>Знайти друзів</span>
+                        <span>{t.findFriends}</span>
                       </Link>
                       
                       <Link
@@ -163,7 +167,7 @@ export function MobileNavigation() {
                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
                       >
                         <Search className="h-5 w-5" />
-                        <span>Знайти професіоналів</span>
+                        <span>{t.findProfessionals}</span>
                       </Link>
                       
                       <Link
@@ -172,7 +176,7 @@ export function MobileNavigation() {
                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
                       >
                         <Settings className="h-5 w-5" />
-                        <span>Налаштування</span>
+                        <span>{t.settings}</span>
                       </Link>
 
                       {/* Кабінет фахівця */}
@@ -183,7 +187,7 @@ export function MobileNavigation() {
                           className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
                         >
                           <Briefcase className="h-5 w-5" />
-                          <span>Кабінет фахівця</span>
+                          <span>{t.specialistCabinet}</span>
                         </Link>
                       )}
                       {/* Панель акціонера */}
@@ -194,7 +198,7 @@ export function MobileNavigation() {
                           className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
                         >
                           <Crown className="h-5 w-5" />
-                          <span>Панель акціонера</span>
+                          <span>{t.shareholderPanel}</span>
                         </Link>
                       )}
 
@@ -206,7 +210,7 @@ export function MobileNavigation() {
                           className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
                         >
                           <UsersRound className="h-5 w-5" />
-                          <span>Кабінет представника</span>
+                          <span>{t.representativeCabinet}</span>
                         </Link>
                       )}
                       {/* Панель модератора */}
@@ -217,7 +221,7 @@ export function MobileNavigation() {
                           className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
                         >
                           <Shield className="h-5 w-5" />
-                          <span>Панель модератора</span>
+                          <span>{t.moderatorPanel}</span>
                         </Link>
                       )}
                       {hasStockAccess && (
@@ -227,14 +231,14 @@ export function MobileNavigation() {
                           className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
                         >
                           <TrendingUp className="h-5 w-5" />
-                          <span>Ринок акцій</span>
+                          <span>{t.stockMarket}</span>
                         </Link>
                       )}
                       
                       <Separator className="my-4" />
                       
                       {/* Мої файли */}
-                      <p className="text-sm font-medium text-muted-foreground px-3 mb-2">Мої файли</p>
+                      <p className="text-sm font-medium text-muted-foreground px-3 mb-2">{t.myFiles}</p>
                       
                       <Link
                         to="/my-files/photos"
@@ -242,7 +246,7 @@ export function MobileNavigation() {
                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
                       >
                         <Image className="h-5 w-5" />
-                        <span>Фото</span>
+                        <span>{t.photo}</span>
                       </Link>
                       <Link
                         to="/my-files/videos"
@@ -250,7 +254,7 @@ export function MobileNavigation() {
                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
                       >
                         <Video className="h-5 w-5" />
-                        <span>Відео</span>
+                        <span>{t.video}</span>
                       </Link>
                       <Link
                         to="/my-files/music"
@@ -258,13 +262,13 @@ export function MobileNavigation() {
                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
                       >
                         <Music className="h-5 w-5" />
-                        <span>Музика</span>
+                        <span>{t.musicLabel}</span>
                       </Link>
                       
                       <Separator className="my-4" />
                       
                       {/* Категорії */}
-                      <p className="text-sm font-medium text-muted-foreground px-3 mb-2">Категорії</p>
+                      <p className="text-sm font-medium text-muted-foreground px-3 mb-2">{t.categories}</p>
                       
                       {CATEGORY_LINKS.map((category) => (
                         <Link
@@ -276,7 +280,7 @@ export function MobileNavigation() {
                           <div className={`p-1.5 rounded-full bg-gradient-to-r ${category.color}`}>
                             <category.icon className="h-4 w-4 text-white" />
                           </div>
-                          <span>{category.name}</span>
+                          <span>{(t as any)[category.nameKey] ?? category.nameKey}</span>
                         </Link>
                       ))}
                       
@@ -289,7 +293,7 @@ export function MobileNavigation() {
                         onClick={handleLogout}
                       >
                         <LogOut className="h-5 w-5 mr-3" />
-                        Вийти
+                        {t.logout}
                       </Button>
                     </div>
                   </SheetContent>
