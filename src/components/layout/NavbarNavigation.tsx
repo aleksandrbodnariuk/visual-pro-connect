@@ -4,6 +4,8 @@ import { Link, useLocation } from "react-router-dom";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/context/LanguageContext";
+import { translations } from "@/lib/translations";
 
 interface NavbarNavigationProps {
   isAdmin: boolean;
@@ -13,6 +15,8 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
   const location = useLocation();
   const { unreadCount } = useUnreadMessages();
   const { user } = useAuth();
+  const { language } = useLanguage();
+  const t = translations[language];
   const [isSpecialist, setIsSpecialist] = useState(false);
   const [hasStockAccess, setHasStockAccess] = useState(false);
   const [isRepresentative, setIsRepresentative] = useState(false);
@@ -58,7 +62,7 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
               isActive("/") ? "text-foreground" : "text-foreground/60"
             }`}
           >
-            Головна
+            {t.home}
           </Link>
           <Link
             to="/search"
@@ -66,7 +70,7 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
               isActive("/search") ? "text-foreground" : "text-foreground/60"
             }`}
           >
-            Знайти професіоналів
+            {t.findProfessionals}
           </Link>
           <Link
             to="/friends"
@@ -74,7 +78,7 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
               isActive("/friends") ? "text-foreground" : "text-foreground/60"
             }`}
           >
-            Друзі
+            {t.friends}
           </Link>
           <Link
             to="/messages"
@@ -88,7 +92,7 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
               isActive("/messages") ? "text-foreground" : "text-foreground/60"
             }`}
           >
-            Повідомлення
+            {t.messages}
             {unreadCount > 0 && (
               <span className="absolute -top-2 -right-4 bg-destructive text-destructive-foreground text-xs rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
                 {unreadCount > 9 ? "9+" : unreadCount}
@@ -104,7 +108,7 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
             isActive("/stock-market") ? "text-foreground" : "text-foreground/60"
           }`}
         >
-          Ринок акцій
+          {t.stockMarket}
         </Link>
       )}
       {(isSpecialist || isAdmin) && (
@@ -114,7 +118,7 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
             isActive("/panel-fahivtsya") ? "text-foreground" : "text-foreground/60"
           }`}
         >
-          Кабінет
+          {t.cabinet}
         </Link>
       )}
       {(isRepresentative || isAdmin) && (
@@ -124,7 +128,7 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
             isActive("/representative-panel") ? "text-foreground" : "text-foreground/60"
           }`}
         >
-          Представники
+          {t.representatives}
         </Link>
       )}
       {(isModerator || isAdmin) && (
@@ -134,7 +138,7 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
             isActive("/moderator-panel") ? "text-foreground" : "text-foreground/60"
           }`}
         >
-          Модерація
+          {t.moderation}
         </Link>
       )}
       {isAdmin && (
@@ -144,7 +148,7 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
             isActive("/admin") ? "text-foreground" : "text-foreground/60"
           }`}
         >
-          Адмін
+          {t.admin}
         </Link>
       )}
     </div>
