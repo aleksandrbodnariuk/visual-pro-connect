@@ -269,8 +269,19 @@ export function MessageList({
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 min-h-0">
         <div className="space-y-4 flex flex-col justify-end" style={{ minHeight: '100%' }}>
           {messages.length > 0 ? (
-            messages.map((message) => (
+            messages.map((message, idx) => {
+              const prev = idx > 0 ? messages[idx - 1] : undefined;
+              const showDate = !!message.createdAt && !sameDay(message.createdAt, prev?.createdAt);
+              const dateLabel = showDate ? formatDateSeparator(message.createdAt) : null;
+              return (
               <div key={message.id}>
+                {dateLabel && (
+                  <div className="flex justify-center my-3">
+                    <div className="text-xs font-medium text-muted-foreground bg-muted/60 rounded-full px-3 py-1">
+                      {dateLabel}
+                    </div>
+                  </div>
+                )}
                 {message.systemEvent ? (
                   <div className="flex justify-center my-2">
                     <div className="text-xs text-muted-foreground bg-muted/60 rounded-full px-3 py-1">
@@ -400,7 +411,8 @@ export function MessageList({
                 </div>
                 )}
               </div>
-            ))
+              );
+            })
           ) : (
             <div className="text-center text-muted-foreground">
               {emptyStateMessage || "Початок розмови"}
