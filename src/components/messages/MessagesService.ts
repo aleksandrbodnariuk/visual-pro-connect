@@ -15,6 +15,7 @@ export interface Message {
   id: string;
   text: string;
   timestamp: string;
+  createdAt?: string;
   isSender: boolean;
   isEdited?: boolean;
   editedAt?: string;
@@ -231,6 +232,7 @@ export class MessagesService {
         id: msg.id,
         text: msg.content,
         timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        createdAt: msg.created_at,
         isSender: msg.sender_id === currentUserId,
         isEdited: msg.is_edited || false,
         editedAt: msg.edited_at ? new Date(msg.edited_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
@@ -391,6 +393,7 @@ export class MessagesService {
         id: data.id,
         text: messageText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        createdAt: new Date().toISOString(),
         isSender: true,
         attachmentUrl,
         attachmentType,

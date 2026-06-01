@@ -9,10 +9,40 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 
+const UA_MONTHS = [
+  'січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+  'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня',
+];
+
+function formatDateSeparator(iso?: string): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diffDays = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+  if (diffDays === 0) return 'Сьогодні';
+  if (diffDays === 1) return 'Вчора';
+  const day = d.getDate();
+  const month = UA_MONTHS[d.getMonth()];
+  if (d.getFullYear() === now.getFullYear()) return `${day} ${month}`;
+  return `${day} ${month} ${d.getFullYear()}`;
+}
+
+function sameDay(a?: string, b?: string): boolean {
+  if (!a || !b) return false;
+  const da = new Date(a);
+  const db = new Date(b);
+  return da.getFullYear() === db.getFullYear()
+    && da.getMonth() === db.getMonth()
+    && da.getDate() === db.getDate();
+}
+
 interface Message {
   id: string;
   text: string;
   timestamp: string;
+  createdAt?: string;
   isSender: boolean;
   isEdited?: boolean;
   editedAt?: string;
@@ -239,8 +269,19 @@ export function MessageList({
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 min-h-0">
         <div className="space-y-4 flex flex-col justify-end" style={{ minHeight: '100%' }}>
           {messages.length > 0 ? (
-            messages.map((message) => (
+            messages.map((message, idx) => {
+              const prev = idx > 0 ? messages[idx - 1] : undefined;
+              const showDate = !!message.createdAt && !sameDay(message.createdAt, prev?.createdAt);
+              const dateLabel = showDate ? formatDateSeparator(message.createdAt) : null;
+              return (
               <div key={message.id}>
+                {dateLabel && (
+                  <div className="flex justify-center my-3">
+                    <div className="text-xs font-medium text-muted-foreground bg-muted/60 rounded-full px-3 py-1">
+                      {dateLabel}
+                    </div>
+                  </div>
+                )}
                 {message.systemEvent ? (
                   <div className="flex justify-center my-2">
                     <div className="text-xs text-muted-foreground bg-muted/60 rounded-full px-3 py-1">
@@ -370,7 +411,8 @@ export function MessageList({
                 </div>
                 )}
               </div>
-            ))
+              );
+            })
           ) : (
             <div className="text-center text-muted-foreground">
               {emptyStateMessage || "Початок розмови"}
