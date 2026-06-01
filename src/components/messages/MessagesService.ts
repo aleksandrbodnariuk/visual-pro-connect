@@ -232,6 +232,7 @@ export class MessagesService {
         id: msg.id,
         text: msg.content,
         timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        createdAt: msg.created_at,
         isSender: msg.sender_id === currentUserId,
         isEdited: msg.is_edited || false,
         editedAt: msg.edited_at ? new Date(msg.edited_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
