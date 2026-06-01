@@ -15,6 +15,7 @@ export interface Message {
   id: string;
   text: string;
   timestamp: string;
+  createdAt?: string;
   isSender: boolean;
   isEdited?: boolean;
   editedAt?: string;
