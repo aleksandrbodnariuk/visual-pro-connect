@@ -9,6 +9,35 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 
+const UA_MONTHS = [
+  'січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+  'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня',
+];
+
+function formatDateSeparator(iso?: string): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diffDays = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+  if (diffDays === 0) return 'Сьогодні';
+  if (diffDays === 1) return 'Вчора';
+  const day = d.getDate();
+  const month = UA_MONTHS[d.getMonth()];
+  if (d.getFullYear() === now.getFullYear()) return `${day} ${month}`;
+  return `${day} ${month} ${d.getFullYear()}`;
+}
+
+function sameDay(a?: string, b?: string): boolean {
+  if (!a || !b) return false;
+  const da = new Date(a);
+  const db = new Date(b);
+  return da.getFullYear() === db.getFullYear()
+    && da.getMonth() === db.getMonth()
+    && da.getDate() === db.getDate();
+}
+
 interface Message {
   id: string;
   text: string;
