@@ -21,6 +21,7 @@ import { SupportTab } from "./tabs/SupportTab";
 import { CertificatesTab } from "./tabs/CertificatesTab";
 import { VipTab } from "./tabs/VipTab";
 import { MarketplaceTab } from "./tabs/MarketplaceTab";
+import { StorageTab } from "./tabs/StorageTab";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -77,6 +78,7 @@ export function AdminTabs() {
         <TabsTrigger value="certificates">Сертифікати</TabsTrigger>
         <TabsTrigger value="vip">VIP</TabsTrigger>
         <TabsTrigger value="marketplace">Маркетплейс</TabsTrigger>
+        <TabsTrigger value="storage">Сховище</TabsTrigger>
       </TabsList>
       
       <TabsContent value="users">
@@ -161,6 +163,10 @@ export function AdminTabs() {
 
       <TabsContent value="marketplace">
         <MarketplaceTab />
+      </TabsContent>
+
+      <TabsContent value="storage">
+        <StorageTab />
       </TabsContent>
     </Tabs>
   );
