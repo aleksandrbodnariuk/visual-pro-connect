@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
           bytes: objs.reduce((s, o) => s + o.size, 0),
         });
       }
-      const { data: dbStats, error: dbErr } = await admin.rpc("get_storage_admin_db_stats");
+      const { data: dbStats, error: dbErr } = await userClient.rpc("get_storage_admin_db_stats");
       if (dbErr) throw dbErr;
       return json({
         storage: perBucket,
