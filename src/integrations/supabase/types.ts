@@ -2727,6 +2727,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _path_from_url: {
+        Args: { _bucket: string; _url: string }
+        Returns: string
+      }
       accept_representative_invite: {
         Args: { _invite_id: string }
         Returns: undefined
@@ -2786,6 +2790,7 @@ export type Database = {
         Args: { _link?: string; _message: string; _user_id: string }
         Returns: undefined
       }
+      enqueue_storage_cleanup: { Args: { _items: Json }; Returns: undefined }
       ensure_user_profile: {
         Args: never
         Returns: {
@@ -3025,6 +3030,7 @@ export type Database = {
           title: string
         }[]
       }
+      get_storage_admin_db_stats: { Args: never; Returns: Json }
       get_team_tree: {
         Args: { _representative_id: string }
         Returns: {
