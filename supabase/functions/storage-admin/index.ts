@@ -170,12 +170,17 @@ Deno.serve(async (req) => {
       const buckets = Object.keys(BUCKET_REFS);
       const perBucket: Array<{ bucket: string; files: number; bytes: number }> = [];
       for (const b of buckets) {
-        const objs = await listAllObjects(admin, b);
-        perBucket.push({
-          bucket: b,
-          files: objs.length,
-          bytes: objs.reduce((s, o) => s + o.size, 0),
-        });
+        try {
+          const objs = await listAllObjects(admin, b);
+          perBucket.push({
+            bucket: b,
+            files: objs.length,
+            bytes: objs.reduce((s, o) => s + o.size, 0),
+          });
+        } catch (e) {
+          console.error(`list bucket ${b} failed:`, (e as Error).message);
+          perBucket.push({ bucket: b, files: 0, bytes: 0 });
+        }
       }
       const { data: dbStats, error: dbErr } = await userClient.rpc("get_storage_admin_db_stats");
       if (dbErr) {
@@ -185,7 +190,7 @@ Deno.serve(async (req) => {
         storage: perBucket,
         storage_total_bytes: perBucket.reduce((s, b) => s + b.bytes, 0),
         storage_total_files: perBucket.reduce((s, b) => s + b.files, 0),
-        db: dbStats,
+        db: dbStats ?? { db_bytes: 0, tables: [] },
       });
     }
 
