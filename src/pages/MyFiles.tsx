@@ -20,6 +20,10 @@ import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -109,6 +113,7 @@ export default function MyFiles() {
   // Drag & drop / multi-select
   const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
+  const [fileToDelete, setFileToDelete] = useState<FileItem | null>(null);
 
   const targetUserId = routeUserId || currentUser?.id;
   const isOwnFiles = !routeUserId || routeUserId === currentUser?.id;
