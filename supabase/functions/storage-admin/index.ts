@@ -151,9 +151,11 @@ Deno.serve(async (req) => {
     global: { headers: { Authorization: authHeader } },
   });
   const token = authHeader.replace("Bearer ", "");
-  const { data: claimsRes, error: claimsErr } = await userClient.auth.getClaims(token);
-  if (claimsErr || !claimsRes?.claims) return json({ error: "Unauthorized" }, 401);
-  const userId = claimsRes.claims.sub;
+  const { data: userRes, error: userErr } = await userClient.auth.getUser(token);
+  if (userErr || !userRes?.user) {
+    return json({ error: "Unauthorized", detail: userErr?.message }, 401);
+  }
+  const userId = userRes.user.id;
   const { data: u } = await admin
     .from("users")
     .select("founder_admin,is_admin")
@@ -168,20 +170,27 @@ Deno.serve(async (req) => {
       const buckets = Object.keys(BUCKET_REFS);
       const perBucket: Array<{ bucket: string; files: number; bytes: number }> = [];
       for (const b of buckets) {
-        const objs = await listAllObjects(admin, b);
-        perBucket.push({
-          bucket: b,
-          files: objs.length,
-          bytes: objs.reduce((s, o) => s + o.size, 0),
-        });
+        try {
+          const objs = await listAllObjects(admin, b);
+          perBucket.push({
+            bucket: b,
+            files: objs.length,
+            bytes: objs.reduce((s, o) => s + o.size, 0),
+          });
+        } catch (e) {
+          console.error(`list bucket ${b} failed:`, (e as Error).message);
+          perBucket.push({ bucket: b, files: 0, bytes: 0 });
+        }
       }
       const { data: dbStats, error: dbErr } = await userClient.rpc("get_storage_admin_db_stats");
-      if (dbErr) throw dbErr;
+      if (dbErr) {
+        console.error("db stats rpc error:", dbErr);
+      }
       return json({
         storage: perBucket,
         storage_total_bytes: perBucket.reduce((s, b) => s + b.bytes, 0),
         storage_total_files: perBucket.reduce((s, b) => s + b.files, 0),
-        db: dbStats,
+        db: dbStats ?? { db_bytes: 0, tables: [] },
       });
     }
 
