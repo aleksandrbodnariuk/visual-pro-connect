@@ -525,12 +525,12 @@ export default function MyFiles() {
         draggable={isDraggable}
         onDragStart={isDraggable ? (e) => handleDragStart(e, file.id) : undefined}
         className={cn(
-          "relative group transition-all rounded-lg",
+          "transition-all rounded-lg",
           isSelected && "ring-2 ring-primary ring-offset-2",
           isDraggable && "cursor-grab active:cursor-grabbing"
         )}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {isDraggable && (
             <Checkbox
               checked={isSelected}
@@ -538,18 +538,22 @@ export default function MyFiles() {
               className="shrink-0"
             />
           )}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <AudioPlayer src={file.media_url!} title={file.content || undefined} />
           </div>
+          {isUploaded && isOwnFiles && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setFileToDelete(file)}
+              className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              aria-label="Видалити аудіо"
+              title="Видалити"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
-        {isUploaded && isOwnFiles && (
-          <button
-            onClick={() => deleteFile(file.id)}
-            className="absolute top-2 right-2 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        )}
       </div>
     );
   };
