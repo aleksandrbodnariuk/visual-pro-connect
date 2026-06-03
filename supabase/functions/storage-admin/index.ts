@@ -151,9 +151,11 @@ Deno.serve(async (req) => {
     global: { headers: { Authorization: authHeader } },
   });
   const token = authHeader.replace("Bearer ", "");
-  const { data: claimsRes, error: claimsErr } = await userClient.auth.getClaims(token);
-  if (claimsErr || !claimsRes?.claims) return json({ error: "Unauthorized" }, 401);
-  const userId = claimsRes.claims.sub;
+  const { data: userRes, error: userErr } = await userClient.auth.getUser(token);
+  if (userErr || !userRes?.user) {
+    return json({ error: "Unauthorized", detail: userErr?.message }, 401);
+  }
+  const userId = userRes.user.id;
   const { data: u } = await admin
     .from("users")
     .select("founder_admin,is_admin")
@@ -175,8 +177,21 @@ Deno.serve(async (req) => {
           bytes: objs.reduce((s, o) => s + o.size, 0),
         });
       }
-      const { data: dbStats, error: dbErr } = await userClient.rpc("get_storage_admin_db_stats");
-      if (dbErr) throw dbErr;
+      // Run RPC as service role; manually verify admin already happened above.
+      const { data: dbStats, error: dbErr } = await admin.rpc("get_storage_admin_db_stats_admin", {
+        _user_id: userId,
+      });
+      if (dbErr) {
+        // Fallback: call without admin wrapper
+        const fallback = await admin.rpc("get_storage_admin_db_stats");
+        if (fallback.error) throw fallback.error;
+        return json({
+          storage: perBucket,
+          storage_total_bytes: perBucket.reduce((s, b) => s + b.bytes, 0),
+          storage_total_files: perBucket.reduce((s, b) => s + b.files, 0),
+          db: fallback.data,
+        });
+      }
       return json({
         storage: perBucket,
         storage_total_bytes: perBucket.reduce((s, b) => s + b.bytes, 0),
