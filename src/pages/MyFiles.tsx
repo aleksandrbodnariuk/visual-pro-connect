@@ -20,6 +20,10 @@ import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -109,6 +113,7 @@ export default function MyFiles() {
   // Drag & drop / multi-select
   const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
+  const [fileToDelete, setFileToDelete] = useState<FileItem | null>(null);
 
   const targetUserId = routeUserId || currentUser?.id;
   const isOwnFiles = !routeUserId || routeUserId === currentUser?.id;
@@ -520,12 +525,12 @@ export default function MyFiles() {
         draggable={isDraggable}
         onDragStart={isDraggable ? (e) => handleDragStart(e, file.id) : undefined}
         className={cn(
-          "relative group transition-all rounded-lg",
+          "transition-all rounded-lg",
           isSelected && "ring-2 ring-primary ring-offset-2",
           isDraggable && "cursor-grab active:cursor-grabbing"
         )}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {isDraggable && (
             <Checkbox
               checked={isSelected}
@@ -533,18 +538,22 @@ export default function MyFiles() {
               className="shrink-0"
             />
           )}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <AudioPlayer src={file.media_url!} title={file.content || undefined} />
           </div>
+          {isUploaded && isOwnFiles && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setFileToDelete(file)}
+              className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              aria-label="Видалити аудіо"
+              title="Видалити"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
-        {isUploaded && isOwnFiles && (
-          <button
-            onClick={() => deleteFile(file.id)}
-            className="absolute top-2 right-2 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        )}
       </div>
     );
   };
@@ -873,6 +882,31 @@ export default function MyFiles() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!fileToDelete} onOpenChange={(open) => !open && setFileToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Видалити файл?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {fileToDelete?.content ? `"${fileToDelete.content}" буде видалено назавжди. Цю дію не можна скасувати.` : "Файл буде видалено назавжди. Цю дію не можна скасувати."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Скасувати</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (fileToDelete) {
+                  await deleteFile(fileToDelete.id);
+                  setFileToDelete(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Видалити
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
