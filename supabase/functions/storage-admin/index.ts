@@ -177,20 +177,9 @@ Deno.serve(async (req) => {
           bytes: objs.reduce((s, o) => s + o.size, 0),
         });
       }
-      // Run RPC as service role; manually verify admin already happened above.
-      const { data: dbStats, error: dbErr } = await admin.rpc("get_storage_admin_db_stats_admin", {
-        _user_id: userId,
-      });
+      const { data: dbStats, error: dbErr } = await userClient.rpc("get_storage_admin_db_stats");
       if (dbErr) {
-        // Fallback: call without admin wrapper
-        const fallback = await admin.rpc("get_storage_admin_db_stats");
-        if (fallback.error) throw fallback.error;
-        return json({
-          storage: perBucket,
-          storage_total_bytes: perBucket.reduce((s, b) => s + b.bytes, 0),
-          storage_total_files: perBucket.reduce((s, b) => s + b.files, 0),
-          db: fallback.data,
-        });
+        console.error("db stats rpc error:", dbErr);
       }
       return json({
         storage: perBucket,
