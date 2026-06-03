@@ -69,7 +69,7 @@ export function AdOrdersTab() {
     setConfirmId(null);
     setProcessingId(id);
     try {
-      const { error } = await supabase.rpc('process_ad_order' as any, { p_ad_order_id: id });
+      const { error } = await supabase.rpc('process_ad_order' as any, { _ad_order_id: id });
       if (error) throw error;
       toast.success('Рекламне замовлення оброблено, виплати створено');
       await load();
