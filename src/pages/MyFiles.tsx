@@ -882,6 +882,31 @@ export default function MyFiles() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!fileToDelete} onOpenChange={(open) => !open && setFileToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Видалити файл?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {fileToDelete?.content ? `"${fileToDelete.content}" буде видалено назавжди. Цю дію не можна скасувати.` : "Файл буде видалено назавжди. Цю дію не можна скасувати."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Скасувати</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (fileToDelete) {
+                  await deleteFile(fileToDelete.id);
+                  setFileToDelete(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Видалити
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
