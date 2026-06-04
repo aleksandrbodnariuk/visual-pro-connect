@@ -543,7 +543,7 @@ export default function MyFiles() {
           <div className="flex-1 min-w-0">
             <AudioPlayer src={file.media_url!} title={file.content || undefined} />
           </div>
-          {isUploaded && isOwnFiles && (
+          {isOwnFiles && (
             <Button
               variant="ghost"
               size="icon"
