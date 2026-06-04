@@ -313,7 +313,9 @@ export default function MyFiles() {
   };
 
   const deleteFile = async (fileId: string) => {
-    const { error } = await supabase.from("user_files").delete().eq("id", fileId);
+    const file = files.find(f => f.id === fileId);
+    const table = file?.source === 'post' ? 'posts' : 'user_files';
+    const { error } = await supabase.from(table).delete().eq("id", fileId);
     if (error) { toast.error("Помилка видалення"); return; }
     toast.success("Файл видалено");
     fetchFiles();
@@ -541,7 +543,7 @@ export default function MyFiles() {
           <div className="flex-1 min-w-0">
             <AudioPlayer src={file.media_url!} title={file.content || undefined} />
           </div>
-          {isUploaded && isOwnFiles && (
+          {isOwnFiles && (
             <Button
               variant="ghost"
               size="icon"
