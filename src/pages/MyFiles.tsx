@@ -344,10 +344,32 @@ export default function MyFiles() {
     toast.success("Збережено у вашу колекцію");
   };
 
+  const copyPostToFolder = async (file: FileItem, folderId: string) => {
+    if (!authUser?.id) return { error: new Error('no auth') as any };
+    const file_url = file.videoEmbed?.originalUrl || file.media_url;
+    if (!file_url) return { error: new Error('no url') as any };
+    const ft = getFileType(file);
+    const file_type = ft === 'photos' ? 'photo' : ft === 'videos' ? 'video' : 'music';
+    return await supabase.from('user_files').insert({
+      user_id: authUser.id,
+      file_url,
+      file_type,
+      title: file.content || null,
+      folder_id: folderId,
+    });
+  };
+
   const moveFileToFolder = async (fileId: string, folderId: string) => {
-    const { error } = await supabase.from('user_files').update({ folder_id: folderId }).eq('id', fileId);
-    if (error) { toast.error("Помилка переміщення"); return; }
-    toast.success("Переміщено");
+    const file = files.find(f => f.id === fileId);
+    if (file?.source === 'post') {
+      const { error } = await copyPostToFolder(file, folderId);
+      if (error) { toast.error("Помилка переміщення"); return; }
+      toast.success("Скопійовано в папку");
+    } else {
+      const { error } = await supabase.from('user_files').update({ folder_id: folderId }).eq('id', fileId);
+      if (error) { toast.error("Помилка переміщення"); return; }
+      toast.success("Переміщено");
+    }
     setFileToMove(null);
     fetchFiles();
   };
@@ -358,8 +380,13 @@ export default function MyFiles() {
       .insert({ user_id: authUser.id, name: moveNewFolderName.trim() })
       .select().single();
     if (error || !data) { toast.error("Помилка створення папки"); return; }
-    const { error: mvErr } = await supabase.from('user_files').update({ folder_id: data.id }).eq('id', fileToMove.id);
-    if (mvErr) { toast.error("Помилка переміщення"); return; }
+    if (fileToMove.source === 'post') {
+      const { error: cpErr } = await copyPostToFolder(fileToMove, data.id);
+      if (cpErr) { toast.error("Помилка переміщення"); return; }
+    } else {
+      const { error: mvErr } = await supabase.from('user_files').update({ folder_id: data.id }).eq('id', fileToMove.id);
+      if (mvErr) { toast.error("Помилка переміщення"); return; }
+    }
     toast.success(`Створено папку "${data.name}" та переміщено`);
     setMoveNewFolderName("");
     setFileToMove(null);
@@ -439,8 +466,8 @@ export default function MyFiles() {
 
   const FileMenu = ({ file, variant }: { file: FileItem; variant: 'overlay' | 'inline' }) => {
     const canDelete = isOwnFiles;
-    const canMove = isOwnFiles && file.source === 'uploaded';
-    const canSave = !isOwnFiles && !!authUser?.id;
+    const canMove = isOwnFiles;
+    const canSave = !!authUser?.id && (!isOwnFiles || file.source === 'post');
     if (!canDelete && !canMove && !canSave) return null;
 
     return (
