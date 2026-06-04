@@ -467,7 +467,7 @@ export default function MyFiles() {
   const FileMenu = ({ file, variant }: { file: FileItem; variant: 'overlay' | 'inline' }) => {
     const canDelete = isOwnFiles;
     const canMove = isOwnFiles;
-    const canSave = !!authUser?.id && (!isOwnFiles || file.source === 'post');
+    const canSave = !isOwnFiles && !!authUser?.id;
     if (!canDelete && !canMove && !canSave) return null;
 
     return (
