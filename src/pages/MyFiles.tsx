@@ -8,7 +8,8 @@ import { useAuthState } from "@/hooks/auth/useAuthState";
 import { useAuth } from "@/context/AuthContext";
 import {
   Image, Video, Music, FolderOpen, FolderPlus, Upload, Plus, ArrowLeft,
-  Trash2, Edit2, Check, X, Link as LinkIcon, GripVertical
+  Trash2, Edit2, Check, X, Link as LinkIcon, GripVertical, MoreVertical,
+  FolderInput, Bookmark
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -114,6 +118,8 @@ export default function MyFiles() {
   const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   const [fileToDelete, setFileToDelete] = useState<FileItem | null>(null);
+  const [fileToMove, setFileToMove] = useState<FileItem | null>(null);
+  const [moveNewFolderName, setMoveNewFolderName] = useState("");
 
   const targetUserId = routeUserId || currentUser?.id;
   const isOwnFiles = !routeUserId || routeUserId === currentUser?.id;
@@ -321,6 +327,46 @@ export default function MyFiles() {
     fetchFiles();
   };
 
+  const saveToMyCollection = async (file: FileItem) => {
+    if (!authUser?.id) { toast.error("Потрібен вхід"); return; }
+    const file_url = file.videoEmbed?.originalUrl || file.media_url;
+    if (!file_url) { toast.error("Немає файлу для збереження"); return; }
+    const ft = getFileType(file);
+    const file_type = ft === 'photos' ? 'photo' : ft === 'videos' ? 'video' : 'music';
+    const { error } = await supabase.from('user_files').insert({
+      user_id: authUser.id,
+      file_url,
+      file_type,
+      title: file.content || null,
+      folder_id: null,
+    });
+    if (error) { toast.error("Помилка збереження"); return; }
+    toast.success("Збережено у вашу колекцію");
+  };
+
+  const moveFileToFolder = async (fileId: string, folderId: string) => {
+    const { error } = await supabase.from('user_files').update({ folder_id: folderId }).eq('id', fileId);
+    if (error) { toast.error("Помилка переміщення"); return; }
+    toast.success("Переміщено");
+    setFileToMove(null);
+    fetchFiles();
+  };
+
+  const createFolderAndMove = async () => {
+    if (!moveNewFolderName.trim() || !authUser?.id || !fileToMove) return;
+    const { data, error } = await supabase.from('user_folders')
+      .insert({ user_id: authUser.id, name: moveNewFolderName.trim() })
+      .select().single();
+    if (error || !data) { toast.error("Помилка створення папки"); return; }
+    const { error: mvErr } = await supabase.from('user_files').update({ folder_id: data.id }).eq('id', fileToMove.id);
+    if (mvErr) { toast.error("Помилка переміщення"); return; }
+    toast.success(`Створено папку "${data.name}" та переміщено`);
+    setMoveNewFolderName("");
+    setFileToMove(null);
+    fetchFolders();
+    fetchFiles();
+  };
+
   // --- Drag & Drop: move files to folders ---
   const toggleSelectFile = (fileId: string) => {
     setSelectedFileIds(prev => {
@@ -391,6 +437,62 @@ export default function MyFiles() {
 
   const activeFolder = folders.find(f => f.id === activeFolderId);
 
+  const FileMenu = ({ file, variant }: { file: FileItem; variant: 'overlay' | 'inline' }) => {
+    const canDelete = isOwnFiles;
+    const canMove = isOwnFiles && file.source === 'uploaded';
+    const canSave = !isOwnFiles && !!authUser?.id;
+    if (!canDelete && !canMove && !canSave) return null;
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          {variant === 'overlay' ? (
+            <button
+              onClick={e => e.stopPropagation()}
+              className="absolute top-1.5 right-1.5 z-10 p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+              aria-label="Меню"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 text-muted-foreground hover:text-foreground"
+              aria-label="Меню"
+              onClick={e => e.stopPropagation()}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          )}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
+          {canSave && (
+            <DropdownMenuItem onClick={() => saveToMyCollection(file)}>
+              <Bookmark className="mr-2 h-4 w-4" />
+              Зберегти собі
+            </DropdownMenuItem>
+          )}
+          {canMove && (
+            <DropdownMenuItem onClick={() => { setMoveNewFolderName(""); setFileToMove(file); }}>
+              <FolderInput className="mr-2 h-4 w-4" />
+              Перемістити в папку
+            </DropdownMenuItem>
+          )}
+          {canDelete && (
+            <DropdownMenuItem
+              onClick={() => setFileToDelete(file)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Видалити
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
   const renderFileCard = (file: FileItem) => {
     const isUploaded = file.source === 'uploaded';
     const isSelected = selectedFileIds.has(file.id);
@@ -432,14 +534,7 @@ export default function MyFiles() {
               />
             </div>
           )}
-          {isUploaded && isOwnFiles && (
-            <button
-              onClick={e => { e.stopPropagation(); deleteFile(file.id); }}
-              className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          )}
+          <FileMenu file={file} variant="overlay" />
           {file.content && (
             <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/60 to-transparent">
               <p className="text-[10px] text-white truncate">{file.content}</p>
@@ -508,14 +603,7 @@ export default function MyFiles() {
             </div>
           )}
           {!file.videoEmbed && file.content && <p className="p-2 text-sm truncate">{file.content}</p>}
-          {isUploaded && isOwnFiles && (
-            <button
-              onClick={e => { e.stopPropagation(); deleteFile(file.id); }}
-              className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          )}
+          <FileMenu file={file} variant="overlay" />
         </div>
       );
     }
@@ -543,18 +631,7 @@ export default function MyFiles() {
           <div className="flex-1 min-w-0">
             <AudioPlayer src={file.media_url!} title={file.content || undefined} />
           </div>
-          {isOwnFiles && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setFileToDelete(file)}
-              className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-              aria-label="Видалити аудіо"
-              title="Видалити"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
+          <FileMenu file={file} variant="inline" />
         </div>
       </div>
     );
@@ -909,6 +986,78 @@ export default function MyFiles() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Move to folder dialog */}
+      <Dialog open={!!fileToMove} onOpenChange={(o) => { if (!o) { setFileToMove(null); setMoveNewFolderName(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FolderInput className="h-5 w-5 text-primary" />
+              Перемістити в папку
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {folders.length > 0 ? (
+              <>
+                <p className="text-sm text-muted-foreground">Оберіть папку:</p>
+                <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
+                  {folders.map(f => (
+                    <Button
+                      key={f.id}
+                      variant={fileToMove?.folder_id === f.id ? "default" : "outline"}
+                      className="justify-start gap-2 h-9"
+                      onClick={() => fileToMove && moveFileToFolder(fileToMove.id, f.id)}
+                    >
+                      <FolderOpen className="h-4 w-4" />
+                      <span className="truncate">{f.name}</span>
+                      {fileToMove?.folder_id === f.id && (
+                        <span className="ml-auto text-xs opacity-70">поточна</span>
+                      )}
+                    </Button>
+                  ))}
+                </div>
+                <div className="border-t pt-3">
+                  <p className="text-xs text-muted-foreground mb-2">Або створіть нову папку:</p>
+                  <div className="flex gap-2">
+                    <Input
+                      value={moveNewFolderName}
+                      onChange={e => setMoveNewFolderName(e.target.value)}
+                      placeholder="Назва папки"
+                      onKeyDown={e => e.key === 'Enter' && createFolderAndMove()}
+                    />
+                    <Button onClick={createFolderAndMove} disabled={!moveNewFolderName.trim()}>
+                      Створити
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  У вас ще немає папок. Створіть нову, щоб перемістити файл:
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    value={moveNewFolderName}
+                    onChange={e => setMoveNewFolderName(e.target.value)}
+                    placeholder="Назва папки"
+                    autoFocus
+                    onKeyDown={e => e.key === 'Enter' && createFolderAndMove()}
+                  />
+                  <Button onClick={createFolderAndMove} disabled={!moveNewFolderName.trim()}>
+                    Створити та перемістити
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setFileToMove(null); setMoveNewFolderName(""); }}>
+              Скасувати
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
