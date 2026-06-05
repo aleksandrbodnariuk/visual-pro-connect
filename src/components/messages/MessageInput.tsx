@@ -1,25 +1,28 @@
 import { useState, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send, Paperclip, X } from "lucide-react";
+import { Send, Paperclip, X, BarChart3 } from "lucide-react";
 import { EmojiPicker } from "./EmojiPicker";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { compressImageAsFile, validateImageSize, OUTPUT_FORMAT, OUTPUT_EXTENSION } from "@/lib/imageCompression";
 import { VoiceRecorder } from "./VoiceRecorder";
+import { CreatePollDialog, PollDraft } from "./CreatePollDialog";
 
 const HEIC_TYPES = ['image/heic', 'image/heif'];
 
 interface MessageInputProps {
   onSendMessage: (text: string, attachmentUrl?: string, attachmentType?: string) => void;
+  onCreatePoll?: (draft: PollDraft) => Promise<void>;
 }
 
-export function MessageInput({ onSendMessage }: MessageInputProps) {
+export function MessageInput({ onSendMessage, onCreatePoll }: MessageInputProps) {
   const [messageText, setMessageText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [pollOpen, setPollOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
 
@@ -214,20 +217,46 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
             >
               <Paperclip className="h-5 w-5 text-muted-foreground" />
             </Button>
+            {onCreatePoll && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                onClick={() => setPollOpen(true)}
+                disabled={isUploading}
+                title="Створити опитування"
+              >
+                <BarChart3 className="h-5 w-5 text-muted-foreground" />
+              </Button>
+            )}
           </div>
         )}
 
         {/* Десктоп: скрепка зліва */}
         {!isMobile && (
-          <Button 
-            variant="ghost" 
-            size="icon"
-            className="h-9 w-9 flex-shrink-0"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-          >
-            <Paperclip className="h-5 w-5 text-muted-foreground" />
-          </Button>
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 flex-shrink-0"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+            >
+              <Paperclip className="h-5 w-5 text-muted-foreground" />
+            </Button>
+            {onCreatePoll && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 flex-shrink-0"
+                onClick={() => setPollOpen(true)}
+                disabled={isUploading}
+                title="Створити опитування"
+              >
+                <BarChart3 className="h-5 w-5 text-muted-foreground" />
+              </Button>
+            )}
+          </>
         )}
 
         <input
@@ -266,6 +295,13 @@ export function MessageInput({ onSendMessage }: MessageInputProps) {
           <VoiceRecorder onRecorded={handleVoiceRecorded} disabled={isUploading} />
         )}
       </div>
+      {onCreatePoll && (
+        <CreatePollDialog
+          open={pollOpen}
+          onOpenChange={setPollOpen}
+          onSubmit={onCreatePoll}
+        />
+      )}
     </div>
   );
 }
