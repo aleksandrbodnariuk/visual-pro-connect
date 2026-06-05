@@ -51,11 +51,11 @@ export function PollMessage({ pollId, currentUserId, isSender }: PollMessageProp
       const uniqueIds = Array.from(new Set((vs as any[]).map(v => v.user_id)));
       const { data: users } = await supabase
         .from("users")
-        .select("id,first_name,last_name")
+        .select("id, full_name")
         .in("id", uniqueIds);
       const map: Record<string, string> = {};
       (users || []).forEach((u: any) => {
-        map[u.id] = [u.first_name, u.last_name].filter(Boolean).join(" ") || "Користувач";
+        map[u.id] = u.full_name || "Користувач";
       });
       setVoterNames(map);
     }
