@@ -13,6 +13,7 @@ import { MessagesService, ChatItem, Message } from "@/components/messages/Messag
 import { playNotificationSound } from "@/lib/sounds";
 import { NewChatDialog } from "@/components/messages/NewChatDialog";
 import { GroupMembersDialog } from "@/components/messages/GroupMembersDialog";
+import type { PollDraft } from "@/components/messages/CreatePollDialog";
 
 export default function Messages() {
   const [activeChat, setActiveChat] = useState<ChatItem | null>(null);
@@ -127,6 +128,61 @@ export default function Messages() {
           : chat
       );
       setChats(updatedChats);
+    }
+  };
+
+  const handleCreatePoll = async (draft: PollDraft) => {
+    if (!activeChat?.conversationId || !currentUser) return;
+    try {
+      // 1. Create poll
+      const { data: poll, error: pollErr } = await supabase
+        .from("polls")
+        .insert({
+          conversation_id: activeChat.conversationId,
+          created_by: currentUser.id,
+          question: draft.question,
+          allow_multiple: draft.allowMultiple,
+          is_anonymous: draft.isAnonymous,
+        })
+        .select("id")
+        .single();
+      if (pollErr || !poll) throw pollErr || new Error("Не вдалося створити опитування");
+
+      // 2. Insert options
+      const { error: optErr } = await supabase
+        .from("poll_options")
+        .insert(draft.options.map((text, idx) => ({ poll_id: poll.id, text, position: idx })));
+      if (optErr) throw optErr;
+
+      // 3. Send a message attachment referencing the poll
+      const { success, newMessage } = await MessagesService.sendMessage(
+        currentUser,
+        activeChat.conversationId,
+        draft.question,
+        poll.id,
+        "poll",
+      );
+      if (!success || !newMessage) throw new Error("Не вдалося надіслати опитування");
+
+      // 4. Link message to poll (best effort)
+      await supabase.from("polls").update({ message_id: newMessage.id }).eq("id", poll.id);
+
+      const updatedMessages = [...messages, newMessage];
+      setMessages(updatedMessages);
+      const updatedChats = chats.map(chat =>
+        chat.id === activeChat.id
+          ? {
+              ...chat,
+              messages: updatedMessages,
+              lastMessage: { text: `📊 ${draft.question}`, timestamp: "Щойно" },
+            }
+          : chat,
+      );
+      setChats(updatedChats);
+      toast.success("Опитування створено");
+    } catch (e: any) {
+      console.error("[CreatePoll]", e);
+      toast.error(e?.message || "Не вдалося створити опитування");
     }
   };
   
@@ -392,7 +448,7 @@ export default function Messages() {
                     isGroup={activeChat.type === 'group'}
                   />
                   
-                  <MessageInput onSendMessage={handleSendMessage} />
+                  <MessageInput onSendMessage={handleSendMessage} onCreatePoll={handleCreatePoll} />
                 </>
               ) : (
                 <EmptyChat />
