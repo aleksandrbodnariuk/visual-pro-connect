@@ -2,6 +2,7 @@ import { ReactNode, useState, useRef, useEffect, useCallback } from "react";
 import { MessageActions } from "./MessageActions";
 import { MessageReactionPicker } from "./MessageReactionPicker";
 import { MessageReactions } from "./MessageReactions";
+import { PollMessage } from "./PollMessage";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCheck } from "lucide-react";
 import {
@@ -352,8 +353,17 @@ export function MessageList({
                           style={{ height: 40 }}
                         />
                       )}
+                      {message.attachmentUrl && message.attachmentType === 'poll' && (
+                        <PollMessage
+                          pollId={message.attachmentUrl}
+                          currentUserId={currentUserId}
+                          isSender={message.isSender}
+                        />
+                      )}
 
-                      {message.text && <p className="text-sm">{message.text}</p>}
+                      {message.text && message.attachmentType !== 'poll' && (
+                        <p className="text-sm">{message.text}</p>
+                      )}
                       
                       <div className={`mt-1 flex items-center gap-1 text-xs ${
                         message.isSender ? "justify-end text-white/70" : "text-muted-foreground"
