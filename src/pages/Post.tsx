@@ -375,23 +375,11 @@ export default function PostPage() {
           {/* Comment input */}
           {currentUser && (
             <div className="pt-3 border-t">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={currentUser.avatar_url || currentUser.avatarUrl || ''} />
-                  <AvatarFallback>
-                    {(currentUser.full_name || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'U')[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <input
-                  type="text"
-                  placeholder="Написати коментар..."
-                  className="flex-1 h-9 bg-muted/50 border-0 rounded-full px-4 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value.slice(0, 2000))}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && newComment.trim()) handleSubmitComment(); }}
-                  disabled={submitting}
-                />
-              </div>
+            <CommentInput
+              currentUser={currentUser}
+              onSubmit={handleSubmitComment}
+              placeholder="Написати коментар..."
+            />
             </div>
           )}
         </div>
