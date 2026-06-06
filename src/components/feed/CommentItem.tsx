@@ -21,6 +21,7 @@ export interface CommentData {
   created_at: string;
   user_id: string;
   parent_id?: string | null;
+  image_url?: string | null;
   user?: {
     id: string;
     full_name: string;
@@ -155,6 +156,21 @@ export function CommentItem({ comment, depth = 0, postAuthorId, currentUserId, o
               </>
             )}
           </div>
+          {comment.image_url && !isEditing && (
+            <a
+              href={comment.image_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 block max-w-[240px]"
+            >
+              <img
+                src={comment.image_url}
+                alt="Зображення коментаря"
+                loading="lazy"
+                className="rounded-xl border max-h-60 object-cover w-full"
+              />
+            </a>
+          )}
           
           {/* Three-dot menu — only for own comments */}
           {isOwnComment && !isEditing && (
