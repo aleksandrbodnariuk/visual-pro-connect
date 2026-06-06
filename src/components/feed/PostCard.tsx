@@ -5,13 +5,13 @@ import { MessageCircle, Share2, Bookmark, X } from "lucide-react";
 import { LikersTooltip } from "./LikersTooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { PostMenu } from "@/components/profile/PostMenu";
 import { extractVideoEmbed } from "@/lib/videoEmbed";
 import { VideoPreview } from "./VideoPreview";
 import { AudioPlayer } from "./AudioPlayer";
 import { CommentItem } from "./CommentItem";
+import { CommentInput } from "./CommentInput";
 import { supabase } from "@/integrations/supabase/client";
 import { ReactionPicker, ReactionType, getReactionEmoji } from "./ReactionPicker";
 import { FeedComment, CommentLikesData, PostLikesData, PostShareData } from "@/hooks/useFeedData";
@@ -84,9 +84,7 @@ export function PostCard({
   onToggleShare,
 }: PostCardProps) {
   const [saved, setSaved] = useState(false);
-  const [commentText, setCommentText] = useState("");
   const [showAllComments, setShowAllComments] = useState(false);
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ commentId: string; userName: string } | null>(null);
   const [showFullCaption, setShowFullCaption] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
@@ -141,22 +139,18 @@ export function PostCard({
     if (onTogglePostReaction) onTogglePostReaction(id, reaction);
   };
 
-  const handleCommentSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && commentText.trim() && authUser?.id) {
-      setIsSubmittingComment(true);
-      try {
-        const insertData: any = { post_id: id, user_id: authUser.id, content: commentText.trim() };
-        if (replyingTo) insertData.parent_id = replyingTo.commentId;
-        const { error } = await supabase.from('comments').insert(insertData);
-        if (error) throw error;
-        setCommentText("");
-        setReplyingTo(null);
-        // Realtime will handle refresh via centralized hook
-      } catch (error) {
-        console.error("Error submitting comment:", error);
-      } finally {
-        setIsSubmittingComment(false);
-      }
+  const handleCommentSend = async (text: string, imageUrl?: string) => {
+    if (!authUser?.id) return;
+    if (!text && !imageUrl) return;
+    try {
+      const insertData: any = { post_id: id, user_id: authUser.id, content: text };
+      if (imageUrl) insertData.image_url = imageUrl;
+      if (replyingTo) insertData.parent_id = replyingTo.commentId;
+      const { error } = await supabase.from('comments').insert(insertData);
+      if (error) throw error;
+      setReplyingTo(null);
+    } catch (error) {
+      console.error("Error submitting comment:", error);
     }
   };
 
@@ -326,21 +320,12 @@ export function PostCard({
                 </button>
               </div>
             )}
-            <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={authUser.avatar_url || authUser.avatarUrl || ''} />
-                <AvatarFallback>{authUser.full_name?.[0] || authUser.firstName?.[0] || 'U'}</AvatarFallback>
-              </Avatar>
-              <Input
-                ref={commentInputRef}
-                placeholder={replyingTo ? `Відповісти ${replyingTo.userName}...` : "Написати коментар..."}
-                className="flex-1 h-9 bg-muted/50 border-0 focus-visible:ring-1"
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                onKeyDown={handleCommentSubmit}
-                disabled={isSubmittingComment}
-              />
-            </div>
+            <CommentInput
+              currentUser={authUser}
+              placeholder={replyingTo ? `Відповісти ${replyingTo.userName}...` : "Написати коментар..."}
+              onSubmit={handleCommentSend}
+              inputRef={commentInputRef}
+            />
           </div>
         )}
       </div>

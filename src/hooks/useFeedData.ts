@@ -12,6 +12,7 @@ export interface FeedComment {
   created_at: string;
   parent_id: string | null;
   likes_count: number;
+  image_url?: string | null;
   user?: { id: string; full_name: string; avatar_url: string };
   replies?: FeedComment[];
 }

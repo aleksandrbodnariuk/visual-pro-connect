@@ -5,7 +5,6 @@ import { ArrowLeft, MessageCircle, Share2, Bookmark, Trash2 } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuthState } from "@/hooks/auth/useAuthState";
@@ -15,6 +14,7 @@ import { extractVideoEmbed } from "@/lib/videoEmbed";
 import { VideoPreview } from "@/components/feed/VideoPreview";
 import { ReactionPicker, ReactionType, getReactionEmoji } from "@/components/feed/ReactionPicker";
 import { LikersTooltip } from "@/components/feed/LikersTooltip";
+import { CommentInput } from "@/components/feed/CommentInput";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +32,7 @@ interface Comment {
   content: string;
   created_at: string;
   user_id: string;
+  image_url?: string | null;
   user?: {
     id: string;
     full_name: string;
@@ -63,9 +64,7 @@ export default function PostPage() {
   
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
 
   const { liked, likesCount, toggleLike, toggleReaction, reactionType, topReactions, likerNames } =
     usePostLikes(postId || "", post?.likes_count || 0);
@@ -126,34 +125,22 @@ export default function PostPage() {
     }
   };
 
-  const handleSubmitComment = async () => {
-    const trimmed = newComment.trim();
-    if (!trimmed || !currentUser?.id || !postId) return;
-    if (trimmed.length > 2000) {
+  const handleSubmitComment = async (text: string, imageUrl?: string) => {
+    if ((!text && !imageUrl) || !currentUser?.id || !postId) return;
+    if (text.length > 2000) {
       toast({ title: "Коментар не може перевищувати 2000 символів", variant: "destructive" });
       return;
     }
-
-    setSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('comments')
-        .insert({
-          post_id: postId,
-          user_id: currentUser.id,
-          content: trimmed
-        });
-
+      const insertData: any = { post_id: postId, user_id: currentUser.id, content: text };
+      if (imageUrl) insertData.image_url = imageUrl;
+      const { error } = await supabase.from('comments').insert(insertData);
       if (error) throw error;
-
-      setNewComment("");
       loadComments();
       toast({ title: "Коментар додано" });
     } catch (error) {
       console.error("Error adding comment:", error);
       toast({ title: "Помилка додавання коментаря", variant: "destructive" });
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -347,8 +334,23 @@ export default function PostPage() {
                       <Link to={`/profile/${comment.user_id}`} className="font-semibold text-sm hover:underline">
                         {comment.user?.full_name || 'Користувач'}
                       </Link>
-                      <p className="text-sm leading-[1.1]">{comment.content}</p>
+                      {comment.content && <p className="text-sm leading-[1.1]">{comment.content}</p>}
                     </div>
+                    {comment.image_url && (
+                      <a
+                        href={comment.image_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 block max-w-[240px]"
+                      >
+                        <img
+                          src={comment.image_url}
+                          alt="Зображення коментаря"
+                          loading="lazy"
+                          className="rounded-xl border max-h-60 object-cover w-full"
+                        />
+                      </a>
+                    )}
                     <div className="flex items-center gap-3 mt-0.5 px-1">
                       <span className="text-xs text-muted-foreground">{formatTimeAgo(comment.created_at)}</span>
                       <button className="text-xs text-muted-foreground hover:text-foreground font-medium">Подобається</button>
@@ -388,23 +390,11 @@ export default function PostPage() {
           {/* Comment input */}
           {currentUser && (
             <div className="pt-3 border-t">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={currentUser.avatar_url || currentUser.avatarUrl || ''} />
-                  <AvatarFallback>
-                    {(currentUser.full_name || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'U')[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <input
-                  type="text"
-                  placeholder="Написати коментар..."
-                  className="flex-1 h-9 bg-muted/50 border-0 rounded-full px-4 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value.slice(0, 2000))}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && newComment.trim()) handleSubmitComment(); }}
-                  disabled={submitting}
-                />
-              </div>
+            <CommentInput
+              currentUser={currentUser}
+              onSubmit={handleSubmitComment}
+              placeholder="Написати коментар..."
+            />
             </div>
           )}
         </div>
