@@ -557,6 +557,7 @@ export type Database = {
           content: string
           created_at: string | null
           id: string
+          image_url: string | null
           likes_count: number
           parent_id: string | null
           post_id: string
@@ -566,6 +567,7 @@ export type Database = {
           content: string
           created_at?: string | null
           id?: string
+          image_url?: string | null
           likes_count?: number
           parent_id?: string | null
           post_id: string
@@ -575,6 +577,7 @@ export type Database = {
           content?: string
           created_at?: string | null
           id?: string
+          image_url?: string | null
           likes_count?: number
           parent_id?: string | null
           post_id?: string
