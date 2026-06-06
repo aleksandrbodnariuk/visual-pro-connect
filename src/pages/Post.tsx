@@ -334,8 +334,23 @@ export default function PostPage() {
                       <Link to={`/profile/${comment.user_id}`} className="font-semibold text-sm hover:underline">
                         {comment.user?.full_name || 'Користувач'}
                       </Link>
-                      <p className="text-sm leading-[1.1]">{comment.content}</p>
+                      {comment.content && <p className="text-sm leading-[1.1]">{comment.content}</p>}
                     </div>
+                    {comment.image_url && (
+                      <a
+                        href={comment.image_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 block max-w-[240px]"
+                      >
+                        <img
+                          src={comment.image_url}
+                          alt="Зображення коментаря"
+                          loading="lazy"
+                          className="rounded-xl border max-h-60 object-cover w-full"
+                        />
+                      </a>
+                    )}
                     <div className="flex items-center gap-3 mt-0.5 px-1">
                       <span className="text-xs text-muted-foreground">{formatTimeAgo(comment.created_at)}</span>
                       <button className="text-xs text-muted-foreground hover:text-foreground font-medium">Подобається</button>
