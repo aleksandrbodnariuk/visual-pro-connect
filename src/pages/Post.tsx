@@ -5,7 +5,6 @@ import { ArrowLeft, MessageCircle, Share2, Bookmark, Trash2 } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuthState } from "@/hooks/auth/useAuthState";
@@ -15,6 +14,7 @@ import { extractVideoEmbed } from "@/lib/videoEmbed";
 import { VideoPreview } from "@/components/feed/VideoPreview";
 import { ReactionPicker, ReactionType, getReactionEmoji } from "@/components/feed/ReactionPicker";
 import { LikersTooltip } from "@/components/feed/LikersTooltip";
+import { CommentInput } from "@/components/feed/CommentInput";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +32,7 @@ interface Comment {
   content: string;
   created_at: string;
   user_id: string;
+  image_url?: string | null;
   user?: {
     id: string;
     full_name: string;
@@ -63,9 +64,7 @@ export default function PostPage() {
   
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
 
   const { liked, likesCount, toggleLike, toggleReaction, reactionType, topReactions, likerNames } =
     usePostLikes(postId || "", post?.likes_count || 0);
@@ -126,34 +125,22 @@ export default function PostPage() {
     }
   };
 
-  const handleSubmitComment = async () => {
-    const trimmed = newComment.trim();
-    if (!trimmed || !currentUser?.id || !postId) return;
-    if (trimmed.length > 2000) {
+  const handleSubmitComment = async (text: string, imageUrl?: string) => {
+    if ((!text && !imageUrl) || !currentUser?.id || !postId) return;
+    if (text.length > 2000) {
       toast({ title: "Коментар не може перевищувати 2000 символів", variant: "destructive" });
       return;
     }
-
-    setSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('comments')
-        .insert({
-          post_id: postId,
-          user_id: currentUser.id,
-          content: trimmed
-        });
-
+      const insertData: any = { post_id: postId, user_id: currentUser.id, content: text };
+      if (imageUrl) insertData.image_url = imageUrl;
+      const { error } = await supabase.from('comments').insert(insertData);
       if (error) throw error;
-
-      setNewComment("");
       loadComments();
       toast({ title: "Коментар додано" });
     } catch (error) {
       console.error("Error adding comment:", error);
       toast({ title: "Помилка додавання коментаря", variant: "destructive" });
-    } finally {
-      setSubmitting(false);
     }
   };
 
