@@ -473,6 +473,7 @@ export function NewsFeed() {
                   }}
                   imageUrl={post.media_url || undefined}
                   caption={post.content || ''}
+                  videoOrientation={(post as any).video_orientation ?? null}
                   likes={post.likes_count || 0}
                   comments={post.comments_count || 0}
                   timeAgo="щойно"
