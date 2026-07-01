@@ -242,7 +242,10 @@ export default function PostPage() {
             {/* Video Preview - якщо є вбудоване відео */}
             {post.content && extractVideoEmbed(post.content) && !post.media_url && (
               <div className="mb-4">
-                <VideoPreview embed={extractVideoEmbed(post.content)!} />
+                <VideoPreview
+                  embed={extractVideoEmbed(post.content)!}
+                  orientationOverride={(post as any).video_orientation ?? null}
+                />
               </div>
             )}
 
