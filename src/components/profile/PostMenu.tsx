@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { MoreHorizontal, Edit, Trash2, Flag, Link, Share2, ExternalLink } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Flag, Link, Share2, ExternalLink, RectangleVertical, RectangleHorizontal } from "lucide-react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { getPostShareUrl } from "@/lib/postShare";
+import { extractVideoEmbed } from "@/lib/videoEmbed";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PostMenuProps {
   postId: string;
@@ -28,6 +30,7 @@ interface PostMenuProps {
   onEdit?: (postId: string) => void;
   onDelete?: (postId: string) => void;
   caption?: string; // Для витягування URL з тексту
+  videoOrientation?: "vertical" | "horizontal" | null;
 }
 
 // Функція для витягування URL з тексту
@@ -37,10 +40,38 @@ const extractUrl = (text?: string): string | null => {
   return match ? match[0] : null;
 };
 
-export function PostMenu({ postId, isAuthor, onEdit, onDelete, caption }: PostMenuProps) {
+export function PostMenu({ postId, isAuthor, onEdit, onDelete, caption, videoOrientation }: PostMenuProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [currentOrientation, setCurrentOrientation] = useState<"vertical" | "horizontal" | null>(
+    videoOrientation ?? null,
+  );
+  const [orientationSaving, setOrientationSaving] = useState(false);
   
   const mediaUrl = extractUrl(caption);
+  const hasVideoEmbed = !!extractVideoEmbed(caption || "");
+
+  const setOrientation = async (orientation: "vertical" | "horizontal") => {
+    if (orientationSaving) return;
+    setOrientationSaving(true);
+    const prev = currentOrientation;
+    setCurrentOrientation(orientation);
+    const { error } = await supabase
+      .from("posts")
+      .update({ video_orientation: orientation } as any)
+      .eq("id", postId);
+    setOrientationSaving(false);
+    if (error) {
+      setCurrentOrientation(prev);
+      console.error("Update video_orientation error:", error);
+      toast.error("Не вдалося змінити формат відео");
+      return;
+    }
+    toast.success(
+      orientation === "vertical"
+        ? "Формат відео: вертикальний"
+        : "Формат відео: горизонтальний",
+    );
+  };
 
   const handleEdit = () => {
     if (onEdit) {
@@ -127,6 +158,33 @@ export function PostMenu({ postId, isAuthor, onEdit, onDelete, caption }: PostMe
               <Flag className="mr-2 h-4 w-4" />
               Поскаржитись
             </DropdownMenuItem>
+          )}
+          {isAuthor && hasVideoEmbed && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setOrientation("vertical")}
+                disabled={orientationSaving}
+                className="flex items-center cursor-pointer"
+              >
+                <RectangleVertical className="mr-2 h-4 w-4" />
+                Вертикальне відео
+                {currentOrientation === "vertical" && (
+                  <span className="ml-auto text-xs text-muted-foreground">✓</span>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setOrientation("horizontal")}
+                disabled={orientationSaving}
+                className="flex items-center cursor-pointer"
+              >
+                <RectangleHorizontal className="mr-2 h-4 w-4" />
+                Горизонтальне відео
+                {currentOrientation === "horizontal" && (
+                  <span className="ml-auto text-xs text-muted-foreground">✓</span>
+                )}
+              </DropdownMenuItem>
+            </>
           )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleCopyLink} className="flex items-center cursor-pointer">

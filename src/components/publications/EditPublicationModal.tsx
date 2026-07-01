@@ -11,6 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { ImageCropEditor } from "@/components/ui/ImageCropEditor";
 import { compressImageAsFile, dataUrlToBlob, OUTPUT_FORMAT, OUTPUT_EXTENSION } from "@/lib/imageCompression";
+import { extractVideoEmbed } from "@/lib/videoEmbed";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const postSchema = z.object({
   content: z.string()
@@ -26,6 +28,7 @@ interface EditPublicationModalProps {
     content: string;
     media_url?: string | null;
     category?: string | null;
+    video_orientation?: "vertical" | "horizontal" | null;
   } | null;
   onSuccess?: () => void;
 }
@@ -38,6 +41,7 @@ export function EditPublicationModal({
 }: EditPublicationModalProps) {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("");
+  const [videoOrientation, setVideoOrientation] = useState<"auto" | "vertical" | "horizontal">("auto");
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -56,6 +60,11 @@ export function EditPublicationModal({
       setPreviewUrl(post.media_url || null);
       setSelectedFile(null);
       setKeepExistingMedia(!!post.media_url);
+      setVideoOrientation(
+        post.video_orientation === "vertical" || post.video_orientation === "horizontal"
+          ? post.video_orientation
+          : "auto",
+      );
     }
   }, [post, open]);
 
@@ -171,14 +180,20 @@ export function EditPublicationModal({
         mediaUrl = await uploadToStorage('posts', filePath, selectedFile, selectedFile.type);
       }
 
+      const detectedEmbed = extractVideoEmbed(content);
+      const hasVideoEmbed = !!detectedEmbed && detectedEmbed.platform !== "link";
+
+      const updatePayload: any = {
+        content: content.trim(),
+        category: category || null,
+        media_url: mediaUrl,
+        video_orientation: hasVideoEmbed && videoOrientation !== "auto" ? videoOrientation : null,
+      };
+
       // Оновлюємо публікацію в базі даних
       const { error } = await supabase
         .from('posts')
-        .update({ 
-          content: content.trim(), 
-          category: category || null,
-          media_url: mediaUrl 
-        })
+        .update(updatePayload)
         .eq('id', post.id);
 
       if (error) {
@@ -237,6 +252,34 @@ export function EditPublicationModal({
               />
               <p className="text-xs text-muted-foreground mt-1">{content.length}/10000</p>
             </div>
+
+            {(() => {
+              const embed = extractVideoEmbed(content);
+              if (!embed || embed.platform === "link") return null;
+              return (
+                <div>
+                  <Label>Формат відео</Label>
+                  <RadioGroup
+                    value={videoOrientation}
+                    onValueChange={(v) => setVideoOrientation(v as any)}
+                    className="flex flex-col gap-2 mt-2"
+                  >
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <RadioGroupItem value="auto" id="edit-orient-auto" />
+                      Автоматично
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <RadioGroupItem value="horizontal" id="edit-orient-h" />
+                      Горизонтальне (16:9)
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <RadioGroupItem value="vertical" id="edit-orient-v" />
+                      Вертикальне (9:16, Reels/Shorts)
+                    </label>
+                  </RadioGroup>
+                </div>
+              );
+            })()}
 
             <div>
               <Label htmlFor="edit-category">Категорія (опціонально)</Label>

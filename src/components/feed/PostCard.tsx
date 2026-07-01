@@ -38,6 +38,7 @@ export interface PostCardProps {
   };
   imageUrl?: string;
   caption: string;
+  videoOrientation?: "vertical" | "horizontal" | null;
   likes: number;
   comments: number;
   timeAgo: string;
@@ -64,6 +65,7 @@ export function PostCard({
   author,
   imageUrl,
   caption,
+  videoOrientation,
   likes,
   comments,
   timeAgo,
@@ -172,7 +174,7 @@ export function PostCard({
             )}
           </div>
         </Link>
-      <PostMenu postId={id} isAuthor={isAuthor} onEdit={onEdit} onDelete={onDelete} caption={caption} />
+      <PostMenu postId={id} isAuthor={isAuthor} onEdit={onEdit} onDelete={onDelete} caption={caption} videoOrientation={videoOrientation ?? null} />
       </div>
 
       {/* Media first (Facebook-style) */}
@@ -187,7 +189,7 @@ export function PostCard({
       )}
 
       {!imageUrl && !isAudioUrl && videoEmbed && (
-        <div className="px-3 pt-2"><VideoPreview embed={videoEmbed} /></div>
+        <div className="px-3 pt-2"><VideoPreview embed={videoEmbed} orientationOverride={videoOrientation ?? null} /></div>
       )}
 
       {/* Caption below media with truncation */}

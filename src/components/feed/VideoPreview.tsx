@@ -6,6 +6,7 @@ import { LinkPreview } from "./LinkPreview";
 
 interface VideoPreviewProps {
   embed: VideoEmbed;
+  orientationOverride?: "vertical" | "horizontal" | null;
 }
 
 interface FacebookPreviewMeta {
@@ -25,12 +26,22 @@ interface FacebookLayout {
   aspectRatio: number;
 }
 
-export function VideoPreview({ embed }: VideoPreviewProps) {
+export function VideoPreview({ embed, orientationOverride }: VideoPreviewProps) {
+  const forcedVertical =
+    orientationOverride === "vertical"
+      ? true
+      : orientationOverride === "horizontal"
+      ? false
+      : null;
   const [facebookLayout, setFacebookLayout] = useState<FacebookLayout | null>(
     embed.platform === "facebook"
       ? {
-          isVertical: embed.isVertical !== false,
-          aspectRatio: embed.isVertical !== false ? 9 / 16 : 16 / 9,
+          isVertical:
+            forcedVertical !== null ? forcedVertical : embed.isVertical !== false,
+          aspectRatio:
+            (forcedVertical !== null ? forcedVertical : embed.isVertical !== false)
+              ? 9 / 16
+              : 16 / 9,
         }
       : null,
   );
@@ -39,6 +50,8 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
 
   useEffect(() => {
     if (embed.platform !== "facebook") return;
+    // If author has manually set orientation, don't auto-override it.
+    if (forcedVertical !== null) return;
 
     let isMounted = true;
 
@@ -71,13 +84,21 @@ export function VideoPreview({ embed }: VideoPreviewProps) {
     return () => {
       isMounted = false;
     };
-  }, [embed.originalUrl, embed.platform]);
+  }, [embed.originalUrl, embed.platform, forcedVertical]);
 
-  const isVertical = embed.platform === "facebook"
-    ? (facebookLayout?.isVertical ?? false)
-    : !!embed.isVertical;
+  const isVertical =
+    forcedVertical !== null
+      ? forcedVertical
+      : embed.platform === "facebook"
+      ? (facebookLayout?.isVertical ?? false)
+      : !!embed.isVertical;
 
-  const facebookAspectRatio = facebookLayout?.aspectRatio ?? (isVertical ? 9 / 16 : 16 / 9);
+  const facebookAspectRatio =
+    forcedVertical !== null
+      ? forcedVertical
+        ? 9 / 16
+        : 16 / 9
+      : facebookLayout?.aspectRatio ?? (isVertical ? 9 / 16 : 16 / 9);
 
   const aspectClass = useMemo(
     () => (isVertical ? "aspect-[9/16] max-w-[320px] mx-auto" : "aspect-video w-full"),

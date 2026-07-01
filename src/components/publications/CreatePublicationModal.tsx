@@ -11,6 +11,8 @@ import { uploadToStorage } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { compressImageAsFile, validateImageSize, OUTPUT_FORMAT, OUTPUT_EXTENSION } from "@/lib/imageCompression";
+import { extractVideoEmbed } from "@/lib/videoEmbed";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 // Validation schema for post content
 const postSchema = z.object({
@@ -37,6 +39,7 @@ export function CreatePublicationModal({
 }: CreatePublicationModalProps) {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("");
+  const [videoOrientation, setVideoOrientation] = useState<"auto" | "vertical" | "horizontal">("auto");
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -117,8 +120,11 @@ export function CreatePublicationModal({
         console.log('Файл завантажено:', mediaUrl);
       }
 
+      const detectedEmbed = extractVideoEmbed(content);
+      const hasVideoEmbed = !!detectedEmbed && detectedEmbed.platform !== "link";
+
       // Зберігаємо публікацію в базі даних
-      const postData = {
+      const postData: any = {
         user_id: userId,
         content: content,
         media_url: mediaUrl,
@@ -126,6 +132,9 @@ export function CreatePublicationModal({
         likes_count: 0,
         comments_count: 0
       };
+      if (hasVideoEmbed && videoOrientation !== "auto") {
+        postData.video_orientation = videoOrientation;
+      }
 
       console.log('Створення публікації:', postData);
 
@@ -147,6 +156,7 @@ export function CreatePublicationModal({
       // Очищаємо форму
       setContent("");
       setCategory("");
+      setVideoOrientation("auto");
       setSelectedFile(null);
       setPreviewUrl(null);
       
@@ -195,6 +205,34 @@ export function CreatePublicationModal({
             />
             <p className="text-xs text-muted-foreground mt-1">{content.length}/10000</p>
           </div>
+
+          {(() => {
+            const embed = extractVideoEmbed(content);
+            if (!embed || embed.platform === "link") return null;
+            return (
+              <div>
+                <Label>Формат відео</Label>
+                <RadioGroup
+                  value={videoOrientation}
+                  onValueChange={(v) => setVideoOrientation(v as any)}
+                  className="flex flex-col gap-2 mt-2"
+                >
+                  <label className="flex items-center gap-2 cursor-pointer text-sm">
+                    <RadioGroupItem value="auto" id="orient-auto" />
+                    Автоматично
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm">
+                    <RadioGroupItem value="horizontal" id="orient-h" />
+                    Горизонтальне (16:9)
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm">
+                    <RadioGroupItem value="vertical" id="orient-v" />
+                    Вертикальне (9:16, Reels/Shorts)
+                  </label>
+                </RadioGroup>
+              </div>
+            );
+          })()}
 
           <div>
             <Label htmlFor="category">Категорія (опціонально)</Label>

@@ -1,0 +1,1 @@
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS video_orientation text CHECK (video_orientation IN ('vertical','horizontal'));
