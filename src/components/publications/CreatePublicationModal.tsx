@@ -11,6 +11,8 @@ import { uploadToStorage } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { compressImageAsFile, validateImageSize, OUTPUT_FORMAT, OUTPUT_EXTENSION } from "@/lib/imageCompression";
+import { extractVideoEmbed } from "@/lib/videoEmbed";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 // Validation schema for post content
 const postSchema = z.object({
@@ -37,6 +39,7 @@ export function CreatePublicationModal({
 }: CreatePublicationModalProps) {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("");
+  const [videoOrientation, setVideoOrientation] = useState<"auto" | "vertical" | "horizontal">("auto");
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -117,8 +120,11 @@ export function CreatePublicationModal({
         console.log('Файл завантажено:', mediaUrl);
       }
 
+      const detectedEmbed = extractVideoEmbed(content);
+      const hasVideoEmbed = !!detectedEmbed && detectedEmbed.platform !== "link";
+
       // Зберігаємо публікацію в базі даних
-      const postData = {
+      const postData: any = {
         user_id: userId,
         content: content,
         media_url: mediaUrl,
@@ -126,6 +132,9 @@ export function CreatePublicationModal({
         likes_count: 0,
         comments_count: 0
       };
+      if (hasVideoEmbed && videoOrientation !== "auto") {
+        postData.video_orientation = videoOrientation;
+      }
 
       console.log('Створення публікації:', postData);
 
@@ -147,6 +156,7 @@ export function CreatePublicationModal({
       // Очищаємо форму
       setContent("");
       setCategory("");
+      setVideoOrientation("auto");
       setSelectedFile(null);
       setPreviewUrl(null);
       
