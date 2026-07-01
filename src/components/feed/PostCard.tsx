@@ -189,7 +189,7 @@ export function PostCard({
       )}
 
       {!imageUrl && !isAudioUrl && videoEmbed && (
-        <div className="px-3 pt-2"><VideoPreview embed={videoEmbed} /></div>
+        <div className="px-3 pt-2"><VideoPreview embed={videoEmbed} orientationOverride={videoOrientation ?? null} /></div>
       )}
 
       {/* Caption below media with truncation */}
