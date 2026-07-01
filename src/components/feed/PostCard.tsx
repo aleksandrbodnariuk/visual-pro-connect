@@ -174,7 +174,7 @@ export function PostCard({
             )}
           </div>
         </Link>
-      <PostMenu postId={id} isAuthor={isAuthor} onEdit={onEdit} onDelete={onDelete} caption={caption} />
+      <PostMenu postId={id} isAuthor={isAuthor} onEdit={onEdit} onDelete={onDelete} caption={caption} videoOrientation={videoOrientation ?? null} />
       </div>
 
       {/* Media first (Facebook-style) */}
