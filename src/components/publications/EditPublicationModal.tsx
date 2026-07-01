@@ -253,6 +253,34 @@ export function EditPublicationModal({
               <p className="text-xs text-muted-foreground mt-1">{content.length}/10000</p>
             </div>
 
+            {(() => {
+              const embed = extractVideoEmbed(content);
+              if (!embed || embed.platform === "link") return null;
+              return (
+                <div>
+                  <Label>Формат відео</Label>
+                  <RadioGroup
+                    value={videoOrientation}
+                    onValueChange={(v) => setVideoOrientation(v as any)}
+                    className="flex flex-col gap-2 mt-2"
+                  >
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <RadioGroupItem value="auto" id="edit-orient-auto" />
+                      Автоматично
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <RadioGroupItem value="horizontal" id="edit-orient-h" />
+                      Горизонтальне (16:9)
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <RadioGroupItem value="vertical" id="edit-orient-v" />
+                      Вертикальне (9:16, Reels/Shorts)
+                    </label>
+                  </RadioGroup>
+                </div>
+              );
+            })()}
+
             <div>
               <Label htmlFor="edit-category">Категорія (опціонально)</Label>
               <Select value={category} onValueChange={setCategory}>
