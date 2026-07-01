@@ -38,6 +38,7 @@ export interface PostCardProps {
   };
   imageUrl?: string;
   caption: string;
+  videoOrientation?: "vertical" | "horizontal" | null;
   likes: number;
   comments: number;
   timeAgo: string;
@@ -64,6 +65,7 @@ export function PostCard({
   author,
   imageUrl,
   caption,
+  videoOrientation,
   likes,
   comments,
   timeAgo,
