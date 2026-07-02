@@ -566,6 +566,7 @@ export function NewsFeed() {
         <ImageCropEditor imageSrc={originalImageSrc} open={showImageEditor} onClose={handleEditorClose}
           onCropComplete={handleCropComplete} aspectRatio={undefined} title="Редагувати фото" />
       )}
+      <CreatePollDialog open={pollDialogOpen} onOpenChange={setPollDialogOpen} onSubmit={handleCreatePoll} />
     </div>
   );
 }
