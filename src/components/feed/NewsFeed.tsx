@@ -3,6 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Image, Video, Users, Send, X, Pencil, Music, ArrowUp } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { CreatePollDialog, PollDraft } from "@/components/messages/CreatePollDialog";
+import { BarChart3 } from "lucide-react";
 import { AudioPlayer } from "./AudioPlayer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "./PostCard";
@@ -21,7 +23,9 @@ const PAGE_SIZE = 12;
 const PREFETCH_THRESHOLD = 0.7; // trigger loadMore at 70% scroll
 
 export function NewsFeed() {
-  const { user: authUser } = useAuth();
+  const { user: authUser, appUser } = useAuth();
+  const isAdmin = !!appUser?.isAdmin;
+  const [pollDialogOpen, setPollDialogOpen] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -258,6 +262,40 @@ export function NewsFeed() {
   };
   const handleEventClick = () => { toast({ title: "Функція 'Подія' в розробці" }); };
 
+  const handleCreatePoll = async (draft: PollDraft) => {
+    if (!currentUser?.id) { toast({ title: "Будь ласка, увійдіть в систему", variant: "destructive" }); return; }
+    if (!isAdmin) { toast({ title: "Тільки адміністратор може створити опитування", variant: "destructive" }); return; }
+    try {
+      // 1. Create the poll (no conversation, no post yet)
+      const { data: poll, error: pollErr } = await supabase.from("polls").insert({
+        created_by: currentUser.id,
+        question: draft.question,
+        allow_multiple: draft.allowMultiple,
+        is_anonymous: draft.isAnonymous,
+      }).select().single();
+      if (pollErr) throw pollErr;
+      // 2. Options
+      const optionsPayload = draft.options.map((text, i) => ({ poll_id: poll.id, text, position: i }));
+      const { error: optErr } = await supabase.from("poll_options").insert(optionsPayload);
+      if (optErr) throw optErr;
+      // 3. Post referencing the poll
+      const { data: post, error: postErr } = await supabase.from("posts").insert([{
+        content: draft.question,
+        user_id: currentUser.id,
+        poll_id: poll.id,
+        category: activeCategory === 'all' ? null : activeCategory,
+      }]).select().single();
+      if (postErr) throw postErr;
+      // 4. Link poll back to post
+      await supabase.from("polls").update({ post_id: post.id }).eq("id", poll.id);
+      setPosts(prev => [post, ...prev]);
+      toast({ title: "Опитування створено!" });
+    } catch (e: any) {
+      console.error("[Create post poll]", e);
+      toast({ title: "Не вдалося створити опитування", variant: "destructive" });
+    }
+  };
+
   const handleCreatePost = async () => {
     if (!newPostContent.trim() && !selectedFile) return;
     if (!currentUser?.id) { toast({ title: "Будь ласка, увійдіть в систему", variant: "destructive" }); return; }
@@ -417,6 +455,12 @@ export function NewsFeed() {
                 className="h-9 px-2 sm:px-3 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 gap-1.5" title="Подія">
                 <Users className="h-5 w-5" /><span className="text-xs hidden sm:inline">Подія</span>
               </Button>
+              {isAdmin && (
+                <Button variant="ghost" size="sm" onClick={() => setPollDialogOpen(true)}
+                  className="h-9 px-2 sm:px-3 text-purple-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950 gap-1.5" title="Опитування">
+                  <BarChart3 className="h-5 w-5" /><span className="text-xs hidden sm:inline">Опитування</span>
+                </Button>
+              )}
             </div>
             {(newPostContent.trim() || selectedFile) && (
               <Button onClick={handleCreatePost} disabled={isUploading} size="sm">
@@ -473,6 +517,7 @@ export function NewsFeed() {
                   }}
                   imageUrl={post.media_url || undefined}
                   caption={post.content || ''}
+                  pollId={(post as any).poll_id ?? null}
                   videoOrientation={(post as any).video_orientation ?? null}
                   likes={post.likes_count || 0}
                   comments={post.comments_count || 0}
