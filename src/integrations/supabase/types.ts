@@ -1306,32 +1306,35 @@ export type Database = {
       polls: {
         Row: {
           allow_multiple: boolean
-          conversation_id: string
+          conversation_id: string | null
           created_at: string
           created_by: string
           id: string
           is_anonymous: boolean
           message_id: string | null
+          post_id: string | null
           question: string
         }
         Insert: {
           allow_multiple?: boolean
-          conversation_id: string
+          conversation_id?: string | null
           created_at?: string
           created_by: string
           id?: string
           is_anonymous?: boolean
           message_id?: string | null
+          post_id?: string | null
           question: string
         }
         Update: {
           allow_multiple?: boolean
-          conversation_id?: string
+          conversation_id?: string | null
           created_at?: string
           created_by?: string
           id?: string
           is_anonymous?: boolean
           message_id?: string | null
+          post_id?: string | null
           question?: string
         }
         Relationships: [
@@ -1515,6 +1518,7 @@ export type Database = {
           id: string
           likes_count: number
           media_url: string | null
+          poll_id: string | null
           user_id: string | null
           video_orientation: string | null
         }
@@ -1526,6 +1530,7 @@ export type Database = {
           id?: string
           likes_count?: number
           media_url?: string | null
+          poll_id?: string | null
           user_id?: string | null
           video_orientation?: string | null
         }
@@ -1537,6 +1542,7 @@ export type Database = {
           id?: string
           likes_count?: number
           media_url?: string | null
+          poll_id?: string | null
           user_id?: string | null
           video_orientation?: string | null
         }
