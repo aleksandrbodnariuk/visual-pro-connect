@@ -12,6 +12,7 @@ import { VideoPreview } from "./VideoPreview";
 import { AudioPlayer } from "./AudioPlayer";
 import { CommentItem } from "./CommentItem";
 import { CommentInput } from "./CommentInput";
+import { PostPoll } from "./PostPoll";
 import { supabase } from "@/integrations/supabase/client";
 import { ReactionPicker, ReactionType, getReactionEmoji } from "./ReactionPicker";
 import { FeedComment, CommentLikesData, PostLikesData, PostShareData } from "@/hooks/useFeedData";
@@ -38,6 +39,7 @@ export interface PostCardProps {
   };
   imageUrl?: string;
   caption: string;
+  pollId?: string | null;
   videoOrientation?: "vertical" | "horizontal" | null;
   likes: number;
   comments: number;
@@ -65,6 +67,7 @@ export function PostCard({
   author,
   imageUrl,
   caption,
+  pollId,
   videoOrientation,
   likes,
   comments,
@@ -190,6 +193,10 @@ export function PostCard({
 
       {!imageUrl && !isAudioUrl && videoEmbed && (
         <div className="px-3 pt-2"><VideoPreview embed={videoEmbed} orientationOverride={videoOrientation ?? null} /></div>
+      )}
+
+      {pollId && (
+        <div className="px-3 pt-2"><PostPoll pollId={pollId} currentUserId={authUser?.id ?? null} /></div>
       )}
 
       {/* Caption below media with truncation */}
