@@ -1306,6 +1306,7 @@ export type Database = {
       polls: {
         Row: {
           allow_multiple: boolean
+          closes_at: string | null
           conversation_id: string | null
           created_at: string
           created_by: string
@@ -1317,6 +1318,7 @@ export type Database = {
         }
         Insert: {
           allow_multiple?: boolean
+          closes_at?: string | null
           conversation_id?: string | null
           created_at?: string
           created_by: string
@@ -1328,6 +1330,7 @@ export type Database = {
         }
         Update: {
           allow_multiple?: boolean
+          closes_at?: string | null
           conversation_id?: string | null
           created_at?: string
           created_by?: string
