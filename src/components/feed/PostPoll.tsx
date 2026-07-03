@@ -10,6 +10,7 @@ interface Poll {
   allow_multiple: boolean;
   is_anonymous: boolean;
   created_by: string;
+  closes_at: string | null;
 }
 interface PollOption { id: string; text: string; position: number }
 interface PollVote { id: string; option_id: string; user_id: string }
@@ -29,7 +30,7 @@ export function PostPoll({ pollId, currentUserId }: PostPollProps) {
 
   const load = useCallback(async () => {
     const [{ data: p }, { data: opts }, { data: vs }] = await Promise.all([
-      supabase.from("polls").select("id,question,allow_multiple,is_anonymous,created_by").eq("id", pollId).maybeSingle(),
+      supabase.from("polls").select("id,question,allow_multiple,is_anonymous,created_by,closes_at").eq("id", pollId).maybeSingle(),
       supabase.from("poll_options").select("id,text,position").eq("poll_id", pollId).order("position"),
       supabase.from("poll_votes").select("id,option_id,user_id").eq("poll_id", pollId),
     ]);
@@ -62,6 +63,10 @@ export function PostPoll({ pollId, currentUserId }: PostPollProps) {
 
   const handleVote = async (optionId: string) => {
     if (!currentUserId || !poll || busy) return;
+    if (poll.closes_at && new Date(poll.closes_at).getTime() <= Date.now()) {
+      toast.error("Опитування завершено");
+      return;
+    }
     setBusy(true);
     try {
       const existing = myVotes.find(v => v.option_id === optionId);
@@ -74,7 +79,15 @@ export function PostPoll({ pollId, currentUserId }: PostPollProps) {
           if (delErr) throw delErr;
         }
         const { error } = await supabase.from("poll_votes").insert({ poll_id: pollId, option_id: optionId, user_id: currentUserId });
-        if (error) throw error;
+        if (error) {
+          if ((error as any).code === "23505") {
+            toast.error("Ви вже проголосували");
+          } else if ((error as any).message?.includes("Poll is closed")) {
+            toast.error("Опитування завершено");
+          } else {
+            throw error;
+          }
+        }
       }
       await load();
     } catch (e: any) {
@@ -86,6 +99,8 @@ export function PostPoll({ pollId, currentUserId }: PostPollProps) {
   if (loading) return <div className="text-xs text-muted-foreground p-3">Завантаження опитування…</div>;
   if (!poll) return <div className="text-xs text-muted-foreground p-3">Опитування недоступне</div>;
 
+  const isClosed = !!(poll.closes_at && new Date(poll.closes_at).getTime() <= Date.now());
+
   return (
     <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
       <div className="font-medium text-sm leading-snug">{poll.question}</div>
@@ -93,6 +108,9 @@ export function PostPoll({ pollId, currentUserId }: PostPollProps) {
         <Check className="w-3 h-3" />
         {poll.allow_multiple ? "Виберіть один або кілька варіантів" : "Виберіть одну відповідь"}
         {poll.is_anonymous && <span>· Анонімно</span>}
+        {poll.closes_at && (
+          <span>· {isClosed ? "Завершено" : `До ${new Date(poll.closes_at).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`}</span>
+        )}
       </div>
       <div className="space-y-2 pt-1">
         {options.map(opt => {
@@ -100,7 +118,7 @@ export function PostPoll({ pollId, currentUserId }: PostPollProps) {
           const pct = uniqueVoters > 0 ? Math.round((count / Math.max(uniqueVoters, 1)) * 100) : 0;
           const mine = isMyOption(opt.id);
           return (
-            <button key={opt.id} type="button" onClick={() => handleVote(opt.id)} disabled={busy || !currentUserId}
+            <button key={opt.id} type="button" onClick={() => handleVote(opt.id)} disabled={busy || !currentUserId || isClosed}
               className={cn("w-full text-left rounded-lg p-2 transition-colors border bg-background hover:bg-accent",
                 mine && "border-primary")}>
               <div className="flex items-center justify-between gap-2 text-sm">
