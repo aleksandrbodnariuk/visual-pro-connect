@@ -272,6 +272,7 @@ export function NewsFeed() {
         question: draft.question,
         allow_multiple: draft.allowMultiple,
         is_anonymous: draft.isAnonymous,
+        closes_at: draft.closesAt,
       }).select().single();
       if (pollErr) throw pollErr;
       // 2. Options
