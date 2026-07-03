@@ -143,6 +143,7 @@ export default function Messages() {
           question: draft.question,
           allow_multiple: draft.allowMultiple,
           is_anonymous: draft.isAnonymous,
+          closes_at: draft.closesAt,
         })
         .select("id")
         .single();
