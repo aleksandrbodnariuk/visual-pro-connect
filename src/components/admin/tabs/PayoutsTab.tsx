@@ -762,6 +762,7 @@ function PayoutRow({
           {p.paid_at && <span>Виплачено: {fmtDate(p.paid_at)}</span>}
           {p.confirmed_at && <span>Підтв: {fmtDate(p.confirmed_at)}</span>}
         </div>
+        <OrderRefList orderIds={p.order_ids} className="mt-2" />
         {p.admin_notes && (
           <p className="text-xs text-muted-foreground mt-1 italic">{p.admin_notes}</p>
         )}
