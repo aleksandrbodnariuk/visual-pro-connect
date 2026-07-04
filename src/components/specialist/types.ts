@@ -21,6 +21,8 @@ export interface SpecialistOrder {
   financials_updated_at: string | null;
   // Представник, який створив замовлення
   representative_id: string | null;
+  // Позначка тестового замовлення (адмін)
+  is_test?: boolean;
 }
 
 export interface OrderParticipant {
