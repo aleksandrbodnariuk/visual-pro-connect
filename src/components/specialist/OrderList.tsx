@@ -5,6 +5,7 @@ import { uk } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { FlaskConical } from 'lucide-react';
 
 interface Props {
   orders: SpecialistOrder[];
@@ -42,6 +43,11 @@ export function OrderList({ orders, selectedDate, onSelectOrder, selectedOrderId
               <div className="flex items-center gap-2">
                 <div className={cn('w-2.5 h-2.5 rounded-full flex-shrink-0', ORDER_TYPE_COLORS[order.order_type as keyof typeof ORDER_TYPE_COLORS])} />
                 <h4 className="font-medium text-sm truncate">{order.title}</h4>
+                {order.is_test && (
+                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 gap-1 flex-shrink-0">
+                    <FlaskConical className="h-2.5 w-2.5" /> ТЕСТ
+                  </Badge>
+                )}
               </div>
               {order.description && (
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{order.description}</p>

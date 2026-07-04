@@ -10,6 +10,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { CalendarIcon, Check, X, Archive, UserPlus, Trash2, TrendingUp, Banknote, Loader2, Wrench, Save } from 'lucide-react';
+import { FlaskConical } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { format, parseISO } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -46,6 +48,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
   const [orderType, setOrderType] = useState<OrderType>('photo');
   const [date, setDate] = useState<Date | undefined>();
   const [notes, setNotes] = useState('');
+  const [isTest, setIsTest] = useState(false);
 
   // Фінансові поля — єдине джерело правди
   const [orderAmount, setOrderAmount] = useState('');
@@ -77,6 +80,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
       setOrderType(order.order_type);
       setDate(parseISO(order.order_date));
       setNotes(order.notes || '');
+      setIsTest(!!order.is_test);
 
       // Фінансові поля
       const amt = order.order_amount != null ? String(order.order_amount) : '';
@@ -210,8 +214,9 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
       order_type: orderType,
       order_date: format(date, 'yyyy-MM-dd'),
       notes: notes.trim() || null,
+      is_test: isTest,
       // price поле більше не оновлюємо з форми — воно є legacy
-    });
+    } as any);
     if (success) setEditing(false);
   };
 
@@ -264,6 +269,11 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
           <DialogTitle className="flex items-center gap-2">
             <div className={cn('w-3 h-3 rounded-full', ORDER_TYPE_COLORS[order.order_type as keyof typeof ORDER_TYPE_COLORS])} />
             {editing ? 'Редагування' : order.title}
+            {order.is_test && (
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 gap-1 ml-auto">
+                <FlaskConical className="h-3 w-3" /> ТЕСТ
+              </Badge>
+            )}
           </DialogTitle>
         </DialogHeader>
 
@@ -306,6 +316,13 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
               <div>
                 <Label>Нотатки</Label>
                 <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} />
+              </div>
+              <div className="flex items-center gap-2 rounded-md border border-dashed border-destructive/40 bg-destructive/5 px-3 py-2">
+                <Checkbox id="is-test" checked={isTest} onCheckedChange={(v) => setIsTest(!!v)} />
+                <Label htmlFor="is-test" className="flex items-center gap-1.5 cursor-pointer text-sm">
+                  <FlaskConical className="h-3.5 w-3.5 text-destructive" />
+                  Тестове замовлення (не враховується у справжніх виплатах, можна масово видалити)
+                </Label>
               </div>
               <div className="flex gap-2">
                 <Button onClick={handleSave} className="flex-1">Зберегти дані замовлення</Button>

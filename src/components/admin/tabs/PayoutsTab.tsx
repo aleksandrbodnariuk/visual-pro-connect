@@ -19,10 +19,11 @@ import {
 } from '@/components/ui/collapsible';
 import {
   Calculator, DollarSign, CheckCircle2, Clock, AlertCircle, Loader2,
-  Send, ShieldCheck, RefreshCw, Trash2, Layers, ChevronDown,
+  Send, ShieldCheck, RefreshCw, Trash2, Layers, ChevronDown, FlaskConical,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { OrderRefList } from '@/components/payouts/OrderRefList';
 import {
   calcFullProfitDistribution,
   type ShareholderInput,
@@ -107,6 +108,43 @@ export function PayoutsTab() {
   const [forceLoading, setForceLoading] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<PayoutRow | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  // Test-data cleanup
+  const [cleanupOpen, setCleanupOpen] = useState(false);
+  const [cleanupSummary, setCleanupSummary] = useState<any>(null);
+  const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [cleanupRunning, setCleanupRunning] = useState(false);
+
+  const openCleanup = async () => {
+    setCleanupOpen(true);
+    setCleanupLoading(true);
+    setCleanupSummary(null);
+    try {
+      const { data, error } = await supabase.rpc('admin_test_data_summary' as any);
+      if (error) throw error;
+      setCleanupSummary(data);
+    } catch (err: any) {
+      toast({ title: 'Помилка', description: err.message, variant: 'destructive' });
+    }
+    setCleanupLoading(false);
+  };
+
+  const runCleanup = async () => {
+    setCleanupRunning(true);
+    try {
+      const { data, error } = await supabase.rpc('admin_delete_all_test_data' as any);
+      if (error) throw error;
+      const r: any = data || {};
+      toast({
+        title: 'Тестові дані видалено',
+        description: `Замовлень: ${r.orders || 0}, виплат акціонерам: ${r.shareholder_payouts || 0}, фахівцям: ${r.specialist_payouts || 0}, представникам: ${r.representative_payouts || 0}.`,
+      });
+      setCleanupOpen(false);
+      await loadPayouts();
+    } catch (err: any) {
+      toast({ title: 'Помилка', description: err.message, variant: 'destructive' });
+    }
+    setCleanupRunning(false);
+  };
 
   // ── Load payouts ──────────────────────────────────────────────────────────
   const loadPayouts = useCallback(async () => {
@@ -338,6 +376,10 @@ export function PayoutsTab() {
             <Layers className="h-4 w-4 mr-1" />
             {merged ? 'Розгорнути виплати' : "Об'єднати виплати"}
           </Button>
+          <Button variant="outline" size="sm" onClick={openCleanup} className="border-destructive/40 text-destructive hover:bg-destructive/10">
+            <FlaskConical className="h-4 w-4 mr-1" />
+            Очистити тестові дані
+          </Button>
           <Button variant="outline" size="sm" onClick={loadPayouts} disabled={loading}>
             <RefreshCw className="h-4 w-4 mr-1" />
             Оновити
@@ -538,6 +580,51 @@ export function PayoutsTab() {
         </DialogContent>
       </Dialog>
 
+      {/* Test data cleanup dialog */}
+      <Dialog open={cleanupOpen} onOpenChange={setCleanupOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FlaskConical className="h-5 w-5 text-destructive" />
+              Очистити тестові дані
+            </DialogTitle>
+            <DialogDescription>
+              Будуть видалені всі замовлення, позначені як «Тестове», разом з усіма нарахуваннями і виплатами (акціонерам, фахівцям, представникам). Дія незворотна.
+            </DialogDescription>
+          </DialogHeader>
+          {cleanupLoading ? (
+            <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Підрахунок…
+            </div>
+          ) : cleanupSummary ? (
+            <div className="space-y-2 text-sm rounded-md border p-3 bg-muted/30">
+              <div className="flex justify-between"><span>Тестових замовлень:</span> <strong>{cleanupSummary.orders}</strong></div>
+              <div className="flex justify-between"><span>Виплат акціонерам:</span> <strong>{cleanupSummary.shareholder_payouts}</strong></div>
+              <div className="flex justify-between"><span>Виплат фахівцям:</span> <strong>{cleanupSummary.specialist_payouts}</strong></div>
+              <div className="flex justify-between"><span>Виплат представникам:</span> <strong>{cleanupSummary.representative_payouts}</strong></div>
+              <div className="flex justify-between"><span>Нарахувань представникам:</span> <strong>{cleanupSummary.representative_earnings}</strong></div>
+              <div className="flex justify-between"><span>Записів аудит-логу:</span> <strong>{cleanupSummary.financial_audit_log}</strong></div>
+              {cleanupSummary.orders === 0 && (
+                <p className="text-xs text-muted-foreground pt-2">
+                  Немає замовлень, позначених як тестові. Спочатку відкрийте замовлення і поставте галочку «Тестове» в режимі редагування.
+                </p>
+              )}
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCleanupOpen(false)}>Скасувати</Button>
+            <Button
+              variant="destructive"
+              onClick={runCleanup}
+              disabled={cleanupRunning || cleanupLoading || !cleanupSummary || cleanupSummary.orders === 0}
+            >
+              {cleanupRunning ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
+              Видалити все тестове
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Representative Payouts Section */}
       <Separator className="my-8" />
       <RepPayoutsSection />
@@ -675,6 +762,7 @@ function PayoutRow({
           {p.paid_at && <span>Виплачено: {fmtDate(p.paid_at)}</span>}
           {p.confirmed_at && <span>Підтв: {fmtDate(p.confirmed_at)}</span>}
         </div>
+        <OrderRefList orderIds={p.order_ids} className="mt-2" />
         {p.admin_notes && (
           <p className="text-xs text-muted-foreground mt-1 italic">{p.admin_notes}</p>
         )}

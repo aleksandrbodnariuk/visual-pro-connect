@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { OrderRefList } from '@/components/payouts/OrderRefList';
 
 interface SpecPayoutRow {
   id: string;
@@ -460,11 +461,11 @@ function SpecPayoutRowItem({
           )}
         </div>
         <div className="flex gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
-          <span>Замовлення: {orderTitles[p.order_id] || p.order_id.slice(0, 8)}</span>
           <span>{fmtDate(p.created_at)}</span>
           {p.paid_at && <span>Виплачено: {fmtDate(p.paid_at)}</span>}
           {p.confirmed_at && <span>Підтв: {fmtDate(p.confirmed_at)}</span>}
         </div>
+        <OrderRefList orderIds={[p.order_id]} className="mt-2" />
         {p.admin_notes && (
           <p className="text-xs text-muted-foreground mt-1 italic">{p.admin_notes}</p>
         )}
