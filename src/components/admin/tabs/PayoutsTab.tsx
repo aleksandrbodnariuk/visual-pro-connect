@@ -580,6 +580,51 @@ export function PayoutsTab() {
         </DialogContent>
       </Dialog>
 
+      {/* Test data cleanup dialog */}
+      <Dialog open={cleanupOpen} onOpenChange={setCleanupOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FlaskConical className="h-5 w-5 text-destructive" />
+              Очистити тестові дані
+            </DialogTitle>
+            <DialogDescription>
+              Будуть видалені всі замовлення, позначені як «Тестове», разом з усіма нарахуваннями і виплатами (акціонерам, фахівцям, представникам). Дія незворотна.
+            </DialogDescription>
+          </DialogHeader>
+          {cleanupLoading ? (
+            <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Підрахунок…
+            </div>
+          ) : cleanupSummary ? (
+            <div className="space-y-2 text-sm rounded-md border p-3 bg-muted/30">
+              <div className="flex justify-between"><span>Тестових замовлень:</span> <strong>{cleanupSummary.orders}</strong></div>
+              <div className="flex justify-between"><span>Виплат акціонерам:</span> <strong>{cleanupSummary.shareholder_payouts}</strong></div>
+              <div className="flex justify-between"><span>Виплат фахівцям:</span> <strong>{cleanupSummary.specialist_payouts}</strong></div>
+              <div className="flex justify-between"><span>Виплат представникам:</span> <strong>{cleanupSummary.representative_payouts}</strong></div>
+              <div className="flex justify-between"><span>Нарахувань представникам:</span> <strong>{cleanupSummary.representative_earnings}</strong></div>
+              <div className="flex justify-between"><span>Записів аудит-логу:</span> <strong>{cleanupSummary.financial_audit_log}</strong></div>
+              {cleanupSummary.orders === 0 && (
+                <p className="text-xs text-muted-foreground pt-2">
+                  Немає замовлень, позначених як тестові. Спочатку відкрийте замовлення і поставте галочку «Тестове» в режимі редагування.
+                </p>
+              )}
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCleanupOpen(false)}>Скасувати</Button>
+            <Button
+              variant="destructive"
+              onClick={runCleanup}
+              disabled={cleanupRunning || cleanupLoading || !cleanupSummary || cleanupSummary.orders === 0}
+            >
+              {cleanupRunning ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
+              Видалити все тестове
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Representative Payouts Section */}
       <Separator className="my-8" />
       <RepPayoutsSection />
