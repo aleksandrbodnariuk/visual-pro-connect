@@ -1,46 +1,68 @@
+## Проблема
 
+У виплатах акціонерам, фахівцям і представникам зараз видно лише суму, ім'я і статус. Немає **дати, назви і опису замовлення** — тому тестові виплати неможливо відрізнити від справжніх. У БД зараз: **39 виплат акціонерам, 3 представникам, 1 фахівцю, 11 замовлень** (з них 9 архівних) — суміш тестових і справжніх.
 
-## Plan: Fix ProfitPreviewBlock — Add Representatives Section & Unallocated Funds Flow
+## Рекомендація — комбінований підхід
 
-### Issues Found
+### 1. Показати замовлення у кожній виплаті (основне виправлення)
 
-**Issue 1: No "Представники" section in preview**
-`ProfitPreviewBlock` doesn't know the order's `representative_id`. It uses `calcFullProfitDistribution` (shareholder-only) instead of `calcFullDistributionWithReps` (which includes representatives). The `SpecialistOrder` TypeScript interface also lacks `representative_id`.
+У всіх списках виплат (адмін-панель + кабінети акціонера/фахівця/представника) біля кожного рядка додати блок «Замовлення»:
+- **Дата** замовлення (`order_date`)
+- **Назва** (`title`)
+- **Короткий опис** (перші ~120 символів `description`)
+- **Сума** (`order_amount`)
 
-**Issue 2: "Не засвоєні" not shown flowing to unallocated_funds**
-The preview uses `calcFullProfitDistribution` which doesn't model the `unallocated_funds` flow. `calcFullDistributionWithReps` already handles this — it covers expenses from fund and adds unclaimed bonuses back.
+Для виплат акціонерам/представникам (де в `order_ids[]` кілька замовлень) — розкривний список: показуємо перше замовлення + «ще N», по кліку розгортається весь список.
 
-### Root Cause
-Both issues stem from the same gap: `ProfitPreviewBlock` doesn't use `calcFullDistributionWithReps` and doesn't receive the order's `representative_id`.
+### 2. Помітка тестових замовлень
 
-### Changes
+Додати колонку `is_test BOOLEAN DEFAULT false` в `specialist_orders` + перемикач «Тестове замовлення» у формі створення/редагування замовлення (доступно тільки адміну). Тестові замовлення:
+- показуються з червоним бейджем `ТЕСТ`
+- виплати, породжені ними, теж отримують бейдж `ТЕСТ` (обчислюється join'ом)
+- за замовчуванням **виключаються** з фінансової статистики і прогнозу
 
-#### 1. `src/components/specialist/types.ts`
-Add `representative_id: string | null` to `SpecialistOrder` interface.
+### 3. Інструмент масового очищення (адмін → Виплати)
 
-#### 2. `src/components/specialist/ProfitPreviewBlock.tsx`
-- Accept new prop: `representativeId: string | null`
-- Load `unallocated_funds` from `company_settings`
-- When `representativeId` exists, load the rep chain from `representatives` table (rep → parent → grandparent)
-- Switch from `calcFullProfitDistribution` to `calcFullDistributionWithReps`
-- Add a "Представники" section showing each chain node with role, percent, amount
-- Show "Не засвоєні → фонд витрат" flow under title bonuses (unclaimed → unallocated_funds)
-- Show expenses coverage from fund if applicable
+Кнопка «**Очистити тестові дані**» у вкладці «Виплати»:
+1. Показує список замовлень, помічених `is_test = true`, з їх виплатами
+2. Кнопка «Видалити все тестове» → каскадно видаляє
+   - `shareholder_payouts` де `order_ids` містить тестові
+   - `specialist_payouts` де `order_id` тестовий
+   - `representative_payouts` де `order_ids` містить тестові
+   - `representative_earnings`, `financial_audit_log` по цих замовленнях
+   - Самі тестові `specialist_orders`
+3. Виводить підсумок: «Видалено X виплат, Y замовлень»
 
-#### 3. `src/components/specialist/OrderDetailsModal.tsx`
-- Pass `order.representative_id` to `ProfitPreviewBlock` as `representativeId` prop
+Це те саме, що вже робить `handleDeleteOrder` в `AdminOrdersTab`, тільки пакетно для всіх помічених.
 
-#### 4. No database changes needed
-The server-side `process_order_profit` already handles both correctly. This is purely a client-side preview fix.
+### 4. Ретро-помітка існуючих тестових
 
-### Safety
-- No mutations — preview is read-only
-- `calcFullDistributionWithReps` already exists and is tested
-- Falls back gracefully when `representative_id` is null (no rep section shown)
-- All existing calculations remain unchanged
+Оскільки зараз тестові й реальні змішані, після міграції треба:
+- Дати адміну можливість вручну відмітити «це тестове» у списку замовлень (галочка в списку архіву або в модалці деталей)
+- Або, якщо ви пам'ятаєте які саме — ми проставляємо `is_test = true` через одну INSERT-міграцію по ID
 
-### Files to Change
-- `src/components/specialist/types.ts` — add field
-- `src/components/specialist/ProfitPreviewBlock.tsx` — main fix
-- `src/components/specialist/OrderDetailsModal.tsx` — pass prop
+## Файли, які будуть змінені
 
+**Міграція БД:**
+- `specialist_orders`: додати `is_test BOOLEAN NOT NULL DEFAULT false`
+- Функція `admin_delete_test_data()` — атомарне видалення тестових замовлень і всіх їх виплат
+- RLS: тільки admin може змінювати `is_test`
+
+**Frontend — показ реквізитів замовлення у виплатах:**
+- `src/components/admin/tabs/PayoutsTab.tsx` (акціонери)
+- `src/components/admin/tabs/SpecPayoutsSection.tsx` (фахівці)
+- `src/components/admin/tabs/RepPayoutsSection.tsx` (представники)
+- `src/components/specialist/SpecialistPayouts.tsx` (кабінет фахівця)
+- `src/components/representative/RepresentativePayouts.tsx` (кабінет представника)
+- Новий компонент `src/components/payouts/OrderRefList.tsx` — щоб не дублювати логіку
+
+**Frontend — керування тестовими замовленнями:**
+- `src/components/specialist/CreateOrderModal.tsx` + `OrderDetailsModal.tsx` — перемикач «Тестове»
+- `src/components/specialist/OrderList.tsx` — бейдж ТЕСТ
+- `src/components/admin/tabs/PayoutsTab.tsx` — кнопка «Очистити тестові дані» + діалог підтвердження
+
+## Питання перед стартом
+
+1. **Ретро-помітка**: ви можете назвати назви/дати тестових замовлень, чи зручніше вручну проставити галочки в UI після деплою?
+2. Чи потрібно фільтрувати тестові замовлення з **прогнозу дивідендів акціонерам** і з **аналітики представників**? (Рекомендую — так.)
+3. Робимо повний обсяг одразу, чи спочатку тільки пункт (1) — показ реквізитів у виплатах, а помітка/масове видалення другим кроком?
