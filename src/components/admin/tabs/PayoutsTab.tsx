@@ -19,10 +19,11 @@ import {
 } from '@/components/ui/collapsible';
 import {
   Calculator, DollarSign, CheckCircle2, Clock, AlertCircle, Loader2,
-  Send, ShieldCheck, RefreshCw, Trash2, Layers, ChevronDown,
+  Send, ShieldCheck, RefreshCw, Trash2, Layers, ChevronDown, FlaskConical,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { OrderRefList } from '@/components/payouts/OrderRefList';
 import {
   calcFullProfitDistribution,
   type ShareholderInput,
@@ -107,6 +108,43 @@ export function PayoutsTab() {
   const [forceLoading, setForceLoading] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<PayoutRow | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  // Test-data cleanup
+  const [cleanupOpen, setCleanupOpen] = useState(false);
+  const [cleanupSummary, setCleanupSummary] = useState<any>(null);
+  const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [cleanupRunning, setCleanupRunning] = useState(false);
+
+  const openCleanup = async () => {
+    setCleanupOpen(true);
+    setCleanupLoading(true);
+    setCleanupSummary(null);
+    try {
+      const { data, error } = await supabase.rpc('admin_test_data_summary' as any);
+      if (error) throw error;
+      setCleanupSummary(data);
+    } catch (err: any) {
+      toast({ title: 'Помилка', description: err.message, variant: 'destructive' });
+    }
+    setCleanupLoading(false);
+  };
+
+  const runCleanup = async () => {
+    setCleanupRunning(true);
+    try {
+      const { data, error } = await supabase.rpc('admin_delete_all_test_data' as any);
+      if (error) throw error;
+      const r: any = data || {};
+      toast({
+        title: 'Тестові дані видалено',
+        description: `Замовлень: ${r.orders || 0}, виплат акціонерам: ${r.shareholder_payouts || 0}, фахівцям: ${r.specialist_payouts || 0}, представникам: ${r.representative_payouts || 0}.`,
+      });
+      setCleanupOpen(false);
+      await loadPayouts();
+    } catch (err: any) {
+      toast({ title: 'Помилка', description: err.message, variant: 'destructive' });
+    }
+    setCleanupRunning(false);
+  };
 
   // ── Load payouts ──────────────────────────────────────────────────────────
   const loadPayouts = useCallback(async () => {
@@ -337,6 +375,10 @@ export function PayoutsTab() {
           >
             <Layers className="h-4 w-4 mr-1" />
             {merged ? 'Розгорнути виплати' : "Об'єднати виплати"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={openCleanup} className="border-destructive/40 text-destructive hover:bg-destructive/10">
+            <FlaskConical className="h-4 w-4 mr-1" />
+            Очистити тестові дані
           </Button>
           <Button variant="outline" size="sm" onClick={loadPayouts} disabled={loading}>
             <RefreshCw className="h-4 w-4 mr-1" />
