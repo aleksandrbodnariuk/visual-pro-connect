@@ -2114,6 +2114,7 @@ export type Database = {
           financial_notes: string | null
           financials_updated_at: string | null
           id: string
+          is_test: boolean
           notes: string | null
           order_amount: number | null
           order_date: string
@@ -2132,6 +2133,7 @@ export type Database = {
           financial_notes?: string | null
           financials_updated_at?: string | null
           id?: string
+          is_test?: boolean
           notes?: string | null
           order_amount?: number | null
           order_date: string
@@ -2150,6 +2152,7 @@ export type Database = {
           financial_notes?: string | null
           financials_updated_at?: string | null
           id?: string
+          is_test?: boolean
           notes?: string | null
           order_amount?: number | null
           order_date?: string
@@ -2870,6 +2873,7 @@ export type Database = {
         Args: { _conv_id: string; _user_ids: string[] }
         Returns: undefined
       }
+      admin_delete_all_test_data: { Args: never; Returns: Json }
       admin_force_confirm_payout: {
         Args: { _payout_id: string }
         Returns: undefined
@@ -2882,6 +2886,7 @@ export type Database = {
         Args: { _payout_id: string }
         Returns: undefined
       }
+      admin_test_data_summary: { Args: never; Returns: Json }
       approve_certificate_purchase: {
         Args: { _admin_note?: string; _request_id: string }
         Returns: undefined
