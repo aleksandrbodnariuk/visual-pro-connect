@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronDown, ChevronRight, FlaskConical } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, FlaskConical } from 'lucide-react';
 
 interface OrderRef {
   id: string;
@@ -48,13 +48,32 @@ interface Props {
 
 export function OrderRefList({ orderIds, previewCount = 2, className }: Props) {
   const [orders, setOrders] = useState<OrderRef[]>([]);
+  const [missingIds, setMissingIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    if (orderIds.length === 0) return;
+    if (orderIds.length === 0) {
+      setOrders([]);
+      setMissingIds([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     fetchOrders(orderIds).then(rows => {
-      if (!cancelled) setOrders(rows);
+      if (!cancelled) {
+        setOrders(rows);
+        const found = new Set(rows.map(o => o.id));
+        setMissingIds(orderIds.filter(id => !found.has(id)));
+        setLoading(false);
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        setOrders([]);
+        setMissingIds(orderIds);
+        setLoading(false);
+      }
     });
     return () => { cancelled = true; };
   }, [orderIds.join(',')]);
@@ -62,7 +81,9 @@ export function OrderRefList({ orderIds, previewCount = 2, className }: Props) {
   if (orderIds.length === 0) return null;
 
   const visible = expanded ? orders : orders.slice(0, previewCount);
-  const hiddenCount = orders.length - visible.length;
+  const visibleMissing = expanded ? missingIds : missingIds.slice(0, Math.max(0, previewCount - visible.length));
+  const totalResolved = orders.length + missingIds.length;
+  const hiddenCount = totalResolved - visible.length - visibleMissing.length;
   const hasTest = orders.some(o => o.is_test);
 
   return (
@@ -107,8 +128,22 @@ export function OrderRefList({ orderIds, previewCount = 2, className }: Props) {
             </div>
           </li>
         ))}
+        {visibleMissing.map(id => (
+          <li
+            key={id}
+            className="text-xs rounded border border-destructive/30 bg-destructive/5 px-2 py-1.5 text-destructive"
+          >
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <div className="font-medium">Замовлення видалене або недоступне</div>
+                <div className="break-all opacity-80">ID: {id}</div>
+              </div>
+            </div>
+          </li>
+        ))}
       </ul>
-      {orders.length > previewCount && (
+      {totalResolved > previewCount && (
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setExpanded(v => !v); }}
@@ -118,7 +153,7 @@ export function OrderRefList({ orderIds, previewCount = 2, className }: Props) {
           {expanded ? 'Згорнути' : `Показати ще ${hiddenCount}`}
         </button>
       )}
-      {orders.length === 0 && (
+      {loading && totalResolved === 0 && (
         <p className="text-xs text-muted-foreground italic">Завантаження…</p>
       )}
     </div>

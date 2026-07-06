@@ -2874,6 +2874,11 @@ export type Database = {
         Returns: undefined
       }
       admin_delete_all_test_data: { Args: never; Returns: Json }
+      admin_delete_order_financials: {
+        Args: { _delete_order?: boolean; _order_id: string }
+        Returns: Json
+      }
+      admin_finance_integrity_report: { Args: never; Returns: Json }
       admin_force_confirm_payout: {
         Args: { _payout_id: string }
         Returns: undefined

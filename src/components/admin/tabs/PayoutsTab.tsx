@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/collapsible';
 import {
   Calculator, DollarSign, CheckCircle2, Clock, AlertCircle, Loader2,
-  Send, ShieldCheck, RefreshCw, Trash2, Layers, ChevronDown, FlaskConical,
+  Send, ShieldCheck, RefreshCw, Trash2, Layers, ChevronDown, FlaskConical, AlertTriangle,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -113,6 +113,45 @@ export function PayoutsTab() {
   const [cleanupSummary, setCleanupSummary] = useState<any>(null);
   const [cleanupLoading, setCleanupLoading] = useState(false);
   const [cleanupRunning, setCleanupRunning] = useState(false);
+  const [integrityOpen, setIntegrityOpen] = useState(false);
+  const [integrityReport, setIntegrityReport] = useState<any>(null);
+  const [integrityLoading, setIntegrityLoading] = useState(false);
+  const [orderFinanceDeleteLoading, setOrderFinanceDeleteLoading] = useState<string | null>(null);
+
+  const openIntegrity = async () => {
+    setIntegrityOpen(true);
+    setIntegrityLoading(true);
+    setIntegrityReport(null);
+    try {
+      const { data, error } = await supabase.rpc('admin_finance_integrity_report' as any);
+      if (error) throw error;
+      setIntegrityReport(data);
+    } catch (err: any) {
+      toast({ title: 'Помилка перевірки', description: err.message, variant: 'destructive' });
+    }
+    setIntegrityLoading(false);
+  };
+
+  const deleteOrderFinancials = async (orderId: string) => {
+    setOrderFinanceDeleteLoading(orderId);
+    try {
+      const { data, error } = await supabase.rpc('admin_delete_order_financials' as any, {
+        _order_id: orderId,
+        _delete_order: true,
+      });
+      if (error) throw error;
+      const r: any = data || {};
+      toast({
+        title: 'Фінансові записи видалено',
+        description: `Акціонери: ${r.shareholder_payouts || 0}, фахівці: ${r.specialist_payouts || 0}, представники: ${r.representative_payouts || 0}.`,
+      });
+      await loadPayouts();
+      await openIntegrity();
+    } catch (err: any) {
+      toast({ title: 'Помилка', description: err.message, variant: 'destructive' });
+    }
+    setOrderFinanceDeleteLoading(null);
+  };
 
   const openCleanup = async () => {
     setCleanupOpen(true);
@@ -380,6 +419,10 @@ export function PayoutsTab() {
             <FlaskConical className="h-4 w-4 mr-1" />
             Очистити тестові дані
           </Button>
+          <Button variant="outline" size="sm" onClick={openIntegrity}>
+            <AlertTriangle className="h-4 w-4 mr-1" />
+            Перевірити дублікати
+          </Button>
           <Button variant="outline" size="sm" onClick={loadPayouts} disabled={loading}>
             <RefreshCw className="h-4 w-4 mr-1" />
             Оновити
@@ -451,10 +494,15 @@ export function PayoutsTab() {
             merged={merged}
             emptyText="Немає очікуваних виплат. Натисніть «Розрахувати виплати» для створення."
             actions={(p) => (
-              <Button size="sm" onClick={() => { setPayDialog(p); setPayNotes(''); }}>
-                <Send className="h-3.5 w-3.5 mr-1" />
-                Виплатити
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button size="sm" onClick={() => { setPayDialog(p); setPayNotes(''); }}>
+                  <Send className="h-3.5 w-3.5 mr-1" />
+                  Виплатити
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setDeleteDialog(p)}>
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                </Button>
+              </div>
             )}
           />
         </TabsContent>
@@ -467,10 +515,15 @@ export function PayoutsTab() {
             merged={merged}
             emptyText="Немає виплат, що очікують підтвердження від акціонерів."
             actions={(p) => (
-              <Button size="sm" variant="outline" onClick={() => setForceDialog(p)}>
-                <ShieldCheck className="h-3.5 w-3.5 mr-1" />
-                Підтвердити за інвестора
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button size="sm" variant="outline" onClick={() => setForceDialog(p)}>
+                  <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+                  Підтвердити за інвестора
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setDeleteDialog(p)}>
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                </Button>
+              </div>
             )}
           />
         </TabsContent>
@@ -621,6 +674,78 @@ export function PayoutsTab() {
               {cleanupRunning ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
               Видалити все тестове
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={integrityOpen} onOpenChange={setIntegrityOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Перевірка виплат
+            </DialogTitle>
+            <DialogDescription>
+              Тут показані виплати, які посилаються на видалені замовлення, і підозрілі дублікати за тим самим замовленням.
+            </DialogDescription>
+          </DialogHeader>
+          {integrityLoading ? (
+            <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Перевірка…
+            </div>
+          ) : integrityReport ? (
+            <div className="space-y-4 text-sm">
+              <div className="rounded-md border p-3 space-y-2">
+                <div className="font-medium">Виплати без замовлення: {integrityReport.orphan_count || 0}</div>
+                {(integrityReport.orphan_payouts || []).length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Не знайдено.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {(integrityReport.orphan_payouts || []).slice(0, 20).map((row: any) => (
+                      <div key={`${row.payout_type}-${row.payout_id}`} className="rounded border border-destructive/30 bg-destructive/5 p-2 flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
+                        <div className="min-w-0">
+                          <div className="font-medium">{row.payout_type} · {fmt(Number(row.amount || 0))} · {statusLabel(row.status)}</div>
+                          <div className="text-xs text-muted-foreground break-all">Замовлення: {row.order_id}</div>
+                          <div className="text-xs text-muted-foreground break-all">Виплата: {row.payout_id}</div>
+                        </div>
+                        <Button size="sm" variant="destructive" disabled={orderFinanceDeleteLoading === row.order_id} onClick={() => deleteOrderFinancials(row.order_id)}>
+                          {orderFinanceDeleteLoading === row.order_id ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 mr-1" />}
+                          Видалити фінанси
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="rounded-md border p-3 space-y-2">
+                <div className="font-medium">Підозрілі дублікати: {integrityReport.duplicate_count || 0}</div>
+                {(integrityReport.duplicate_payouts || []).length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Не знайдено.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {(integrityReport.duplicate_payouts || []).slice(0, 20).map((row: any) => (
+                      <div key={`${row.payout_type}-${row.beneficiary_id}-${row.order_id}`} className="rounded border p-2">
+                        <div className="font-medium">{row.payout_type} · {row.payout_rows} виплати · разом {fmt(Number(row.total_amount || 0))}</div>
+                        <div className="text-xs text-muted-foreground break-all">Замовлення: {row.order_id}</div>
+                        <div className="mt-1 space-y-1">
+                          {(row.rows || []).map((r: any) => (
+                            <div key={r.payout_id} className="text-xs text-muted-foreground break-all">
+                              {fmt(Number(r.amount || 0))} · {statusLabel(r.status)} · {fmtDate(r.created_at)} · {r.payout_id}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    <p className="text-xs text-muted-foreground">
+                      Видаліть неправильний рядок кнопкою кошика у відповідній вкладці виплат. Нові дублікати сервер вже блокує.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIntegrityOpen(false)}>Закрити</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
