@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,26 +34,32 @@ export function CreateOrderModal({ open, onOpenChange, onSubmit, initialDate }: 
   const [date, setDate] = useState<Date | undefined>(initialDate);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleSubmit = async () => {
-    if (submitting) return;
+    if (submittingRef.current) return;
     if (!title.trim() || !date) return;
+    submittingRef.current = true;
     setSubmitting(true);
-    const result = await onSubmit({
-      title: title.trim(),
-      description: description.trim() || undefined,
-      order_type: orderType,
-      order_date: format(date, 'yyyy-MM-dd'),
-      notes: notes.trim() || undefined,
-    });
-    setSubmitting(false);
-    if (result) {
-      setTitle('');
-      setDescription('');
-      setOrderType('photo');
-      setDate(undefined);
-      setNotes('');
-      onOpenChange(false);
+    try {
+      const result = await onSubmit({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        order_type: orderType,
+        order_date: format(date, 'yyyy-MM-dd'),
+        notes: notes.trim() || undefined,
+      });
+      if (result) {
+        setTitle('');
+        setDescription('');
+        setOrderType('photo');
+        setDate(undefined);
+        setNotes('');
+        onOpenChange(false);
+      }
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   };
 

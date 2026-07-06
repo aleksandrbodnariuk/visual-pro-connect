@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,6 +67,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
   const [profitDistributed, setProfitDistributed] = useState<boolean | null>(null);
   const [distributing, setDistributing] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const statusUpdatingRef = useRef(false);
 
   // Specialist payouts state
   const [specAmounts, setSpecAmounts] = useState<Record<string, string>>({});
@@ -254,11 +255,13 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
     : null;
 
   const updateStatus = async (status: SpecialistOrder['status']) => {
-    if (statusUpdating) return;
+    if (statusUpdatingRef.current) return;
+    statusUpdatingRef.current = true;
     setStatusUpdating(true);
     try {
       await onUpdate(order.id, { status });
     } finally {
+      statusUpdatingRef.current = false;
       setStatusUpdating(false);
     }
   };
