@@ -66,6 +66,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
   const [addSpecRole, setAddSpecRole] = useState<OrderType>('photo');
   const [profitDistributed, setProfitDistributed] = useState<boolean | null>(null);
   const [distributing, setDistributing] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   // Specialist payouts state
   const [specAmounts, setSpecAmounts] = useState<Record<string, string>>({});
@@ -252,9 +253,19 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
     ? calcNetProfit(orderAmount ? Number(orderAmount) : 0, orderExpenses ? Number(orderExpenses) : 0)
     : null;
 
-  const handleConfirm = () => onUpdate(order.id, { status: 'confirmed' });
-  const handleReject = () => onUpdate(order.id, { status: 'pending' });
-  const handleArchive = () => onUpdate(order.id, { status: 'archived' });
+  const updateStatus = async (status: SpecialistOrder['status']) => {
+    if (statusUpdating) return;
+    setStatusUpdating(true);
+    try {
+      await onUpdate(order.id, { status });
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
+  const handleConfirm = () => updateStatus('confirmed');
+  const handleReject = () => updateStatus('pending');
+  const handleArchive = () => updateStatus('archived');
 
   const handleAddParticipant = async () => {
     if (!addSpecId) return;
@@ -666,26 +677,26 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
               )}
 
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => { setEditing(true); setEditingFinancials(false); }}>
+                <Button variant="outline" size="sm" onClick={() => { setEditing(true); setEditingFinancials(false); }} disabled={statusUpdating}>
                   Редагувати
                 </Button>
                 {order.status === 'pending' && (
-                  <Button size="sm" onClick={handleConfirm} className="bg-green-600 hover:bg-green-700">
-                    <Check className="h-3.5 w-3.5 mr-1" /> Підтвердити
+                  <Button size="sm" onClick={handleConfirm} disabled={statusUpdating} className="bg-green-600 hover:bg-green-700">
+                    {statusUpdating ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1" />} Підтвердити
                   </Button>
                 )}
                 {(order.status === 'confirmed' || order.status === 'archived') && (
-                  <Button size="sm" variant="outline" onClick={handleReject}>
-                    <X className="h-3.5 w-3.5 mr-1" /> Повернути
+                  <Button size="sm" variant="outline" onClick={handleReject} disabled={statusUpdating}>
+                    {statusUpdating ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <X className="h-3.5 w-3.5 mr-1" />} Повернути
                   </Button>
                 )}
                 {order.status !== 'archived' && (
-                  <Button size="sm" variant="secondary" onClick={handleArchive}>
-                    <Archive className="h-3.5 w-3.5 mr-1" /> В архів
+                  <Button size="sm" variant="secondary" onClick={handleArchive} disabled={statusUpdating}>
+                    {statusUpdating ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Archive className="h-3.5 w-3.5 mr-1" />} В архів
                   </Button>
                 )}
-                {order.status === 'archived' && onDelete && (
-                  <Button size="sm" variant="destructive" onClick={() => onDelete(order.id)}>
+                {onDelete && (
+                  <Button size="sm" variant="destructive" onClick={() => onDelete(order.id)} disabled={statusUpdating}>
                     <Trash2 className="h-3.5 w-3.5 mr-1" /> Видалити
                   </Button>
                 )}

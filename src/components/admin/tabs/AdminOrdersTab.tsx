@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Plus, CalendarDays, CheckCircle, Archive, Trash2 } from 'lucide-react';
+import { Plus, CalendarDays, CheckCircle, Archive, Trash2, Loader2 } from 'lucide-react';
 import { SpecialistCalendar } from '@/components/specialist/SpecialistCalendar';
 import { OrderList } from '@/components/specialist/OrderList';
 import { CreateOrderModal } from '@/components/specialist/CreateOrderModal';
@@ -60,6 +60,7 @@ export function AdminOrdersTab() {
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     if (!user) return;
@@ -153,32 +154,21 @@ export function AdminOrdersTab() {
 
   const handleDeleteOrder = async () => {
     if (!orderToDelete) return;
+    setDeleteLoading(true);
     try {
-      // Delete all related financial records first — check each for errors
-      const delEarnings = await (supabase as any).from('representative_earnings').delete().eq('order_id', orderToDelete);
-      if (delEarnings.error) console.warn('representative_earnings delete:', delEarnings.error.message);
-      
-      const delSpecPayouts = await (supabase as any).from('specialist_payouts').delete().eq('order_id', orderToDelete);
-      if (delSpecPayouts.error) console.warn('specialist_payouts delete:', delSpecPayouts.error.message);
-      
-      const delAudit = await (supabase as any).from('financial_audit_log').delete().eq('order_id', orderToDelete);
-      if (delAudit.error) {
-        console.error('financial_audit_log delete failed:', delAudit.error.message);
-        toast.error('Не вдалося видалити фінансові записи: ' + delAudit.error.message);
-        setDeleteDialogOpen(false);
-        setOrderToDelete(null);
-        return;
-      }
-      
-      await (supabase as any).from('specialist_order_participants').delete().eq('order_id', orderToDelete);
-      const { error } = await (supabase as any).from('specialist_orders').delete().eq('id', orderToDelete);
-      if (error) { toast.error(error.message); } else {
-        toast.success('Замовлення видалено');
-        if (selectedOrder?.id === orderToDelete) { setDetailsOpen(false); setSelectedOrder(null); }
-      }
+      const { data, error } = await supabase.rpc('admin_delete_order_financials' as any, {
+        _order_id: orderToDelete,
+        _delete_order: true,
+      });
+      if (error) throw error;
+      const r: any = data || {};
+      toast.success(`Замовлення видалено. Виплати: акціонерам ${r.shareholder_payouts || 0}, фахівцям ${r.specialist_payouts || 0}, представникам ${r.representative_payouts || 0}.`);
+      if (selectedOrder?.id === orderToDelete) { setDetailsOpen(false); setSelectedOrder(null); }
+      await fetchOrders();
     } catch (err: any) {
       toast.error(err.message);
     }
+    setDeleteLoading(false);
     setDeleteDialogOpen(false);
     setOrderToDelete(null);
   };
@@ -270,8 +260,9 @@ export function AdminOrdersTab() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{DELETE_CANCEL[language] || DELETE_CANCEL.uk}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteOrder} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {DELETE_CONFIRM[language] || DELETE_CONFIRM.uk}
+            <AlertDialogAction onClick={handleDeleteOrder} disabled={deleteLoading} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+              {deleteLoading ? 'Видалення…' : (DELETE_CONFIRM[language] || DELETE_CONFIRM.uk)}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

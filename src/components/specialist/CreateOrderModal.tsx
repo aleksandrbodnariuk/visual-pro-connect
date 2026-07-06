@@ -36,6 +36,7 @@ export function CreateOrderModal({ open, onOpenChange, onSubmit, initialDate }: 
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
+    if (submitting) return;
     if (!title.trim() || !date) return;
     setSubmitting(true);
     const result = await onSubmit({
