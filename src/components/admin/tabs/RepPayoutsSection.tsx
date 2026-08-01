@@ -156,13 +156,21 @@ export function RepPayoutsSection() {
         }
       }
 
-      // 4. Group earnings by user_id, filter out already paid orders
-      const userEarnings: Record<string, {
-        totalAmount: number;
-        orderIds: Set<string>;
-        role: string;
-        percent: number;
-      }> = {};
+      // 4. Дати замовлень: виплата ставиться в чергу лише в день замовлення
+      const allOrderIds = [...new Set(earningsData.map(e => e.order_id))];
+      const { data: ordersData } = await supabase
+        .from('specialist_orders')
+        .select('id, title, order_date')
+        .in('id', allOrderIds);
+      const orderMap = new Map<string, { title: string; order_date: string }>(
+        (ordersData || []).map((o: any) => [o.id, { title: o.title, order_date: o.order_date }]),
+      );
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      // 5. Окрема виплата на КОЖНЕ замовлення (без об'єднання)
+      const grouped = new Map<string, { userId: string; orderId: string; amount: number; role: string; percent: number }>();
+      let futureCount = 0;
 
       for (const earning of earningsData) {
         const rep = repUserMap[earning.representative_id];
@@ -172,30 +180,46 @@ export function RepPayoutsSection() {
         const paidOrders = paidOrdersMap[userId] || new Set<string>();
         if (paidOrders.has(earning.order_id)) continue;
 
-        if (!userEarnings[userId]) {
-          userEarnings[userId] = { totalAmount: 0, orderIds: new Set(), role: rep.role, percent: Number(earning.percent) };
+        const ord = orderMap.get(earning.order_id);
+        if (!ord || new Date(ord.order_date) > todayEnd) { futureCount++; continue; }
+
+        const key = `${userId}::${earning.order_id}`;
+        const prev = grouped.get(key);
+        if (prev) {
+          prev.amount += Number(earning.amount);
+        } else {
+          grouped.set(key, {
+            userId,
+            orderId: earning.order_id,
+            amount: Number(earning.amount),
+            role: rep.role,
+            percent: Number(earning.percent),
+          });
         }
-        userEarnings[userId].totalAmount += Number(earning.amount);
-        userEarnings[userId].orderIds.add(earning.order_id);
       }
 
-      // 5. Build payouts
       const newPayouts: any[] = [];
-      for (const [userId, data] of Object.entries(userEarnings)) {
-        if (data.totalAmount <= 0 || data.orderIds.size === 0) continue;
+      for (const g of grouped.values()) {
+        if (g.amount <= 0) continue;
+        const ord = orderMap.get(g.orderId)!;
         newPayouts.push({
-          representative_id: userId,
-          amount: Math.round(data.totalAmount * 100) / 100,
-          order_ids: Array.from(data.orderIds),
-          role_at_calculation: data.role,
-          percent_at_calculation: data.percent,
+          representative_id: g.userId,
+          amount: Math.round(g.amount * 100) / 100,
+          order_ids: [g.orderId],
+          role_at_calculation: g.role,
+          percent_at_calculation: g.percent,
           status: 'pending',
-          notes: `Розрахунок за ${data.orderIds.size} замовлень`,
+          notes: `Замовлення «${ord.title}» від ${new Date(ord.order_date).toLocaleDateString('uk-UA')}`,
         });
       }
 
       if (newPayouts.length === 0) {
-        toast({ title: 'Немає нових нарахувань для розрахунку', description: 'Усі нарахування вже враховані.' });
+        toast({
+          title: 'Немає нових нарахувань для розрахунку',
+          description: futureCount > 0
+            ? `Усі поточні нарахування враховані. Майбутні замовлення потраплять у виплати у день замовлення.`
+            : 'Усі нарахування вже враховані.',
+        });
         setCalculating(false);
         return;
       }
@@ -206,7 +230,11 @@ export function RepPayoutsSection() {
 
       if (insertErr) throw insertErr;
 
-      toast({ title: 'Розраховано', description: `Створено ${newPayouts.length} виплат` });
+      toast({
+        title: 'Розраховано',
+        description: `Створено ${newPayouts.length} виплат (по одній на замовлення).`
+          + (futureCount > 0 ? ' Майбутні замовлення пропущено до дати замовлення.' : ''),
+      });
       await loadPayouts();
     } catch (err: any) {
       toast({ title: 'Помилка розрахунку', description: err.message, variant: 'destructive' });
