@@ -283,15 +283,23 @@ export function PayoutsTab() {
       // 6. For each shareholder, find NEW orders not yet paid out
       const newPayouts: Omit<PayoutRow, 'id' | 'created_at' | 'paid_at' | 'paid_by' | 'confirmed_at' | 'reminder_sent_at'>[] = [];
 
+      // Виплата ставиться в чергу лише в день замовлення (або пізніше),
+      // щоб майбутні зйомки не потрапляли у виплати заздалегідь.
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+      const dueOrders = orders.filter(o => new Date(o.order_date) <= todayEnd);
+      const futureCount = orders.length - dueOrders.length;
+
       for (const sh of shareholders) {
         const paidOrders = paidOrdersMap[sh.userId] || new Set<string>();
-        const newOrders = orders.filter(o => !paidOrders.has(o.id));
+        const newOrders = dueOrders.filter(o => !paidOrders.has(o.id));
         if (newOrders.length === 0) continue;
 
-        // Calculate total income across new orders
-        let totalBase = 0;
-        let totalTitleBonus = 0;
+        const percent = totalShares > 0 ? (sh.shares / totalShares) * 100 : 0;
+        const { getTitleByPercent } = await import('@/lib/shareholderRules');
+        const title = getTitleByPercent(percent);
 
+        // Окрема виплата на КОЖНЕ замовлення (без об'єднання/спарювання)
         for (const order of newOrders) {
           const dist = calcFullProfitDistribution(
             order.order_amount,
@@ -301,37 +309,34 @@ export function PayoutsTab() {
             distConfig,
           );
           const shResult = dist.shareholders.find(r => r.userId === sh.userId);
-          if (shResult) {
-            totalBase += shResult.baseIncome;
-            totalTitleBonus += shResult.titleBonus;
-          }
+          if (!shResult) continue;
+          const amount = shResult.baseIncome + shResult.titleBonus;
+          if (amount <= 0) continue;
+
+          newPayouts.push({
+            shareholder_id: sh.userId,
+            amount: Math.round(amount * 100) / 100,
+            base_income: Math.round(shResult.baseIncome * 100) / 100,
+            title_bonus: Math.round(shResult.titleBonus * 100) / 100,
+            order_ids: [order.id],
+            shares_at_calculation: sh.shares,
+            share_percent_at_calculation: Math.round(percent * 100) / 100,
+            title_at_calculation: title?.title ?? null,
+            total_shares_snapshot: totalShares,
+            status: 'pending',
+            notes: `Замовлення «${order.title}» від ${fmtDate(order.order_date)}`,
+            admin_notes: null,
+          });
         }
-
-        const totalAmount = totalBase + totalTitleBonus;
-        if (totalAmount <= 0) continue;
-
-        const percent = totalShares > 0 ? (sh.shares / totalShares) * 100 : 0;
-        const { getTitleByPercent } = await import('@/lib/shareholderRules');
-        const title = getTitleByPercent(percent);
-
-        newPayouts.push({
-          shareholder_id: sh.userId,
-          amount: Math.round(totalAmount * 100) / 100,
-          base_income: Math.round(totalBase * 100) / 100,
-          title_bonus: Math.round(totalTitleBonus * 100) / 100,
-          order_ids: newOrders.map(o => o.id),
-          shares_at_calculation: sh.shares,
-          share_percent_at_calculation: Math.round(percent * 100) / 100,
-          title_at_calculation: title?.title ?? null,
-          total_shares_snapshot: totalShares,
-          status: 'pending',
-          notes: `Розрахунок за ${newOrders.length} замовлень`,
-          admin_notes: null,
-        });
       }
 
       if (newPayouts.length === 0) {
-        toast({ title: 'Немає нових замовлень для розрахунку', description: 'Усі підтверджені замовлення вже враховані.' });
+        toast({
+          title: 'Немає нових замовлень для розрахунку',
+          description: futureCount > 0
+            ? `Усі поточні замовлення враховані. Ще ${futureCount} майбутніх — виплати з’являться у день замовлення.`
+            : 'Усі підтверджені замовлення вже враховані.',
+        });
         setCalculating(false);
         return;
       }
@@ -343,7 +348,11 @@ export function PayoutsTab() {
 
       if (insertErr) throw insertErr;
 
-      toast({ title: 'Розраховано', description: `Створено ${newPayouts.length} виплат` });
+      toast({
+        title: 'Розраховано',
+        description: `Створено ${newPayouts.length} виплат (по одній на замовлення).`
+          + (futureCount > 0 ? ` ${futureCount} майбутніх замовлень пропущено до дати замовлення.` : ''),
+      });
       await loadPayouts();
     } catch (err: any) {
       toast({ title: 'Помилка розрахунку', description: err.message, variant: 'destructive' });
