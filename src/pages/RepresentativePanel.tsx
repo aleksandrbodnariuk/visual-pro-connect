@@ -150,8 +150,10 @@ export default function RepresentativePanel() {
 
   const deleteBooking = async (id: string) => {
     try {
-      await supabase.from('specialist_order_participants').delete().eq('order_id', id);
-      const { error } = await supabase.from('specialist_orders').delete().eq('id', id);
+      const { error } = await supabase.rpc('admin_delete_order_financials', {
+        _order_id: id,
+        _delete_order: true,
+      } as any);
       if (error) throw error;
       setDeleteDialog(null);
       loadBookings();
