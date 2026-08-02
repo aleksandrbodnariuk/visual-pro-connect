@@ -35,6 +35,8 @@ const CATEGORY_LABELS: Record<OrderType, string> = {
   photo: "Фото",
   video: "Відео",
   music: "Музика",
+  photo_video: "Фото + Відео",
+  photo_video_music: "Фото + Відео + Музика",
   other: "Інше",
 };
 
@@ -42,6 +44,8 @@ const CATEGORY_COLOR_VARS: Record<OrderType, string> = {
   photo: "hsl(var(--accent))",
   video: "hsl(var(--secondary))",
   music: "hsl(var(--primary))",
+  photo_video: "hsl(var(--accent))",
+  photo_video_music: "hsl(var(--secondary))",
   other: "hsl(var(--muted-foreground))",
 };
 
