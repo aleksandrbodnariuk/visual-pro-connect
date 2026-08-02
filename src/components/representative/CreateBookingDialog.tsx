@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Loader2 } from "lucide-react";
@@ -12,6 +13,7 @@ import { format } from "date-fns";
 import { uk } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { OrderType, ORDER_TYPE_LABELS, ORDER_TYPE_COLORS } from "@/components/specialist/types";
 
 interface Props {
   open: boolean;
@@ -33,6 +35,7 @@ export function CreateBookingDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState<Date | undefined>(initialDate);
+  const [orderType, setOrderType] = useState<OrderType>("photo");
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -52,7 +55,7 @@ export function CreateBookingDialog({
         description: description.trim() || null,
         order_date: format(date, "yyyy-MM-dd"),
         status: "pending",
-        order_type: "other",
+        order_type: orderType,
         created_by: userId,
         representative_id: representativeId,
       });
@@ -62,6 +65,7 @@ export function CreateBookingDialog({
       toast.success("Бронювання створено та очікує підтвердження");
       setTitle("");
       setDescription("");
+      setOrderType("photo");
       setDate(undefined);
       onOpenChange(false);
       onCreated();
@@ -89,6 +93,25 @@ export function CreateBookingDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Тип замовлення</Label>
+            <Select value={orderType} onValueChange={(v) => setOrderType(v as OrderType)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.entries(ORDER_TYPE_LABELS) as [OrderType, string][]).map(([k, l]) => (
+                  <SelectItem key={k} value={k}>
+                    <span className="flex items-center gap-2">
+                      <span className={cn("w-2.5 h-2.5 rounded-full", ORDER_TYPE_COLORS[k])} />
+                      {l}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

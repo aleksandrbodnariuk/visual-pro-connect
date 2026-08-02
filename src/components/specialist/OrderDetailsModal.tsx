@@ -307,8 +307,13 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                 <Select value={orderType} onValueChange={v => setOrderType(v as OrderType)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(ORDER_TYPE_LABELS).map(([k, l]) => (
-                      <SelectItem key={k} value={k}>{l}</SelectItem>
+                    {(Object.entries(ORDER_TYPE_LABELS) as [OrderType, string][]).map(([k, l]) => (
+                      <SelectItem key={k} value={k}>
+                        <span className="flex items-center gap-2">
+                          <span className={cn('w-2.5 h-2.5 rounded-full', ORDER_TYPE_COLORS[k])} />
+                          {l}
+                        </span>
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
