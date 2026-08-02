@@ -1,5 +1,5 @@
 
-export type OrderType = 'photo' | 'video' | 'music' | 'other';
+export type OrderType = 'photo' | 'video' | 'music' | 'photo_video' | 'photo_video_music' | 'other';
 export type OrderStatus = 'pending' | 'confirmed' | 'archived';
 
 export interface SpecialistOrder {
@@ -37,6 +37,8 @@ export const ORDER_TYPE_LABELS: Record<OrderType, string> = {
   photo: 'Фото',
   video: 'Відео',
   music: 'Музика',
+  photo_video: 'Фото + Відео',
+  photo_video_music: 'Фото + Відео + Музика',
   other: 'Інше',
 };
 
@@ -44,6 +46,8 @@ export const ORDER_TYPE_COLORS: Record<OrderType, string> = {
   photo: 'bg-blue-500',
   video: 'bg-red-500',
   music: 'bg-green-500',
+  photo_video: 'bg-gradient-to-r from-blue-500 to-red-500',
+  photo_video_music: 'bg-gradient-to-r from-blue-500 via-red-500 to-green-500',
   other: 'bg-gray-500',
 };
 
@@ -51,6 +55,8 @@ export const ORDER_TYPE_TEXT_COLORS: Record<OrderType, string> = {
   photo: 'text-blue-600 dark:text-blue-400',
   video: 'text-red-600 dark:text-red-400',
   music: 'text-green-600 dark:text-green-400',
+  photo_video: 'text-purple-600 dark:text-purple-400',
+  photo_video_music: 'text-amber-600 dark:text-amber-400',
   other: 'text-muted-foreground',
 };
 
