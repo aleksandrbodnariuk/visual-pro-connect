@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { SpecialistOrder, ORDER_TYPE_COLORS } from './types';
+import { SpecialistOrder, ORDER_TYPE_COLORS, ORDER_TYPE_LABELS, OrderType } from './types';
 import { format, isSameDay, parseISO } from 'date-fns';
 import { uk } from 'date-fns/locale';
 
@@ -64,6 +64,19 @@ export function SpecialistCalendar({ orders, selectedDate, onSelectDate }: Props
           },
         }}
       />
+
+      {/* Легенда кольорів (за типом замовлення) */}
+      <div className="mt-3 pt-3 border-t">
+        <p className="text-xs text-muted-foreground mb-1.5">Колір точки — тип замовлення</p>
+        <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+          {(Object.keys(ORDER_TYPE_LABELS) as OrderType[]).map((type) => (
+            <div key={type} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <div className={cn('w-2 h-2 rounded-full shrink-0', ORDER_TYPE_COLORS[type])} />
+              {ORDER_TYPE_LABELS[type]}
+            </div>
+          ))}
+        </div>
+      </div>
 
       {selectedDate && (
         <div className="mt-3 pt-3 border-t">
