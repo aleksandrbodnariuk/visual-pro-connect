@@ -12,7 +12,7 @@ import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { OrderType, ORDER_TYPE_LABELS } from './types';
+import { OrderType, ORDER_TYPE_LABELS, ORDER_TYPE_COLORS } from './types';
 
 interface Props {
   open: boolean;
@@ -83,8 +83,13 @@ export function CreateOrderModal({ open, onOpenChange, onSubmit, initialDate }: 
             <Select value={orderType} onValueChange={v => setOrderType(v as OrderType)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {Object.entries(ORDER_TYPE_LABELS).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                {(Object.entries(ORDER_TYPE_LABELS) as [OrderType, string][]).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
+                    <span className="flex items-center gap-2">
+                      <span className={cn('w-2.5 h-2.5 rounded-full', ORDER_TYPE_COLORS[key])} />
+                      {label}
+                    </span>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
