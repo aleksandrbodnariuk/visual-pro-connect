@@ -539,6 +539,8 @@ export function ShareholdersTab() {
       </Card>
 
       {/* ─── Shareholders management ─── */}
+      <ShareholderTiersTables config={distConfig} levelCounts={levelCounts} />
+
       <Card>
         <CardHeader>
           <CardTitle>Управління акціонерами</CardTitle>
