@@ -15,6 +15,7 @@ import { useProfitDistConfig } from "@/hooks/useProfitDistConfig";
 import { getTitleName, getTitleByPercent, getEffectiveTitle } from "@/lib/shareholderRules";
 import { useAuth } from "@/context/AuthContext";
 import { TitleApprovalDropdown } from "@/components/admin/TitleApprovalDropdown";
+import { ShareholderTiersTables } from "@/components/admin/shareholders/ShareholderTiersTables";
 export function ShareholdersTab() {
   const { user } = useAuth();
   const {
