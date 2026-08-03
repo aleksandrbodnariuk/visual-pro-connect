@@ -15,6 +15,7 @@ import { useProfitDistConfig } from "@/hooks/useProfitDistConfig";
 import { getTitleName, getTitleByPercent, getEffectiveTitle } from "@/lib/shareholderRules";
 import { useAuth } from "@/context/AuthContext";
 import { TitleApprovalDropdown } from "@/components/admin/TitleApprovalDropdown";
+import { ShareholderTiersTables } from "@/components/admin/shareholders/ShareholderTiersTables";
 export function ShareholdersTab() {
   const { user } = useAuth();
   const {
@@ -301,6 +302,18 @@ export function ShareholdersTab() {
     return `${profit.toFixed(2)} $`;
   };
 
+  // Кількість акціонерів на кожному рівні титулу
+  const levelCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    if (dbTotalShares <= 0) return counts;
+    shareholders.forEach((sh: any) => {
+      const pct = ((sh.shares || 0) / dbTotalShares) * 100;
+      const title = getEffectiveTitle(pct, titleApprovals[sh.id] ?? 1);
+      if (title) counts[title.level] = (counts[title.level] || 0) + 1;
+    });
+    return counts;
+  }, [shareholders, dbTotalShares, titleApprovals]);
+
   return (
     <div className="space-y-6">
       {/* ─── System not configured banner ─── */}
@@ -526,6 +539,8 @@ export function ShareholdersTab() {
       </Card>
 
       {/* ─── Shareholders management ─── */}
+      <ShareholderTiersTables config={distConfig} levelCounts={levelCounts} />
+
       <Card>
         <CardHeader>
           <CardTitle>Управління акціонерами</CardTitle>
