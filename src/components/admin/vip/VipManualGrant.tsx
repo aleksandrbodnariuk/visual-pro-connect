@@ -50,14 +50,38 @@ export function VipManualGrant() {
 
   useEffect(() => { load(); }, []);
 
-  const draft = (uid: string) => drafts[uid] || { tier: tiers[0]?.id || "gold", days: "30", lifetime: false };
+  const draft = (uid: string) => {
+    if (drafts[uid]) return drafts[uid];
+    const m = memberships[uid];
+    const tierId = m?.tier || tiers[0]?.id || "gold";
+    const t = tiers.find((x) => x.id === tierId) || tiers[0];
+    return {
+      tier: tierId,
+      days: String(t?.duration_days || 30),
+      lifetime: !!m?.is_lifetime,
+    };
+  };
   const setDraft = (uid: string, patch: Partial<{ tier: string; days: string; lifetime: boolean }>) =>
     setDrafts((p) => ({ ...p, [uid]: { ...draft(uid), ...patch } }));
+
+  // Зміна тарифу автоматично підставляє його тривалість
+  const changeTier = (uid: string, tierId: string) => {
+    const t = tiers.find((x) => x.id === tierId);
+    setDraft(uid, { tier: tierId, days: String(t?.duration_days || 30) });
+  };
 
   const grant = async (uid: string) => {
     const d = draft(uid);
     setGranting(uid);
-    const expires = d.lifetime ? null : new Date(Date.now() + (parseInt(d.days) || 30) * 86400000).toISOString();
+    const t = tiers.find((x) => x.id === d.tier);
+    const days = parseInt(d.days) > 0 ? parseInt(d.days) : (t?.duration_days || 30);
+    // Продовження: додаємо дні до залишку діючої підписки того ж рівня
+    const current = memberships[uid];
+    const baseMs =
+      current && !current.is_lifetime && current.tier === d.tier && current.expires_at
+        ? Math.max(Date.now(), new Date(current.expires_at).getTime())
+        : Date.now();
+    const expires = d.lifetime ? null : new Date(baseMs + days * 86400000).toISOString();
     const payload = {
       user_id: uid,
       tier: d.tier,
@@ -85,6 +109,7 @@ export function VipManualGrant() {
         message: `🏆 Адміністратор видав вам ${tiers.find(t => t.id === d.tier)?.label || d.tier}`,
         link: "/vip/moi",
       });
+    setDrafts((p) => { const n = { ...p }; delete n[uid]; return n; });
     load();
   };
 
@@ -94,7 +119,11 @@ export function VipManualGrant() {
     const { error } = await supabase.from("user_vip_memberships" as any).delete().eq("user_id", uid);
     setGranting(null);
     if (error) toast.error("Помилка");
-    else { toast.success("VIP скасовано"); load(); }
+    else {
+      toast.success("VIP скасовано");
+      setDrafts((p) => { const n = { ...p }; delete n[uid]; return n; });
+      load();
+    }
   };
 
   const filtered = useMemo(() => {
@@ -151,7 +180,7 @@ export function VipManualGrant() {
                     </Badge>
                   )}
                   <div className="flex flex-wrap items-center gap-2 ml-auto">
-                    <Select value={d.tier} onValueChange={(v) => setDraft(u.id, { tier: v })}>
+                    <Select value={d.tier} onValueChange={(v) => changeTier(u.id, v)}>
                       <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {tiers.map((t) => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}
@@ -162,8 +191,11 @@ export function VipManualGrant() {
                       <Label htmlFor={`life-${u.id}`} className="text-xs">∞</Label>
                     </div>
                     {!d.lifetime && (
-                      <Input type="number" min="1" value={d.days} className="w-20"
-                        onChange={(e) => setDraft(u.id, { days: e.target.value })} placeholder="днів" />
+                      <div className="flex items-center gap-1">
+                        <Input type="number" min="1" value={d.days} className="w-20"
+                          onChange={(e) => setDraft(u.id, { days: e.target.value })} placeholder="днів" />
+                        <span className="text-xs text-muted-foreground">днів</span>
+                      </div>
                     )}
                     <Button size="sm" onClick={() => grant(u.id)} disabled={granting === u.id}>
                       {granting === u.id && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
