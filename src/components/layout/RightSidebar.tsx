@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Image, Video, Music, FolderOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { extractVideoEmbed, VideoEmbed } from "@/lib/videoEmbed";
+import { EmbedThumbnail } from "@/components/feed/EmbedThumbnail";
 import { AudioPlayer } from "@/components/feed/AudioPlayer";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
