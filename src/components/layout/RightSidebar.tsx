@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Image, Video, Music, FolderOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { extractVideoEmbed, VideoEmbed } from "@/lib/videoEmbed";
+import { EmbedThumbnail } from "@/components/feed/EmbedThumbnail";
 import { AudioPlayer } from "@/components/feed/AudioPlayer";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -166,7 +167,6 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
           </div>
           <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
             {videos.slice(0, 4).map(file => {
-              const thumbnail = file.videoEmbed?.thumbnailUrl || null;
               const platform = file.videoEmbed?.platform;
               const label = platform === 'youtube' 
                 ? (file.videoEmbed?.isVertical ? 'YOUTUBE SHORTS' : 'YOUTUBE.COM')
@@ -183,12 +183,10 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
                   onClick={() => navigate(`/post/${file.id}`)}
                 >
                   <div className="aspect-video relative">
-                    {thumbnail ? (
-                      <img
-                        src={thumbnail}
-                        alt=""
-                        className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                        loading="lazy"
+                    {file.videoEmbed && file.videoEmbed.platform !== 'link' ? (
+                      <EmbedThumbnail
+                        embed={file.videoEmbed}
+                        imageClassName="transition-transform group-hover:scale-110"
                       />
                     ) : file.media_url && VIDEO_EXTENSIONS.some(ext => file.media_url!.toLowerCase().includes(ext)) ? (
                       <video
