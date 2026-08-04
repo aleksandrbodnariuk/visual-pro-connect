@@ -17,6 +17,7 @@ import { AudioPlayer } from "@/components/feed/AudioPlayer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { extractVideoEmbed, VideoEmbed } from "@/lib/videoEmbed";
 import { VideoPreview } from "@/components/feed/VideoPreview";
+import { EmbedThumbnail } from "@/components/feed/EmbedThumbnail";
 import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
