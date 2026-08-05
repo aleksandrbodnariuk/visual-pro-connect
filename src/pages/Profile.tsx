@@ -176,7 +176,8 @@ export default function Profile() {
           title: userData.title || "",
           categories: userData.categories || [],
           country: userData.country,
-          city: userData.city
+          city: userData.city,
+          date_of_birth: (userData as any).date_of_birth || null
         });
         
         if (postsData.length > 0) {
