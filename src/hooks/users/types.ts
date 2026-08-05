@@ -35,6 +35,7 @@ export interface User {
   is_admin?: boolean;
   is_shareholder?: boolean;
   phone_number?: string;
+  date_of_birth?: string | null;
 }
 
 // Type for user list
