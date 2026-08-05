@@ -25,7 +25,7 @@ async function fetchAppUser(): Promise<AppUser | null> {
       console.error('Error fetching app user:', error);
       return null;
     }
-    let profile = data?.[0];
+    let profile: any = data?.[0];
     if (!profile) {
       const { data: newData, error: createError } = await supabase.rpc('ensure_user_profile');
       if (createError) { console.error('Error creating profile:', createError); return null; }
@@ -51,6 +51,7 @@ async function fetchAppUser(): Promise<AppUser | null> {
       viber: profile.viber || '',
       bannerUrl: profile.banner_url || '',
       title: profile.title || '',
+      date_of_birth: profile.date_of_birth || '',
       country: profile.country || '',
       city: profile.city || ''
     } as AppUser;
