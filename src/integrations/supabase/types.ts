@@ -745,6 +745,30 @@ export type Database = {
           },
         ]
       }
+      friend_birthday_notifications: {
+        Row: {
+          birthday_user_id: string
+          created_at: string
+          id: string
+          notify_year: number
+          recipient_id: string
+        }
+        Insert: {
+          birthday_user_id: string
+          created_at?: string
+          id?: string
+          notify_year: number
+          recipient_id: string
+        }
+        Update: {
+          birthday_user_id?: string
+          created_at?: string
+          id?: string
+          notify_year?: number
+          recipient_id?: string
+        }
+        Relationships: []
+      }
       friend_requests: {
         Row: {
           created_at: string | null
@@ -3337,6 +3361,7 @@ export type Database = {
         Args: { _link?: string; _message: string }
         Returns: undefined
       }
+      notify_friend_birthdays: { Args: never; Returns: Json }
       process_ad_order: { Args: { _ad_order_id: string }; Returns: Json }
       process_order_profit: { Args: { _order_id: string }; Returns: Json }
       record_visit: { Args: never; Returns: undefined }
