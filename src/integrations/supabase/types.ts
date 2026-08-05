@@ -3058,6 +3058,7 @@ export type Database = {
           city: string
           country: string
           created_at: string
+          date_of_birth: string
           facebook: string
           full_name: string
           id: string
@@ -3118,6 +3119,7 @@ export type Database = {
           city: string
           country: string
           created_at: string
+          date_of_birth: string
           facebook: string
           founder_admin: boolean
           full_name: string
