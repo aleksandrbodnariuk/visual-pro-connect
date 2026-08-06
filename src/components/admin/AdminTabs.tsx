@@ -22,6 +22,7 @@ import { CertificatesTab } from "./tabs/CertificatesTab";
 import { VipTab } from "./tabs/VipTab";
 import { MarketplaceTab } from "./tabs/MarketplaceTab";
 import { StorageTab } from "./tabs/StorageTab";
+import { ClientsTab } from "./tabs/ClientsTab";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -49,6 +50,7 @@ export function AdminTabs() {
         <TabsTrigger value="specialists">Фахівці</TabsTrigger>
         <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
         <TabsTrigger value="representatives">Представники</TabsTrigger>
+        <TabsTrigger value="clients">Клієнти</TabsTrigger>
 
         <div className="w-px self-stretch bg-border mx-1 shrink-0" />
 
@@ -95,6 +97,10 @@ export function AdminTabs() {
 
       <TabsContent value="representatives">
         <RepresentativesTab />
+      </TabsContent>
+
+      <TabsContent value="clients">
+        <ClientsTab />
       </TabsContent>
       
       <TabsContent value="orders">
