@@ -520,6 +520,125 @@ export type Database = {
           },
         ]
       }
+      client_events: {
+        Row: {
+          client_user_id: string
+          created_at: string
+          created_by: string | null
+          event_date: string
+          event_type: string
+          greeting_enabled: boolean
+          id: string
+          notes: string | null
+          prep_days: number
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_user_id: string
+          created_at?: string
+          created_by?: string | null
+          event_date: string
+          event_type?: string
+          greeting_enabled?: boolean
+          id?: string
+          notes?: string | null
+          prep_days?: number
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_user_id?: string
+          created_at?: string
+          created_by?: string | null
+          event_date?: string
+          event_type?: string
+          greeting_enabled?: boolean
+          id?: string
+          notes?: string | null
+          prep_days?: number
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      client_greeting_log: {
+        Row: {
+          client_event_id: string
+          created_at: string
+          id: string
+          kind: string
+          notify_year: number
+        }
+        Insert: {
+          client_event_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          notify_year: number
+        }
+        Update: {
+          client_event_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          notify_year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_greeting_log_client_event_id_fkey"
+            columns: ["client_event_id"]
+            isOneToOne: false
+            referencedRelation: "client_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_profiles: {
+        Row: {
+          city: string | null
+          client_type: string
+          contact_phone: string | null
+          created_at: string
+          created_by: string | null
+          display_name: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          partner_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          city?: string | null
+          client_type?: string
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          partner_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          city?: string | null
+          client_type?: string
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          partner_name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       comment_likes: {
         Row: {
           comment_id: string
@@ -3224,6 +3343,25 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_upcoming_client_greetings: {
+        Args: { _days?: number }
+        Returns: {
+          avatar_url: string
+          client_name: string
+          client_type: string
+          client_user_id: string
+          days_left: number
+          event_date: string
+          event_id: string
+          event_type: string
+          greeting_enabled: boolean
+          next_date: string
+          notes: string
+          prep_days: number
+          title: string
+          years_count: number
+        }[]
+      }
       get_user_by_phone: {
         Args: { _phone_number: string }
         Returns: {
@@ -3363,6 +3501,7 @@ export type Database = {
         Args: { _link?: string; _message: string }
         Returns: undefined
       }
+      notify_client_anniversaries: { Args: never; Returns: Json }
       notify_friend_birthdays: { Args: never; Returns: Json }
       process_ad_order: { Args: { _ad_order_id: string }; Returns: Json }
       process_order_profit: { Args: { _order_id: string }; Returns: Json }
@@ -3506,6 +3645,7 @@ export type Database = {
         | "representative"
         | "manager"
         | "director"
+        | "client"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3644,6 +3784,7 @@ export const Constants = {
         "representative",
         "manager",
         "director",
+        "client",
       ],
     },
   },
