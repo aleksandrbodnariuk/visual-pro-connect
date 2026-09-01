@@ -930,6 +930,83 @@ export type Database = {
           },
         ]
       }
+      group_members: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          role: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          role?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          role?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          avatar_url: string | null
+          cover_url: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          post_policy: string
+          privacy: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          cover_url?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          post_policy?: string
+          privacy?: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          post_policy?: string
+          privacy?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       market: {
         Row: {
           buyer_id: string | null
@@ -1661,10 +1738,12 @@ export type Database = {
           comments_count: number
           content: string | null
           created_at: string | null
+          group_id: string | null
           id: string
           likes_count: number
           media_url: string | null
           poll_id: string | null
+          posted_as_group: boolean
           user_id: string | null
           video_orientation: string | null
         }
@@ -1673,10 +1752,12 @@ export type Database = {
           comments_count?: number
           content?: string | null
           created_at?: string | null
+          group_id?: string | null
           id?: string
           likes_count?: number
           media_url?: string | null
           poll_id?: string | null
+          posted_as_group?: boolean
           user_id?: string | null
           video_orientation?: string | null
         }
@@ -1685,14 +1766,23 @@ export type Database = {
           comments_count?: number
           content?: string | null
           created_at?: string | null
+          group_id?: string | null
           id?: string
           likes_count?: number
           media_url?: string | null
           poll_id?: string | null
+          posted_as_group?: boolean
           user_id?: string | null
           video_orientation?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "posts_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "posts_user_id_fkey"
             columns: ["user_id"]
@@ -3052,6 +3142,10 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: boolean
       }
+      can_post_in_group: {
+        Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
       cancel_share_transaction: {
         Args: { _transaction_id: string }
         Returns: undefined
@@ -3474,6 +3568,15 @@ export type Database = {
         Args: { _conv_id: string; _user_id: string }
         Returns: boolean
       }
+      is_group_admin: {
+        Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_group_member: {
+        Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_group_public: { Args: { _group_id: string }; Returns: boolean }
       is_order_creator: {
         Args: { _order_id: string; _user_id: string }
         Returns: boolean
