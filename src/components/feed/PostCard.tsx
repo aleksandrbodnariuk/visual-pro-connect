@@ -37,6 +37,13 @@ export interface PostCardProps {
     profession?: string;
     isShareHolder?: boolean;
   };
+  /** Group context when the post belongs to a group */
+  groupInfo?: {
+    id: string;
+    name: string;
+    avatarUrl?: string;
+    postedAsGroup?: boolean;
+  } | null;
   imageUrl?: string;
   caption: string;
   pollId?: string | null;
