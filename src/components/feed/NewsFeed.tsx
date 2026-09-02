@@ -117,9 +117,14 @@ export function NewsFeed() {
     const { data: authors } = authorIds.length > 0
       ? await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: authorIds })
       : { data: [] as any[] };
+    const groupIds = [...new Set(supabasePosts.map((p: any) => p.group_id).filter(Boolean))] as string[];
+    const { data: groupsData } = groupIds.length > 0
+      ? await supabase.from('groups').select('id, name, avatar_url').in('id', groupIds)
+      : { data: [] as any[] };
     return supabasePosts.map(post => ({
       ...post,
       author: authors?.find((a: any) => a.id === post.user_id) || null,
+      group: groupsData?.find((g: any) => g.id === (post as any).group_id) || null,
     }));
   };
 
@@ -512,10 +517,18 @@ export function NewsFeed() {
                   author={{
                     id: post.user_id,
                     name: authorName,
-                    avatarUrl: postAuthor?.avatar_url || postAuthor?.avatarUrl || '',
+                    avatarUrl: (post as any).posted_as_group && post.group
+                      ? (post.group.avatar_url || '')
+                      : (postAuthor?.avatar_url || postAuthor?.avatarUrl || ''),
                     profession: postAuthor?.title || '',
                     isShareHolder: postAuthor?.is_shareholder || false
                   }}
+                  groupInfo={post.group ? {
+                    id: post.group.id,
+                    name: post.group.name,
+                    avatarUrl: post.group.avatar_url || '',
+                    postedAsGroup: !!(post as any).posted_as_group,
+                  } : null}
                   imageUrl={post.media_url || undefined}
                   caption={post.content || ''}
                   pollId={(post as any).poll_id ?? null}

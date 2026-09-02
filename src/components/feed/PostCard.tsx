@@ -37,6 +37,13 @@ export interface PostCardProps {
     profession?: string;
     isShareHolder?: boolean;
   };
+  /** Group context when the post belongs to a group */
+  groupInfo?: {
+    id: string;
+    name: string;
+    avatarUrl?: string;
+    postedAsGroup?: boolean;
+  } | null;
   imageUrl?: string;
   caption: string;
   pollId?: string | null;
@@ -65,6 +72,7 @@ export interface PostCardProps {
 export function PostCard({
   id,
   author,
+  groupInfo,
   imageUrl,
   caption,
   pollId,
@@ -163,14 +171,23 @@ export function PostCard({
     <div className={cn("creative-card card-hover", className)}>
       {/* Header */}
       <div className="flex items-center justify-between p-3">
-        <Link to={`/profile/${author.id}`} className="flex items-center gap-2">
+        <Link
+          to={groupInfo?.postedAsGroup ? `/groups/${groupInfo.id}` : `/profile/${author.id}`}
+          className="flex items-center gap-2"
+        >
           <Avatar className="h-8 w-8 border">
             <AvatarImage src={author.avatarUrl} alt={author.name} />
             <AvatarFallback>{author.name.split(" ").map((n) => n[0]).join("")}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
             <span className="text-sm font-semibold">{author.name}</span>
-            {author.profession && isCurrentUserInvestor && (
+            {groupInfo && !groupInfo.postedAsGroup && (
+              <span className="text-[11px] text-muted-foreground">у групі «{groupInfo.name}»</span>
+            )}
+            {groupInfo?.postedAsGroup && (
+              <span className="text-[11px] text-muted-foreground">Публікація групи</span>
+            )}
+            {!groupInfo && author.profession && isCurrentUserInvestor && (
               <span className={`profession-badge profession-badge-${author.profession.toLowerCase()} text-[10px]`}>
                 {author.profession}
               </span>

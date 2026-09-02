@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Search, Bell, MessageSquare, User, Settings, Users, Crown, TrendingUp, Award, Store } from 'lucide-react';
+import { Home, Search, Bell, MessageSquare, User, Settings, Users, Crown, TrendingUp, Award, Store, UsersRound } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 import { useAuthState } from "@/hooks/auth/useAuthState";
@@ -102,6 +102,9 @@ export function Sidebar({ className }: SidebarProps) {
           </Button>
           <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/friends')} data-active={location.pathname.startsWith("/friends")}>
             <Users className="mr-2 h-4 w-4" /> {t.friends}
+          </Button>
+          <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/groups')} data-active={location.pathname.startsWith("/groups")}>
+            <UsersRound className="mr-2 h-4 w-4" /> Групи
           </Button>
           <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/settings')} data-active={location.pathname === "/settings"}>
             <Settings className="mr-2 h-4 w-4" /> {t.settings}
