@@ -72,6 +72,7 @@ export interface PostCardProps {
 export function PostCard({
   id,
   author,
+  groupInfo,
   imageUrl,
   caption,
   pollId,
