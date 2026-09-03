@@ -121,6 +121,11 @@ export default function GroupPage() {
                   <LogOut className="h-4 w-4 mr-1" /> Вийти
                 </Button>
               )}
+              {isGroupAdmin && (
+                <Button size="sm" variant="outline" onClick={() => setSettingsOpen(true)}>
+                  <Settings className="h-4 w-4 mr-1" /> Налаштування
+                </Button>
+              )}
               {(myMembership?.role === 'owner' || isSiteAdmin) && (
                 <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteOpen(true)}>
                   <Trash2 className="h-4 w-4" />
