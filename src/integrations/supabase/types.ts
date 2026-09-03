@@ -965,6 +965,35 @@ export type Database = {
           },
         ]
       }
+      group_views: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_views_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       groups: {
         Row: {
           avatar_url: string | null
@@ -3309,6 +3338,17 @@ export type Database = {
           total_representatives_paid: number
           total_shareholders_paid: number
           total_unallocated: number
+        }[]
+      }
+      get_group_stats: {
+        Args: { _group_id: string }
+        Returns: {
+          members_count: number
+          posts_count: number
+          unique_viewers: number
+          views_30d: number
+          views_7d: number
+          views_total: number
         }[]
       }
       get_issued_shares_count: { Args: never; Returns: number }
