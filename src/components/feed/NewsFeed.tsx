@@ -508,7 +508,9 @@ export function NewsFeed() {
             filteredPosts.map((post) => {
               let postAuthor = post.author;
               if (!postAuthor && post.user_id === currentUser?.id) postAuthor = currentUser;
-              const authorName = postAuthor?.full_name || 'Користувач';
+              const authorName = (post as any).posted_as_group && post.group
+                ? post.group.name
+                : (postAuthor?.full_name || 'Користувач');
               
               return (
                 <PostCard 
