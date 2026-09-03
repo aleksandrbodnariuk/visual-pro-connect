@@ -10,12 +10,14 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Globe, Lock, Users, ArrowLeft, LogOut, Trash2 } from 'lucide-react';
+import { Globe, Lock, Users, ArrowLeft, LogOut, Trash2, Settings } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useGroup, groupActions } from '@/hooks/groups/useGroups';
 import { GroupComposer } from '@/components/groups/GroupComposer';
 import { GroupFeed } from '@/components/groups/GroupFeed';
 import { GroupMembersPanel } from '@/components/groups/GroupMembersPanel';
+import { GroupSettingsDialog } from '@/components/groups/GroupSettingsDialog';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export default function GroupPage() {
@@ -25,10 +27,21 @@ export default function GroupPage() {
   const { group, members, myMembership, loading, reload } = useGroup(groupId);
   const [refreshKey, setRefreshKey] = useState(0);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (group) document.title = `${group.name} — група`;
   }, [group]);
+
+  // Log one view per group visit (authenticated users only)
+  useEffect(() => {
+    if (!groupId || !user?.id) return;
+    const key = `group-view-${groupId}`;
+    const last = Number(sessionStorage.getItem(key) || 0);
+    if (Date.now() - last < 30 * 60 * 1000) return;
+    sessionStorage.setItem(key, String(Date.now()));
+    supabase.from('group_views').insert({ group_id: groupId, user_id: user.id }).then(() => {});
+  }, [groupId, user?.id]);
 
   if (loading) {
     return (
