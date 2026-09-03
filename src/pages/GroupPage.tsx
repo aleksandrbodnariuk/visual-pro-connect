@@ -170,6 +170,17 @@ export default function GroupPage() {
         </main>
       </div>
 
+      {isGroupAdmin && (
+        <GroupSettingsDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          group={group}
+          onSaved={reload}
+        />
+      )}
+
+
+
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
