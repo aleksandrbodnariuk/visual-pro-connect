@@ -133,6 +133,7 @@ const AppContent = () => {
             <Route path="/vip/reminders" element={<VipReminders />} />
             <Route path="/vip/planner" element={<VipPlanner />} />
             <Route path="/vip/analytics" element={<VipAnalytics />} />
+            <Route path="/vip/editor" element={<VipEditor />} />
             <Route path="/market" element={<Marketplace />} />
             <Route path="/market/new" element={<MarketplaceNew />} />
             <Route path="/market/moi" element={<MarketplaceMine />} />
