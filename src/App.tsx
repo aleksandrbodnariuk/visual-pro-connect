@@ -54,6 +54,7 @@ const VipCalculator = lazy(() => import("./pages/vip/Calculator"));
 const VipReminders = lazy(() => import("./pages/vip/Reminders"));
 const VipPlanner = lazy(() => import("./pages/vip/Planner"));
 const VipAnalytics = lazy(() => import("./pages/vip/Analytics"));
+const VipEditor = lazy(() => import("./pages/vip/Editor"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
 const Groups = lazy(() => import("./pages/Groups"));
 const GroupPage = lazy(() => import("./pages/GroupPage"));
