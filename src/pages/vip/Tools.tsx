@@ -74,6 +74,15 @@ const TOOLS: Tool[] = [
     available: true,
   },
   {
+    id: "editor",
+    title: "Текстовий редактор B&C",
+    description:
+      "Офісний редактор документів: шрифти, кольори, стилі, відкриття файлів Word (.docx), збереження на сайті та на комп'ютері.",
+    icon: FileText,
+    path: "/vip/editor",
+    available: true,
+  },
+  {
     id: "moodboard",
     title: "Mood board",
     description:
