@@ -13,6 +13,7 @@ import {
   CalendarRange,
   LineChart,
   Lightbulb,
+  FileText,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -71,6 +72,15 @@ const TOOLS: Tool[] = [
       "Графіки витрат на послуги фахівців з фільтрами по періодах і категоріях.",
     icon: LineChart,
     path: "/vip/analytics",
+    available: true,
+  },
+  {
+    id: "editor",
+    title: "Текстовий редактор B&C",
+    description:
+      "Офісний редактор документів: шрифти, кольори, стилі, відкриття файлів Word (.docx), збереження на сайті та на комп'ютері.",
+    icon: FileText,
+    path: "/vip/editor",
     available: true,
   },
   {
