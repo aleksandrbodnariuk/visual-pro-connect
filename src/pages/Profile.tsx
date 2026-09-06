@@ -107,7 +107,10 @@ export default function Profile() {
           const { data: postsResult } = await supabase
             .from('posts')
             .select('*')
-            .eq('user_id', targetUserId);
+            .eq('user_id', targetUserId)
+            .is('group_id', null)
+            .order('created_at', { ascending: false })
+            .limit(100);
           
           if (postsResult) {
             postsData = postsResult;
