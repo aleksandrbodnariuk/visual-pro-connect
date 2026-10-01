@@ -1036,6 +1036,98 @@ export type Database = {
         }
         Relationships: []
       }
+      hq_members: {
+        Row: {
+          created_at: string
+          full_name: string
+          hq_id: string
+          id: string
+          is_agitator: boolean
+          notes: string | null
+          organization_id: string
+          phone: string | null
+          position: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          full_name: string
+          hq_id: string
+          id?: string
+          is_agitator?: boolean
+          notes?: string | null
+          organization_id: string
+          phone?: string | null
+          position?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          hq_id?: string
+          id?: string
+          is_agitator?: boolean
+          notes?: string | null
+          organization_id?: string
+          phone?: string | null
+          position?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hq_members_hq_id_fkey"
+            columns: ["hq_id"]
+            isOneToOne: false
+            referencedRelation: "party_hqs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hq_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hq_structure_templates: {
+        Row: {
+          created_at: string
+          id: string
+          level: Database["public"]["Enums"]["hq_level"]
+          organization_id: string
+          positions: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level: Database["public"]["Enums"]["hq_level"]
+          organization_id: string
+          positions?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: Database["public"]["Enums"]["hq_level"]
+          organization_id?: string
+          positions?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hq_structure_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       market: {
         Row: {
           buyer_id: string | null
@@ -1484,6 +1576,172 @@ export type Database = {
           },
         ]
       }
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          type: Database["public"]["Enums"]["org_type"]
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          type?: Database["public"]["Enums"]["org_type"]
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          type?: Database["public"]["Enums"]["org_type"]
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      party_access: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          note: string | null
+          organization_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          note?: string | null
+          organization_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          note?: string | null
+          organization_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_access_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_hqs: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          level: Database["public"]["Enums"]["hq_level"]
+          name: string
+          notes: string | null
+          organization_id: string
+          parent_id: string | null
+          phone: string | null
+          region: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          level: Database["public"]["Enums"]["hq_level"]
+          name: string
+          notes?: string | null
+          organization_id: string
+          parent_id?: string | null
+          phone?: string | null
+          region?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          level?: Database["public"]["Enums"]["hq_level"]
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          parent_id?: string | null
+          phone?: string | null
+          region?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_hqs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_hqs_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "party_hqs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       poll_options: {
         Row: {
           id: string
@@ -1817,6 +2075,114 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      precinct_members: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          organization_id: string
+          phone: string | null
+          position: string | null
+          precinct_id: string
+          role: Database["public"]["Enums"]["precinct_role"]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          full_name: string
+          id?: string
+          organization_id: string
+          phone?: string | null
+          position?: string | null
+          precinct_id: string
+          role?: Database["public"]["Enums"]["precinct_role"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          organization_id?: string
+          phone?: string | null
+          position?: string | null
+          precinct_id?: string
+          role?: Database["public"]["Enums"]["precinct_role"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "precinct_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precinct_members_precinct_id_fkey"
+            columns: ["precinct_id"]
+            isOneToOne: false
+            referencedRelation: "precincts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      precincts: {
+        Row: {
+          address: string | null
+          created_at: string
+          hq_id: string
+          id: string
+          name: string | null
+          notes: string | null
+          number: string
+          organization_id: string
+          updated_at: string
+          voters_count: number
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          hq_id: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          number: string
+          organization_id: string
+          updated_at?: string
+          voters_count?: number
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          hq_id?: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          number?: string
+          organization_id?: string
+          updated_at?: string
+          voters_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "precincts_hq_id_fkey"
+            columns: ["hq_id"]
+            isOneToOne: false
+            referencedRelation: "party_hqs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precincts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -3617,6 +3983,10 @@ export type Database = {
         }[]
       }
       has_active_vip: { Args: { _user_id: string }; Returns: boolean }
+      has_party_access: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -3650,6 +4020,10 @@ export type Database = {
       }
       is_order_participant: {
         Args: { _order_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_org_manager: {
+        Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
       is_user_admin: { Args: { _user_id: string }; Returns: boolean }
@@ -3816,6 +4190,9 @@ export type Database = {
         | "manager"
         | "director"
         | "client"
+      hq_level: "central" | "oblast" | "okrug" | "city" | "otg" | "village"
+      org_type: "party" | "company" | "ngo" | "other"
+      precinct_role: "commission" | "observer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3956,6 +4333,9 @@ export const Constants = {
         "director",
         "client",
       ],
+      hq_level: ["central", "oblast", "okrug", "city", "otg", "village"],
+      org_type: ["party", "company", "ngo", "other"],
+      precinct_role: ["commission", "observer"],
     },
   },
 } as const
