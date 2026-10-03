@@ -425,6 +425,54 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_candidates: {
+        Row: {
+          ballot_number: number | null
+          campaign_id: string
+          created_at: string
+          id: string
+          is_ours: boolean
+          name: string
+          organization_id: string
+          party: string | null
+        }
+        Insert: {
+          ballot_number?: number | null
+          campaign_id: string
+          created_at?: string
+          id?: string
+          is_ours?: boolean
+          name: string
+          organization_id: string
+          party?: string | null
+        }
+        Update: {
+          ballot_number?: number | null
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          is_ours?: boolean
+          name?: string
+          organization_id?: string
+          party?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_candidates_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "election_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_candidates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           color: string
@@ -823,6 +871,59 @@ export type Database = {
         }
         Relationships: []
       }
+      election_campaigns: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          election_date: string | null
+          election_type: string
+          id: string
+          local_kind: string | null
+          name: string
+          notes: string | null
+          organization_id: string
+          round: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          election_date?: string | null
+          election_type: string
+          id?: string
+          local_kind?: string | null
+          name: string
+          notes?: string | null
+          organization_id: string
+          round?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          election_date?: string | null
+          election_type?: string
+          id?: string
+          local_kind?: string | null
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          round?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "election_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_audit_log: {
         Row: {
           created_at: string
@@ -1035,6 +1136,48 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      hq_managers: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          hq_id: string
+          id: string
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          hq_id: string
+          id?: string
+          organization_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          hq_id?: string
+          id?: string
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hq_managers_hq_id_fkey"
+            columns: ["hq_id"]
+            isOneToOne: false
+            referencedRelation: "party_hqs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hq_managers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hq_members: {
         Row: {
@@ -1685,6 +1828,55 @@ export type Database = {
           },
         ]
       }
+      party_chats: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          hq_id: string | null
+          id: string
+          kind: string
+          organization_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          hq_id?: string | null
+          id?: string
+          kind: string
+          organization_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          hq_id?: string | null
+          id?: string
+          kind?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_chats_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_chats_hq_id_fkey"
+            columns: ["hq_id"]
+            isOneToOne: false
+            referencedRelation: "party_hqs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_chats_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       party_hqs: {
         Row: {
           address: string | null
@@ -2133,6 +2325,73 @@ export type Database = {
           },
         ]
       }
+      precinct_protocols: {
+        Row: {
+          ballots_issued: number
+          campaign_id: string
+          created_at: string
+          id: string
+          invalid_ballots: number
+          notes: string | null
+          organization_id: string
+          precinct_id: string
+          status: string
+          submitted_by: string | null
+          updated_at: string
+          voters_on_list: number
+        }
+        Insert: {
+          ballots_issued?: number
+          campaign_id: string
+          created_at?: string
+          id?: string
+          invalid_ballots?: number
+          notes?: string | null
+          organization_id: string
+          precinct_id: string
+          status?: string
+          submitted_by?: string | null
+          updated_at?: string
+          voters_on_list?: number
+        }
+        Update: {
+          ballots_issued?: number
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          invalid_ballots?: number
+          notes?: string | null
+          organization_id?: string
+          precinct_id?: string
+          status?: string
+          submitted_by?: string | null
+          updated_at?: string
+          voters_on_list?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "precinct_protocols_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "election_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precinct_protocols_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precinct_protocols_precinct_id_fkey"
+            columns: ["precinct_id"]
+            isOneToOne: false
+            referencedRelation: "precincts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       precincts: {
         Row: {
           address: string | null
@@ -2183,6 +2442,42 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      protocol_votes: {
+        Row: {
+          candidate_id: string
+          id: string
+          protocol_id: string
+          votes: number
+        }
+        Insert: {
+          candidate_id: string
+          id?: string
+          protocol_id: string
+          votes?: number
+        }
+        Update: {
+          candidate_id?: string
+          id?: string
+          protocol_id?: string
+          votes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocol_votes_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocol_votes_protocol_id_fkey"
+            columns: ["protocol_id"]
+            isOneToOne: false
+            referencedRelation: "precinct_protocols"
             referencedColumns: ["id"]
           },
         ]
@@ -3560,8 +3855,31 @@ export type Database = {
         Returns: string
       }
       assign_default_role: { Args: { _user_id: string }; Returns: undefined }
+      campaign_progress: {
+        Args: { _campaign_id: string }
+        Returns: {
+          ballots: number
+          hq_id: string
+          invalid: number
+          precincts: number
+          protocols: number
+          voters: number
+        }[]
+      }
+      campaign_results: {
+        Args: { _campaign_id: string }
+        Returns: {
+          candidate_id: string
+          hq_id: string
+          votes: number
+        }[]
+      }
       can_access_user_public_data: {
         Args: { target_user_id: string }
+        Returns: boolean
+      }
+      can_manage_hq: {
+        Args: { _hq_id: string; _user_id: string }
         Returns: boolean
       }
       can_post_in_group: {
@@ -4047,6 +4365,10 @@ export type Database = {
       }
       notify_client_anniversaries: { Args: never; Returns: Json }
       notify_friend_birthdays: { Args: never; Returns: Json }
+      open_party_chat: {
+        Args: { _hq_id: string; _kind: string; _org_id: string }
+        Returns: string
+      }
       process_ad_order: { Args: { _ad_order_id: string }; Returns: Json }
       process_order_profit: { Args: { _order_id: string }; Returns: Json }
       record_visit: { Args: never; Returns: undefined }
