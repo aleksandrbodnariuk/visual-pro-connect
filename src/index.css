@@ -341,3 +341,9 @@
     padding-bottom: 0;
   }
 }
+/* Native select dropdown options readable in dark/light themes */
+select option, select optgroup {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+.dark select { color-scheme: dark; }
