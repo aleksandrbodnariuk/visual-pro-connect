@@ -341,3 +341,149 @@ export const partyActions = {
     return true;
   },
 };
+
+// ===== HQ managers, chats, campaigns =====
+const db = supabase as any;
+
+export type ElectionType = 'presidential' | 'parliamentary' | 'local';
+export type LocalKind = 'mayor' | 'oblast_council' | 'raion_council' | 'city_council' | 'village_council';
+
+export interface Campaign {
+  id: string; organization_id: string; election_type: ElectionType; local_kind: LocalKind | null;
+  name: string; election_date: string | null; round: number; status: 'draft' | 'active' | 'finished'; notes: string | null;
+}
+export interface Candidate { id: string; campaign_id: string; name: string; party: string | null; ballot_number: number | null; is_ours: boolean }
+export interface Protocol { id: string; campaign_id: string; precinct_id: string; voters_on_list: number; ballots_issued: number; invalid_ballots: number; status: string }
+
+export const ELECTION_TYPES: { value: ElectionType; label: string; candidateLabel: string }[] = [
+  { value: 'presidential', label: 'Президентські вибори', candidateLabel: 'Кандидат' },
+  { value: 'parliamentary', label: 'Парламентські вибори', candidateLabel: 'Партія / кандидат' },
+  { value: 'local', label: 'Місцеві вибори', candidateLabel: 'Кандидат / партія' },
+];
+export const LOCAL_KINDS: { value: LocalKind; label: string }[] = [
+  { value: 'mayor', label: 'Мер (міський голова)' },
+  { value: 'oblast_council', label: 'Обласна рада' },
+  { value: 'raion_council', label: 'Районна рада' },
+  { value: 'city_council', label: 'Міська рада' },
+  { value: 'village_council', label: 'Сільська / селищна рада' },
+];
+
+async function fetchAll(q: () => any) {
+  const out: any[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await q().range(from, from + 999);
+    if (error || !data) break;
+    out.push(...data);
+    if (data.length < 1000) break;
+  }
+  return out;
+}
+
+export const partyExtra = {
+  async listManagers(orgId: string) {
+    const { data } = await db.from('hq_managers').select('*').eq('organization_id', orgId);
+    return (data as { id: string; hq_id: string; user_id: string }[]) || [];
+  },
+  async addManager(orgId: string, hqId: string, userId: string) {
+    const me = (await supabase.auth.getUser()).data.user?.id ?? null;
+    const { error } = await db.from('hq_managers').insert({ organization_id: orgId, hq_id: hqId, user_id: userId, granted_by: me });
+    if (error) { toast.error('Не вдалося призначити: ' + error.message); return false; }
+    toast.success('Керівника призначено'); return true;
+  },
+  async removeManager(id: string) {
+    const { error } = await db.from('hq_managers').delete().eq('id', id);
+    if (error) { toast.error('Не вдалося забрати права'); return false; }
+    return true;
+  },
+  async openChat(orgId: string, hqId: string | null, kind: 'internal' | 'network' | 'general') {
+    const { data, error } = await db.rpc('open_party_chat', { _org_id: orgId, _hq_id: hqId, _kind: kind });
+    if (error) { toast.error(error.message); return null; }
+    return data as string;
+  },
+  async linkMemberUser(memberId: string, userId: string | null) {
+    const { error } = await db.from('hq_members').update({ user_id: userId }).eq('id', memberId);
+    if (error) { toast.error('Не вдалося прив’язати профіль'); return false; }
+    return true;
+  },
+
+  async listCampaigns(orgId: string) {
+    const { data } = await db.from('election_campaigns').select('*').eq('organization_id', orgId).order('created_at', { ascending: false });
+    return (data as Campaign[]) || [];
+  },
+  async saveCampaign(orgId: string, c: Partial<Campaign> & { name: string; election_type: ElectionType }) {
+    const payload: any = {
+      organization_id: orgId, name: c.name, election_type: c.election_type,
+      local_kind: c.election_type === 'local' ? c.local_kind || 'mayor' : null,
+      election_date: c.election_date || null, round: c.round || 1, status: c.status || 'active', notes: c.notes || null,
+    };
+    const res = c.id ? await db.from('election_campaigns').update(payload).eq('id', c.id)
+      : await db.from('election_campaigns').insert({ ...payload, created_by: (await supabase.auth.getUser()).data.user?.id ?? null });
+    if (res.error) { toast.error('Не вдалося зберегти кампанію: ' + res.error.message); return false; }
+    toast.success('Кампанію збережено'); return true;
+  },
+  async removeCampaign(id: string) {
+    const { error } = await db.from('election_campaigns').delete().eq('id', id);
+    if (error) { toast.error('Не вдалося видалити'); return false; }
+    return true;
+  },
+  async listCandidates(campaignId: string) {
+    const { data } = await db.from('campaign_candidates').select('*').eq('campaign_id', campaignId).order('ballot_number', { nullsFirst: false }).order('name');
+    return (data as Candidate[]) || [];
+  },
+  async saveCandidate(orgId: string, campaignId: string, c: Partial<Candidate> & { name: string }) {
+    const payload = { organization_id: orgId, campaign_id: campaignId, name: c.name, party: c.party || null, ballot_number: c.ballot_number ?? null, is_ours: !!c.is_ours };
+    const res = c.id ? await db.from('campaign_candidates').update(payload).eq('id', c.id) : await db.from('campaign_candidates').insert(payload);
+    if (res.error) { toast.error('Не вдалося зберегти: ' + res.error.message); return false; }
+    return true;
+  },
+  async removeCandidate(id: string) {
+    const { error } = await db.from('campaign_candidates').delete().eq('id', id);
+    if (error) { toast.error('Не вдалося видалити'); return false; }
+    return true;
+  },
+  async listOrgPrecincts(orgId: string) {
+    return (await fetchAll(() => db.from('precincts').select('*').eq('organization_id', orgId).order('number'))) as Precinct[];
+  },
+  async listProtocols(campaignId: string) {
+    return (await fetchAll(() => db.from('precinct_protocols').select('*').eq('campaign_id', campaignId))) as Protocol[];
+  },
+  async loadProtocolVotes(protocolId: string) {
+    const { data } = await db.from('protocol_votes').select('candidate_id, votes').eq('protocol_id', protocolId);
+    return (data as { candidate_id: string; votes: number }[]) || [];
+  },
+  async saveProtocol(orgId: string, campaignId: string, precinctId: string,
+    p: { voters_on_list: number; ballots_issued: number; invalid_ballots: number; status: string }, votes: Record<string, number>) {
+    const me = (await supabase.auth.getUser()).data.user?.id ?? null;
+    const { data, error } = await db.from('precinct_protocols')
+      .upsert({ organization_id: orgId, campaign_id: campaignId, precinct_id: precinctId, ...p, submitted_by: me }, { onConflict: 'campaign_id,precinct_id' })
+      .select('id').maybeSingle();
+    if (error || !data) { toast.error('Не вдалося зберегти протокол: ' + (error?.message || '')); return false; }
+    const rows = Object.entries(votes).map(([candidate_id, v]) => ({ protocol_id: data.id, candidate_id, votes: Math.max(0, Number(v) || 0) }));
+    if (rows.length) {
+      const r = await db.from('protocol_votes').upsert(rows, { onConflict: 'protocol_id,candidate_id' });
+      if (r.error) { toast.error('Не вдалося зберегти голоси: ' + r.error.message); return false; }
+    }
+    toast.success('Протокол збережено'); return true;
+  },
+  async removeProtocol(id: string) {
+    const { error } = await db.from('precinct_protocols').delete().eq('id', id);
+    if (error) { toast.error('Не вдалося видалити протокол'); return false; }
+    return true;
+  },
+  async results(campaignId: string) {
+    const [r, p] = await Promise.all([
+      db.rpc('campaign_results', { _campaign_id: campaignId }),
+      db.rpc('campaign_progress', { _campaign_id: campaignId }),
+    ]);
+    return {
+      votes: ((r.data as any[]) || []) as { hq_id: string | null; candidate_id: string; votes: number }[],
+      progress: ((p.data as any[]) || []) as { hq_id: string | null; precincts: number; protocols: number; voters: number; ballots: number; invalid: number }[],
+    };
+  },
+};
+
+/** Opens a conversation in the Messages page */
+export function goToConversation(navigate: (p: string) => void, conversationId: string) {
+  localStorage.setItem('currentChatConversationId', conversationId);
+  navigate('/messages');
+}
