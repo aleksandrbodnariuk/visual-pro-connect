@@ -59,7 +59,11 @@ export default function Messages() {
     const receiverId = localStorage.getItem("currentChatReceiverId");
     // Clear immediately so navigating back to /messages shows the list
     localStorage.removeItem("currentChatReceiverId");
-    loadChatsAndMessages(currentUser.id, receiverId);
+    const openConvId = localStorage.getItem("currentChatConversationId");
+    localStorage.removeItem("currentChatConversationId");
+    loadChatsAndMessages(currentUser.id, receiverId).then(() => {
+      if (openConvId) handleChatCreated(openConvId);
+    });
   }, [authLoading, isAuthenticated, currentUser?.id]);
 
   // Окремий useEffect для force-reload з правильними залежностями
