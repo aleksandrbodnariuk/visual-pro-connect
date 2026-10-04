@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Building2, Flag, ShieldCheck, Trash2 } from 'lucide-react';
+import { ArrowLeft, Building2, Flag, ShieldCheck, Trash2, Vote } from 'lucide-react';
+import { CampaignsPanel } from '@/components/party/CampaignsPanel';
 import { ORG_TYPES, orgActions, useOrganization } from '@/hooks/orgs/useOrganizations';
 import { PartySection } from '@/components/party/PartySection';
 import { PartyAccessPanel } from '@/components/party/PartyAccessPanel';
@@ -45,6 +46,7 @@ export default function OrganizationPage() {
               <TabsList className="flex-wrap h-auto">
                 <TabsTrigger value="about">Про організацію</TabsTrigger>
                 {hasParty && <TabsTrigger value="party"><Flag className="h-4 w-4 mr-1" />Партія</TabsTrigger>}
+                {hasParty && <TabsTrigger value="campaigns"><Vote className="h-4 w-4 mr-1" />Вибори</TabsTrigger>}
                 {isAdmin && <TabsTrigger value="access"><ShieldCheck className="h-4 w-4 mr-1" />Доступи</TabsTrigger>}
               </TabsList>
               <TabsContent value="about">
@@ -56,6 +58,11 @@ export default function OrganizationPage() {
               {hasParty && (
                 <TabsContent value="party">
                   <PartySection orgId={organization.id} canEdit={isAdmin} />
+                </TabsContent>
+              )}
+              {hasParty && (
+                <TabsContent value="campaigns">
+                  <CampaignsPanel orgId={organization.id} isAdmin={isAdmin} />
                 </TabsContent>
               )}
               {isAdmin && (
