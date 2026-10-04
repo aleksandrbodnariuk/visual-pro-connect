@@ -5,7 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash2, Megaphone, UserRound } from 'lucide-react';
+import { Plus, Trash2, Megaphone, UserRound, Pencil, Link2 } from 'lucide-react';
+import { HqMemberEditDialog } from './HqMemberEditDialog';
 import { partyActions, type HqLevel, type HqMember, type StructureTemplate } from '@/hooks/orgs/useOrganizations';
 import { toast } from 'sonner';
 
@@ -24,6 +25,7 @@ export function HqTeamPanel({ orgId, hqId, level, templates, canEdit }: Props) {
   const [phone, setPhone] = useState('');
   const [isAgitator, setIsAgitator] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<HqMember | null>(null);
 
   const template = templates.find((t) => t.level === level);
   const positions = template?.positions ?? [];
@@ -109,10 +111,10 @@ export function HqTeamPanel({ orgId, hqId, level, templates, canEdit }: Props) {
             {team.map((m) => (
               <div key={m.id} className="flex items-center justify-between gap-2 text-sm border-b last:border-0 py-1.5">
                 <div className="min-w-0">
-                  <p className="truncate">{m.full_name}</p>
+                  <p className="truncate flex items-center gap-1">{m.full_name}{m.user_id && <Link2 className="h-3 w-3 text-primary" />}</p>
                   <p className="text-xs text-muted-foreground truncate">{[m.position, m.phone].filter(Boolean).join(' · ')}</p>
                 </div>
-                {canEdit && <Button size="icon" variant="ghost" onClick={() => remove(m.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                {canEdit && <div className="flex shrink-0"><Button size="icon" variant="ghost" onClick={() => setEditing(m)}><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" onClick={() => remove(m.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>}
               </div>
             ))}
           </div>
@@ -128,12 +130,13 @@ export function HqTeamPanel({ orgId, hqId, level, templates, canEdit }: Props) {
                   <p className="truncate">{m.full_name} <Badge variant="secondary" className="ml-1">агітатор</Badge></p>
                   <p className="text-xs text-muted-foreground truncate">{m.phone}</p>
                 </div>
-                {canEdit && <Button size="icon" variant="ghost" onClick={() => remove(m.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                {canEdit && <div className="flex shrink-0"><Button size="icon" variant="ghost" onClick={() => setEditing(m)}><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" onClick={() => remove(m.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>}
               </div>
             ))}
           </div>
         </Card>
       </div>
+      <HqMemberEditDialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)} orgId={orgId} hqId={hqId} member={editing} positions={positions} onSaved={load} />
     </div>
   );
 }
