@@ -4,9 +4,12 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Building2, LayoutList, Pencil, Plus, Trash2, MapPin, Phone } from 'lucide-react';
+import { ArrowLeft, Building2, LayoutList, Pencil, Plus, Trash2, MapPin, Phone, MessagesSquare } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { HqChatsPanel } from './HqChatsPanel';
+import { HqManagersPanel } from './HqManagersPanel';
 import {
-  HQ_LEVELS, levelLabel, levelPlural, partyActions,
+  HQ_LEVELS, levelLabel, levelPlural, partyActions, partyExtra,
   type HqLevel, type PartyHq, type StructureTemplate,
 } from '@/hooks/orgs/useOrganizations';
 import { HqDialog } from './HqDialog';
@@ -18,7 +21,9 @@ const PARENT_LEVEL: Record<HqLevel, HqLevel | null> = {
   central: null, oblast: 'central', okrug: 'oblast', city: 'okrug', otg: 'okrug', village: 'otg',
 };
 
-export function PartySection({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
+export function PartySection({ orgId, canEdit: isAdmin }: { orgId: string; canEdit: boolean }) {
+  const { user } = useAuth();
+  const [managed, setManaged] = useState<Set<string>>(new Set());
   const [hqs, setHqs] = useState<PartyHq[]>([]);
   const [templates, setTemplates] = useState<StructureTemplate[]>([]);
   const [level, setLevel] = useState<HqLevel>('central');
@@ -29,10 +34,11 @@ export function PartySection({ orgId, canEdit }: { orgId: string; canEdit: boole
   const [query, setQuery] = useState('');
 
   const load = useCallback(async () => {
-    const [h, t] = await Promise.all([partyActions.listHqs(orgId), partyActions.listTemplates(orgId)]);
+    const [h, t, m] = await Promise.all([partyActions.listHqs(orgId), partyActions.listTemplates(orgId), partyExtra.listManagers(orgId)]);
     setHqs(h); setTemplates(t);
+    setManaged(new Set(m.filter((x) => x.user_id === user?.id).map((x) => x.hq_id)));
     setSelected((s) => (s ? h.find((x) => x.id === s.id) || null : null));
-  }, [orgId]);
+  }, [orgId, user?.id]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -45,11 +51,20 @@ export function PartySection({ orgId, canEdit }: { orgId: string; canEdit: boole
   const parentLevel = PARENT_LEVEL[level];
   const parents = parentLevel ? hqs.filter((h) => h.level === parentLevel) : [];
   const byId = useMemo(() => new Map(hqs.map((h) => [h.id, h])), [hqs]);
+  const canManage = (hq: PartyHq | null | undefined): boolean => {
+    if (isAdmin) return true;
+    let cur = hq; let guard = 0;
+    while (cur && guard++ < 10) { if (managed.has(cur.id)) return true; cur = cur.parent_id ? byId.get(cur.parent_id) : undefined; }
+    return false;
+  };
+  const canEdit = isAdmin;
   const list = hqs.filter((h) => h.level === level && (!query || `${h.name} ${h.region || ''}`.toLowerCase().includes(query.toLowerCase())));
 
   if (selected) {
     const parent = selected.parent_id ? byId.get(selected.parent_id) : null;
     const children = hqs.filter((h) => h.parent_id === selected.id);
+    const canEditHq = canManage(selected);
+    const childLevel = (HQ_LEVELS.find((l) => PARENT_LEVEL[l.value] === selected.level)?.value) || null;
     return (
       <div className="space-y-4">
         <Button variant="ghost" size="sm" onClick={() => setSelected(null)}><ArrowLeft className="h-4 w-4 mr-1" /> До списку</Button>
@@ -65,7 +80,7 @@ export function PartySection({ orgId, canEdit }: { orgId: string; canEdit: boole
                 {parent && <p>Підпорядковується: <button className="underline" onClick={() => setSelected(parent)}>{parent.name}</button></p>}
               </div>
             </div>
-            {canEdit && (
+            {canEditHq && (
               <Button size="sm" variant="outline" onClick={() => { setLevel(selected.level); setEditing(selected); setDialogOpen(true); }}>
                 <Pencil className="h-4 w-4 mr-1" /> Редагувати
               </Button>
@@ -79,14 +94,23 @@ export function PartySection({ orgId, canEdit }: { orgId: string; canEdit: boole
             <TabsTrigger value="team">Команда</TabsTrigger>
             <TabsTrigger value="precincts">Дільниці</TabsTrigger>
             <TabsTrigger value="children">Підлеглі штаби ({children.length})</TabsTrigger>
+            <TabsTrigger value="chats"><MessagesSquare className="h-4 w-4 mr-1" />Чати</TabsTrigger>
+            <TabsTrigger value="managers">Керівники</TabsTrigger>
           </TabsList>
           <TabsContent value="team">
-            <HqTeamPanel orgId={orgId} hqId={selected.id} level={selected.level} templates={templates} canEdit={canEdit} />
+            <HqTeamPanel orgId={orgId} hqId={selected.id} level={selected.level} templates={templates} canEdit={canEditHq} />
           </TabsContent>
           <TabsContent value="precincts">
-            <PrecinctsPanel orgId={orgId} hqId={selected.id} canEdit={canEdit} />
+            <PrecinctsPanel orgId={orgId} hqId={selected.id} canEdit={canEditHq} />
           </TabsContent>
+          <TabsContent value="chats"><HqChatsPanel orgId={orgId} hqId={selected.id} hqName={selected.name} /></TabsContent>
+          <TabsContent value="managers"><HqManagersPanel orgId={orgId} hqId={selected.id} isAdmin={isAdmin} onChanged={load} /></TabsContent>
           <TabsContent value="children">
+            {canEditHq && childLevel && (
+              <Button size="sm" className="mb-3" onClick={() => { setLevel(childLevel); setEditing(null); setDialogOpen(true); }}>
+                <Plus className="h-4 w-4 mr-1" /> Додати: {levelLabel(childLevel)}
+              </Button>
+            )}
             {children.length === 0 ? <p className="text-sm text-muted-foreground">Немає підлеглих штабів</p> : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                 {children.map((c) => (
@@ -123,6 +147,12 @@ export function PartySection({ orgId, canEdit }: { orgId: string; canEdit: boole
             ))}
           </div>
         </Card>
+        <Button variant="outline" className="w-full mt-2" onClick={async () => {
+          const id = await partyExtra.openChat(orgId, null, 'general');
+          if (id) { localStorage.setItem('currentChatConversationId', id); window.location.assign('/messages'); }
+        }}>
+          <MessagesSquare className="h-4 w-4 mr-1" /> Загальнопартійний чат
+        </Button>
         {canEdit && (
           <Button variant="outline" className="w-full mt-2" onClick={() => setTplOpen(true)}>
             <LayoutList className="h-4 w-4 mr-1" /> Структура штабів
