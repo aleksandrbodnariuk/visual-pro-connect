@@ -2,7 +2,7 @@
 import { Language } from "@/context/LanguageContext";
 
 export const translations: Record<Language, Record<string, string>> = {
-  uk: {
+  uk{
     // Auth page
     loginToApp: "Увійти на платформу",
     register: "Зареєструватися",
@@ -105,8 +105,6 @@ export const translations: Record<Language, Record<string, string>> = {
     marketplace: "Маркетплейс",
     groups: "Групи",
     organizations: "Організації",
-    groups: "Групи",
-    organizations: "Організації",
     findService: "Знайти послугу",
     findFriendsTitle: "Знаходьте нових друзів",
     myProfile: "Мій профіль",
@@ -134,7 +132,7 @@ export const translations: Record<Language, Record<string, string>> = {
     florists: "Флористи"
   },
   
-  en: {
+  en{
     // Auth page
     loginToApp: "Login to Platform",
     register: "Register",
@@ -237,14 +235,6 @@ export const translations: Record<Language, Record<string, string>> = {
     marketplace: "Marketplace",
     groups: "Groups",
     organizations: "Organizations",
-    groups: "Grupuri",
-    organizations: "Organizații",
-    groups: "Gruppen",
-    organizations: "Organisationen",
-    groups: "Grupy",
-    organizations: "Organizacje",
-    groups: "Groups",
-    organizations: "Organizations",
     findService: "Find a Service",
     findFriendsTitle: "Find new friends",
     myProfile: "My Profile",
@@ -272,7 +262,7 @@ export const translations: Record<Language, Record<string, string>> = {
     florists: "Florists"
   },
   
-  pl: {
+  pl{
     // Auth page
     loginToApp: "Zaloguj się do platformy",
     register: "Zarejestruj się",
@@ -374,14 +364,6 @@ export const translations: Record<Language, Record<string, string>> = {
     marketplace: "Marketplace",
     groups: "Grupy",
     organizations: "Organizacje",
-    groups: "Grupuri",
-    organizations: "Organizații",
-    groups: "Gruppen",
-    organizations: "Organisationen",
-    groups: "Grupy",
-    organizations: "Organizacje",
-    groups: "Groups",
-    organizations: "Organizations",
     findService: "Znajdź usługę",
     findFriendsTitle: "Znajdź nowych znajomych",
     myProfile: "Mój profil",
@@ -409,7 +391,7 @@ export const translations: Record<Language, Record<string, string>> = {
     florists: "Floryści"
   },
   
-  de: {
+  de{
     // Auth page
     loginToApp: "Bei der Plattform anmelden",
     register: "Registrieren",
@@ -538,7 +520,7 @@ export const translations: Record<Language, Record<string, string>> = {
     florists: "Floristen"
   },
   
-  ro: {
+  ro{
     // Auth page
     loginToApp: "Conectare la platformă",
     register: "Înregistrare",
@@ -640,14 +622,6 @@ export const translations: Record<Language, Record<string, string>> = {
     marketplace: "Marketplace",
     groups: "Grupuri",
     organizations: "Organizații",
-    groups: "Grupuri",
-    organizations: "Organizații",
-    groups: "Gruppen",
-    organizations: "Organisationen",
-    groups: "Grupy",
-    organizations: "Organizacje",
-    groups: "Groups",
-    organizations: "Organizations",
     findService: "Găsește un serviciu",
     findFriendsTitle: "Găsește prieteni noi",
     myProfile: "Profilul meu",
