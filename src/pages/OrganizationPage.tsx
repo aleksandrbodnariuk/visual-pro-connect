@@ -12,6 +12,7 @@ import { PartySection } from '@/components/party/PartySection';
 import { PartyAccessPanel } from '@/components/party/PartyAccessPanel';
 import { PartyPeoplePanel } from '@/components/party/PartyPeoplePanel';
 import { PartySymbols } from '@/components/party/PartySymbols';
+import { FlagBanner } from '@/components/party/FlagBanner';
 
 export default function OrganizationPage() {
   const { orgId } = useParams();
@@ -30,7 +31,7 @@ export default function OrganizationPage() {
         ) : (
           <>
             <Card className="overflow-hidden">
-              {organization.flag_url && <img src={organization.flag_url} alt={`Прапор ${organization.name}`} className="w-full h-20 md:h-28 object-cover" />}
+              <FlagBanner org={organization} canEdit={isAdmin} onChanged={reload} />
               <div className="p-4 flex flex-wrap items-center gap-4">
               <div className="h-16 w-16 rounded-xl bg-muted flex items-center justify-center overflow-hidden">
                 {organization.logo_url ? <img src={organization.logo_url} alt={organization.name} className="h-full w-full object-cover" /> : <Building2 className="h-8 w-8 text-muted-foreground" />}

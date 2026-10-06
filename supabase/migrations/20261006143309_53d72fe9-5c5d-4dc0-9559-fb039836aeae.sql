@@ -1,0 +1,1 @@
+ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS flag_position smallint NOT NULL DEFAULT 50;
