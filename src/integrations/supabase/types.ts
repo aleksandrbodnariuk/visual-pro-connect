@@ -1018,6 +1018,73 @@ export type Database = {
           },
         ]
       }
+      election_day_reports: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          notes: string | null
+          organization_id: string
+          photos: Json
+          precinct_id: string
+          quorum: boolean | null
+          slot: string | null
+          voted: number | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind: string
+          notes?: string | null
+          organization_id: string
+          photos?: Json
+          precinct_id: string
+          quorum?: boolean | null
+          slot?: string | null
+          voted?: number | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind?: string
+          notes?: string | null
+          organization_id?: string
+          photos?: Json
+          precinct_id?: string
+          quorum?: boolean | null
+          slot?: string | null
+          voted?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "election_day_reports_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "election_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "election_day_reports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "election_day_reports_precinct_id_fkey"
+            columns: ["precinct_id"]
+            isOneToOne: false
+            referencedRelation: "precincts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feed_ads: {
         Row: {
           advertiser_name: string
