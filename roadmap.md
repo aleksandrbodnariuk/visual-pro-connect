@@ -20,5 +20,6 @@
 - [x] Micro-animations: gentle fade-in for posts, disabled for reduced-motion users.
 - [x] Long-feed performance: off-screen posts skip rendering (content-visibility) instead of risky list virtualization.
 - [x] Colour contrast check: muted text meets readable contrast in light and dark themes.
-- [ ] «Актуальне» carousel at the top of the feed — waits for the owner to choose what it shows.
+- [ ] Add «Актуальне» above the home feed with today's most popular accessible posts ranked by reactions.
+- [ ] Verify daily ranking, access restrictions, and carousel navigation.
 - [x] Media CDN: files are already served through the storage CDN with caching; no change needed.
