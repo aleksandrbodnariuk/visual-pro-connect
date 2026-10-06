@@ -357,7 +357,8 @@ export interface Campaign {
   mode?: CampaignMode; precinct_ids?: string[] | null;
 }
 export interface Candidate { id: string; campaign_id: string; name: string; party: string | null; ballot_number: number | null; is_ours: boolean }
-export interface Protocol { id: string; campaign_id: string; precinct_id: string; voters_on_list: number; ballots_issued: number; invalid_ballots: number; status: string }
+export interface ProtocolPhoto { url: string; label: string }
+export interface Protocol { id: string; campaign_id: string; precinct_id: string; voters_on_list: number; ballots_issued: number; invalid_ballots: number; status: string; photos?: ProtocolPhoto[] | null }
 
 export const ELECTION_TYPES: { value: ElectionType; label: string; candidateLabel: string }[] = [
   { value: 'presidential', label: 'Президентські вибори', candidateLabel: 'Кандидат' },
@@ -461,7 +462,7 @@ export const partyExtra = {
     return (data as { candidate_id: string; votes: number }[]) || [];
   },
   async saveProtocol(orgId: string, campaignId: string, precinctId: string,
-    p: { voters_on_list: number; ballots_issued: number; invalid_ballots: number; status: string }, votes: Record<string, number>) {
+    p: { voters_on_list: number; ballots_issued: number; invalid_ballots: number; status: string; photos?: ProtocolPhoto[] }, votes: Record<string, number>) {
     const me = (await supabase.auth.getUser()).data.user?.id ?? null;
     const { data, error } = await db.from('precinct_protocols')
       .upsert({ organization_id: orgId, campaign_id: campaignId, precinct_id: precinctId, ...p, submitted_by: me }, { onConflict: 'campaign_id,precinct_id' })

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { orgActions, type Organization } from '@/hooks/orgs/useOrganizations';
+import { compressForProfile } from '@/lib/documentImage';
 
 const ACCEPT = 'image/png,image/jpeg,image/webp,image/svg+xml';
 const MAX = 5 * 1024 * 1024;
@@ -31,6 +32,7 @@ export function PartySymbols({ org, canEdit, onChanged }: { org: Organization; c
     if (file.size > MAX) { toast.error('Файл завеликий — максимум 5 МБ'); return; }
     if (!ACCEPT.split(',').includes(file.type)) { toast.error('Підтримуються PNG, JPG, WebP або SVG'); return; }
     setBusy(field);
+    file = await compressForProfile(file, 'symbol');
     const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
     const path = `${user.id}/org-symbols/${org.id}-${field}-${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from('posts').upload(path, file, { contentType: file.type, upsert: false });

@@ -11,6 +11,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { ArrowLeft, Plus, Trash2, Vote, FileCheck2, RefreshCw, Star, FlaskConical } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { CAMPAIGN_MODES, campaignPrecincts, type CampaignMode } from '@/lib/campaignMode';
+import { ProtocolPhotos } from './ProtocolPhotos';
+import type { ProtocolPhoto } from '@/hooks/orgs/useOrganizations';
 import {
   ELECTION_TYPES, HQ_LEVELS, LOCAL_KINDS, levelPlural, partyActions, partyExtra,
   type Campaign, type Candidate, type ElectionType, type HqLevel, type LocalKind, type PartyHq, type Precinct, type Protocol,
@@ -331,6 +333,7 @@ function ProtocolDialog({ orgId, campaign, precinct, protocol, candidates, readO
   const [ballots, setBallots] = useState(protocol?.ballots_issued ?? 0);
   const [invalid, setInvalid] = useState(protocol?.invalid_ballots ?? 0);
   const [votes, setVotes] = useState<Record<string, number>>({});
+  const [photos, setPhotos] = useState<ProtocolPhoto[]>(Array.isArray(protocol?.photos) ? protocol!.photos! : []);
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     if (!protocol) return;
@@ -341,7 +344,7 @@ function ProtocolDialog({ orgId, campaign, precinct, protocol, candidates, readO
   const save = async () => {
     setSaving(true);
     const all = Object.fromEntries(candidates.map((c) => [c.id, votes[c.id] || 0]));
-    const ok = await partyExtra.saveProtocol(orgId, campaign.id, precinct.id, { voters_on_list: voters, ballots_issued: ballots, invalid_ballots: invalid, status: 'submitted' }, all);
+    const ok = await partyExtra.saveProtocol(orgId, campaign.id, precinct.id, { voters_on_list: voters, ballots_issued: ballots, invalid_ballots: invalid, status: 'submitted', photos }, all);
     setSaving(false);
     if (ok) onSaved();
   };
@@ -369,6 +372,7 @@ function ProtocolDialog({ orgId, campaign, precinct, protocol, candidates, readO
           <p>Сума голосів: <b>{sum}</b>{voters > 0 && ballots > 0 && <> · Явка: <b>{((ballots / voters) * 100).toFixed(1)}%</b></>}</p>
           {mismatch && <p className="text-destructive text-xs">Увага: голоси ({sum}) + недійсні ({invalid}) не дорівнюють кількості бюлетенів ({ballots}).</p>}
         </div>
+        <ProtocolPhotos photos={photos} onChange={setPhotos} readOnly={readOnly} campaignId={campaign.id} precinctId={precinct.id} />
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Закрити</Button>
           {!readOnly && <Button onClick={save} disabled={saving}>Зберегти протокол</Button>}
