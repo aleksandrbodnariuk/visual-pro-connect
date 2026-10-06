@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { campaignPrecincts } from "./campaignMode.ts";
+import { campaignPrecincts } from "./campaignMode";
 
 const all = [{ id: "a" }, { id: "b" }, { id: "c" }];
 
