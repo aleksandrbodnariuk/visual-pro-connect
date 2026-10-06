@@ -58,6 +58,24 @@ export type Database = {
           },
         ]
       }
+      ad_managers: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       ad_network_revenue: {
         Row: {
           ad_order_id: string
@@ -923,6 +941,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      feed_ads: {
+        Row: {
+          advertiser_name: string
+          author_id: string
+          clicks_count: number
+          created_at: string
+          cta_text: string
+          cta_url: string
+          description: string
+          end_date: string
+          id: string
+          media_url: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          start_date: string
+          status: string
+          target_views: number | null
+          title: string
+          updated_at: string
+          views_count: number
+        }
+        Insert: {
+          advertiser_name: string
+          author_id?: string
+          clicks_count?: number
+          created_at?: string
+          cta_text?: string
+          cta_url: string
+          description?: string
+          end_date?: string
+          id?: string
+          media_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date?: string
+          status?: string
+          target_views?: number | null
+          title: string
+          updated_at?: string
+          views_count?: number
+        }
+        Update: {
+          advertiser_name?: string
+          author_id?: string
+          clicks_count?: number
+          created_at?: string
+          cta_text?: string
+          cta_url?: string
+          description?: string
+          end_date?: string
+          id?: string
+          media_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date?: string
+          status?: string
+          target_views?: number | null
+          title?: string
+          updated_at?: string
+          views_count?: number
+        }
+        Relationships: []
       }
       financial_audit_log: {
         Row: {
@@ -4331,6 +4415,7 @@ export type Database = {
         Args: { _body: string; _title: string; _url: string; _user_id: string }
         Returns: undefined
       }
+      is_ad_manager: { Args: { _user_id: string }; Returns: boolean }
       is_admin: { Args: { user_id: string }; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
       is_conversation_member: {
@@ -4385,6 +4470,10 @@ export type Database = {
       }
       process_ad_order: { Args: { _ad_order_id: string }; Returns: Json }
       process_order_profit: { Args: { _order_id: string }; Returns: Json }
+      record_feed_ad_event: {
+        Args: { _ad_id: string; _kind: string }
+        Returns: undefined
+      }
       record_visit: { Args: never; Returns: undefined }
       reject_certificate_purchase: {
         Args: { _admin_note?: string; _request_id: string }
