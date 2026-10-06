@@ -36,7 +36,10 @@ export function StructureTemplateDialog({ open, onOpenChange, orgId, templates, 
   const add = () => { if (draft.trim()) { setPositions([...positions, draft.trim()]); setDraft(''); } };
   const up = (i: number) => { if (i === 0) return; const n = [...positions]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; setPositions(n); };
 
-  const save = async () => { if (await partyActions.saveTemplate(orgId, level, positions)) onSaved(); };
+  const save = async () => {
+    const clean = positions.map((p) => p.trim()).filter(Boolean);
+    if (await partyActions.saveTemplate(orgId, level, clean)) onSaved();
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -49,7 +52,13 @@ export function StructureTemplateDialog({ open, onOpenChange, orgId, templates, 
         <div className="space-y-1">
           {positions.map((p, i) => (
             <div key={i} className="flex items-center gap-2 border rounded-md px-2 py-1">
-              <span className="flex-1 text-sm">{p}</span>
+              <Input
+                className="flex-1 h-9 text-sm border-transparent bg-transparent focus-visible:border-input"
+                value={p}
+                aria-label="Назва посади"
+                onChange={(e) => { const n = [...positions]; n[i] = e.target.value; setPositions(n); }}
+                onBlur={() => { if (!positions[i]?.trim()) setPositions(positions.filter((_, j) => j !== i)); }}
+              />
               <Button size="icon" variant="ghost" onClick={() => up(i)}><ArrowUp className="h-4 w-4" /></Button>
               <Button size="icon" variant="ghost" onClick={() => setPositions(positions.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
             </div>
