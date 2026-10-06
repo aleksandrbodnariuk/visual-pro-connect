@@ -11,11 +11,12 @@ import { ORG_TYPES, orgActions, useOrganization } from '@/hooks/orgs/useOrganiza
 import { PartySection } from '@/components/party/PartySection';
 import { PartyAccessPanel } from '@/components/party/PartyAccessPanel';
 import { PartyPeoplePanel } from '@/components/party/PartyPeoplePanel';
+import { PartySymbols } from '@/components/party/PartySymbols';
 
 export default function OrganizationPage() {
   const { orgId } = useParams();
   const navigate = useNavigate();
-  const { organization, isAdmin, hasParty, loading } = useOrganization(orgId);
+  const { organization, isAdmin, hasParty, loading, reload } = useOrganization(orgId);
 
   useEffect(() => { if (organization) document.title = `${organization.name} — Організації`; }, [organization]);
 
@@ -28,7 +29,9 @@ export default function OrganizationPage() {
           <p className="text-muted-foreground">Організацію не знайдено</p>
         ) : (
           <>
-            <Card className="p-4 flex flex-wrap items-center gap-4">
+            <Card className="overflow-hidden">
+              {organization.flag_url && <img src={organization.flag_url} alt={`Прапор ${organization.name}`} className="w-full h-20 md:h-28 object-cover" />}
+              <div className="p-4 flex flex-wrap items-center gap-4">
               <div className="h-16 w-16 rounded-xl bg-muted flex items-center justify-center overflow-hidden">
                 {organization.logo_url ? <img src={organization.logo_url} alt={organization.name} className="h-full w-full object-cover" /> : <Building2 className="h-8 w-8 text-muted-foreground" />}
               </div>
@@ -41,6 +44,7 @@ export default function OrganizationPage() {
                   if (confirm('Видалити організацію з усіма даними?') && await orgActions.remove(organization.id)) navigate('/organizations');
                 }}><Trash2 className="h-4 w-4 mr-1 text-destructive" /> Видалити</Button>
               )}
+              </div>
             </Card>
 
             <Tabs defaultValue={hasParty ? 'party' : 'about'}>
@@ -51,10 +55,13 @@ export default function OrganizationPage() {
                 {isAdmin && <TabsTrigger value="access"><ShieldCheck className="h-4 w-4 mr-1" />Доступи</TabsTrigger>}
               </TabsList>
               <TabsContent value="about">
+                <div className="space-y-3">
                 <Card className="p-4 space-y-2">
                   <p className="whitespace-pre-wrap text-sm">{organization.description || 'Опис відсутній'}</p>
                   {organization.website && <a href={organization.website} target="_blank" rel="noreferrer" className="text-primary text-sm underline">{organization.website}</a>}
                 </Card>
+                <PartySymbols org={organization} canEdit={isAdmin} onChanged={reload} />
+                </div>
               </TabsContent>
               {hasParty && (
                 <TabsContent value="party">
@@ -63,10 +70,12 @@ export default function OrganizationPage() {
                       <TabsTrigger value="hqs">Штаби</TabsTrigger>
                       <TabsTrigger value="leaders">Керівництво</TabsTrigger>
                       <TabsTrigger value="members">Члени партії</TabsTrigger>
+                      <TabsTrigger value="symbols">Символіка</TabsTrigger>
                     </TabsList>
                     <TabsContent value="hqs"><PartySection orgId={organization.id} canEdit={isAdmin} /></TabsContent>
                     <TabsContent value="leaders"><PartyPeoplePanel orgId={organization.id} mode="leaders" /></TabsContent>
                     <TabsContent value="members"><PartyPeoplePanel orgId={organization.id} mode="members" /></TabsContent>
+                    <TabsContent value="symbols"><PartySymbols org={organization} canEdit={isAdmin} onChanged={reload} /></TabsContent>
                   </Tabs>
                 </TabsContent>
               )}

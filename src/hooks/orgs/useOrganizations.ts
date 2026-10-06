@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import type { CampaignMode } from '@/lib/campaignMode';
+export type { CampaignMode } from '@/lib/campaignMode';
 
 export type OrgType = 'party' | 'company' | 'ngo' | 'other';
 export type HqLevel = 'central' | 'oblast' | 'okrug' | 'city' | 'otg' | 'village';
@@ -12,6 +14,7 @@ export interface Organization {
   name: string;
   description: string | null;
   logo_url: string | null;
+  flag_url?: string | null;
   type: OrgType;
   website: string | null;
   created_by: string | null;
@@ -351,6 +354,7 @@ export type LocalKind = 'mayor' | 'oblast_council' | 'raion_council' | 'city_cou
 export interface Campaign {
   id: string; organization_id: string; election_type: ElectionType; local_kind: LocalKind | null;
   name: string; election_date: string | null; round: number; status: 'draft' | 'active' | 'finished'; notes: string | null; is_test?: boolean;
+  mode?: CampaignMode; precinct_ids?: string[] | null;
 }
 export interface Candidate { id: string; campaign_id: string; name: string; party: string | null; ballot_number: number | null; is_ours: boolean }
 export interface Protocol { id: string; campaign_id: string; precinct_id: string; voters_on_list: number; ballots_issued: number; invalid_ballots: number; status: string }
@@ -419,6 +423,7 @@ export const partyExtra = {
       organization_id: orgId, name: c.name, election_type: c.election_type,
       local_kind: c.election_type === 'local' ? c.local_kind || 'mayor' : null,
       election_date: c.election_date || null, round: c.round || 1, status: c.status || 'active', notes: c.notes || null,
+      mode: c.mode || 'real', precinct_ids: c.mode && c.mode !== 'real' && c.precinct_ids?.length ? c.precinct_ids : null,
     };
     const res = c.id ? await db.from('election_campaigns').update(payload).eq('id', c.id)
       : await db.from('election_campaigns').insert({ ...payload, created_by: (await supabase.auth.getUser()).data.user?.id ?? null });
