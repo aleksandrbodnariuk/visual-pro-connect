@@ -386,15 +386,15 @@ export function useFeedData(postIds: string[]) {
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comment_likes' }, payload => {
-        const row = (payload.new as { comment_id?: string } | undefined) || (payload.old as { comment_id?: string } | undefined);
-        const commentId = row?.comment_id;
+        const commentId = (payload.new as { comment_id?: string } | undefined)?.comment_id
+          || (payload.old as { comment_id?: string } | undefined)?.comment_id;
         if (commentId && knownCommentIdsRef.current.has(commentId)) {
           scheduleRealtimeRefresh(`comment-likes:${commentId}`, () => { void refreshCommentLikes(commentId); });
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'post_likes' }, (payload) => {
-        const row = (payload.new as { post_id?: string } | undefined) || (payload.old as { post_id?: string } | undefined);
-        const postId = row?.post_id;
+        const postId = (payload.new as { post_id?: string } | undefined)?.post_id
+          || (payload.old as { post_id?: string } | undefined)?.post_id;
         if (postId && visiblePostIdsRef.current.has(postId)) {
           scheduleRealtimeRefresh(`post-likes:${postId}`, () => { void refreshPostLikes(postId); });
         }
