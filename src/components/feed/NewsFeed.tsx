@@ -18,6 +18,8 @@ import { extractVideoEmbed } from "@/lib/videoEmbed";
 import { ImageCropEditor } from "@/components/ui/ImageCropEditor";
 import { compressImageFromDataUrl, dataUrlToBlob, validateImageSize, OUTPUT_FORMAT, OUTPUT_EXTENSION } from '@/lib/imageCompression';
 import { useFeedData } from "@/hooks/useFeedData";
+import { buildFeedGroupFilter, getFeedGroupIds } from "@/lib/feedGroups";
+import { RecommendedGroupPosts } from "./RecommendedGroupPosts";
 
 const PAGE_SIZE = 12;
 const PREFETCH_THRESHOLD = 0.7; // trigger loadMore at 70% scroll
@@ -101,11 +103,26 @@ export function NewsFeed() {
     }
   };
 
-  /** Cursor-based fetch: returns posts strictly older than `cursor` (or latest if null). */
+  /** Approved group memberships of the current user (cached per session). */
+  const myGroupIdsRef = useRef<string[] | null>(null);
+  const getMyGroupIds = async (): Promise<string[]> => {
+    if (myGroupIdsRef.current) return myGroupIdsRef.current;
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return (myGroupIdsRef.current = []);
+    const { data } = await supabase.from('group_members').select('group_id')
+      .eq('user_id', uid).eq('status', 'approved');
+    myGroupIdsRef.current = getFeedGroupIds(data || []);
+    return myGroupIdsRef.current;
+  };
+
+  /** Cursor-based fetch: personal posts + posts of joined groups only. */
   const fetchPostsCursor = async (cursor: string | null) => {
+    const myGroups = await getMyGroupIds();
     let query = supabase
       .from('posts')
       .select('*')
+      .or(buildFeedGroupFilter(myGroups))
       .order('created_at', { ascending: false })
       .limit(PAGE_SIZE);
     if (cursor) query = query.lt('created_at', cursor);
@@ -504,6 +521,9 @@ export function NewsFeed() {
         </TabsList>
         
         <TabsContent value={activeCategory} className="space-y-4 md:space-y-6 mt-4 md:mt-6">
+          {activeCategory === 'all' && (
+            <RecommendedGroupPosts onJoined={() => { myGroupIdsRef.current = null; loadInitialPosts(); }} />
+          )}
           {filteredPosts.length > 0 ? (
             filteredPosts.map((post) => {
               let postAuthor = post.author;
