@@ -521,6 +521,9 @@ export function NewsFeed() {
         </TabsList>
         
         <TabsContent value={activeCategory} className="space-y-4 md:space-y-6 mt-4 md:mt-6">
+          {activeCategory === 'all' && (
+            <RecommendedGroupPosts onJoined={() => { myGroupIdsRef.current = null; loadInitialPosts(); }} />
+          )}
           {filteredPosts.length > 0 ? (
             filteredPosts.map((post) => {
               let postAuthor = post.author;
