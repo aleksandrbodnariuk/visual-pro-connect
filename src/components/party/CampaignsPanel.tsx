@@ -15,6 +15,7 @@ import { CAMPAIGN_MODES, campaignPrecincts, type CampaignMode } from '@/lib/camp
 import { ProtocolPhotos } from './ProtocolPhotos';
 import { TentsPanel } from './TentsPanel';
 import { ElectionDayPanel } from './ElectionDayPanel';
+import { HqBoardPanel } from './HqBoardPanel';
 import type { ProtocolPhoto } from '@/hooks/orgs/useOrganizations';
 import {
   ELECTION_TYPES, HQ_LEVELS, LOCAL_KINDS, levelPlural, partyActions, partyExtra,
@@ -220,12 +221,14 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
       <Tabs defaultValue="results">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="results">Результати</TabsTrigger>
+          <TabsTrigger value="board">Табло</TabsTrigger>
           <TabsTrigger value="day">День виборів</TabsTrigger>
           <TabsTrigger value="protocols">Протоколи</TabsTrigger>
           <TabsTrigger value="candidates">{campaign.election_type === 'parliamentary' ? 'Партії / кандидати' : 'Кандидати'} ({candidates.length})</TabsTrigger>
           <TabsTrigger value="tents">Намети</TabsTrigger>
         </TabsList>
         <TabsContent value="results"><ResultsView hqs={hqs} candidates={candidates} results={results} onRefresh={load} /></TabsContent>
+        <TabsContent value="board"><HqBoardPanel campaign={campaign} hqs={hqs} precincts={precincts} protocols={protocols} onRefresh={load} /></TabsContent>
         <TabsContent value="day"><ElectionDayPanel orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={canManageHq} /></TabsContent>
         <TabsContent value="protocols">
           <ProtocolsView orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} protocols={protocols} candidates={candidates} canManageHq={canManageHq} onSaved={load} />
