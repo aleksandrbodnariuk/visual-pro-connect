@@ -43,7 +43,7 @@ export default function Groups() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-3 md:px-4 pt-20 pb-6 grid grid-cols-12 gap-4">
+      <div className="container mx-auto grid grid-cols-12 gap-4 px-3 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-20 md:px-4 md:pb-6">
         <Sidebar className="hidden lg:block col-span-3 sticky top-20 self-start max-h-[calc(100vh-6rem)] overflow-y-auto" />
         <main className="col-span-12 lg:col-span-9 space-y-4">
           <div className="flex items-center justify-between gap-2 flex-wrap">
