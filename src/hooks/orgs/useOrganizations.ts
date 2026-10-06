@@ -16,6 +16,7 @@ export interface Organization {
   description: string | null;
   logo_url: string | null;
   flag_url?: string | null;
+  flag_position?: number | null;
   type: OrgType;
   website: string | null;
   created_by: string | null;
