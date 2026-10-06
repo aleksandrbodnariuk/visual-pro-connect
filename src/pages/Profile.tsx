@@ -110,7 +110,7 @@ export default function Profile() {
             .eq('user_id', targetUserId)
             .is('group_id', null)
             .order('created_at', { ascending: false })
-            .limit(100);
+            .range(0, 9);
           
           if (postsResult) {
             postsData = postsResult;
