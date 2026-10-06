@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { CAMPAIGN_MODES, campaignPrecincts, type CampaignMode } from '@/lib/campaignMode';
 import { ProtocolPhotos } from './ProtocolPhotos';
+import { TentsPanel } from './TentsPanel';
 import type { ProtocolPhoto } from '@/hooks/orgs/useOrganizations';
 import {
   ELECTION_TYPES, HQ_LEVELS, LOCAL_KINDS, levelPlural, partyActions, partyExtra,
@@ -220,6 +221,7 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
           <TabsTrigger value="results">Результати</TabsTrigger>
           <TabsTrigger value="protocols">Протоколи</TabsTrigger>
           <TabsTrigger value="candidates">{campaign.election_type === 'parliamentary' ? 'Партії / кандидати' : 'Кандидати'} ({candidates.length})</TabsTrigger>
+          <TabsTrigger value="tents">Намети</TabsTrigger>
         </TabsList>
         <TabsContent value="results"><ResultsView hqs={hqs} candidates={candidates} results={results} onRefresh={load} /></TabsContent>
         <TabsContent value="protocols">
@@ -228,6 +230,7 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
         <TabsContent value="candidates">
           <CandidatesView orgId={orgId} campaignId={campaign.id} candidates={candidates} label={candLabel} isAdmin={isAdmin} onSaved={load} />
         </TabsContent>
+        <TabsContent value="tents"><TentsPanel orgId={orgId} campaign={campaign} hqs={hqs} canManageHq={canManageHq} /></TabsContent>
       </Tabs>
     </div>
   );
