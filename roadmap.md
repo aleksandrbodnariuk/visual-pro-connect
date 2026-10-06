@@ -7,3 +7,4 @@
 - [x] Make all admin tables, forms, and dialogs usable on mobile.
 - [x] Verify mobile and desktop layouts, interactions, and current build status.
 - [x] Verify the group feed continuation control specifically on mobile.
+- [x] Keep the last group card and its «Відкрити» button above mobile navigation.
