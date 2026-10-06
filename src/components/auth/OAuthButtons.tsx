@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
+import { translateAuthError } from '@/lib/authErrors';
 
 export default function OAuthButtons() {
   const [loading, setLoading] = useState<string | null>(null);
@@ -13,16 +14,19 @@ export default function OAuthButtons() {
         provider,
         options: {
           redirectTo: window.location.origin + '/',
+          ...(provider === 'facebook' ? { scopes: 'email public_profile' } : {}),
+          ...(provider === 'google' ? { queryParams: { prompt: 'select_account' } } : {}),
         },
       });
       if (error) {
         console.error(`OAuth ${provider} error:`, error);
-        toast.error(error.message);
+        toast.error(translateAuthError(error));
+        setLoading(null);
       }
+      // On success the browser navigates away; keep the button disabled.
     } catch (err) {
       console.error(`OAuth ${provider} exception:`, err);
-      toast.error('Помилка входу');
-    } finally {
+      toast.error(translateAuthError(err));
       setLoading(null);
     }
   };

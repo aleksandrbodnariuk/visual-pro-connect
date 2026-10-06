@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef, Re
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { User as AppUser } from '@/hooks/users/types';
+import { consumeAuthErrorFromUrl } from '@/lib/authErrors';
 
 interface AuthContextType {
   user: User | null;
@@ -78,6 +79,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, 10000);
     return () => clearTimeout(timeout);
   }, [loading]);
+
+  // Show OAuth / email-link errors returned in the URL (in Ukrainian)
+  useEffect(() => {
+    const msg = consumeAuthErrorFromUrl();
+    if (msg) setTimeout(() => import('sonner').then(({ toast }) => toast.error(msg, { duration: 10000 })), 800);
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
