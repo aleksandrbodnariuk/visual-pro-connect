@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, Plus, Trash2, Vote, FileCheck2, RefreshCw, Star, FlaskConical } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
 import { CAMPAIGN_MODES, campaignPrecincts, type CampaignMode } from '@/lib/campaignMode';
 import { ProtocolPhotos } from './ProtocolPhotos';
 import type { ProtocolPhoto } from '@/hooks/orgs/useOrganizations';
@@ -346,7 +347,12 @@ function ProtocolDialog({ orgId, campaign, precinct, protocol, candidates, readO
     const all = Object.fromEntries(candidates.map((c) => [c.id, votes[c.id] || 0]));
     const ok = await partyExtra.saveProtocol(orgId, campaign.id, precinct.id, { voters_on_list: voters, ballots_issued: ballots, invalid_ballots: invalid, status: 'submitted', photos }, all);
     setSaving(false);
-    if (ok) onSaved();
+    if (ok) {
+      toast.success(`Протокол дільниці № ${precinct.number} збережено`, {
+        description: `Голосів: ${sum}${photos.length ? ` · фото: ${photos.length}` : ''}`, duration: 5000,
+      });
+      onSaved();
+    }
   };
   const num = (v: number, set: (n: number) => void) => (
     <Input type="number" min={0} inputMode="numeric" disabled={readOnly} value={v || ''} onChange={(e) => set(Math.max(0, Number(e.target.value) || 0))} />
