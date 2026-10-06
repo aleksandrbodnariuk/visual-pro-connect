@@ -168,7 +168,7 @@ export function PostCard({
   };
 
   return (
-    <div className={cn("creative-card card-hover", className)}>
+    <div className={cn("creative-card card-hover feed-card", className)}>
       {/* Header */}
       <div className="flex items-center justify-between p-3">
         <Link
