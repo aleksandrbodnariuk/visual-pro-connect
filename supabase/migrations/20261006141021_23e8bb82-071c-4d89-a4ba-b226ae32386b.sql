@@ -1,0 +1,1 @@
+ALTER TABLE public.precinct_protocols ADD COLUMN IF NOT EXISTS photos jsonb NOT NULL DEFAULT '[]'::jsonb;

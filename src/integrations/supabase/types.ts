@@ -2433,6 +2433,7 @@ export type Database = {
           invalid_ballots: number
           notes: string | null
           organization_id: string
+          photos: Json
           precinct_id: string
           status: string
           submitted_by: string | null
@@ -2447,6 +2448,7 @@ export type Database = {
           invalid_ballots?: number
           notes?: string | null
           organization_id: string
+          photos?: Json
           precinct_id: string
           status?: string
           submitted_by?: string | null
@@ -2461,6 +2463,7 @@ export type Database = {
           invalid_ballots?: number
           notes?: string | null
           organization_id?: string
+          photos?: Json
           precinct_id?: string
           status?: string
           submitted_by?: string | null
