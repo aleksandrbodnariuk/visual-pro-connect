@@ -1,15 +1,16 @@
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { MessagesSquare, Network, Users } from 'lucide-react';
-import { goToConversation, partyExtra } from '@/hooks/orgs/useOrganizations';
+import { Loader2, MessagesSquare, Network, Users } from 'lucide-react';
+import { partyExtra } from '@/hooks/orgs/useOrganizations';
+import { cn } from '@/lib/utils';
+import { EmbeddedConversation } from './EmbeddedConversation';
+
+type Kind = 'internal' | 'network' | 'general';
 
 export function HqChatsPanel({ orgId, hqId, hqName }: { orgId: string; hqId: string | null; hqName?: string }) {
-  const navigate = useNavigate();
-  const open = async (kind: 'internal' | 'network' | 'general') => {
-    const id = await partyExtra.openChat(orgId, kind === 'general' ? null : hqId, kind);
-    if (id) goToConversation(navigate, id);
-  };
+  const [active, setActive] = useState<{ kind: Kind; convId: string; title: string } | null>(null);
+  const [opening, setOpening] = useState<Kind | null>(null);
+
   const items = [
     ...(hqId ? [
       { kind: 'internal' as const, icon: Users, title: 'Внутрішній чат штабу', desc: `Команда та керівники «${hqName}»` },
@@ -17,19 +18,41 @@ export function HqChatsPanel({ orgId, hqId, hqName }: { orgId: string; hqId: str
     ] : []),
     { kind: 'general' as const, icon: MessagesSquare, title: 'Загальнопартійний чат', desc: 'Усі, хто має доступ до партії' },
   ];
+
+  const open = async (it: (typeof items)[number]) => {
+    setOpening(it.kind);
+    const id = await partyExtra.openChat(orgId, it.kind === 'general' ? null : hqId, it.kind);
+    setOpening(null);
+    if (id) setActive({ kind: it.kind, convId: id, title: it.title });
+  };
+
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {items.map((it) => (
-          <Card key={it.kind} className="p-4 flex flex-col gap-2">
-            <it.icon className="h-6 w-6 text-primary" />
-            <p className="font-medium">{it.title}</p>
-            <p className="text-xs text-muted-foreground flex-1">{it.desc}</p>
-            <Button size="sm" onClick={() => open(it.kind)}>Відкрити чат</Button>
-          </Card>
-        ))}
+    <Card className="overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] h-[70vh] min-h-[420px]">
+        <div className={cn('border-r overflow-y-auto', active ? 'hidden md:block' : 'block')}>
+          {items.map((it) => (
+            <button
+              key={it.kind}
+              onClick={() => open(it)}
+              className={cn('w-full text-left flex gap-3 p-3 min-h-[60px] border-b hover:bg-muted/60 transition-colors', active?.kind === it.kind && 'bg-muted')}
+            >
+              {opening === it.kind ? <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" /> : <it.icon className="h-5 w-5 text-primary shrink-0" />}
+              <span className="min-w-0">
+                <span className="block font-medium">{it.title}</span>
+                <span className="block text-xs text-muted-foreground">{it.desc}</span>
+              </span>
+            </button>
+          ))}
+          <p className="p-3 text-xs text-muted-foreground">Учасники додаються автоматично при відкритті: люди з команди, прив’язані до профілю, та керівники штабів.</p>
+        </div>
+        <div className={cn('min-h-0', active ? 'flex flex-col' : 'hidden md:flex md:flex-col')}>
+          {active ? (
+            <EmbeddedConversation conversationId={active.convId} title={active.title} onBack={() => setActive(null)} />
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground p-6 text-center">Оберіть чат ліворуч, щоб почати спілкування</div>
+          )}
+        </div>
       </div>
-      <p className="text-xs text-muted-foreground">Учасники додаються автоматично при відкритті: люди з команди, прив’язані до профілю на сайті, та керівники штабів. Чати відкриваються в розділі «Повідомлення».</p>
-    </div>
+    </Card>
   );
 }

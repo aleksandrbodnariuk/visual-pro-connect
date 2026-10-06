@@ -32,6 +32,7 @@ export function PartySection({ orgId, canEdit: isAdmin }: { orgId: string; canEd
   const [editing, setEditing] = useState<PartyHq | null>(null);
   const [tplOpen, setTplOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [showGeneral, setShowGeneral] = useState(false);
 
   const load = useCallback(async () => {
     const [h, t, m] = await Promise.all([partyActions.listHqs(orgId), partyActions.listTemplates(orgId), partyExtra.listManagers(orgId)]);
@@ -147,11 +148,8 @@ export function PartySection({ orgId, canEdit: isAdmin }: { orgId: string; canEd
             ))}
           </div>
         </Card>
-        <Button variant="outline" className="w-full mt-2" onClick={async () => {
-          const id = await partyExtra.openChat(orgId, null, 'general');
-          if (id) { localStorage.setItem('currentChatConversationId', id); window.location.assign('/messages'); }
-        }}>
-          <MessagesSquare className="h-4 w-4 mr-1" /> Загальнопартійний чат
+        <Button variant={showGeneral ? 'default' : 'outline'} className="w-full mt-2 min-h-[44px]" onClick={() => setShowGeneral((v) => !v)}>
+          <MessagesSquare className="h-4 w-4 mr-1" /> {showGeneral ? 'Сховати чат' : 'Загальнопартійний чат'}
         </Button>
         {canEdit && (
           <Button variant="outline" className="w-full mt-2" onClick={() => setTplOpen(true)}>
@@ -161,6 +159,7 @@ export function PartySection({ orgId, canEdit: isAdmin }: { orgId: string; canEd
       </div>
 
       <div className="col-span-12 md:col-span-8 xl:col-span-9 space-y-3">
+        {showGeneral && <HqChatsPanel orgId={orgId} hqId={null} />}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">{levelPlural(level)}</h2>
           {canEdit && (
