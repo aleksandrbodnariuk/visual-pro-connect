@@ -485,7 +485,7 @@ export function PayoutsTab() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="h-auto w-full justify-start overflow-x-auto">
           <TabsTrigger value="pending">
             На виплату {pending.length > 0 && <Badge variant="destructive" className="ml-1 text-xs">{pending.length}</Badge>}
           </TabsTrigger>

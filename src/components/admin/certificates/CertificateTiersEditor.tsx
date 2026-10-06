@@ -294,7 +294,7 @@ export function CertificateTiersEditor() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <Label className="mb-1 block">
                     Назва <span className="text-destructive">*</span>
@@ -360,7 +360,7 @@ export function CertificateTiersEditor() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <Label className="mb-1 block">Колір (градієнт)</Label>
                   <select

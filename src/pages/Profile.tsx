@@ -320,7 +320,11 @@ export default function Profile() {
       }
 
       // Оновлюємо локальний стан
-      setPosts(posts.filter(post => post.id !== postId));
+      setPosts((currentPosts) => currentPosts.filter(post => post.id !== postId));
+      setUser((currentUser: any) => currentUser ? {
+        ...currentUser,
+        postsCount: Math.max(0, (currentUser.postsCount || 0) - 1)
+      } : currentUser);
       toast.success("Публікацію видалено");
     } catch (error) {
       console.error('Помилка видалення:', error);

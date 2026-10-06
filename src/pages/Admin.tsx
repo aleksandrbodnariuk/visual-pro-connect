@@ -80,12 +80,12 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen pt-14 sm:pt-16 3xl:pt-20 pb-safe-nav">
+    <div className="min-h-screen min-w-0 overflow-x-hidden pt-14 sm:pt-16 3xl:pt-20 pb-safe-nav">
       <Navbar />
-      <div className="container py-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Панель адміністратора</h1>
+      <div className="container min-w-0 px-2 py-4 sm:px-4 sm:py-8">
+        <div className="mb-4 flex min-w-0 flex-wrap items-center justify-between gap-3 sm:mb-6">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold sm:text-3xl">Панель адміністратора</h1>
             <p className="text-muted-foreground">Управління сайтом Спільнота B&C</p>
             
             {currentUser.founder_admin && (

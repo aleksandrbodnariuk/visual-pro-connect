@@ -5,7 +5,7 @@ import { MarketplaceCategoriesManager } from "@/components/admin/marketplace/Mar
 export function MarketplaceTab() {
   return (
     <Tabs defaultValue="listings" className="w-full">
-      <TabsList>
+      <TabsList className="h-auto w-full justify-start overflow-x-auto">
         <TabsTrigger value="listings">Оголошення</TabsTrigger>
         <TabsTrigger value="categories">Категорії</TabsTrigger>
       </TabsList>
