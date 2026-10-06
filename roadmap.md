@@ -12,6 +12,6 @@
 - [x] Make post and comment reactions optimistic with rollback and Ukrainian errors.
 - [x] Add feed query indexes for newest posts, group posts, and post comments.
 - [ ] Verify signed-in feed and group reactions on desktop and mobile — blocked because this external authentication session is unavailable to the preview checker.
-- [ ] Review all current security and database warnings, classify real risks versus intentional settings, and safely fix everything possible without changing existing access behavior.
-- [ ] Restrict unnecessary execution rights on SECURITY DEFINER functions and set a safe `search_path` where missing.
-- [ ] Re-run the security checker and document warnings that require Supabase Dashboard actions or should remain unchanged.
+- [x] Review all current security and database warnings, classify real risks versus intentional settings, and safely fix everything possible without changing existing access behavior.
+- [x] Restrict unnecessary execution rights on SECURITY DEFINER functions and verify every protected function has a safe `search_path`.
+- [x] Re-run the security checker and document warnings that require Supabase Dashboard actions or should remain unchanged.
