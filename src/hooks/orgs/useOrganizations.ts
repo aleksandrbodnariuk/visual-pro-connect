@@ -350,7 +350,7 @@ export type LocalKind = 'mayor' | 'oblast_council' | 'raion_council' | 'city_cou
 
 export interface Campaign {
   id: string; organization_id: string; election_type: ElectionType; local_kind: LocalKind | null;
-  name: string; election_date: string | null; round: number; status: 'draft' | 'active' | 'finished'; notes: string | null;
+  name: string; election_date: string | null; round: number; status: 'draft' | 'active' | 'finished'; notes: string | null; is_test?: boolean;
 }
 export interface Candidate { id: string; campaign_id: string; name: string; party: string | null; ballot_number: number | null; is_ours: boolean }
 export interface Protocol { id: string; campaign_id: string; precinct_id: string; voters_on_list: number; ballots_issued: number; invalid_ballots: number; status: string }
@@ -483,6 +483,64 @@ export const partyExtra = {
       votes: ((r.data as any[]) || []) as { hq_id: string | null; candidate_id: string; votes: number }[],
       progress: ((p.data as any[]) || []) as { hq_id: string | null; precincts: number; protocols: number; voters: number; ballots: number; invalid: number }[],
     };
+  },
+
+  /** Усі люди з команд усіх штабів партії (реєстр членів). */
+  async listOrgMembers(orgId: string) {
+    return (await fetchAll(() => db.from('hq_members').select('*').eq('organization_id', orgId).order('full_name'))) as HqMember[];
+  },
+
+  /** Створює навчальну кампанію з окремим тестовим штабом, дільницями, кандидатами й протоколами. */
+  async createTestCampaign(orgId: string) {
+    const me = (await supabase.auth.getUser()).data.user?.id ?? null;
+    try {
+      const { data: hq, error: he } = await db.from('party_hqs')
+        .insert({ organization_id: orgId, level: 'city', name: '[ТЕСТ] Навчальний штаб', notes: 'Навчальні дані — можна видалити', is_test: true })
+        .select('id').single();
+      if (he || !hq) throw he;
+      const { data: camp, error: ce } = await db.from('election_campaigns')
+        .insert({ organization_id: orgId, name: '[ТЕСТ] Навчальні вибори міського голови', election_type: 'local', local_kind: 'mayor',
+          election_date: new Date().toISOString().slice(0, 10), round: 1, status: 'active', is_test: true, created_by: me })
+        .select('id').single();
+      if (ce || !camp) throw ce;
+      const names = [['Іваненко Петро', 'Наша партія', true], ['Коваль Олена', 'Партія А', false], ['Шевчук Андрій', 'Партія Б', false], ['Бондар Ірина', 'Самовисування', false]] as const;
+      const { data: cands, error: ke } = await db.from('campaign_candidates')
+        .insert(names.map(([n, p, o], i) => ({ organization_id: orgId, campaign_id: camp.id, name: n, party: p, is_ours: o, ballot_number: i + 1 })))
+        .select('id');
+      if (ke || !cands) throw ke;
+      const precs = Array.from({ length: 6 }, (_, i) => ({ organization_id: orgId, hq_id: hq.id, number: `ТЕСТ-${i + 1}`, name: `Навчальна дільниця ${i + 1}`, voters_count: 800 + i * 150 }));
+      const { data: ps, error: pe } = await db.from('precincts').insert(precs).select('id, voters_count');
+      if (pe || !ps) throw pe;
+      // Протоколи лише для 4 з 6 дільниць — щоб тренувати контроль «не внесено».
+      for (const p of ps.slice(0, 4)) {
+        const issued = Math.round(p.voters_count * (0.45 + Math.random() * 0.2));
+        const invalid = Math.round(issued * 0.02);
+        const { data: pr } = await db.from('precinct_protocols')
+          .insert({ organization_id: orgId, campaign_id: camp.id, precinct_id: p.id, voters_on_list: p.voters_count, ballots_issued: issued, invalid_ballots: invalid, status: 'submitted', submitted_by: me })
+          .select('id').single();
+        if (!pr) continue;
+        let left = issued - invalid;
+        const votes = cands.map((c: { id: string }, i: number) => {
+          const v = i === cands.length - 1 ? left : Math.round(left * (0.25 + Math.random() * 0.3));
+          left -= v; return { protocol_id: pr.id, candidate_id: c.id, votes: Math.max(0, v) };
+        });
+        await db.from('protocol_votes').insert(votes);
+      }
+      toast.success('Навчальну кампанію створено');
+      return true;
+    } catch (e: any) {
+      toast.error('Не вдалося створити навчальну кампанію' + (e?.message ? ': ' + e.message : ''));
+      return false;
+    }
+  },
+
+  /** Видаляє лише навчальні кампанії та штаби (дільниці, протоколи й голоси видаляються каскадно). */
+  async removeTestData(orgId: string) {
+    const a = await db.from('election_campaigns').delete().eq('organization_id', orgId).eq('is_test', true);
+    const b = await db.from('party_hqs').delete().eq('organization_id', orgId).eq('is_test', true);
+    if (a.error || b.error) { toast.error('Не вдалося видалити навчальні дані'); return false; }
+    toast.success('Навчальні дані видалено');
+    return true;
   },
 };
 
