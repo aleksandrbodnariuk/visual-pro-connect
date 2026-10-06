@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import type { CampaignMode } from '@/lib/campaignMode';
 export type { CampaignMode } from '@/lib/campaignMode';
+import { sortHqsByOkrug } from '@/lib/hqSort';
 
 export type OrgType = 'party' | 'company' | 'ngo' | 'other';
 export type HqLevel = 'central' | 'oblast' | 'okrug' | 'city' | 'otg' | 'village';
@@ -192,7 +193,7 @@ export const partyActions = {
       .select('*')
       .eq('organization_id', orgId)
       .order('name');
-    return (data as PartyHq[]) || [];
+    return sortHqsByOkrug((data as PartyHq[]) || []);
   },
 
   async saveHq(orgId: string, hq: Partial<PartyHq> & { level: HqLevel; name: string }) {
