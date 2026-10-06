@@ -10,6 +10,7 @@ import { CampaignsPanel } from '@/components/party/CampaignsPanel';
 import { ORG_TYPES, orgActions, useOrganization } from '@/hooks/orgs/useOrganizations';
 import { PartySection } from '@/components/party/PartySection';
 import { PartyAccessPanel } from '@/components/party/PartyAccessPanel';
+import { PartyPeoplePanel } from '@/components/party/PartyPeoplePanel';
 
 export default function OrganizationPage() {
   const { orgId } = useParams();
@@ -57,7 +58,16 @@ export default function OrganizationPage() {
               </TabsContent>
               {hasParty && (
                 <TabsContent value="party">
-                  <PartySection orgId={organization.id} canEdit={isAdmin} />
+                  <Tabs defaultValue="hqs">
+                    <TabsList className="flex-wrap h-auto mb-2">
+                      <TabsTrigger value="hqs">Штаби</TabsTrigger>
+                      <TabsTrigger value="leaders">Керівництво</TabsTrigger>
+                      <TabsTrigger value="members">Члени партії</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="hqs"><PartySection orgId={organization.id} canEdit={isAdmin} /></TabsContent>
+                    <TabsContent value="leaders"><PartyPeoplePanel orgId={organization.id} mode="leaders" /></TabsContent>
+                    <TabsContent value="members"><PartyPeoplePanel orgId={organization.id} mode="members" /></TabsContent>
+                  </Tabs>
                 </TabsContent>
               )}
               {hasParty && (

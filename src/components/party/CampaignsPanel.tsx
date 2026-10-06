@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Plus, Trash2, Vote, FileCheck2, RefreshCw, Star } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Vote, FileCheck2, RefreshCw, Star, FlaskConical } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   ELECTION_TYPES, HQ_LEVELS, LOCAL_KINDS, levelPlural, partyActions, partyExtra,
@@ -24,7 +24,9 @@ export function CampaignsPanel({ orgId, isAdmin }: { orgId: string; isAdmin: boo
   const [list, setList] = useState<Campaign[]>([]);
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState<Campaign | null>(null);
+  const [busy, setBusy] = useState(false);
   const load = useCallback(async () => setList(await partyExtra.listCampaigns(orgId)), [orgId]);
+  const hasTest = list.some((c) => c.is_test);
   useEffect(() => { load(); }, [load]);
 
   if (current) return <CampaignView orgId={orgId} campaign={current} isAdmin={isAdmin} onBack={() => setCurrent(null)} />;
@@ -35,6 +37,25 @@ export function CampaignsPanel({ orgId, isAdmin }: { orgId: string; isAdmin: boo
         <h2 className="text-lg font-semibold flex items-center gap-2"><Vote className="h-5 w-5 text-primary" /> Виборчі кампанії</h2>
         {isAdmin && <Button size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Нова кампанія</Button>}
       </div>
+      {isAdmin && (
+        <Card className="p-3 flex flex-wrap items-center justify-between gap-2 border-dashed">
+          <div className="text-sm">
+            <p className="font-medium">Тестовий режим</p>
+            <p className="text-muted-foreground text-xs">Навчальна кампанія з окремим штабом, 6 дільницями й частково внесеними протоколами. Бойові дані не зачіпаються.</p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Button size="sm" variant="outline" disabled={busy} onClick={async () => { setBusy(true); if (await partyExtra.createTestCampaign(orgId)) load(); setBusy(false); }}>
+              <FlaskConical className="h-4 w-4 mr-1" /> Створити навчальну
+            </Button>
+            {hasTest && (
+              <Button size="sm" variant="destructive" disabled={busy} onClick={async () => {
+                if (!confirm('Видалити всі навчальні кампанії, штаби, дільниці й протоколи?')) return;
+                setBusy(true); if (await partyExtra.removeTestData(orgId)) load(); setBusy(false);
+              }}><Trash2 className="h-4 w-4 mr-1" /> Видалити навчальні дані</Button>
+            )}
+          </div>
+        </Card>
+      )}
       {list.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">Кампаній ще немає</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
         {list.map((c) => (
