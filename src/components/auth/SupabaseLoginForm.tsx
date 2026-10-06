@@ -8,6 +8,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/lib/translations';
 import { Eye, EyeOff } from 'lucide-react';
 import OAuthButtons from './OAuthButtons';
+import { translateAuthError } from '@/lib/authErrors';
 
 interface SupabaseLoginFormProps {
   onSwitchToRegister: () => void;
@@ -38,13 +39,7 @@ export default function SupabaseLoginForm({ onSwitchToRegister, onForgotPassword
 
       if (error) {
         console.error("Login error:", error);
-        if (error.message.includes('Invalid login credentials')) {
-          toast.error('Невірний email або пароль. Якщо ви не підтвердили email — перевірте пошту. Або спробуйте відновити пароль.');
-        } else if (error.message.includes('Email not confirmed')) {
-          toast.error('Email не підтверджено. Перевірте вашу поштову скриньку та натисніть на лінк підтвердження.');
-        } else {
-          toast.error(error.message);
-        }
+        toast.error(translateAuthError(error));
         return;
       }
 

@@ -9,6 +9,7 @@ import { translations } from '@/lib/translations';
 import { Eye, EyeOff } from 'lucide-react';
 import PasswordRequirements, { isPasswordValid } from './PasswordRequirements';
 import OAuthButtons from './OAuthButtons';
+import { translateAuthError } from '@/lib/authErrors';
 interface SupabaseRegisterFormProps {
   onSwitchToLogin: () => void;
 }
@@ -75,10 +76,8 @@ export default function SupabaseRegisterForm({ onSwitchToLogin }: SupabaseRegist
           toast.error(t.invalidEmail);
         } else if (msg.includes('Database error saving new user')) {
           toast.error(t.databaseErrorSavingUser);
-        } else if (msg.toLowerCase().includes('redirect') || msg.toLowerCase().includes('site url')) {
-          toast.error(`${t.registrationError}: перевірте Redirect URLs у Supabase`);
         } else {
-          toast.error(msg || t.registrationError);
+          toast.error(translateAuthError(raw, t.registrationError));
         }
         return;
       }
