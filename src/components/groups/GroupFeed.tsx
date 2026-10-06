@@ -24,16 +24,15 @@ export function GroupFeed({ group, currentUser, refreshKey }: Props) {
   const reqId = useRef(0);
 
   const fetchPage = useCallback(async (offset: number) => {
-    const { data, error } = await supabase
+    const { data, error, count } = await supabase
       .from('posts')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('group_id', group.id)
       .order('created_at', { ascending: false })
-      .range(offset, offset + PAGE_SIZE);
+      .range(offset, offset + PAGE_SIZE - 1);
     if (error) throw error;
-    const raw = data || [];
-    const more = raw.length > PAGE_SIZE;
-    const list = raw.slice(0, PAGE_SIZE);
+    const list = data || [];
+    const more = offset + list.length < (count ?? offset + list.length);
     const authorIds = [...new Set(list.map((p: any) => p.user_id).filter(Boolean))] as string[];
     let authors: any[] = [];
     if (authorIds.length > 0) {
@@ -158,11 +157,17 @@ export function GroupFeed({ group, currentUser, refreshKey }: Props) {
         );
       })}
       {hasMore && (
-        <div className="flex justify-center pt-2">
+        <div className="flex flex-col items-center gap-2 border-t pt-4">
+          <p className="text-sm text-muted-foreground">Є ще публікації</p>
           <Button variant="outline" onClick={loadMore} disabled={loadingMore} className="min-h-11 px-6">
             {loadingMore ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Завантаження…</> : 'Показати ще'}
           </Button>
         </div>
+      )}
+      {!hasMore && posts.length >= PAGE_SIZE && (
+        <p className="border-t pt-4 text-center text-sm text-muted-foreground">
+          Ви переглянули всі публікації групи
+        </p>
       )}
     </div>
   );
