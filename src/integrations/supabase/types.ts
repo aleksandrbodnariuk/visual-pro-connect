@@ -1852,6 +1852,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          flag_position: number
           flag_url: string | null
           id: string
           logo_url: string | null
@@ -1864,6 +1865,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          flag_position?: number
           flag_url?: string | null
           id?: string
           logo_url?: string | null
@@ -1876,6 +1878,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          flag_position?: number
           flag_url?: string | null
           id?: string
           logo_url?: string | null
