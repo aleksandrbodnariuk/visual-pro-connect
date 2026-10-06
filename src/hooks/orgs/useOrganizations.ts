@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import type { CampaignMode } from '@/lib/campaignMode';
+export type { CampaignMode } from '@/lib/campaignMode';
 
 export type OrgType = 'party' | 'company' | 'ngo' | 'other';
 export type HqLevel = 'central' | 'oblast' | 'okrug' | 'city' | 'otg' | 'village';
