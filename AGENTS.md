@@ -5,4 +5,4 @@
 - Wide admin datasets must scroll inside their own container or use mobile cards, because the page itself must never overflow horizontally.
 - Keep feed engagement Realtime in one channel and refresh only the affected visible post or comment, because full-feed reloads multiply database traffic.
 - Lock every SECURITY DEFINER function to a fixed search path, minimal EXECUTE roles, and internal authorization for sensitive work, because grants alone are fragile.
-- Rank daily highlighted posts in a bounded SECURITY INVOKER query using existing post RLS and actual reaction rows, because client-side ranking of a partial feed is inaccurate and bypassing access policies is unsafe.
+- Rank daily highlighted posts in a bounded SECURITY INVOKER query using existing post RLS and actual reaction rows, because client-side ranking of a partial feed is inaccurate and bypassing access policies is unsafe.- Feed sponsored ads live in their own tables with admin-only approval enforced by a database trigger and are kept separate from the referral ad-order finances, because client checks can be bypassed and mixing them would corrupt payout logic.

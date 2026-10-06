@@ -1,3 +1,4 @@
+import { useIsAdManager } from "@/hooks/ads/useFeedAds";
 
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -21,6 +22,7 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
   const [hasStockAccess, setHasStockAccess] = useState(false);
   const [isRepresentative, setIsRepresentative] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
+  const { data: isAdManager } = useIsAdManager();
 
   useEffect(() => {
     if (!user) { setIsSpecialist(false); setHasStockAccess(false); setIsRepresentative(false); setIsModerator(false); return; }
@@ -129,6 +131,11 @@ export function NavbarNavigation({ isAdmin }: NavbarNavigationProps) {
           }`}
         >
           {t.representatives}
+        </Link>
+      )}
+      {isAdManager && (
+        <Link to="/ad-panel" className={`text-sm font-medium transition-colors hover:text-foreground/80 ${isActive("/ad-panel") ? "text-foreground" : "text-foreground/60"}`}>
+          Реклама
         </Link>
       )}
       {(isModerator || isAdmin) && (

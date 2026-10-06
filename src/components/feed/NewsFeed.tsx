@@ -20,6 +20,9 @@ import { compressImageFromDataUrl, dataUrlToBlob, validateImageSize, OUTPUT_FORM
 import { useFeedData } from "@/hooks/useFeedData";
 import { buildFeedGroupFilter, getFeedGroupIds } from "@/lib/feedGroups";
 import { RecommendedGroupPosts } from "./RecommendedGroupPosts";
+import { SponsoredPostCard } from "@/components/ads/SponsoredPostCard";
+import { useActiveFeedAds } from "@/hooks/ads/useFeedAds";
+import { interleaveAds } from "@/lib/feedAds";
 
 const PAGE_SIZE = 12;
 const PREFETCH_THRESHOLD = 0.7; // trigger loadMore at 70% scroll
@@ -28,6 +31,8 @@ export function NewsFeed() {
   const { user: authUser, appUser } = useAuth();
   const isAdmin = !!appUser?.isAdmin;
   const [pollDialogOpen, setPollDialogOpen] = useState(false);
+  const { data: feedAds = [] } = useActiveFeedAds();
+  const [adRotation] = useState(() => Math.floor(Math.random() * 100));
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -525,7 +530,9 @@ export function NewsFeed() {
             <RecommendedGroupPosts onJoined={() => { myGroupIdsRef.current = null; loadInitialPosts(); }} />
           )}
           {filteredPosts.length > 0 ? (
-            filteredPosts.map((post) => {
+            interleaveAds(filteredPosts, activeCategory === 'all' ? feedAds : [], adRotation).map((item) => {
+              if (item.kind === 'ad') return <SponsoredPostCard key={`ad-${item.slot}-${item.ad.id}`} ad={item.ad} />;
+              const post = item.post;
               let postAuthor = post.author;
               if (!postAuthor && post.user_id === currentUser?.id) postAuthor = currentUser;
               const authorName = (post as any).posted_as_group && post.group
