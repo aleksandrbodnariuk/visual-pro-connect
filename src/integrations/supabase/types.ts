@@ -896,6 +896,7 @@ export type Database = {
           election_date: string | null
           election_type: string
           id: string
+          is_test: boolean
           local_kind: string | null
           name: string
           notes: string | null
@@ -910,6 +911,7 @@ export type Database = {
           election_date?: string | null
           election_type: string
           id?: string
+          is_test?: boolean
           local_kind?: string | null
           name: string
           notes?: string | null
@@ -924,6 +926,7 @@ export type Database = {
           election_date?: string | null
           election_type?: string
           id?: string
+          is_test?: boolean
           local_kind?: string | null
           name?: string
           notes?: string | null
@@ -1966,6 +1969,7 @@ export type Database = {
           address: string | null
           created_at: string
           id: string
+          is_test: boolean
           level: Database["public"]["Enums"]["hq_level"]
           name: string
           notes: string | null
@@ -1979,6 +1983,7 @@ export type Database = {
           address?: string | null
           created_at?: string
           id?: string
+          is_test?: boolean
           level: Database["public"]["Enums"]["hq_level"]
           name: string
           notes?: string | null
@@ -1992,6 +1997,7 @@ export type Database = {
           address?: string | null
           created_at?: string
           id?: string
+          is_test?: boolean
           level?: Database["public"]["Enums"]["hq_level"]
           name?: string
           notes?: string | null
