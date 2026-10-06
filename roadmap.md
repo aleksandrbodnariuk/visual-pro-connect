@@ -24,3 +24,5 @@
 - [x] Verify calendar-day boundaries, invoker access restrictions, build status, and public route.
 - [ ] Verify signed-in daily ranking and carousel navigation — blocked by unavailable external authentication session.
 - [x] Media CDN: files are already served through the storage CDN with caching; no change needed.
+- [x] Реклама в стрічці: рекламні права, панель рекламного відділу, модерація адміном, показ після 4-го і кожні 9 дописів
+- [ ] Перевірити рекламу в стрічці під акаунтом (заблоковано: вхід у перегляді недоступний)
