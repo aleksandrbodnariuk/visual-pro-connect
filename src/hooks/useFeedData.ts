@@ -73,8 +73,14 @@ export function useFeedData(postIds: string[]) {
 
   // Ref to track known comment IDs for realtime filtering (avoids stale closure)
   const knownCommentIdsRef = useRef<Set<string>>(new Set());
+  const visiblePostIdsRef = useRef<Set<string>>(new Set(postIds));
+  const realtimeTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const idsKey = postIds.join(',');
+
+  useEffect(() => {
+    visiblePostIdsRef.current = new Set(postIds);
+  }, [idsKey]);
 
   // ============ BATCH LOAD ALL DATA ============
   const loadAllData = useCallback(async () => {
@@ -147,13 +153,14 @@ export function useFeedData(postIds: string[]) {
       const cMap = new Map<string, FeedComment[]>();
       postIds.forEach(pid => cMap.set(pid, []));
       comments.forEach(c => {
+        const profile = pMap.get(c.user_id);
         const enriched: FeedComment = {
           ...c,
           parent_id: c.parent_id || null,
-          user: pMap.get(c.user_id) ? {
-            id: pMap.get(c.user_id)!.id,
-            full_name: pMap.get(c.user_id)!.full_name,
-            avatar_url: pMap.get(c.user_id)!.avatar_url,
+          user: profile ? {
+            id: profile.id,
+            full_name: profile.full_name,
+            avatar_url: profile.avatar_url,
           } : undefined,
         };
         const list = cMap.get(c.post_id) || [];
@@ -255,87 +262,179 @@ export function useFeedData(postIds: string[]) {
     loadAllData();
   }, [loadAllData]);
 
-  // ============ REALTIME: 1 channel for comments ============
+  const refreshPostLikes = useCallback(async (postId: string) => {
+    if (!visiblePostIdsRef.current.has(postId)) return;
+    const { data, error } = await supabase
+      .from('post_likes')
+      .select('user_id, reaction_type')
+      .eq('post_id', postId);
+    if (error) return;
+
+    const likes = data || [];
+    const otherUserIds = [...new Set(likes.map(like => like.user_id).filter(id => id && id !== userId))];
+    let namesById = new Map<string, string>();
+    if (otherUserIds.length > 0) {
+      const { data: profiles } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: otherUserIds });
+      namesById = new Map((profiles || []).map(profile => [profile.id, profile.full_name]));
+    }
+    const myReaction = userId ? likes.find(like => like.user_id === userId)?.reaction_type : null;
+    const counts: Record<string, number> = {};
+    likes.forEach(like => {
+      const type = like.reaction_type || 'like';
+      counts[type] = (counts[type] || 0) + 1;
+    });
+    setPostLikesMap(prev => {
+      const next = new Map(prev);
+      next.set(postId, {
+        liked: Boolean(myReaction),
+        likesCount: likes.length,
+        reactionType: myReaction ? myReaction as ReactionType : null,
+        topReactions: Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([type]) => type),
+        likerNames: likes.filter(like => like.user_id !== userId).map(like => namesById.get(like.user_id) || '').filter(Boolean),
+        currentUserLiked: Boolean(myReaction),
+      });
+      return next;
+    });
+  }, [userId]);
+
+  const refreshCommentLikes = useCallback(async (commentId: string) => {
+    if (!knownCommentIdsRef.current.has(commentId)) return;
+    const { data, error } = await supabase
+      .from('comment_likes')
+      .select('user_id, reaction_type')
+      .eq('comment_id', commentId);
+    if (error) return;
+    const likes = data || [];
+    const counts: Record<string, number> = {};
+    likes.forEach(like => { counts[like.reaction_type] = (counts[like.reaction_type] || 0) + 1; });
+    const myReaction = userId ? likes.find(like => like.user_id === userId)?.reaction_type : null;
+    setCommentLikesMap(prev => {
+      const next = new Map(prev);
+      next.set(commentId, {
+        likesCount: likes.length,
+        userReaction: myReaction ? myReaction as ReactionType : null,
+        topReactions: Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([type]) => type),
+        likerNames: prev.get(commentId)?.likerNames || [],
+      });
+      return next;
+    });
+  }, [userId]);
+
+  const refreshCommentsForPost = useCallback(async (postId: string) => {
+    if (!visiblePostIdsRef.current.has(postId)) return;
+    const { data, error } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true });
+    if (error) return;
+    const comments = (data || []) as FeedComment[];
+    const authorIds = [...new Set(comments.map(comment => comment.user_id))];
+    let profileById = new Map<string, ProfileData>();
+    if (authorIds.length > 0) {
+      const { data: profiles } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: authorIds });
+      profileById = new Map(((profiles || []) as ProfileData[]).map(profile => [profile.id, profile]));
+    }
+    const enriched = comments.map(comment => {
+      const profile = profileById.get(comment.user_id);
+      return {
+        ...comment,
+        parent_id: comment.parent_id || null,
+        user: profile ? { id: profile.id, full_name: profile.full_name, avatar_url: profile.avatar_url } : undefined,
+      };
+    });
+    const currentIds = new Set(enriched.map(comment => comment.id));
+    setCommentsMap(prev => {
+      const next = new Map(prev);
+      next.set(postId, enriched);
+      const visibleIds = new Set<string>();
+      next.forEach(list => list.forEach(comment => visibleIds.add(comment.id)));
+      knownCommentIdsRef.current = visibleIds;
+      return next;
+    });
+    setCommentLikesMap(prev => {
+      const next = new Map(prev);
+      prev.forEach((_value, id) => {
+        if (!knownCommentIdsRef.current.has(id)) next.delete(id);
+      });
+      currentIds.forEach(id => {
+        if (!next.has(id)) next.set(id, { likesCount: 0, userReaction: null, topReactions: [], likerNames: [] });
+      });
+      return next;
+    });
+  }, []);
+
+  const scheduleRealtimeRefresh = useCallback((key: string, refresh: () => void) => {
+    const existing = realtimeTimersRef.current.get(key);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      realtimeTimersRef.current.delete(key);
+      refresh();
+    }, 120);
+    realtimeTimersRef.current.set(key, timer);
+  }, []);
+
+  // ============ REALTIME: one channel, targeted refreshes only ============
   useEffect(() => {
     if (postIds.length === 0) return;
     const ch = supabase
-      .channel(`feed_comments_${Math.random().toString(36).substring(7)}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, (payload) => {
-        const pid = (payload.new as any)?.post_id || (payload.old as any)?.post_id;
-        if (pid && postIds.includes(pid)) {
-          loadAllData();
+      .channel(`feed_engagement_${Math.random().toString(36).substring(7)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, payload => {
+        const postId = (payload.new as FeedComment | undefined)?.post_id || (payload.old as FeedComment | undefined)?.post_id;
+        if (postId && visiblePostIdsRef.current.has(postId)) {
+          scheduleRealtimeRefresh(`comments:${postId}`, () => { void refreshCommentsForPost(postId); });
         }
       })
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [idsKey, loadAllData]);
-
-   // ============ REALTIME: 1 channel for comment_likes ============
-  useEffect(() => {
-    if (postIds.length === 0) return;
-    const ch = supabase
-      .channel(`feed_comment_likes_${Math.random().toString(36).substring(7)}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'comment_likes' }, (payload) => {
-        const cid = (payload.new as any)?.comment_id || (payload.old as any)?.comment_id;
-        // Use ref instead of stale closure
-        if (cid && knownCommentIdsRef.current.has(cid)) {
-          loadAllData();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comment_likes' }, payload => {
+        const commentId = (payload.new as { comment_id?: string } | undefined)?.comment_id
+          || (payload.old as { comment_id?: string } | undefined)?.comment_id;
+        if (commentId && knownCommentIdsRef.current.has(commentId)) {
+          scheduleRealtimeRefresh(`comment-likes:${commentId}`, () => { void refreshCommentLikes(commentId); });
         }
       })
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [idsKey, loadAllData]);
-
-  // ============ REALTIME: 1 channel for post_likes ============
-  useEffect(() => {
-    if (postIds.length === 0) return;
-    const ch = supabase
-      .channel(`feed_post_likes_${Math.random().toString(36).substring(7)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'post_likes' }, (payload) => {
-        const pid = (payload.new as any)?.post_id || (payload.old as any)?.post_id;
-        if (pid && postIds.includes(pid)) {
-          loadAllData();
+        const postId = (payload.new as { post_id?: string } | undefined)?.post_id
+          || (payload.old as { post_id?: string } | undefined)?.post_id;
+        if (postId && visiblePostIdsRef.current.has(postId)) {
+          scheduleRealtimeRefresh(`post-likes:${postId}`, () => { void refreshPostLikes(postId); });
         }
       })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [idsKey, loadAllData]);
+    return () => {
+      supabase.removeChannel(ch);
+      realtimeTimersRef.current.forEach(timer => clearTimeout(timer));
+      realtimeTimersRef.current.clear();
+    };
+  }, [idsKey, refreshCommentLikes, refreshCommentsForPost, refreshPostLikes, scheduleRealtimeRefresh]);
 
   // ============ ACTIONS ============
 
   const togglePostReaction = async (postId: string, newReaction: ReactionType) => {
-    if (!userId) { toast.error("Потрібно авторизуватися"); return; }
+    if (!userId || postLikeLoading.has(postId)) { if (!userId) toast.error("Потрібно авторизуватися"); return; }
 
     setPostLikeLoading(prev => new Set(prev).add(postId));
+    const previous = postLikesMap.get(postId) || { liked: false, likesCount: 0, reactionType: null, topReactions: [], likerNames: [], currentUserLiked: false };
     try {
-      const current = postLikesMap.get(postId);
-      if (current?.liked && current.reactionType === newReaction) {
-        await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', userId);
-        setPostLikesMap(prev => {
-          const m = new Map(prev);
-          m.set(postId, { ...current, liked: false, reactionType: null, likesCount: Math.max(0, current.likesCount - 1) });
-          return m;
-        });
-      } else if (current?.liked) {
-        await supabase.from('post_likes').update({ reaction_type: newReaction }).eq('post_id', postId).eq('user_id', userId);
-        setPostLikesMap(prev => {
-          const m = new Map(prev);
-          m.set(postId, { ...current, reactionType: newReaction });
-          return m;
-        });
+      const isRemoving = previous.liked && previous.reactionType === newReaction;
+      const optimistic = isRemoving
+        ? { ...previous, liked: false, currentUserLiked: false, reactionType: null, likesCount: Math.max(0, previous.likesCount - 1) }
+        : { ...previous, liked: true, currentUserLiked: true, reactionType: newReaction, likesCount: previous.liked ? previous.likesCount : previous.likesCount + 1 };
+      setPostLikesMap(prev => new Map(prev).set(postId, optimistic));
+
+      if (isRemoving) {
+        const { error } = await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', userId);
+        if (error) throw error;
+      } else if (previous.liked) {
+        const { error } = await supabase.from('post_likes').update({ reaction_type: newReaction }).eq('post_id', postId).eq('user_id', userId);
+        if (error) throw error;
       } else {
-        await supabase.from('post_likes').insert([{ post_id: postId, user_id: userId, reaction_type: newReaction }]);
-        setPostLikesMap(prev => {
-          const m = new Map(prev);
-          const c = prev.get(postId) || { liked: false, likesCount: 0, reactionType: null, topReactions: [], likerNames: [], currentUserLiked: false };
-          m.set(postId, { ...c, liked: true, currentUserLiked: true, reactionType: newReaction, likesCount: c.likesCount + 1 });
-          return m;
-        });
+        const { error } = await supabase.from('post_likes').insert([{ post_id: postId, user_id: userId, reaction_type: newReaction }]);
+        if (error) throw error;
       }
-      // Realtime will handle full refresh of topReactions
     } catch (error) {
       console.error("Error toggling post reaction:", error);
-      toast.error("Помилка при роботі з реакцією");
+      setPostLikesMap(prev => new Map(prev).set(postId, previous));
+      toast.error("Не вдалося зберегти реакцію");
     } finally {
       setPostLikeLoading(prev => { const s = new Set(prev); s.delete(postId); return s; });
     }
@@ -344,8 +443,8 @@ export function useFeedData(postIds: string[]) {
   const toggleCommentReaction = async (commentId: string, reactionType: ReactionType) => {
     if (!userId || commentLikeLoading.has(commentId)) return;
     setCommentLikeLoading(prev => new Set(prev).add(commentId));
+    const current = commentLikesMap.get(commentId) || { likesCount: 0, userReaction: null, topReactions: [], likerNames: [] };
     try {
-      const current = commentLikesMap.get(commentId) || { likesCount: 0, userReaction: null, topReactions: [], likerNames: [] };
 
       if (current.userReaction === reactionType) {
         // Remove reaction — optimistic
@@ -354,7 +453,8 @@ export function useFeedData(postIds: string[]) {
           m.set(commentId, { ...current, userReaction: null, likesCount: Math.max(0, current.likesCount - 1) });
           return m;
         });
-        await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', userId);
+        const { error } = await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', userId);
+        if (error) throw error;
       } else if (current.userReaction) {
         // Change reaction — optimistic
         setCommentLikesMap(prev => {
@@ -362,7 +462,8 @@ export function useFeedData(postIds: string[]) {
           m.set(commentId, { ...current, userReaction: reactionType });
           return m;
         });
-        await supabase.from('comment_likes').update({ reaction_type: reactionType }).eq('comment_id', commentId).eq('user_id', userId);
+        const { error } = await supabase.from('comment_likes').update({ reaction_type: reactionType }).eq('comment_id', commentId).eq('user_id', userId);
+        if (error) throw error;
       } else {
         // Add reaction — optimistic
         setCommentLikesMap(prev => {
@@ -370,13 +471,14 @@ export function useFeedData(postIds: string[]) {
           m.set(commentId, { ...current, userReaction: reactionType, likesCount: current.likesCount + 1 });
           return m;
         });
-        await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: userId, reaction_type: reactionType });
+        const { error } = await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: userId, reaction_type: reactionType });
+        if (error) throw error;
       }
       // Realtime handles topReactions refresh
     } catch (error) {
       console.error('Error toggling comment reaction:', error);
-      // Revert on error
-      loadAllData();
+      setCommentLikesMap(prev => new Map(prev).set(commentId, current));
+      toast.error('Не вдалося зберегти реакцію');
     } finally {
       setCommentLikeLoading(prev => { const s = new Set(prev); s.delete(commentId); return s; });
     }
