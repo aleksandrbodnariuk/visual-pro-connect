@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, Plus, Trash2, Vote, FileCheck2, RefreshCw, Star, FlaskConical } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { CAMPAIGN_MODES, campaignPrecincts, type CampaignMode } from '@/lib/campaignMode';
 import {
   ELECTION_TYPES, HQ_LEVELS, LOCAL_KINDS, levelPlural, partyActions, partyExtra,
   type Campaign, type Candidate, type ElectionType, type HqLevel, type LocalKind, type PartyHq, type Precinct, type Protocol,
@@ -37,23 +38,16 @@ export function CampaignsPanel({ orgId, isAdmin }: { orgId: string; isAdmin: boo
         <h2 className="text-lg font-semibold flex items-center gap-2"><Vote className="h-5 w-5 text-primary" /> Виборчі кампанії</h2>
         {isAdmin && <Button size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Нова кампанія</Button>}
       </div>
-      {isAdmin && (
+      {isAdmin && hasTest && (
         <Card className="p-3 flex flex-wrap items-center justify-between gap-2 border-dashed">
           <div className="text-sm">
-            <p className="font-medium">Тестовий режим</p>
-            <p className="text-muted-foreground text-xs">Навчальна кампанія з окремим штабом, 6 дільницями й частково внесеними протоколами. Бойові дані не зачіпаються.</p>
+            <p className="font-medium">Тестові та навчальні кампанії</p>
+            <p className="text-muted-foreground text-xs">Видаляються лише їхні протоколи й голоси. Справжні штаби, дільниці та люди залишаються.</p>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button size="sm" variant="outline" disabled={busy} onClick={async () => { setBusy(true); if (await partyExtra.createTestCampaign(orgId)) load(); setBusy(false); }}>
-              <FlaskConical className="h-4 w-4 mr-1" /> Створити навчальну
-            </Button>
-            {hasTest && (
-              <Button size="sm" variant="destructive" disabled={busy} onClick={async () => {
-                if (!confirm('Видалити всі навчальні кампанії, штаби, дільниці й протоколи?')) return;
-                setBusy(true); if (await partyExtra.removeTestData(orgId)) load(); setBusy(false);
-              }}><Trash2 className="h-4 w-4 mr-1" /> Видалити навчальні дані</Button>
-            )}
-          </div>
+          <Button size="sm" variant="destructive" disabled={busy} onClick={async () => {
+            if (!confirm('Видалити всі тестові й навчальні кампанії з їхніми протоколами? Штаби й дільниці залишаться.')) return;
+            setBusy(true); if (await partyExtra.removeTestData(orgId)) load(); setBusy(false);
+          }}><Trash2 className="h-4 w-4 mr-1" /> Видалити тестові дані</Button>
         </Card>
       )}
       {list.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">Кампаній ще немає</p>}
@@ -62,7 +56,10 @@ export function CampaignsPanel({ orgId, isAdmin }: { orgId: string; isAdmin: boo
           <Card key={c.id} className="p-4 cursor-pointer hover:border-primary transition-colors" onClick={() => setCurrent(c)}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <Badge variant="secondary" className="mb-1">{typeLabel(c)}</Badge>
+                <div className="flex flex-wrap gap-1 mb-1">
+                  <Badge variant="secondary">{typeLabel(c)}</Badge>
+                  {c.mode && c.mode !== 'real' && <Badge variant="outline" className="border-primary text-primary"><FlaskConical className="h-3 w-3 mr-1" />{c.mode === 'test' ? 'Тест' : 'Навчання'}</Badge>}
+                </div>
                 <p className="font-semibold">{c.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {c.election_date ? new Date(c.election_date).toLocaleDateString('uk-UA') : 'Дата не вказана'}{c.round > 1 ? ` · ${c.round} тур` : ''}
@@ -90,16 +87,52 @@ function CampaignDialog({ open, onOpenChange, orgId, onSaved }: { open: boolean;
   const [kind, setKind] = useState<LocalKind>('mayor');
   const [date, setDate] = useState('');
   const [round, setRound] = useState(1);
-  useEffect(() => { if (open) { setName(''); setDate(''); setRound(1); } }, [open]);
+  const [mode, setMode] = useState<CampaignMode>('real');
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [hqs, setHqs] = useState<PartyHq[]>([]);
+  const [precincts, setPrecincts] = useState<Precinct[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    setName(''); setDate(''); setRound(1); setMode('real'); setPicked(new Set());
+    Promise.all([partyActions.listHqs(orgId), partyExtra.listOrgPrecincts(orgId)]).then(([h, p]) => { setHqs(h); setPrecincts(p); });
+  }, [open, orgId]);
+  const toggle = (ids: string[], on: boolean) => setPicked((prev) => { const n = new Set(prev); ids.forEach((i) => (on ? n.add(i) : n.delete(i))); return n; });
   const save = async () => {
     if (!name.trim()) return;
-    if (await partyExtra.saveCampaign(orgId, { name: name.trim(), election_type: type, local_kind: kind, election_date: date || null, round })) { onOpenChange(false); onSaved(); }
+    if (await partyExtra.saveCampaign(orgId, { name: name.trim(), election_type: type, local_kind: kind, election_date: date || null, round, mode, precinct_ids: [...picked] })) { onOpenChange(false); onSaved(); }
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader><DialogTitle>Нова виборча кампанія</DialogTitle></DialogHeader>
-        <div className="space-y-3">
+        <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+          <div><Label>Режим</Label>
+            <select className={sel} value={mode} onChange={(e) => setMode(e.target.value as CampaignMode)}>
+              {CAMPAIGN_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+            <p className="text-xs text-muted-foreground mt-1">{CAMPAIGN_MODES.find((m) => m.value === mode)?.hint}</p>
+          </div>
+          {mode !== 'real' && (
+            <div className="rounded-md border p-2 space-y-2">
+              <p className="text-sm font-medium">Учасники: {picked.size ? `${picked.size} дільниць` : 'уся структура'}</p>
+              <p className="text-xs text-muted-foreground">Позначте штаби або окремі дільниці. Якщо нічого не вибрати — бере участь уся структура.</p>
+              {precincts.length === 0 && <p className="text-xs text-muted-foreground">Дільниць ще немає — додайте їх у штабах.</p>}
+              {hqs.filter((h) => precincts.some((p) => p.hq_id === h.id)).map((h) => {
+                const ps = precincts.filter((p) => p.hq_id === h.id);
+                const all = ps.every((p) => picked.has(p.id));
+                return (
+                  <div key={h.id} className="space-y-1">
+                    <label className="flex items-center gap-2 text-sm font-medium min-h-[36px]"><Checkbox checked={all} onCheckedChange={(v) => toggle(ps.map((p) => p.id), v === true)} />{h.name}</label>
+                    <div className="pl-6 grid grid-cols-2 sm:grid-cols-3 gap-1">
+                      {ps.map((p) => (
+                        <label key={p.id} className="flex items-center gap-2 text-xs min-h-[32px]"><Checkbox checked={picked.has(p.id)} onCheckedChange={(v) => toggle([p.id], v === true)} />№ {p.number}</label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           <div><Label>Тип виборів</Label>
             <select className={sel} value={type} onChange={(e) => setType(e.target.value as ElectionType)}>
               {ELECTION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -142,7 +175,7 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
       partyExtra.listCandidates(campaign.id), partyActions.listHqs(orgId), partyExtra.listOrgPrecincts(orgId),
       partyExtra.listProtocols(campaign.id), partyExtra.listManagers(orgId), partyExtra.results(campaign.id),
     ]);
-    setCandidates(c); setHqs(h); setPrecincts(p); setProtocols(pr); setResults(r);
+    setCandidates(c); setHqs(h); setPrecincts(campaignPrecincts(p, campaign.mode, campaign.precinct_ids)); setProtocols(pr); setResults(r);
     setManaged(new Set(m.filter((x) => x.user_id === user?.id).map((x) => x.hq_id)));
   }, [campaign.id, orgId, user?.id]);
   useEffect(() => { load(); }, [load]);
@@ -162,7 +195,23 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
         <Badge variant="secondary" className="mb-1">{typeLabel(campaign)}</Badge>
         <h2 className="text-xl font-bold">{campaign.name}</h2>
         <p className="text-sm text-muted-foreground">{campaign.election_date ? new Date(campaign.election_date).toLocaleDateString('uk-UA') : ''}{campaign.round > 1 ? ` · ${campaign.round} тур` : ''}</p>
+        {campaign.mode && campaign.mode !== 'real' && (
+          <p className="text-xs mt-2 text-primary flex items-center gap-1"><FlaskConical className="h-3.5 w-3.5" />
+            {campaign.mode === 'test' ? 'Тестова' : 'Навчальна'} кампанія · {precincts.length} дільниць · дані можна видалити без шкоди для штабів</p>
+        )}
       </Card>
+      {campaign.mode === 'training' && (
+        <Card className="p-3 text-sm space-y-1 border-primary/40">
+          <p className="font-medium">Як працювати на дільниці</p>
+          <ol className="list-decimal pl-5 text-muted-foreground space-y-0.5">
+            <li>Відкрийте вкладку «Протоколи» та знайдіть свою дільницю.</li>
+            <li>Натисніть «Внести» і перепишіть кількість виборців і виданих бюлетенів.</li>
+            <li>Внесіть недійсні бюлетені та голоси за кожного кандидата.</li>
+            <li>Перевірте, що сума голосів і недійсних дорівнює виданим бюлетеням, і збережіть.</li>
+            <li>Штаб одразу бачить результат у вкладці «Результати».</li>
+          </ol>
+        </Card>
+      )}
       <Tabs defaultValue="results">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="results">Результати</TabsTrigger>
