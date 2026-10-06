@@ -4001,6 +4001,20 @@ export type Database = {
           total_revenue: number
         }[]
       }
+      get_daily_popular_posts: {
+        Args: { _day_end: string; _day_start: string }
+        Returns: {
+          category: string
+          content: string
+          created_at: string
+          group_id: string
+          id: string
+          media_url: string
+          posted_as_group: boolean
+          reaction_count: number
+          user_id: string
+        }[]
+      }
       get_detailed_profile: {
         Args: { target_user_id: string }
         Returns: {
