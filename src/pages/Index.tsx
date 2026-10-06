@@ -6,6 +6,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Hero } from "@/components/home/Hero";
 import { useAuth } from "@/context/AuthContext";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
+import { TrendingPosts } from "@/components/feed/TrendingPosts";
 
 const Index = () => {
   const { isAuthenticated, loading, appUser } = useAuth();
@@ -56,7 +57,8 @@ const Index = () => {
             onRefresh={() => setFeedKey((k) => k + 1)}
             className="h-full overflow-y-auto overscroll-contain scrollbar-hide py-4 md:py-6"
           >
-            <div key={feedKey} className="animate-fade-in">
+            <div key={feedKey} className="animate-fade-in space-y-4 md:space-y-6">
+              <TrendingPosts />
               <NewsFeed />
             </div>
           </PullToRefresh>
