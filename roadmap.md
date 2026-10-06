@@ -5,4 +5,4 @@
 - [x] Add Groups and Organizations to the mobile menu and align it with desktop navigation.
 - [x] Replace the mobile admin tab strip with a compact section picker.
 - [x] Make all admin tables, forms, and dialogs usable on mobile.
-- [ ] Verify mobile and desktop layouts, interactions, and current build status.
+- [x] Verify mobile and desktop layouts, interactions, and current build status.
