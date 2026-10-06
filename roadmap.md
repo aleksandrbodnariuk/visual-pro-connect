@@ -11,4 +11,4 @@
 - [x] Replace full-feed Realtime reloads with targeted post and comment engagement refreshes.
 - [x] Make post and comment reactions optimistic with rollback and Ukrainian errors.
 - [x] Add feed query indexes for newest posts, group posts, and post comments.
-- [ ] Verify feed and group reactions on desktop and mobile.
+- [ ] Verify signed-in feed and group reactions on desktop and mobile — blocked because this external authentication session is unavailable to the preview checker.
