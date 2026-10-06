@@ -6,3 +6,4 @@
 - [x] Replace the mobile admin tab strip with a compact section picker.
 - [x] Make all admin tables, forms, and dialogs usable on mobile.
 - [x] Verify mobile and desktop layouts, interactions, and current build status.
+- [x] Verify the group feed continuation control specifically on mobile.
