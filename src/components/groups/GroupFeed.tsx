@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PostCard } from '@/components/feed/PostCard';
 import { useFeedData } from '@/hooks/useFeedData';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Group } from '@/hooks/groups/useGroups';
 
@@ -11,30 +13,73 @@ interface Props {
   refreshKey: number;
 }
 
+const PAGE_SIZE = 10;
+
 export function GroupFeed({ group, currentUser, refreshKey }: Props) {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const reqId = useRef(0);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const { data } = await supabase
+  const fetchPage = useCallback(async (offset: number) => {
+    const { data, error } = await supabase
       .from('posts')
       .select('*')
       .eq('group_id', group.id)
       .order('created_at', { ascending: false })
-      .limit(50);
-    const list = data || [];
+      .range(offset, offset + PAGE_SIZE);
+    if (error) throw error;
+    const raw = data || [];
+    const more = raw.length > PAGE_SIZE;
+    const list = raw.slice(0, PAGE_SIZE);
     const authorIds = [...new Set(list.map((p: any) => p.user_id).filter(Boolean))] as string[];
     let authors: any[] = [];
     if (authorIds.length > 0) {
       const { data: a } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: authorIds });
       authors = a || [];
     }
-    setPosts(list.map((p: any) => ({ ...p, author: authors.find((a) => a.id === p.user_id) || null })));
-    setLoading(false);
+    return {
+      more,
+      list: list.map((p: any) => ({ ...p, author: authors.find((a) => a.id === p.user_id) || null })),
+    };
   }, [group.id]);
 
+  const load = useCallback(async () => {
+    const id = ++reqId.current;
+    setLoading(true);
+    try {
+      const { list, more } = await fetchPage(0);
+      if (id !== reqId.current) return;
+      setPosts(list);
+      setHasMore(more);
+    } catch {
+      if (id === reqId.current) toast.error('Не вдалося завантажити дописи');
+    } finally {
+      if (id === reqId.current) setLoading(false);
+    }
+  }, [fetchPage]);
+
   useEffect(() => { load(); }, [load, refreshKey]);
+
+  const loadMore = async () => {
+    if (loadingMore) return;
+    const id = reqId.current;
+    setLoadingMore(true);
+    try {
+      const { list, more } = await fetchPage(posts.length);
+      if (id !== reqId.current) return;
+      setPosts((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...list.filter((p) => !seen.has(p.id))];
+      });
+      setHasMore(more);
+    } catch {
+      toast.error('Не вдалося завантажити ще дописи');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const postIds = useMemo(() => posts.map((p) => p.id), [posts]);
   const feed = useFeedData(postIds);
@@ -92,6 +137,13 @@ export function GroupFeed({ group, currentUser, refreshKey }: Props) {
           />
         );
       })}
+      {hasMore && (
+        <div className="flex justify-center pt-2">
+          <Button variant="outline" onClick={loadMore} disabled={loadingMore} className="min-h-11 px-6">
+            {loadingMore ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Завантаження…</> : 'Показати ще'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

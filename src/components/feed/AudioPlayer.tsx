@@ -41,9 +41,8 @@ export function AudioPlayer({ src, title }: AudioPlayerProps) {
     if (isPlaying) {
       audio.pause();
     } else {
-      audio.play();
+      audio.play().catch(() => setIsPlaying(false));
     }
-    setIsPlaying(!isPlaying);
   };
 
   const handleSeek = (value: number[]) => {
@@ -72,7 +71,7 @@ export function AudioPlayer({ src, title }: AudioPlayerProps) {
 
   return (
     <div className="rounded-xl bg-gradient-to-r from-primary/10 via-accent/10 to-primary/5 border p-4">
-      <audio ref={audioRef} src={src} preload="metadata" />
+      <audio ref={audioRef} src={src} preload="none" onPause={() => setIsPlaying(false)} onPlay={() => setIsPlaying(true)} />
       
       <div className="flex items-center gap-3">
         {/* Album art placeholder */}

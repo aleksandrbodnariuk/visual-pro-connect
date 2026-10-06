@@ -208,7 +208,7 @@ export function PostCard({
         </div>
       )}
 
-      {!imageUrl && !isAudioUrl && videoEmbed && (
+      {videoEmbed && (
         <div className="px-3 pt-2"><VideoPreview embed={videoEmbed} orientationOverride={videoOrientation ?? null} /></div>
       )}
 
