@@ -18,6 +18,8 @@ import { extractVideoEmbed } from "@/lib/videoEmbed";
 import { ImageCropEditor } from "@/components/ui/ImageCropEditor";
 import { compressImageFromDataUrl, dataUrlToBlob, validateImageSize, OUTPUT_FORMAT, OUTPUT_EXTENSION } from '@/lib/imageCompression';
 import { useFeedData } from "@/hooks/useFeedData";
+import { buildFeedGroupFilter, getFeedGroupIds } from "@/lib/feedGroups";
+import { RecommendedGroupPosts } from "./RecommendedGroupPosts";
 
 const PAGE_SIZE = 12;
 const PREFETCH_THRESHOLD = 0.7; // trigger loadMore at 70% scroll
