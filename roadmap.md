@@ -14,4 +14,11 @@
 - [ ] Verify signed-in feed and group reactions on desktop and mobile — blocked because this external authentication session is unavailable to the preview checker.
 - [x] Review all current security and database warnings, classify real risks versus intentional settings, and safely fix everything possible without changing existing access behavior.
 - [x] Restrict unnecessary execution rights on SECURITY DEFINER functions and verify every protected function has a safe `search_path`.
-- [x] Re-run the security checker and document warnings that require Supabase Dashboard actions or should remain unchanged.- [x] Add mobile pull-to-refresh on the home feed with a gentle fade-in.
+- [x] Re-run the security checker and document warnings that require Supabase Dashboard actions or should remain unchanged.
+- [x] Add mobile pull-to-refresh on the home feed with a gentle fade-in.
+
+- [x] Micro-animations: gentle fade-in for posts, disabled for reduced-motion users.
+- [x] Long-feed performance: off-screen posts skip rendering (content-visibility) instead of risky list virtualization.
+- [x] Colour contrast check: muted text meets readable contrast in light and dark themes.
+- [ ] «Актуальне» carousel at the top of the feed — waits for the owner to choose what it shows.
+- [x] Media CDN: files are already served through the storage CDN with caching; no change needed.
