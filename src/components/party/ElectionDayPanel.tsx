@@ -121,7 +121,7 @@ export function ElectionDayPanel({ orgId, campaign, hqs, precincts, canManageHq 
           {dlg?.kind === 'opened' && <label className="flex items-center gap-2 text-sm min-h-[44px]"><input type="checkbox" checked={quorum} onChange={(e) => setQuorum(e.target.checked)} /><Users className="h-4 w-4" /> Кворум комісії є</label>}
           {dlg?.kind === 'turnout' && <div><Label>Проголосувало виборців{dlg.p.voters_count ? ` (зі ${dlg.p.voters_count})` : ''}</Label><Input type="number" inputMode="numeric" min={0} autoFocus value={voted} onChange={(e) => setVoted(e.target.value)} /></div>}
           <div><Label>{dlg?.kind === 'incident' ? 'Що сталося' : 'Коментар'}</Label><Textarea maxLength={2000} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
-          {dlg?.kind === 'incident' && <ProtocolPhotos photos={photos} onChange={setPhotos} campaignId={campaign.id} precinctId={dlg.p.id} />}
+          {dlg?.kind === 'incident' && <ProtocolPhotos photos={photos} onChange={setPhotos} readOnly={false} campaignId={campaign.id} precinctId={dlg.p.id} />}
           <DialogFooter><Button className="min-h-[44px] w-full sm:w-auto" onClick={save}>Надіслати в штаб</Button></DialogFooter>
         </DialogContent>
       </Dialog>
