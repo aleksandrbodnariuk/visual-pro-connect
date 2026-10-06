@@ -14,7 +14,7 @@ import { effectiveAdStatus, type FeedAd } from '@/lib/feedAds';
 import { toast } from 'sonner';
 
 export default function AdPanel() {
-  const { user, loading } = useAuth() as any;
+  const { user, loading } = useAuth();
   const { data: allowed, isLoading } = useIsAdManager();
   const qc = useQueryClient();
   const [editing, setEditing] = useState<FeedAd | null>(null);
@@ -34,7 +34,7 @@ export default function AdPanel() {
   if (!loading && !user) return <Navigate to="/auth" replace />;
   if (isLoading || loading) return <div className="p-8 text-center text-muted-foreground">Завантаження…</div>;
   if (!allowed) return (
-    <div className="min-h-screen bg-background"><Navbar />
+    <div className="min-h-screen pt-14 sm:pt-16 pb-safe-nav"><Navbar />
       <div className="container py-16 text-center text-muted-foreground">У вас немає доступу до панелі рекламного відділу. Зверніться до адміністратора.</div>
     </div>
   );
@@ -67,9 +67,9 @@ export default function AdPanel() {
   );
 
   return (
-    <div className="h-screen overflow-y-auto bg-background">
+    <div className="min-h-screen pt-14 sm:pt-16 3xl:pt-20 pb-safe-nav">
       <Navbar />
-      <main className="container max-w-5xl space-y-6 py-6 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-6">
+      <main className="container max-w-5xl space-y-6 py-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="flex items-center gap-2 text-2xl font-bold"><Megaphone className="h-6 w-6 text-primary" /> Панель рекламного відділу</h1>
           <Button className="min-h-11" onClick={() => { setEditing(null); setOpen(true); }}><Plus className="mr-1 h-4 w-4" /> Нова реклама</Button>

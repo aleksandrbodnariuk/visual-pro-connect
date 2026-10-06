@@ -1,3 +1,5 @@
+import { useIsAdManager } from "@/hooks/ads/useFeedAds";
+import { Megaphone } from "lucide-react";
 
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -40,6 +42,7 @@ export function MobileNavigation() {
   const [hasStockAccess, setHasStockAccess] = useState(false);
   const [isRepresentative, setIsRepresentative] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
+  const { data: isAdManager } = useIsAdManager();
 
   useEffect(() => {
     if (!currentUser?.id) { setIsSpecialist(false); setIsAdmin(false); setIsShareholder(false); setHasStockAccess(false); setIsRepresentative(false); setIsModerator(false); return; }
@@ -239,6 +242,16 @@ export function MobileNavigation() {
                         >
                           <UsersRound className="h-5 w-5" />
                           <span>{t.representativeCabinet}</span>
+                        </Link>
+                      )}
+                      {isAdManager && (
+                        <Link
+                          to="/ad-panel"
+                          onClick={() => setIsMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <Megaphone className="h-5 w-5" />
+                          <span>Панель рекламного відділу</span>
                         </Link>
                       )}
                       {/* Панель модератора */}

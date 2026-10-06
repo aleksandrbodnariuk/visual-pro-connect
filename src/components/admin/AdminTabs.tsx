@@ -6,6 +6,7 @@ import { SpecialistsTab } from "./tabs/SpecialistsTab";
 import { RepresentativesTab } from "./tabs/RepresentativesTab";
 import { AdminOrdersTab } from "./tabs/AdminOrdersTab";
 import { AdOrdersTab } from "./tabs/AdOrdersTab";
+import { FeedAdsTab } from "./tabs/FeedAdsTab";
 import { StockExchangeTab } from "./tabs/StockExchangeTab";
 import { PostsTab } from "./tabs/PostsTab";
 import { SettingsTab } from "./tabs/SettingsTab";
@@ -32,7 +33,7 @@ const ADMIN_SECTIONS = [
   ["representatives", "Представники"], ["clients", "Клієнти"], ["posts", "Публікації"],
   ["categories", "Категорії"], ["portfolio-categories", "Категорії портфоліо"], ["analytics", "Аналітика"],
   ["notifications-admin", "Сповіщення"], ["settings", "Налаштування"], ["orders", "Замовлення"],
-  ["ad-orders", "Реклама"], ["finances", "Фінанси"], ["payouts", "Виплати"],
+  ["ad-orders", "Реклама"], ["feed-ads", "Реклама в стрічці"], ["finances", "Фінанси"], ["payouts", "Виплати"],
   ["history", "Історія розрахунків"], ["stock-exchange", "Облік акцій"], ["assets", "Облік майна"],
   ["support", "Підтримка"], ["certificates", "Сертифікати"], ["vip", "VIP"],
   ["marketplace", "Маркетплейс"], ["storage", "Сховище"]
@@ -90,6 +91,7 @@ export function AdminTabs() {
 
         <TabsTrigger value="orders">Замовлення</TabsTrigger>
         <TabsTrigger value="ad-orders">Реклама</TabsTrigger>
+        <TabsTrigger value="feed-ads">Реклама в стрічці</TabsTrigger>
         <TabsTrigger value="finances">Фінанси</TabsTrigger>
         <TabsTrigger value="payouts">Виплати</TabsTrigger>
         <TabsTrigger value="history">Історія розрахунків</TabsTrigger>
@@ -131,6 +133,10 @@ export function AdminTabs() {
       
       <TabsContent value="orders">
         <AdminOrdersTab />
+      </TabsContent>
+
+      <TabsContent value="feed-ads">
+        <FeedAdsTab />
       </TabsContent>
 
       <TabsContent value="ad-orders">

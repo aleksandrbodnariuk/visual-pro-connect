@@ -41,6 +41,7 @@ const MyFiles = lazy(() => import("./pages/MyFiles"));
 const SpecialistPanel = lazy(() => import("./pages/SpecialistPanel"));
 const RepresentativePanel = lazy(() => import("./pages/RepresentativePanel"));
 const ModeratorPanel = lazy(() => import("./pages/ModeratorPanel"));
+const AdPanel = lazy(() => import("./pages/AdPanel"));
 const ServiceCatalog = lazy(() => import("./pages/ServiceCatalog"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -123,6 +124,7 @@ const AppContent = () => {
             <Route path="/panel-fahivtsya" element={<SpecialistPanel />} />
             <Route path="/representative-panel" element={<RepresentativePanel />} />
             <Route path="/moderator-panel" element={<ModeratorPanel />} />
+            <Route path="/ad-panel" element={<AdPanel />} />
             <Route path="/services" element={<ServiceCatalog />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/sertyfikaty" element={<Sertyfikaty />} />
