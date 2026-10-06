@@ -157,9 +157,9 @@ export function GroupFeed({ group, currentUser, refreshKey }: Props) {
         );
       })}
       {hasMore && (
-        <div className="flex flex-col items-center gap-2 border-t pt-4">
+        <div className="flex flex-col items-stretch gap-2 border-t px-1 pb-safe-nav pt-4 sm:items-center sm:pb-0">
           <p className="text-sm text-muted-foreground">Є ще публікації</p>
-          <Button variant="outline" onClick={loadMore} disabled={loadingMore} className="min-h-11 px-6">
+          <Button variant="outline" onClick={loadMore} disabled={loadingMore} className="min-h-11 w-full px-6 sm:w-auto">
             {loadingMore ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Завантаження…</> : 'Показати ще'}
           </Button>
         </div>
