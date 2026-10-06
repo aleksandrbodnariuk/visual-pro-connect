@@ -474,7 +474,7 @@ export const partyExtra = {
       const r = await db.from('protocol_votes').upsert(rows, { onConflict: 'protocol_id,candidate_id' });
       if (r.error) { toast.error('Не вдалося зберегти голоси: ' + r.error.message); return false; }
     }
-    toast.success('Протокол збережено'); return true;
+    return true;
   },
   async removeProtocol(id: string) {
     const { error } = await db.from('precinct_protocols').delete().eq('id', id);
