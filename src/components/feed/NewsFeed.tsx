@@ -101,11 +101,26 @@ export function NewsFeed() {
     }
   };
 
-  /** Cursor-based fetch: returns posts strictly older than `cursor` (or latest if null). */
+  /** Approved group memberships of the current user (cached per session). */
+  const myGroupIdsRef = useRef<string[] | null>(null);
+  const getMyGroupIds = async (): Promise<string[]> => {
+    if (myGroupIdsRef.current) return myGroupIdsRef.current;
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return (myGroupIdsRef.current = []);
+    const { data } = await supabase.from('group_members').select('group_id')
+      .eq('user_id', uid).eq('status', 'approved');
+    myGroupIdsRef.current = getFeedGroupIds(data || []);
+    return myGroupIdsRef.current;
+  };
+
+  /** Cursor-based fetch: personal posts + posts of joined groups only. */
   const fetchPostsCursor = async (cursor: string | null) => {
+    const myGroups = await getMyGroupIds();
     let query = supabase
       .from('posts')
       .select('*')
+      .or(buildFeedGroupFilter(myGroups))
       .order('created_at', { ascending: false })
       .limit(PAGE_SIZE);
     if (cursor) query = query.lt('created_at', cursor);
