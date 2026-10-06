@@ -44,31 +44,23 @@ export function MobileNavigation() {
   useEffect(() => {
     if (!currentUser?.id) { setIsSpecialist(false); setIsAdmin(false); setIsShareholder(false); setHasStockAccess(false); setIsRepresentative(false); setIsModerator(false); return; }
 
-    const checkRepAccess = async () => {
-      try {
-        for (const role of ['representative', 'manager', 'director'] as const) {
-          const { data } = await supabase.rpc('has_role', { _user_id: currentUser.id, _role: role as any });
-          if (data === true) return true;
-        }
-      } catch { /* ignore */ }
-      return false;
-    };
-
+    let cancelled = false;
+    // One request for all own roles instead of 6+ separate checks
     Promise.all([
-      supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'specialist' as any }),
-      supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'admin' as any }),
-      supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'shareholder' as any }),
+      supabase.from('user_roles').select('role').eq('user_id', currentUser.id),
       supabase.rpc('has_stock_market_access', { _user_id: currentUser.id }),
-      checkRepAccess(),
-      supabase.rpc('has_role', { _user_id: currentUser.id, _role: 'moderator' as any }),
-    ]).then(([specRes, adminRes, shareholderRes, stockRes, repAccess, modRes]) => {
-      setIsSpecialist(specRes.data === true);
-      setIsAdmin(adminRes.data === true || currentUser.founder_admin === true);
-      setIsShareholder(shareholderRes.data === true || currentUser.founder_admin === true);
-      setHasStockAccess(stockRes.data === true || currentUser.founder_admin === true);
-      setIsRepresentative(repAccess);
-      setIsModerator(modRes.data === true);
-    });
+    ]).then(([rolesRes, stockRes]) => {
+      if (cancelled) return;
+      const roles = new Set(((rolesRes.data as any[]) || []).map((r) => String(r.role)));
+      const founder = currentUser.founder_admin === true;
+      setIsSpecialist(roles.has('specialist'));
+      setIsAdmin(roles.has('admin') || founder);
+      setIsShareholder(roles.has('shareholder') || founder);
+      setHasStockAccess(stockRes.data === true || founder);
+      setIsRepresentative(roles.has('representative') || roles.has('manager') || roles.has('director'));
+      setIsModerator(roles.has('moderator'));
+    }).catch(() => { /* keep defaults */ });
+    return () => { cancelled = true; };
   }, [currentUser?.id]);
 
   // Не показуємо для неавторизованих користувачів
