@@ -342,8 +342,14 @@
   }
 }
 /* Native select dropdown options readable in dark/light themes */
+select { color-scheme: light; }
 select option, select optgroup {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
+  background-color: #ffffff !important;
+  color: #1f2333 !important;
 }
 .dark select { color-scheme: dark; }
+.dark select option, .dark select optgroup {
+  background-color: #1f2333 !important;
+  color: #f5f5f5 !important;
+}
+select option:checked { background-color: #3b82f6 !important; color: #ffffff !important; }

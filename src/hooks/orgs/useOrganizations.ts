@@ -397,7 +397,11 @@ export const partyExtra = {
   },
   async openChat(orgId: string, hqId: string | null, kind: 'internal' | 'network' | 'general') {
     const { data, error } = await db.rpc('open_party_chat', { _org_id: orgId, _hq_id: hqId, _kind: kind });
-    if (error) { toast.error(error.message); return null; }
+    if (error) {
+      const msg = /[а-яіїєґ]/i.test(error.message) ? error.message : 'Спробуйте ще раз або зверніться до адміністратора';
+      toast.error('Не вдалося відкрити чат штабу: ' + msg);
+      return null;
+    }
     return data as string;
   },
   async linkMemberUser(memberId: string, userId: string | null) {
