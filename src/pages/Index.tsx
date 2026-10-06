@@ -1,13 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { NewsFeed } from "@/components/feed/NewsFeed";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RightSidebar } from "@/components/layout/RightSidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Hero } from "@/components/home/Hero";
 import { useAuth } from "@/context/AuthContext";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 
 const Index = () => {
   const { isAuthenticated, loading, appUser } = useAuth();
+  const [feedKey, setFeedKey] = useState(0);
 
   // Prevent page-level scroll on authenticated home (Facebook-style fixed layout)
   useEffect(() => {
@@ -49,8 +51,15 @@ const Index = () => {
         </aside>
 
         {/* Основний контент */}
-        <main className="col-span-1 md:col-span-8 lg:col-span-6 h-full overflow-y-auto overscroll-contain scrollbar-hide py-4 md:py-6">
-          <NewsFeed />
+        <main className="col-span-1 md:col-span-8 lg:col-span-6 h-full min-h-0">
+          <PullToRefresh
+            onRefresh={() => setFeedKey((k) => k + 1)}
+            className="h-full overflow-y-auto overscroll-contain scrollbar-hide py-4 md:py-6"
+          >
+            <div key={feedKey} className="animate-fade-in">
+              <NewsFeed />
+            </div>
+          </PullToRefresh>
         </main>
 
         {/* Right Sidebar */}
