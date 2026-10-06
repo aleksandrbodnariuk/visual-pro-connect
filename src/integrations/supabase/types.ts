@@ -491,6 +491,73 @@ export type Database = {
           },
         ]
       }
+      campaign_tents: {
+        Row: {
+          address: string
+          campaign_id: string
+          created_at: string
+          created_by: string | null
+          hq_id: string
+          id: string
+          notes: string | null
+          organization_id: string
+          phone: string | null
+          responsible_name: string | null
+          schedule: string | null
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          campaign_id: string
+          created_at?: string
+          created_by?: string | null
+          hq_id: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          phone?: string | null
+          responsible_name?: string | null
+          schedule?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          hq_id?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          phone?: string | null
+          responsible_name?: string | null
+          schedule?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_tents_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "election_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_tents_hq_id_fkey"
+            columns: ["hq_id"]
+            isOneToOne: false
+            referencedRelation: "party_hqs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_tents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           color: string
@@ -3325,6 +3392,53 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      tent_reports: {
+        Row: {
+          booklets: number
+          contacts: number
+          created_at: string
+          created_by: string | null
+          id: string
+          newspapers: number
+          notes: string | null
+          other_materials: number
+          report_date: string
+          tent_id: string
+        }
+        Insert: {
+          booklets?: number
+          contacts?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          newspapers?: number
+          notes?: string | null
+          other_materials?: number
+          report_date?: string
+          tent_id: string
+        }
+        Update: {
+          booklets?: number
+          contacts?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          newspapers?: number
+          notes?: string | null
+          other_materials?: number
+          report_date?: string
+          tent_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tent_reports_tent_id_fkey"
+            columns: ["tent_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_tents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {
