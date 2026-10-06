@@ -136,8 +136,8 @@ export function StorageTab() {
                   <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
                     <HardDrive className="h-4 w-4" /> Бакети файлів
                   </h3>
-                  <div className="rounded-md border overflow-hidden">
-                    <table className="w-full text-sm">
+                  <div className="max-w-full overflow-x-auto rounded-md border">
+                    <table className="min-w-[520px] w-full text-sm">
                       <thead className="bg-muted/40">
                         <tr>
                           <th className="text-left p-2">Бакет</th>
@@ -168,8 +168,8 @@ export function StorageTab() {
                   <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
                     <Database className="h-4 w-4" /> Таблиці БД (топ 15)
                   </h3>
-                  <div className="rounded-md border overflow-hidden max-h-[400px] overflow-y-auto">
-                    <table className="w-full text-sm">
+                  <div className="max-h-[400px] max-w-full overflow-auto rounded-md border">
+                    <table className="min-w-[420px] w-full text-sm">
                       <thead className="bg-muted/40 sticky top-0">
                         <tr>
                           <th className="text-left p-2">Таблиця</th>
@@ -245,8 +245,8 @@ export function StorageTab() {
                   Знайдено <b>{orphans.length}</b> неприв'язаних файлів загальним розміром{" "}
                   <b>{fmt(orphans.reduce((s, o) => s + o.bytes, 0))}</b>.
                 </p>
-                <div className="rounded-md border overflow-hidden max-h-[500px] overflow-y-auto">
-                  <table className="w-full text-sm">
+                <div className="max-h-[500px] max-w-full overflow-auto rounded-md border">
+                  <table className="min-w-[420px] w-full text-sm">
                     <thead className="bg-muted/40 sticky top-0">
                       <tr>
                         <th className="w-10 p-2"></th>

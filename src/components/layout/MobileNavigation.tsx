@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Users, Plus, MessageSquare, Menu, User, Bell, Search, Settings, LogOut, Camera, Video, Music, Mic, Sparkles, UtensilsCrossed, Car, Flower2, UserPlus, FolderOpen, Image, Briefcase, Crown, TrendingUp, UsersRound, Shield } from "lucide-react";
+import { Home, Users, Plus, MessageSquare, Menu, User, Bell, Search, Settings, LogOut, Camera, Video, Music, Mic, Sparkles, UtensilsCrossed, Car, Flower2, UserPlus, FolderOpen, Image, Briefcase, Crown, TrendingUp, UsersRound, Shield, Building2, Award, Store } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -170,6 +170,42 @@ export function MobileNavigation() {
                         <Settings className="h-5 w-5" />
                         <span>{t.settings}</span>
                       </Link>
+                      <Link
+                        to="/groups"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <UsersRound className="h-5 w-5" />
+                        <span>{t.groups}</span>
+                      </Link>
+
+                      <Link
+                        to="/organizations"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <Building2 className="h-5 w-5" />
+                        <span>{t.organizations}</span>
+                      </Link>
+
+                      <Link
+                        to="/sertyfikaty"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <Award className="h-5 w-5 text-amber-500" />
+                        <span>{t.certificates}</span>
+                      </Link>
+
+                      <Link
+                        to="/market"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <Store className="h-5 w-5 text-primary" />
+                        <span>{t.marketplace}</span>
+                      </Link>
+
 
                       {/* Кабінет фахівця */}
                       {(isSpecialist || isAdmin) && (
@@ -226,6 +262,17 @@ export function MobileNavigation() {
                           <span>{t.stockMarket}</span>
                         </Link>
                       )}
+                      {isAdmin && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setIsMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <Shield className="h-5 w-5 text-destructive" />
+                          <span>{t.adminPanel}</span>
+                        </Link>
+                      )}
+
                       
                       <Separator className="my-4" />
                       

@@ -547,14 +547,14 @@ export function UsersTab() {
         <CardDescription>Перегляд та управління користувачами системи</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex justify-between items-center mb-4">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Input
             placeholder="Пошук за ім'ям, email або телефоном"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-sm"
           />
-          <div className="flex items-center space-x-2">
+          <div className="flex min-h-11 items-center space-x-2">
             <Switch
               id="show-blocked"
               checked={showBlocked}

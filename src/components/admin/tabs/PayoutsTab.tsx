@@ -485,7 +485,7 @@ export function PayoutsTab() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="h-auto w-full justify-start overflow-x-auto">
           <TabsTrigger value="pending">
             На виплату {pending.length > 0 && <Badge variant="destructive" className="ml-1 text-xs">{pending.length}</Badge>}
           </TabsTrigger>
@@ -564,7 +564,7 @@ export function PayoutsTab() {
           </DialogHeader>
           {payDialog && (
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                 <div><span className="text-muted-foreground">Сума:</span> <strong>{fmt(payDialog.amount)}</strong></div>
                 <div><span className="text-muted-foreground">Базовий:</span> {fmt(payDialog.base_income)}</div>
                 <div><span className="text-muted-foreground">Титульний:</span> {fmt(payDialog.title_bonus)}</div>

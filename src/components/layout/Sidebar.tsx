@@ -104,10 +104,10 @@ export function Sidebar({ className }: SidebarProps) {
             <Users className="mr-2 h-4 w-4" /> {t.friends}
           </Button>
           <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/groups')} data-active={location.pathname.startsWith("/groups")}>
-            <UsersRound className="mr-2 h-4 w-4" /> Групи
+            <UsersRound className="mr-2 h-4 w-4" /> {t.groups}
           </Button>
           <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/organizations')} data-active={location.pathname.startsWith("/organizations")}>
-            <Building2 className="mr-2 h-4 w-4" /> Організації
+            <Building2 className="mr-2 h-4 w-4" /> {t.organizations}
           </Button>
           <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/settings')} data-active={location.pathname === "/settings"}>
             <Settings className="mr-2 h-4 w-4" /> {t.settings}

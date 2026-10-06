@@ -25,6 +25,18 @@ import { StorageTab } from "./tabs/StorageTab";
 import { ClientsTab } from "./tabs/ClientsTab";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const ADMIN_SECTIONS = [
+  ["users", "Користувачі"], ["specialists", "Фахівці"], ["shareholders", "Акціонери"],
+  ["representatives", "Представники"], ["clients", "Клієнти"], ["posts", "Публікації"],
+  ["categories", "Категорії"], ["portfolio-categories", "Категорії портфоліо"], ["analytics", "Аналітика"],
+  ["notifications-admin", "Сповіщення"], ["settings", "Налаштування"], ["orders", "Замовлення"],
+  ["ad-orders", "Реклама"], ["finances", "Фінанси"], ["payouts", "Виплати"],
+  ["history", "Історія розрахунків"], ["stock-exchange", "Облік акцій"], ["assets", "Облік майна"],
+  ["support", "Підтримка"], ["certificates", "Сертифікати"], ["vip", "VIP"],
+  ["marketplace", "Маркетплейс"], ["storage", "Сховище"]
+] as const;
 
 export function AdminTabs() {
   const navigate = useNavigate();
@@ -44,8 +56,21 @@ export function AdminTabs() {
   };
 
   return (
-    <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-      <TabsList className="mb-4 flex overflow-x-auto gap-1 w-full justify-start pb-2">
+    <Tabs value={activeTab} onValueChange={handleTabChange} className="min-w-0 w-full">
+      <div className="mb-4 md:hidden">
+        <label className="mb-2 block text-sm font-medium" htmlFor="admin-section">Розділ адміністратора</label>
+        <Select value={activeTab} onValueChange={handleTabChange}>
+          <SelectTrigger id="admin-section" className="min-h-11 w-full">
+            <SelectValue placeholder="Оберіть розділ" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[60vh]">
+            {ADMIN_SECTIONS.map(([value, label]) => (
+              <SelectItem key={value} value={value}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <TabsList className="mb-4 hidden w-full justify-start gap-1 overflow-x-auto pb-2 md:flex">
         <TabsTrigger value="users">Користувачі</TabsTrigger>
         <TabsTrigger value="specialists">Фахівці</TabsTrigger>
         <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
@@ -83,6 +108,7 @@ export function AdminTabs() {
         <TabsTrigger value="storage">Сховище</TabsTrigger>
       </TabsList>
       
+      <div className="min-w-0 max-w-full overflow-x-hidden">
       <TabsContent value="users">
         <UsersTab />
       </TabsContent>
@@ -174,6 +200,7 @@ export function AdminTabs() {
       <TabsContent value="storage">
         <StorageTab />
       </TabsContent>
+      </div>
     </Tabs>
   );
 }

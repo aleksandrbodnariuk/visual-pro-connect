@@ -228,7 +228,7 @@ export function VipTiersEditor() {
                   onChange={(e) => setEditing({ ...editing, draft: { ...editing.draft, id: e.target.value } })}
                   placeholder="silver / gold / platinum" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <Label className="mb-1 block">Назва <span className="text-destructive">*</span></Label>
                   <Input value={editing.draft.label} maxLength={50}
@@ -240,7 +240,7 @@ export function VipTiersEditor() {
                     onChange={(e) => setEditing({ ...editing, draft: { ...editing.draft, price_uah: e.target.value } })} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <Label className="mb-1 block">Тривалість (днів) <span className="text-destructive">*</span></Label>
                   <Input type="number" min="1" value={editing.draft.duration_days}
@@ -266,7 +266,7 @@ export function VipTiersEditor() {
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                   Економічні переваги
                 </Label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <div>
                     <Label className="mb-1 block text-xs">Знижка %</Label>
                     <Input type="number" min="0" max="100" value={editing.draft.discount_percent}
@@ -284,7 +284,7 @@ export function VipTiersEditor() {
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
                   <Label className="mb-1 block">Іконка</Label>
                   <select className="w-full h-10 rounded-md border bg-background px-3 text-sm"
@@ -302,7 +302,7 @@ export function VipTiersEditor() {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <Label className="mb-1 block">Анімація банера</Label>
                   <select className="w-full h-10 rounded-md border bg-background px-3 text-sm"

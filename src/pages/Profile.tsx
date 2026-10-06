@@ -9,6 +9,7 @@ import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ProfileEditorDialog } from "@/components/profile/ProfileEditorDialog";
 import { useLanguage } from "@/context/LanguageContext";
@@ -51,12 +52,16 @@ const ErrorComponent = ({ message }: { message: string }) => (
 );
 
 
+const POSTS_PER_PAGE = 10;
+
 export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
   const [user, setUser] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [isCurrentUser, setIsCurrentUser] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [portfolioManagerOpen, setPortfolioManagerOpen] = useState(false);
@@ -104,17 +109,27 @@ export default function Profile() {
         let postsCount = 0;
         
         try {
+          // Get total count of posts
+          const { count } = await supabase
+            .from('posts')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', targetUserId)
+            .is('group_id', null);
+          
+          postsCount = count || 0;
+
+          // Fetch first page
           const { data: postsResult } = await supabase
             .from('posts')
             .select('*')
             .eq('user_id', targetUserId)
             .is('group_id', null)
             .order('created_at', { ascending: false })
-            .range(0, 9);
+            .range(0, POSTS_PER_PAGE - 1);
           
           if (postsResult) {
             postsData = postsResult;
-            postsCount = postsResult.length;
+            setHasMore(postsResult.length < postsCount);
           }
         } catch (postsError) {
           console.warn("Помилка отримання постів:", postsError);
@@ -305,7 +320,11 @@ export default function Profile() {
       }
 
       // Оновлюємо локальний стан
-      setPosts(posts.filter(post => post.id !== postId));
+      setPosts((currentPosts) => currentPosts.filter(post => post.id !== postId));
+      setUser((currentUser: any) => currentUser ? {
+        ...currentUser,
+        postsCount: Math.max(0, (currentUser.postsCount || 0) - 1)
+      } : currentUser);
       toast.success("Публікацію видалено");
     } catch (error) {
       console.error('Помилка видалення:', error);
@@ -344,6 +363,54 @@ export default function Profile() {
       case 'host': return 'Ведучий';
       case 'pyrotechnician': return 'Піротехнік';
       default: return categoryId;
+    }
+  };
+
+  
+  const handleLoadMore = async () => {
+    if (loadingMore || !hasMore || !user) return;
+    
+    setLoadingMore(true);
+    try {
+      const targetUserId = user.id;
+      const { data: morePosts, error: fetchError } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('user_id', targetUserId)
+        .is('group_id', null)
+        .order('created_at', { ascending: false })
+        .range(posts.length, posts.length + POSTS_PER_PAGE - 1);
+
+      if (fetchError) throw fetchError;
+
+      if (morePosts && morePosts.length > 0) {
+        const enrichedPosts = morePosts.map((post: any) => ({
+          id: post.id,
+          author: {
+            id: targetUserId,
+            name: user.name,
+            username: user.username || `user_${post.user_id.substring(0, 5)}`,
+            avatarUrl: user.avatarUrl || "https://i.pravatar.cc/150?img=1",
+            profession: user.profession || "",
+            categories: user.categories || []
+          },
+          imageUrl: post.media_url,
+          caption: post.content,
+          likes: post.likes_count,
+          comments: post.comments_count,
+          timeAgo: new Date(post.created_at).toLocaleDateString()
+        }));
+
+        setPosts(prev => [...prev, ...enrichedPosts]);
+        setHasMore(posts.length + morePosts.length < user.postsCount);
+      } else {
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.error("Error loading more posts:", err);
+      toast.error("Помилка при завантаженні додаткових публікацій");
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -400,6 +467,25 @@ export default function Profile() {
                     onEditPost={handleEditPost}
                     onDeletePost={handleDeletePost}
                   />
+                  {hasMore && (
+                    <div className="flex justify-center mt-6 pb-8">
+                      <Button 
+                        variant="outline" 
+                        onClick={handleLoadMore} 
+                        disabled={loadingMore}
+                        className="min-w-[150px]"
+                      >
+                        {loadingMore ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Завантаження...
+                          </>
+                        ) : (
+                          "Показати ще"
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </Suspense>
               </div>
             </TabsContent>

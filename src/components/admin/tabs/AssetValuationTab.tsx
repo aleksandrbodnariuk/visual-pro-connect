@@ -553,7 +553,7 @@ export function AssetValuationTab() {
                 <label className="text-sm font-medium text-foreground mb-1.5 block">Опис / примітка</label>
                 <Textarea className="min-h-[80px] text-base" placeholder="Додаткова інформація" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1.5 block">Кількість</label>
                   <Input className="h-11 text-base" type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
@@ -572,7 +572,7 @@ export function AssetValuationTab() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1.5 block">Стан</label>
                   <Select value={form.condition} onValueChange={(v) => setForm({ ...form, condition: v })}>

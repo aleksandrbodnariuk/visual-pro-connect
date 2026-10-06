@@ -726,7 +726,7 @@ export function StockExchangeTab() {
               </DialogHeader>
 
               <div className="grid gap-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <h3 className="text-sm font-medium">Від кого (передає)</h3>
                     <p>{selectedTransaction.seller_name}</p>
@@ -736,7 +736,7 @@ export function StockExchangeTab() {
                     <p>{selectedTransaction.buyer_name}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div>
                     <h3 className="text-sm font-medium">Кількість акцій</h3>
                     <p>{selectedTransaction.quantity}</p>
