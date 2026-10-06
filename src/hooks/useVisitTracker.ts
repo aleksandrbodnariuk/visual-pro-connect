@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
-const HEARTBEAT_INTERVAL = 30 * 1000; // Update last_seen every 30 seconds
+const HEARTBEAT_INTERVAL = 2 * 60 * 1000; // Update last_seen every 2 minutes (online window is 5 min)
 
 export function useVisitTracker() {
   const { user } = useAuth();

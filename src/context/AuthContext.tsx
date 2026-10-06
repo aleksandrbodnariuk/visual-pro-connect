@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { User as AppUser } from '@/hooks/users/types';
@@ -66,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [appUser, setAppUser] = useState<AppUser | null>(null);
+  const loadedUserIdRef = useRef<string | null>(null);
 
   // Safety timeout
   useEffect(() => {
@@ -81,16 +82,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
         setSession(session);
-        setUser(session?.user ?? null);
+        // Keep the same user object when the id hasn't changed to avoid app-wide re-renders/refetches
+        setUser((prev) => (prev && session?.user && prev.id === session.user.id ? prev : session?.user ?? null));
         // Update analytics tracker so future page views include user_id
         import('@/lib/analytics').then((m) => m.setAnalyticsUserId(session?.user?.id ?? null));
 
         if (session?.user) {
-          // Defer to avoid deadlock in auth callback
+          // Token refresh / repeated SIGNED_IN for same user: no need to reload profile
+          if (event === 'TOKEN_REFRESHED' || (event === 'SIGNED_IN' && loadedUserIdRef.current === session.user.id)) {
+            setLoading(false);
+            return;
+          }
+          const uid = session.user.id;
           setTimeout(async () => {
             const userData = await fetchAppUser();
+            loadedUserIdRef.current = uid;
             setAppUser(userData);
             setLoading(false);
           }, 0);
