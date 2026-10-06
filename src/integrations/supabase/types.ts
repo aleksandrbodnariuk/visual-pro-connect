@@ -898,9 +898,11 @@ export type Database = {
           id: string
           is_test: boolean
           local_kind: string | null
+          mode: string
           name: string
           notes: string | null
           organization_id: string
+          precinct_ids: string[] | null
           round: number
           status: string
           updated_at: string
@@ -913,9 +915,11 @@ export type Database = {
           id?: string
           is_test?: boolean
           local_kind?: string | null
+          mode?: string
           name: string
           notes?: string | null
           organization_id: string
+          precinct_ids?: string[] | null
           round?: number
           status?: string
           updated_at?: string
@@ -928,9 +932,11 @@ export type Database = {
           id?: string
           is_test?: boolean
           local_kind?: string | null
+          mode?: string
           name?: string
           notes?: string | null
           organization_id?: string
+          precinct_ids?: string[] | null
           round?: number
           status?: string
           updated_at?: string
@@ -1846,6 +1852,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          flag_url: string | null
           id: string
           logo_url: string | null
           name: string
@@ -1857,6 +1864,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          flag_url?: string | null
           id?: string
           logo_url?: string | null
           name: string
@@ -1868,6 +1876,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          flag_url?: string | null
           id?: string
           logo_url?: string | null
           name?: string
