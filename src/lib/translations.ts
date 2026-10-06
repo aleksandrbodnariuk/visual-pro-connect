@@ -2,7 +2,7 @@
 import { Language } from "@/context/LanguageContext";
 
 export const translations: Record<Language, Record<string, string>> = {
-  uk{
+  uk: {
     // Auth page
     loginToApp: "Увійти на платформу",
     register: "Зареєструватися",
@@ -132,7 +132,7 @@ export const translations: Record<Language, Record<string, string>> = {
     florists: "Флористи"
   },
   
-  en{
+  en: {
     // Auth page
     loginToApp: "Login to Platform",
     register: "Register",
@@ -262,7 +262,7 @@ export const translations: Record<Language, Record<string, string>> = {
     florists: "Florists"
   },
   
-  pl{
+  pl: {
     // Auth page
     loginToApp: "Zaloguj się do platformy",
     register: "Zarejestruj się",
@@ -391,7 +391,7 @@ export const translations: Record<Language, Record<string, string>> = {
     florists: "Floryści"
   },
   
-  de{
+  de: {
     // Auth page
     loginToApp: "Bei der Plattform anmelden",
     register: "Registrieren",
@@ -520,7 +520,7 @@ export const translations: Record<Language, Record<string, string>> = {
     florists: "Floristen"
   },
   
-  ro{
+  ro: {
     // Auth page
     loginToApp: "Conectare la platformă",
     register: "Înregistrare",
