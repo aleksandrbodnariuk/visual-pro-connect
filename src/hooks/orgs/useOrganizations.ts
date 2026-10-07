@@ -45,6 +45,7 @@ export interface HqMember {
   phone: string | null;
   is_agitator: boolean;
   notes: string | null;
+  party_member_id?: string | null;
 }
 
 export interface Precinct {
@@ -236,7 +237,8 @@ export const partyActions = {
       phone: m.phone || null,
       is_agitator: !!m.is_agitator,
       notes: m.notes || null,
-    };
+      ...(m.party_member_id !== undefined ? { party_member_id: m.party_member_id } : {}),
+    } as any;
     const res = m.id
       ? await supabase.from('hq_members').update(payload).eq('id', m.id)
       : await supabase.from('hq_members').insert(payload);
@@ -557,3 +559,55 @@ export function goToConversation(navigate: (p: string) => void, conversationId: 
   localStorage.setItem('currentChatConversationId', conversationId);
   navigate('/messages');
 }
+
+export type PartyMemberStatus = 'active' | 'candidate' | 'honorary' | 'suspended';
+export const PARTY_MEMBER_STATUS: Record<PartyMemberStatus, string> = {
+  active: 'Активний', candidate: 'Кандидат у члени', honorary: 'Почесний', suspended: 'Призупинено',
+};
+export interface PartyMember {
+  id: string;
+  organization_id: string;
+  unit_name: string | null;
+  full_name: string;
+  phone: string | null;
+  email: string | null;
+  card_number: string | null;
+  joined_date: string | null;
+  status: PartyMemberStatus;
+  position: string | null;
+  user_id: string | null;
+  notes: string | null;
+}
+
+/** Реєстр членів партії (постійна структура, незалежна від штабів). */
+export const partyMembersApi = {
+  async list(orgId: string) {
+    return (await fetchAll(() => db.from('party_members').select('*').eq('organization_id', orgId).order('full_name'))) as PartyMember[];
+  },
+  async save(orgId: string, m: Partial<PartyMember> & { full_name: string }) {
+    const payload = {
+      organization_id: orgId,
+      full_name: m.full_name.trim(),
+      unit_name: m.unit_name?.trim() || null,
+      phone: m.phone?.trim() || null,
+      email: m.email?.trim() || null,
+      card_number: m.card_number?.trim() || null,
+      joined_date: m.joined_date || null,
+      status: m.status || 'active',
+      position: m.position?.trim() || null,
+      user_id: m.user_id || null,
+      notes: m.notes?.trim() || null,
+    };
+    const res = m.id
+      ? await db.from('party_members').update(payload).eq('id', m.id)
+      : await db.from('party_members').insert(payload);
+    if (res.error) { toast.error('Не вдалося зберегти члена партії'); return false; }
+    toast.success(m.id ? 'Дані оновлено' : 'Члена партії додано');
+    return true;
+  },
+  async remove(id: string) {
+    const { error } = await db.from('party_members').delete().eq('id', id);
+    if (error) { toast.error('Не вдалося видалити'); return false; }
+    return true;
+  },
+};
