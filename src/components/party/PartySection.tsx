@@ -94,7 +94,7 @@ export function PartySection({ orgId, canEdit: isAdmin }: { orgId: string; canEd
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="team">Команда</TabsTrigger>
             <TabsTrigger value="precincts">Дільниці</TabsTrigger>
-            <TabsTrigger value="children">Підлеглі штаби ({children.length})</TabsTrigger>
+            <TabsTrigger value="children">Підлеглі організації ({children.length})</TabsTrigger>
             <TabsTrigger value="chats"><MessagesSquare className="h-4 w-4 mr-1" />Чати</TabsTrigger>
             <TabsTrigger value="managers">Керівники</TabsTrigger>
           </TabsList>
@@ -112,7 +112,7 @@ export function PartySection({ orgId, canEdit: isAdmin }: { orgId: string; canEd
                 <Plus className="h-4 w-4 mr-1" /> Додати: {levelLabel(childLevel)}
               </Button>
             )}
-            {children.length === 0 ? <p className="text-sm text-muted-foreground">Немає підлеглих штабів</p> : (
+            {children.length === 0 ? <p className="text-sm text-muted-foreground">Немає підлеглих організацій</p> : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                 {children.map((c) => (
                   <Card key={c.id} className="p-3 cursor-pointer hover:border-primary transition-colors" onClick={() => setSelected(c)}>
@@ -153,7 +153,7 @@ export function PartySection({ orgId, canEdit: isAdmin }: { orgId: string; canEd
         </Button>
         {canEdit && (
           <Button variant="outline" className="w-full mt-2" onClick={() => setTplOpen(true)}>
-            <LayoutList className="h-4 w-4 mr-1" /> Структура штабів
+            <LayoutList className="h-4 w-4 mr-1" /> Структура посад
           </Button>
         )}
       </div>
