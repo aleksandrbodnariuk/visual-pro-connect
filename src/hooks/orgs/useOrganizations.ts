@@ -88,6 +88,17 @@ export const HQ_LEVELS: { value: HqLevel; label: string; plural: string; campaig
 
 export const ORG_TYPES: { value: OrgType; label: string }[] = [
   { value: 'party', label: 'Політична партія' },
+  { value: 'company', label: 'Компанія' },
+  { value: 'ngo', label: 'Громадська організація' },
+  { value: 'other', label: 'Інше' },
+];
+
+export const levelLabel = (l: HqLevel) => HQ_LEVELS.find((x) => x.value === l)?.label ?? l;
+export const levelPlural = (l: HqLevel) => HQ_LEVELS.find((x) => x.value === l)?.plural ?? l;
+/** Назви рівнів під час виборчої кампанії. */
+export const campaignLevelLabel = (l: HqLevel) => HQ_LEVELS.find((x) => x.value === l)?.campaign ?? l;
+export const campaignLevelPlural = (l: HqLevel) => HQ_LEVELS.find((x) => x.value === l)?.campaignPlural ?? l;
+
 
 export function useOrganizations() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
