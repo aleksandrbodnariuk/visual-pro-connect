@@ -76,13 +76,14 @@ export interface StructureTemplate {
   positions: string[];
 }
 
-export const HQ_LEVELS: { value: HqLevel; label: string; plural: string }[] = [
-  { value: 'central', label: 'Центральний штаб', plural: 'Центральний штаб' },
-  { value: 'oblast', label: 'Обласний штаб', plural: 'Обласні штаби' },
-  { value: 'okrug', label: 'Окружний (районний) штаб', plural: 'Окружні (районні) штаби' },
-  { value: 'city', label: 'Міська організація', plural: 'Міські організації' },
-  { value: 'otg', label: 'Організація ОТГ', plural: 'Організації ОТГ' },
-  { value: 'village', label: 'Сільська організація', plural: 'Сільські організації' },
+/** Постійні (статутні) назви рівнів — для міжвиборчого періоду. */
+export const HQ_LEVELS: { value: HqLevel; label: string; plural: string; campaign: string; campaignPlural: string }[] = [
+  { value: 'central', label: 'Центральна партійна організація', plural: 'Центральна організація', campaign: 'Центральний виборчий штаб', campaignPlural: 'Центральний штаб' },
+  { value: 'oblast', label: 'Обласна організація', plural: 'Обласні організації', campaign: 'Обласний виборчий штаб', campaignPlural: 'Обласні штаби' },
+  { value: 'okrug', label: 'Районна організація', plural: 'Районні організації', campaign: 'Окружний виборчий штаб', campaignPlural: 'Окружні штаби' },
+  { value: 'city', label: 'Міська організація', plural: 'Міські організації', campaign: 'Міський виборчий штаб', campaignPlural: 'Міські штаби' },
+  { value: 'otg', label: 'Організація ОТГ', plural: 'Організації ОТГ', campaign: 'Штаб громади', campaignPlural: 'Штаби громад' },
+  { value: 'village', label: 'Первинний осередок', plural: 'Первинні осередки', campaign: 'Сільський штаб', campaignPlural: 'Сільські штаби' },
 ];
 
 export const ORG_TYPES: { value: OrgType; label: string }[] = [
@@ -94,6 +95,10 @@ export const ORG_TYPES: { value: OrgType; label: string }[] = [
 
 export const levelLabel = (l: HqLevel) => HQ_LEVELS.find((x) => x.value === l)?.label ?? l;
 export const levelPlural = (l: HqLevel) => HQ_LEVELS.find((x) => x.value === l)?.plural ?? l;
+/** Назви рівнів під час виборчої кампанії. */
+export const campaignLevelLabel = (l: HqLevel) => HQ_LEVELS.find((x) => x.value === l)?.campaign ?? l;
+export const campaignLevelPlural = (l: HqLevel) => HQ_LEVELS.find((x) => x.value === l)?.campaignPlural ?? l;
+
 
 export function useOrganizations() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);

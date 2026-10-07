@@ -18,7 +18,7 @@ import { ElectionDayPanel } from './ElectionDayPanel';
 import { HqBoardPanel } from './HqBoardPanel';
 import type { ProtocolPhoto } from '@/hooks/orgs/useOrganizations';
 import {
-  ELECTION_TYPES, HQ_LEVELS, LOCAL_KINDS, levelPlural, partyActions, partyExtra,
+  ELECTION_TYPES, HQ_LEVELS, LOCAL_KINDS, levelPlural, campaignLevelPlural, partyActions, partyExtra,
   type Campaign, type Candidate, type ElectionType, type HqLevel, type LocalKind, type PartyHq, type Precinct, type Protocol,
 } from '@/hooks/orgs/useOrganizations';
 
@@ -443,7 +443,7 @@ function ResultsView({ hqs, candidates, results, onRefresh }: {
       <div className="flex flex-wrap gap-2 items-center">
         <select className={`${sel} sm:w-72`} value={scope} onChange={(e) => setScope(e.target.value as any)}>
           <option value="total">Загалом</option>
-          {levels.map((l) => <option key={l.value} value={l.value}>По рівню: {levelPlural(l.value)}</option>)}
+          {levels.map((l) => <option key={l.value} value={l.value}>По рівню: {campaignLevelPlural(l.value)}</option>)}
         </select>
         <Button variant="outline" size="sm" onClick={onRefresh}><RefreshCw className="h-4 w-4 mr-1" /> Оновити</Button>
       </div>
