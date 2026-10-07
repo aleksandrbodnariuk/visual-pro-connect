@@ -1415,6 +1415,7 @@ export type Database = {
           is_agitator: boolean
           notes: string | null
           organization_id: string
+          party_member_id: string | null
           phone: string | null
           position: string | null
           updated_at: string
@@ -1428,6 +1429,7 @@ export type Database = {
           is_agitator?: boolean
           notes?: string | null
           organization_id: string
+          party_member_id?: string | null
           phone?: string | null
           position?: string | null
           updated_at?: string
@@ -1441,6 +1443,7 @@ export type Database = {
           is_agitator?: boolean
           notes?: string | null
           organization_id?: string
+          party_member_id?: string | null
           phone?: string | null
           position?: string | null
           updated_at?: string
@@ -1459,6 +1462,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hq_members_party_member_id_fkey"
+            columns: ["party_member_id"]
+            isOneToOne: false
+            referencedRelation: "party_members"
             referencedColumns: ["id"]
           },
         ]
@@ -2166,6 +2176,68 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "party_hqs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_members: {
+        Row: {
+          card_number: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          full_name: string
+          id: string
+          joined_date: string | null
+          notes: string | null
+          organization_id: string
+          phone: string | null
+          position: string | null
+          status: string
+          unit_name: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          card_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          joined_date?: string | null
+          notes?: string | null
+          organization_id: string
+          phone?: string | null
+          position?: string | null
+          status?: string
+          unit_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          card_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          joined_date?: string | null
+          notes?: string | null
+          organization_id?: string
+          phone?: string | null
+          position?: string | null
+          status?: string
+          unit_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]

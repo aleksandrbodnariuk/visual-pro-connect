@@ -10,6 +10,7 @@ import { CampaignsPanel } from '@/components/party/CampaignsPanel';
 import { ORG_TYPES, orgActions, useOrganization } from '@/hooks/orgs/useOrganizations';
 import { PartySection } from '@/components/party/PartySection';
 import { PartyAccessPanel } from '@/components/party/PartyAccessPanel';
+import { PartyMembersRegistry } from '@/components/party/PartyMembersRegistry';
 import { PartyPeoplePanel } from '@/components/party/PartyPeoplePanel';
 import { PartySymbols } from '@/components/party/PartySymbols';
 import { FlagBanner } from '@/components/party/FlagBanner';
@@ -71,11 +72,13 @@ export default function OrganizationPage() {
                       <TabsTrigger value="hqs">Штаби</TabsTrigger>
                       <TabsTrigger value="leaders">Керівництво</TabsTrigger>
                       <TabsTrigger value="members">Члени партії</TabsTrigger>
+                      <TabsTrigger value="staff">Працівники штабів</TabsTrigger>
                       <TabsTrigger value="symbols">Символіка</TabsTrigger>
                     </TabsList>
                     <TabsContent value="hqs"><PartySection orgId={organization.id} canEdit={isAdmin} /></TabsContent>
                     <TabsContent value="leaders"><PartyPeoplePanel orgId={organization.id} mode="leaders" /></TabsContent>
-                    <TabsContent value="members"><PartyPeoplePanel orgId={organization.id} mode="members" /></TabsContent>
+                    <TabsContent value="members"><PartyMembersRegistry orgId={organization.id} canEdit={isAdmin} /></TabsContent>
+                    <TabsContent value="staff"><PartyPeoplePanel orgId={organization.id} mode="members" /></TabsContent>
                     <TabsContent value="symbols"><PartySymbols org={organization} canEdit={isAdmin} onChanged={reload} /></TabsContent>
                   </Tabs>
                 </TabsContent>
