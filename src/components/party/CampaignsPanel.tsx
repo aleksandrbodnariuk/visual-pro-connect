@@ -16,6 +16,8 @@ import { ProtocolPhotos } from './ProtocolPhotos';
 import { TentsPanel } from './TentsPanel';
 import { ElectionDayPanel } from './ElectionDayPanel';
 import { HqBoardPanel } from './HqBoardPanel';
+import { IncidentsPanel } from './IncidentsPanel';
+import { supabase } from '@/integrations/supabase/client';
 import type { ProtocolPhoto } from '@/hooks/orgs/useOrganizations';
 import {
   ELECTION_TYPES, HQ_LEVELS, LOCAL_KINDS, levelPlural, campaignLevelPlural, partyActions, partyExtra,
@@ -173,6 +175,8 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
   const [precincts, setPrecincts] = useState<Precinct[]>([]);
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [managed, setManaged] = useState<Set<string>>(new Set());
+  const [mine, setMine] = useState<Set<string>>(new Set());
+  const [proto, setProto] = useState<Precinct | null>(null);
   const [results, setResults] = useState<Awaited<ReturnType<typeof partyExtra.results>>>({ votes: [], progress: [] });
   const candLabel = ELECTION_TYPES.find((t) => t.value === campaign.election_type)?.candidateLabel || 'Кандидат';
 
@@ -183,6 +187,10 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
     ]);
     setCandidates(c); setHqs(h); setPrecincts(campaignPrecincts(p, campaign.mode, campaign.precinct_ids)); setProtocols(pr); setResults(r);
     setManaged(new Set(m.filter((x) => x.user_id === user?.id).map((x) => x.hq_id)));
+    if (user?.id) {
+      const { data: pm } = await (supabase as any).from('precinct_members').select('precinct_id').eq('organization_id', orgId).eq('user_id', user.id);
+      setMine(new Set((pm || []).map((x: any) => x.precinct_id)));
+    }
   }, [campaign.id, orgId, user?.id]);
   useEffect(() => { load(); }, [load]);
 
@@ -193,6 +201,8 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
     while (cur && g++ < 10) { if (managed.has(cur.id)) return true; cur = cur.parent_id ? byId.get(cur.parent_id) : undefined; }
     return false;
   };
+  const canEditPrecinct = (p: Precinct) => campaign.status !== 'finished' && (canManageHq(p.hq_id) || mine.has(p.id));
+  const isObserver = mine.size > 0 && !isAdmin && managed.size === 0;
 
   return (
     <div className="space-y-4">
@@ -218,26 +228,38 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
           </ol>
         </Card>
       )}
-      <Tabs defaultValue="results">
+      {isObserver && (
+        <Card className="p-3 text-sm border-primary/40">
+          <p className="font-medium">Кабінет спостерігача</p>
+          <p className="text-muted-foreground text-xs">Тут ваші дільниці: підтвердьте відкриття, передайте явку о 12, 16 і 20 годині, повідомляйте про порушення, а після підрахунку натисніть «Протокол» — внесіть результати й сфотографуйте аркуші.</p>
+        </Card>
+      )}
+      <Tabs defaultValue={isObserver ? 'day' : 'results'} key={isObserver ? 'obs' : 'hq'}>
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="results">Результати</TabsTrigger>
           <TabsTrigger value="board">Табло</TabsTrigger>
-          <TabsTrigger value="day">День виборів</TabsTrigger>
+          <TabsTrigger value="day">{isObserver ? 'Моя дільниця' : 'День виборів'}</TabsTrigger>
+          <TabsTrigger value="incidents">Порушення (юристи)</TabsTrigger>
           <TabsTrigger value="protocols">Протоколи</TabsTrigger>
           <TabsTrigger value="candidates">{campaign.election_type === 'parliamentary' ? 'Партії / кандидати' : 'Кандидати'} ({candidates.length})</TabsTrigger>
           <TabsTrigger value="tents">Намети</TabsTrigger>
         </TabsList>
         <TabsContent value="results"><ResultsView hqs={hqs} candidates={candidates} results={results} onRefresh={load} /></TabsContent>
         <TabsContent value="board"><HqBoardPanel campaign={campaign} hqs={hqs} precincts={precincts} protocols={protocols} onRefresh={load} /></TabsContent>
-        <TabsContent value="day"><ElectionDayPanel orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={canManageHq} /></TabsContent>
+        <TabsContent value="day"><ElectionDayPanel orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={canManageHq} onProtocol={candidates.length ? setProto : undefined} protocolIds={new Set(protocols.map((x) => x.precinct_id))} /></TabsContent>
+        <TabsContent value="incidents"><IncidentsPanel campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={canManageHq} /></TabsContent>
         <TabsContent value="protocols">
-          <ProtocolsView orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} protocols={protocols} candidates={candidates} canManageHq={canManageHq} onSaved={load} />
+          <ProtocolsView orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} protocols={protocols} candidates={candidates} canEditPrecinct={canEditPrecinct} onSaved={load} />
         </TabsContent>
         <TabsContent value="candidates">
           <CandidatesView orgId={orgId} campaignId={campaign.id} candidates={candidates} label={candLabel} isAdmin={isAdmin} onSaved={load} />
         </TabsContent>
         <TabsContent value="tents"><TentsPanel orgId={orgId} campaign={campaign} hqs={hqs} canManageHq={canManageHq} /></TabsContent>
       </Tabs>
+      {proto && (
+        <ProtocolDialog orgId={orgId} campaign={campaign} precinct={proto} protocol={protocols.find((x) => x.precinct_id === proto.id) || null}
+          candidates={candidates} readOnly={!canEditPrecinct(proto)} onClose={() => setProto(null)} onSaved={() => { setProto(null); load(); }} />
+      )}
     </div>
   );
 }
@@ -277,9 +299,9 @@ function CandidatesView({ orgId, campaignId, candidates, label, isAdmin, onSaved
   );
 }
 
-function ProtocolsView({ orgId, campaign, hqs, precincts, protocols, candidates, canManageHq, onSaved }: {
+function ProtocolsView({ orgId, campaign, hqs, precincts, protocols, candidates, canEditPrecinct, onSaved }: {
   orgId: string; campaign: Campaign; hqs: PartyHq[]; precincts: Precinct[]; protocols: Protocol[]; candidates: Candidate[];
-  canManageHq: (id: string) => boolean; onSaved: () => void;
+  canEditPrecinct: (p: Precinct) => boolean; onSaved: () => void;
 }) {
   const [hqId, setHqId] = useState('');
   const [q, setQ] = useState('');
@@ -314,7 +336,7 @@ function ProtocolsView({ orgId, campaign, hqs, precincts, protocols, candidates,
       {precincts.length === 0 && <p className="text-sm text-muted-foreground">Дільниць ще немає — додайте їх у штабах (вкладка «Дільниці»).</p>}
       <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-2">
         {rows.slice(0, 300).map((p) => {
-          const pr = protoBy.get(p.id); const can = canManageHq(p.hq_id);
+          const pr = protoBy.get(p.id); const can = canEditPrecinct(p);
           return (
             <Card key={p.id} className="p-3 flex items-center justify-between gap-2">
               <div className="min-w-0">
@@ -330,7 +352,7 @@ function ProtocolsView({ orgId, campaign, hqs, precincts, protocols, candidates,
       {rows.length > 300 && <p className="text-xs text-muted-foreground">Показано 300 з {rows.length}. Уточніть пошук.</p>}
       {editing && (
         <ProtocolDialog orgId={orgId} campaign={campaign} precinct={editing} protocol={protoBy.get(editing.id) || null}
-          candidates={candidates} readOnly={!canManageHq(editing.hq_id)} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); onSaved(); }} />
+          candidates={candidates} readOnly={!canEditPrecinct(editing)} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); onSaved(); }} />
       )}
     </div>
   );

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertTriangle, CheckCircle2, DoorOpen, Users } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, DoorOpen, FileCheck2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -18,7 +18,7 @@ const SLOTS = ['12', '16', '20'] as const;
 type Kind = 'opened' | 'turnout' | 'incident';
 interface Row { id: string; precinct_id: string; kind: Kind; slot: string | null; voted: number | null; quorum: boolean | null; notes: string | null; photos: ProtocolPhoto[]; created_at: string }
 
-export function ElectionDayPanel({ orgId, campaign, hqs, precincts, canManageHq }: { orgId: string; campaign: Campaign; hqs: PartyHq[]; precincts: Precinct[]; canManageHq: (id: string) => boolean }) {
+export function ElectionDayPanel({ orgId, campaign, hqs, precincts, canManageHq, onProtocol, protocolIds }: { orgId: string; campaign: Campaign; hqs: PartyHq[]; precincts: Precinct[]; canManageHq: (id: string) => boolean; onProtocol?: (p: Precinct) => void; protocolIds?: Set<string> }) {
   const { user } = useAuth();
   const [rows, setRows] = useState<Row[]>([]);
   const [mine, setMine] = useState<Set<string>>(new Set());
@@ -104,6 +104,8 @@ export function ElectionDayPanel({ orgId, campaign, hqs, precincts, canManageHq 
                 <Button size="sm" variant={op ? 'outline' : 'default'} className="flex-1 min-h-[44px]" onClick={() => open(p, 'opened')}><DoorOpen className="h-4 w-4 mr-1" />Відкриття</Button>
                 <Button size="sm" variant="outline" className="flex-1 min-h-[44px]" onClick={() => open(p, 'incident')}><AlertTriangle className="h-4 w-4 mr-1" />Порушення</Button>
               </div>}
+              {onProtocol && (w || protocolIds?.has(p.id)) && <Button size="sm" variant={protocolIds?.has(p.id) ? 'outline' : 'secondary'} className="w-full min-h-[44px]" onClick={() => onProtocol(p)}>
+                <FileCheck2 className="h-4 w-4 mr-1" />{protocolIds?.has(p.id) ? 'Протокол здано · переглянути' : 'Протокол: результати і фото'}</Button>}
               {pr.filter((r) => r.kind === 'incident').slice(0, 2).map((r) => (
                 <p key={r.id} className="text-xs text-destructive line-clamp-2">{new Date(r.created_at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })} — {r.notes}{r.photos?.length ? ` (фото: ${r.photos.length})` : ''}</p>
               ))}
