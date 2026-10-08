@@ -37,7 +37,7 @@ export function HqDialog({ open, onOpenChange, orgId, level, parents, editing, o
   }, [open, editing]);
 
   const submit = async () => {
-    if (!name.trim()) { toast.error('Вкажіть назву штабу'); return; }
+    if (!name.trim()) { toast.error('Вкажіть назву організації'); return; }
     setSaving(true);
     const ok = await partyActions.saveHq(orgId, {
       id: editing?.id,
@@ -64,7 +64,7 @@ export function HqDialog({ open, onOpenChange, orgId, level, parents, editing, o
           <div><Label>Регіон / округ</Label><Input value={region} onChange={(e) => setRegion(e.target.value)} /></div>
           {parents.length > 0 && (
             <div>
-              <Label>Підпорядкований штаб</Label>
+              <Label>Вища організація</Label>
               <select className="w-full h-10 rounded-md border bg-background px-3 text-sm" value={parentId} onChange={(e) => setParentId(e.target.value)}>
                 <option value="">— не вказано —</option>
                 {parents.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
