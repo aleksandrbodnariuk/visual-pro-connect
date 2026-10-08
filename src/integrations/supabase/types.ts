@@ -1023,8 +1023,11 @@ export type Database = {
           campaign_id: string
           created_at: string
           created_by: string
+          handled_by: string | null
           id: string
+          incident_status: string
           kind: string
+          legal_notes: string | null
           notes: string | null
           organization_id: string
           photos: Json
@@ -1037,8 +1040,11 @@ export type Database = {
           campaign_id: string
           created_at?: string
           created_by?: string
+          handled_by?: string | null
           id?: string
+          incident_status?: string
           kind: string
+          legal_notes?: string | null
           notes?: string | null
           organization_id: string
           photos?: Json
@@ -1051,8 +1057,11 @@ export type Database = {
           campaign_id?: string
           created_at?: string
           created_by?: string
+          handled_by?: string | null
           id?: string
+          incident_status?: string
           kind?: string
+          legal_notes?: string | null
           notes?: string | null
           organization_id?: string
           photos?: Json
