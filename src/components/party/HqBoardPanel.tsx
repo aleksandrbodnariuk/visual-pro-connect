@@ -8,7 +8,7 @@ import { STATUS_META, STATUS_ORDER, precinctStatus, subtreeIds, type PrecinctSta
 
 const db = supabase as any;
 
-export function HqBoardPanel({ campaign, hqs, precincts, protocols, onRefresh }: { campaign: Campaign; hqs: PartyHq[]; precincts: Precinct[]; protocols: Protocol[]; onRefresh: () => void }) {
+export function HqBoardPanel({ campaign, hqs, precincts, protocols, onRefresh, onOpen }: { campaign: Campaign; hqs: PartyHq[]; precincts: Precinct[]; protocols: Protocol[]; onRefresh: () => void; onOpen?: (p: Precinct) => void }) {
   const [reports, setReports] = useState<{ precinct_id: string; kind: string; slot: string | null }[]>([]);
   const [root, setRoot] = useState<string>('');
 
@@ -70,9 +70,10 @@ export function HqBoardPanel({ campaign, hqs, precincts, protocols, onRefresh }:
 
       <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-8 xl:grid-cols-12 gap-1.5">
         {list.map((p) => { const s = status.get(p.id) || 'silent'; return (
-          <div key={p.id} title={`№ ${p.number} — ${STATUS_META[s].label}`} className={`rounded-md p-2 text-center text-xs font-semibold ${STATUS_META[s].cls}`}>{p.number}</div>
+          <button type="button" key={p.id} disabled={!onOpen} onClick={() => onOpen?.(p)} title={`№ ${p.number} — ${STATUS_META[s].label}`} className={`rounded-md p-2 min-h-[44px] text-center text-xs font-semibold hover:opacity-80 ${STATUS_META[s].cls}`}>{p.number}</button>
         ); })}
       </div>
+      {onOpen && list.length > 0 && <p className="text-xs text-muted-foreground">Натисніть на дільницю, щоб переглянути протокол: голоси та фото.</p>}
       {list.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Дільниць немає</p>}
     </div>
   );
