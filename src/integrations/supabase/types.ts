@@ -2251,6 +2251,63 @@ export type Database = {
           },
         ]
       }
+      party_unit_officers: {
+        Row: {
+          body: string
+          created_at: string
+          decision: string | null
+          full_name: string
+          id: string
+          organization_id: string
+          party_member_id: string | null
+          phone: string | null
+          term_end: string | null
+          term_start: string | null
+          unit_name: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          decision?: string | null
+          full_name: string
+          id?: string
+          organization_id: string
+          party_member_id?: string | null
+          phone?: string | null
+          term_end?: string | null
+          term_start?: string | null
+          unit_name: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          decision?: string | null
+          full_name?: string
+          id?: string
+          organization_id?: string
+          party_member_id?: string | null
+          phone?: string | null
+          term_end?: string | null
+          term_start?: string | null
+          unit_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_unit_officers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_unit_officers_party_member_id_fkey"
+            columns: ["party_member_id"]
+            isOneToOne: false
+            referencedRelation: "party_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       poll_options: {
         Row: {
           id: string
