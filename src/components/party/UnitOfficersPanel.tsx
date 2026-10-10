@@ -116,6 +116,15 @@ export function UnitOfficersPanel({ orgId, canEdit }: { orgId: string; canEdit: 
                 {BODIES.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
               </select></div>
             <div><Label>ПІБ</Label><Input value={form.full_name} maxLength={200} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
+            {(form.body === 'lawyer' || form.body === 'agitation') && (
+              <div><Label>Член партії (для доступу на платформі)</Label>
+                <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={form.party_member_id || ''} onChange={(e) => { const m = members.find((x) => x.id === e.target.value); setForm({ ...form, party_member_id: e.target.value || null, full_name: form.full_name || m?.full_name || '' }); }}>
+                  <option value="">Не прив'язано</option>
+                  {members.filter((m) => m.user_id).map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+                </select>
+                <p className="text-xs text-muted-foreground mt-1">Прив'язка дає цій особі доступ до її інструментів: юрист — до журналу порушень, керівник агітації — до наметів.</p>
+              </div>
+            )}
             <div><Label>Телефон</Label><Input type="tel" value={form.phone || ''} maxLength={40} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-2">
               <div><Label>Повноваження з</Label><Input type="date" value={form.term_start || ''} onChange={(e) => setForm({ ...form, term_start: e.target.value })} /></div>
