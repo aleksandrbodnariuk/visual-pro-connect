@@ -176,6 +176,7 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [managed, setManaged] = useState<Set<string>>(new Set());
   const [mine, setMine] = useState<Set<string>>(new Set());
+  const [officerBodies, setOfficerBodies] = useState<Set<string>>(new Set());
   const [proto, setProto] = useState<Precinct | null>(null);
   const [results, setResults] = useState<Awaited<ReturnType<typeof partyExtra.results>>>({ votes: [], progress: [] });
   const candLabel = ELECTION_TYPES.find((t) => t.value === campaign.election_type)?.candidateLabel || 'Кандидат';
