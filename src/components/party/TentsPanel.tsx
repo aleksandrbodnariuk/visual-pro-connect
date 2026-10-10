@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ClipboardList, MapPin, Pencil, Phone, Plus, Tent, Trash2 } from 'lucide-react';
+import { ClipboardList, MapPin, Pencil, Phone, Plus, Tent, Trash2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { downloadCsv } from '@/lib/csvExport';
 import type { Campaign, PartyHq } from '@/hooks/orgs/useOrganizations';
 
 const db = supabase as any;
@@ -62,11 +63,20 @@ export function TentsPanel({ orgId, campaign, hqs, canManageHq }: { orgId: strin
 
   const totals = reports.reduce((a, r) => ({ m: a.m + r.newspapers + r.booklets + r.other_materials, c: a.c + r.contacts }), { m: 0, c: 0 });
 
+  const exportCsv = () => {
+    const hqName = (id: string) => hqs.find((h) => h.id === id)?.name || '';
+    const rows: (string | number | null)[][] = [['Штаб', 'Адреса', 'Відповідальний', 'Телефон', 'Днів звітів', 'Газети', 'Буклети', 'Інше', 'Розмови']];
+    for (const t of tents) { const rs = reports.filter((r) => r.tent_id === t.id); const s = (k: 'newspapers' | 'booklets' | 'other_materials' | 'contacts') => rs.reduce((a, r) => a + r[k], 0);
+      rows.push([hqName(t.hq_id), t.address, t.responsible_name, t.phone, rs.length, s('newspapers'), s('booklets'), s('other_materials'), s('contacts')]); }
+    downloadCsv(`Намети — ${campaign.name}`, rows);
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">Наметів: {tents.length} · роздано матеріалів: {totals.m} · розмов: {totals.c}</p>
-        {active && editableHqs.length > 0 && <Button size="sm" className="min-h-[44px]" onClick={() => setEdit({ hq_id: editableHqs[0].id })}><Plus className="h-4 w-4 mr-1" />Додати намет</Button>}
+        <div className="flex gap-2">{tents.length > 0 && <Button size="sm" variant="outline" className="min-h-[44px]" onClick={exportCsv}><Download className="h-4 w-4 mr-1" />Excel</Button>}
+        {active && editableHqs.length > 0 && <Button size="sm" className="min-h-[44px]" onClick={() => setEdit({ hq_id: editableHqs[0].id })}><Plus className="h-4 w-4 mr-1" />Додати намет</Button>}</div>
       </div>
       {!active && <Card className="p-3 text-sm text-muted-foreground">Кампанія завершена — намети доступні лише для перегляду.</Card>}
       {tents.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Наметів поки немає</p> : (

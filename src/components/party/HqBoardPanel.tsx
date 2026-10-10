@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { Download, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Campaign, PartyHq, Precinct, Protocol } from '@/hooks/orgs/useOrganizations';
+import { downloadCsv } from '@/lib/csvExport';
 import { STATUS_META, STATUS_ORDER, precinctStatus, subtreeIds, type PrecinctStatus } from '@/lib/precinctStatus';
 
 const db = supabase as any;
@@ -35,6 +36,13 @@ export function HqBoardPanel({ campaign, hqs, precincts, protocols, onRefresh, o
   const count = (ps: Precinct[]) => STATUS_ORDER.map((s) => ps.filter((p) => status.get(p.id) === s).length);
   const children = hqs.filter((h) => (root ? h.parent_id === root : !h.parent_id));
 
+  const exportCsv = () => {
+    const pb = new Map(protocols.map((x) => [x.precinct_id, x]));
+    const hn = (id: string) => hqs.find((h) => h.id === id)?.name || '';
+    downloadCsv(`Табло — ${campaign.name}`, [['Дільниця', 'Штаб', 'Статус', 'Виборців у списку', 'Видано бюлетенів', 'Недійсні', 'Фото протоколу'],
+      ...list.map((p) => { const pr = pb.get(p.id); return [p.number, hn(p.hq_id), STATUS_META[status.get(p.id) || 'silent'].label, pr?.voters_on_list ?? '', pr?.ballots_issued ?? '', pr?.invalid_ballots ?? '', pr?.photos?.length || 0]; })]);
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -42,6 +50,7 @@ export function HqBoardPanel({ campaign, hqs, precincts, protocols, onRefresh, o
           <option value="">Уся партія</option>
           {hqs.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
         </select>
+        <Button size="sm" variant="outline" className="min-h-[44px]" onClick={exportCsv}><Download className="h-4 w-4 mr-1" />Excel</Button>
         <Button size="sm" variant="outline" className="min-h-[44px]" onClick={() => { load(); onRefresh(); }}><RefreshCw className="h-4 w-4 mr-1" />Оновити</Button>
       </div>
 
