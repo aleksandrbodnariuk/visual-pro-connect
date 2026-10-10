@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { IdCard, Mail, Pencil, Phone, Plus, Trash2 } from 'lucide-react';
+import { IdCard, Mail, Pencil, Phone, Plus, Trash2, Download } from 'lucide-react';
+import { downloadCsv } from '@/lib/csvExport';
 import { PARTY_MEMBER_STATUS, partyMembersApi, type PartyMember, type PartyMemberStatus } from '@/hooks/orgs/useOrganizations';
 
 const EMPTY: Partial<PartyMember> = { full_name: '', status: 'active' };
@@ -40,6 +41,8 @@ export function PartyMembersRegistry({ orgId, canEdit }: { orgId: string; canEdi
     if (!confirm(`Зняти з обліку ${m.full_name}?`)) return;
     if (await partyMembersApi.remove(m.id)) load();
   };
+  const exportCsv = () => downloadCsv('Реєстр членів партії', [['ПІБ', 'Організація', 'Посада', 'Статус', 'Телефон', 'Email', 'Партквиток', 'Дата вступу', 'Примітки'],
+    ...shown.map((m) => [m.full_name, m.unit_name, m.position, PARTY_MEMBER_STATUS[m.status], m.phone, m.email, m.card_number, m.joined_date, m.notes])]);
   const set = (k: keyof PartyMember, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
@@ -49,7 +52,8 @@ export function PartyMembersRegistry({ orgId, canEdit }: { orgId: string; canEdi
           <Badge variant="secondary">Членів партії: {list.length}</Badge>
           <Badge variant="secondary">Осередків: {units.length}</Badge>
         </div>
-        {canEdit && <Button onClick={() => setForm({ ...EMPTY })} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1" />Додати члена партії</Button>}
+        <div className="flex gap-2">{shown.length > 0 && <Button size="sm" variant="outline" className="min-h-[44px]" onClick={exportCsv}><Download className="h-4 w-4 mr-1" />Excel</Button>}
+        {canEdit && <Button onClick={() => setForm({ ...EMPTY })} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1" />Додати члена партії</Button>}</div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <Input placeholder="Пошук: ПІБ, телефон, квиток…" value={q} onChange={(e) => setQ(e.target.value)} />
