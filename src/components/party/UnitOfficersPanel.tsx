@@ -17,6 +17,8 @@ export const BODIES: { value: string; label: string }[] = [
   { value: 'secretary', label: 'Секретар' },
   { value: 'council', label: 'Рада / Бюро' },
   { value: 'audit', label: 'Контрольно-ревізійна комісія' },
+  { value: 'lawyer', label: 'Юрист штабу' },
+  { value: 'agitation', label: 'Керівник агітаційного відділу' },
 ];
 
 interface Officer { id?: string; unit_name: string; body: string; full_name: string; phone?: string | null; term_start?: string | null; term_end?: string | null; decision?: string | null }
