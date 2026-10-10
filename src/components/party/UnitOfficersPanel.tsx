@@ -58,7 +58,8 @@ export function UnitOfficersPanel({ orgId, canEdit }: { orgId: string; canEdit: 
     if (form.term_start && form.term_end && form.term_end < form.term_start) { toast.error('Кінець повноважень раніше за початок'); return; }
     setSaving(true);
     const payload = { organization_id: orgId, unit_name: form.unit_name.trim(), body: form.body, full_name: form.full_name.trim(),
-      phone: form.phone || null, term_start: form.term_start || null, term_end: form.term_end || null, decision: form.decision || null };
+      phone: form.phone || null, term_start: form.term_start || null, term_end: form.term_end || null, decision: form.decision || null,
+      party_member_id: form.party_member_id || null };
     const { error } = form.id ? await db.from('party_unit_officers').update(payload).eq('id', form.id) : await db.from('party_unit_officers').insert(payload);
     setSaving(false);
     if (error) { toast.error('Не вдалося зберегти'); return; }
