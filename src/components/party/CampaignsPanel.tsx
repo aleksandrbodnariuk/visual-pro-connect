@@ -206,6 +206,8 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
   };
   const canEditPrecinct = (p: Precinct) => campaign.status !== 'finished' && (canManageHq(p.hq_id) || mine.has(p.id));
   const isObserver = mine.size > 0 && !isAdmin && managed.size === 0;
+  const isLawyer = officerBodies.has('lawyer');
+  const isAgitation = officerBodies.has('agitation');
 
   return (
     <div className="space-y-4">
@@ -250,14 +252,14 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
         <TabsContent value="results"><ResultsView hqs={hqs} candidates={candidates} results={results} onRefresh={load} /></TabsContent>
         <TabsContent value="board"><HqBoardPanel campaign={campaign} hqs={hqs} precincts={precincts} protocols={protocols} onRefresh={load} onOpen={candidates.length ? setProto : undefined} /></TabsContent>
         <TabsContent value="day"><ElectionDayPanel orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={canManageHq} onProtocol={candidates.length ? setProto : undefined} protocolIds={new Set(protocols.map((x) => x.precinct_id))} /></TabsContent>
-        <TabsContent value="incidents"><IncidentsPanel campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={canManageHq} /></TabsContent>
+        <TabsContent value="incidents"><IncidentsPanel campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={(id) => canManageHq(id) || isLawyer} /></TabsContent>
         <TabsContent value="protocols">
           <ProtocolsView orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} protocols={protocols} candidates={candidates} canEditPrecinct={canEditPrecinct} onSaved={load} />
         </TabsContent>
         <TabsContent value="candidates">
           <CandidatesView orgId={orgId} campaignId={campaign.id} candidates={candidates} label={candLabel} isAdmin={isAdmin} onSaved={load} />
         </TabsContent>
-        <TabsContent value="tents"><TentsPanel orgId={orgId} campaign={campaign} hqs={hqs} canManageHq={canManageHq} /></TabsContent>
+        <TabsContent value="tents"><TentsPanel orgId={orgId} campaign={campaign} hqs={hqs} canManageHq={(id) => canManageHq(id) || isAgitation} /></TabsContent>
       </Tabs>
       {proto && (
         <ProtocolDialog orgId={orgId} campaign={campaign} precinct={proto} protocol={protocols.find((x) => x.precinct_id === proto.id) || null}
