@@ -21,12 +21,14 @@ export const BODIES: { value: string; label: string }[] = [
   { value: 'agitation', label: 'Керівник агітаційного відділу' },
 ];
 
-interface Officer { id?: string; unit_name: string; body: string; full_name: string; phone?: string | null; term_start?: string | null; term_end?: string | null; decision?: string | null }
+interface Officer { id?: string; unit_name: string; body: string; full_name: string; phone?: string | null; term_start?: string | null; term_end?: string | null; decision?: string | null; party_member_id?: string | null }
+interface MemberOption { id: string; full_name: string; user_id: string | null }
 
 /** Статутні керівні органи кожної організації (міжвиборчий період). */
 export function UnitOfficersPanel({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
   const [list, setList] = useState<Officer[]>([]);
   const [units, setUnits] = useState<string[]>([]);
+  const [members, setMembers] = useState<MemberOption[]>([]);
   const [unit, setUnit] = useState('');
   const [form, setForm] = useState<Officer | null>(null);
   const [saving, setSaving] = useState(false);
