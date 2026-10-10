@@ -176,6 +176,7 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [managed, setManaged] = useState<Set<string>>(new Set());
   const [mine, setMine] = useState<Set<string>>(new Set());
+  const [officerBodies, setOfficerBodies] = useState<Set<string>>(new Set());
   const [proto, setProto] = useState<Precinct | null>(null);
   const [results, setResults] = useState<Awaited<ReturnType<typeof partyExtra.results>>>({ votes: [], progress: [] });
   const candLabel = ELECTION_TYPES.find((t) => t.value === campaign.election_type)?.candidateLabel || 'Кандидат';
@@ -190,6 +191,8 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
     if (user?.id) {
       const { data: pm } = await (supabase as any).from('precinct_members').select('precinct_id').eq('organization_id', orgId).eq('user_id', user.id);
       setMine(new Set((pm || []).map((x: any) => x.precinct_id)));
+      const { data: ob } = await (supabase as any).from('party_unit_officers').select('body, party_members!inner(user_id)').eq('organization_id', orgId).eq('party_members.user_id', user.id);
+      setOfficerBodies(new Set((ob || []).map((x: any) => x.body)));
     }
   }, [campaign.id, orgId, user?.id]);
   useEffect(() => { load(); }, [load]);
@@ -203,6 +206,8 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
   };
   const canEditPrecinct = (p: Precinct) => campaign.status !== 'finished' && (canManageHq(p.hq_id) || mine.has(p.id));
   const isObserver = mine.size > 0 && !isAdmin && managed.size === 0;
+  const isLawyer = officerBodies.has('lawyer');
+  const isAgitation = officerBodies.has('agitation');
 
   return (
     <div className="space-y-4">
@@ -247,14 +252,14 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
         <TabsContent value="results"><ResultsView hqs={hqs} candidates={candidates} results={results} onRefresh={load} /></TabsContent>
         <TabsContent value="board"><HqBoardPanel campaign={campaign} hqs={hqs} precincts={precincts} protocols={protocols} onRefresh={load} onOpen={candidates.length ? setProto : undefined} /></TabsContent>
         <TabsContent value="day"><ElectionDayPanel orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={canManageHq} onProtocol={candidates.length ? setProto : undefined} protocolIds={new Set(protocols.map((x) => x.precinct_id))} /></TabsContent>
-        <TabsContent value="incidents"><IncidentsPanel campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={canManageHq} /></TabsContent>
+        <TabsContent value="incidents"><IncidentsPanel campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={(id) => canManageHq(id) || isLawyer} /></TabsContent>
         <TabsContent value="protocols">
           <ProtocolsView orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} protocols={protocols} candidates={candidates} canEditPrecinct={canEditPrecinct} onSaved={load} />
         </TabsContent>
         <TabsContent value="candidates">
           <CandidatesView orgId={orgId} campaignId={campaign.id} candidates={candidates} label={candLabel} isAdmin={isAdmin} onSaved={load} />
         </TabsContent>
-        <TabsContent value="tents"><TentsPanel orgId={orgId} campaign={campaign} hqs={hqs} canManageHq={canManageHq} /></TabsContent>
+        <TabsContent value="tents"><TentsPanel orgId={orgId} campaign={campaign} hqs={hqs} canManageHq={(id) => canManageHq(id) || isAgitation} /></TabsContent>
       </Tabs>
       {proto && (
         <ProtocolDialog orgId={orgId} campaign={campaign} precinct={proto} protocol={protocols.find((x) => x.precinct_id === proto.id) || null}

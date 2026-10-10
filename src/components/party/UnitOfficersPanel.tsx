@@ -17,25 +17,31 @@ export const BODIES: { value: string; label: string }[] = [
   { value: 'secretary', label: 'Секретар' },
   { value: 'council', label: 'Рада / Бюро' },
   { value: 'audit', label: 'Контрольно-ревізійна комісія' },
+  { value: 'lawyer', label: 'Юрист штабу' },
+  { value: 'agitation', label: 'Керівник агітаційного відділу' },
 ];
 
-interface Officer { id?: string; unit_name: string; body: string; full_name: string; phone?: string | null; term_start?: string | null; term_end?: string | null; decision?: string | null }
+interface Officer { id?: string; unit_name: string; body: string; full_name: string; phone?: string | null; term_start?: string | null; term_end?: string | null; decision?: string | null; party_member_id?: string | null }
+interface MemberOption { id: string; full_name: string; user_id: string | null }
 
 /** Статутні керівні органи кожної організації (міжвиборчий період). */
 export function UnitOfficersPanel({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
   const [list, setList] = useState<Officer[]>([]);
   const [units, setUnits] = useState<string[]>([]);
+  const [members, setMembers] = useState<MemberOption[]>([]);
   const [unit, setUnit] = useState('');
   const [form, setForm] = useState<Officer | null>(null);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
-    const [{ data }, hqs] = await Promise.all([
+    const [{ data }, hqs, { data: mem }] = await Promise.all([
       db.from('party_unit_officers').select('*').eq('organization_id', orgId).order('unit_name').limit(2000),
       partyActions.listHqs(orgId),
+      db.from('party_members').select('id,full_name,user_id').eq('organization_id', orgId).order('full_name').limit(5000),
     ]);
     setList(data || []);
     setUnits((hqs as any[]).map((h) => h.name));
+    setMembers(mem || []);
   }, [orgId]);
   useEffect(() => { load(); }, [load]);
 
@@ -52,7 +58,8 @@ export function UnitOfficersPanel({ orgId, canEdit }: { orgId: string; canEdit: 
     if (form.term_start && form.term_end && form.term_end < form.term_start) { toast.error('Кінець повноважень раніше за початок'); return; }
     setSaving(true);
     const payload = { organization_id: orgId, unit_name: form.unit_name.trim(), body: form.body, full_name: form.full_name.trim(),
-      phone: form.phone || null, term_start: form.term_start || null, term_end: form.term_end || null, decision: form.decision || null };
+      phone: form.phone || null, term_start: form.term_start || null, term_end: form.term_end || null, decision: form.decision || null,
+      party_member_id: form.party_member_id || null };
     const { error } = form.id ? await db.from('party_unit_officers').update(payload).eq('id', form.id) : await db.from('party_unit_officers').insert(payload);
     setSaving(false);
     if (error) { toast.error('Не вдалося зберегти'); return; }
@@ -109,6 +116,15 @@ export function UnitOfficersPanel({ orgId, canEdit }: { orgId: string; canEdit: 
                 {BODIES.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
               </select></div>
             <div><Label>ПІБ</Label><Input value={form.full_name} maxLength={200} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
+            {(form.body === 'lawyer' || form.body === 'agitation') && (
+              <div><Label>Член партії (для доступу на платформі)</Label>
+                <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={form.party_member_id || ''} onChange={(e) => { const m = members.find((x) => x.id === e.target.value); setForm({ ...form, party_member_id: e.target.value || null, full_name: form.full_name || m?.full_name || '' }); }}>
+                  <option value="">Не прив'язано</option>
+                  {members.filter((m) => m.user_id).map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+                </select>
+                <p className="text-xs text-muted-foreground mt-1">Прив'язка дає цій особі доступ до її інструментів: юрист — до журналу порушень, керівник агітації — до наметів.</p>
+              </div>
+            )}
             <div><Label>Телефон</Label><Input type="tel" value={form.phone || ''} maxLength={40} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-2">
               <div><Label>Повноваження з</Label><Input type="date" value={form.term_start || ''} onChange={(e) => setForm({ ...form, term_start: e.target.value })} /></div>

@@ -4783,6 +4783,10 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
+      is_party_officer: {
+        Args: { _bodies: string[]; _org_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_user_admin: { Args: { _user_id: string }; Returns: boolean }
       leave_conversation: { Args: { _conv_id: string }; Returns: undefined }
       mark_conversation_read: { Args: { _conv_id: string }; Returns: undefined }
