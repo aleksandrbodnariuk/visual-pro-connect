@@ -191,6 +191,8 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
     if (user?.id) {
       const { data: pm } = await (supabase as any).from('precinct_members').select('precinct_id').eq('organization_id', orgId).eq('user_id', user.id);
       setMine(new Set((pm || []).map((x: any) => x.precinct_id)));
+      const { data: ob } = await (supabase as any).from('party_unit_officers').select('body, party_members!inner(user_id)').eq('organization_id', orgId).eq('party_members.user_id', user.id);
+      setOfficerBodies(new Set((ob || []).map((x: any) => x.body)));
     }
   }, [campaign.id, orgId, user?.id]);
   useEffect(() => { load(); }, [load]);
