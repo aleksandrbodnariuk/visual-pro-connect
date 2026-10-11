@@ -4298,6 +4298,10 @@ export type Database = {
           votes: number
         }[]
       }
+      can_access_protocol_file: {
+        Args: { _name: string; _write: boolean }
+        Returns: boolean
+      }
       can_access_user_public_data: {
         Args: { target_user_id: string }
         Returns: boolean
