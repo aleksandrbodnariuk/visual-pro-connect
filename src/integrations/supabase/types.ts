@@ -3374,6 +3374,51 @@ export type Database = {
           },
         ]
       }
+      software_releases: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          downloads: number
+          file_name: string
+          file_path: string
+          file_size: number
+          id: string
+          name: string
+          platform: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          downloads?: number
+          file_name: string
+          file_path: string
+          file_size?: number
+          id?: string
+          name: string
+          platform: string
+          updated_at?: string
+          version?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          downloads?: number
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          name?: string
+          platform?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
       specialist_order_participants: {
         Row: {
           created_at: string
@@ -4324,6 +4369,7 @@ export type Database = {
       confirm_payout: { Args: { _payout_id: string }; Returns: undefined }
       confirm_rep_payout: { Args: { _payout_id: string }; Returns: undefined }
       confirm_spec_payout: { Args: { _payout_id: string }; Returns: undefined }
+      count_software_download: { Args: { _id: string }; Returns: undefined }
       create_group_conversation: {
         Args: { _member_ids: string[]; _title: string }
         Returns: string

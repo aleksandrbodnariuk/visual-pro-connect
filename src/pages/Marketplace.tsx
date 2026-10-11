@@ -8,6 +8,7 @@ import { useMarketplaceListings } from '@/hooks/marketplace/useMarketplaceListin
 import { ListingCard } from '@/components/marketplace/ListingCard';
 import { MarketplaceFilters } from '@/components/marketplace/MarketplaceFilters';
 import { useAuth } from '@/context/AuthContext';
+import { SoftwareDownloads } from '@/components/marketplace/SoftwareDownloads';
 import type { ListingFilters } from '@/hooks/marketplace/types';
 
 export default function Marketplace() {
@@ -78,6 +79,8 @@ export default function Marketplace() {
           </div>
 
           <MarketplaceFilters filters={filters} onChange={handleFiltersChange} />
+
+          {filters.categoryId === 'digital' && <SoftwareDownloads />}
 
           {isLoading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
