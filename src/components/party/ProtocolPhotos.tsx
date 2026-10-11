@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { compressForProfile } from '@/lib/documentImage';
 import type { ProtocolPhoto } from '@/hooks/orgs/useOrganizations';
 
+export const PRIVATE_PREFIX = 'protocols://';
 const MAX = 25 * 1024 * 1024;
 const MAX_PHOTOS = 10;
 
@@ -19,6 +20,17 @@ export function ProtocolPhotos({ photos, onChange, readOnly, campaignId, precinc
   const ref = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<ProtocolPhoto | null>(null);
+  const [signed, setSigned] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const paths = photos.map((p) => p.url).filter((u) => u.startsWith(PRIVATE_PREFIX) && !signed[u]).map((u) => u.slice(PRIVATE_PREFIX.length));
+    if (!paths.length) return;
+    supabase.storage.from('protocols').createSignedUrls(paths, 3600).then(({ data }) => {
+      const m: Record<string, string> = {};
+      data?.forEach((d) => { if (d.signedUrl && d.path) m[PRIVATE_PREFIX + d.path] = d.signedUrl; });
+      setSigned((s) => ({ ...s, ...m }));
+    });
+  }, [photos]); // eslint-disable-line react-hooks/exhaustive-deps
+  const src = (u: string) => (u.startsWith(PRIVATE_PREFIX) ? signed[u] || '' : u);
 
   const add = async (files: FileList | null) => {
     if (!files || !user) return;
@@ -30,10 +42,10 @@ export function ProtocolPhotos({ photos, onChange, readOnly, campaignId, precinc
       if (f.size > MAX) { toast.error(`«${f.name}» завеликий — максимум 25 МБ`); continue; }
       const file = await compressForProfile(f, 'document');
       const ext = file.name.split('.').pop() || 'jpg';
-      const path = `${user.id}/protocols/${campaignId}/${precinctId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error } = await supabase.storage.from('posts').upload(path, file, { contentType: file.type });
+      const path = `${campaignId}/${precinctId}/${user.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from('protocols').upload(path, file, { contentType: file.type });
       if (error) { toast.error('Не вдалося завантажити фото'); continue; }
-      next.push({ url: supabase.storage.from('posts').getPublicUrl(path).data.publicUrl, label: `Аркуш ${next.length + 1}` });
+      next.push({ url: PRIVATE_PREFIX + path, label: `Аркуш ${next.length + 1}` });
     }
     onChange(next);
     setBusy(false);
@@ -55,8 +67,8 @@ export function ProtocolPhotos({ photos, onChange, readOnly, campaignId, precinc
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {photos.map((p, i) => (
           <div key={p.url} className="space-y-1">
-            <button type="button" onClick={() => setView(p)} className="block w-full aspect-[3/4] rounded-md overflow-hidden border bg-muted">
-              <img src={p.url} alt={p.label} loading="lazy" className="w-full h-full object-cover" />
+            <button type="button" onClick={() => src(p.url) && setView({ ...p, url: src(p.url) })} className="block w-full aspect-[3/4] rounded-md overflow-hidden border bg-muted">
+              {src(p.url) && <img src={src(p.url)} alt={p.label} loading="lazy" className="w-full h-full object-cover" />}
             </button>
             <div className="flex gap-1">
               <Input value={p.label} disabled={readOnly} className="h-8 text-xs" maxLength={60}
