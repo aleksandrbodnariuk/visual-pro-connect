@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 const db = supabase as any;
 const MAX = 50 * 1024 * 1024;
 type Platform = 'windows' | 'android';
-interface Release { id: string; platform: Platform; name: string; version: string; description: string | null; file_path: string; file_name: string; file_size: number; downloads: number; created_at: string }
+interface Release { id: string; platform: Platform; name: string; version: string; author: string | null; description: string | null; file_path: string; file_name: string; file_size: number; downloads: number; created_at: string }
 
 const PLATFORM: Record<Platform, { label: string; icon: typeof Monitor; accept: string; hint: string }> = {
   windows: { label: 'Windows', icon: Monitor, accept: '.exe,.msi,.zip', hint: 'Запустіть завантажений файл і дотримуйтесь кроків встановлення.' },
@@ -66,6 +66,7 @@ export function SoftwareDownloads() {
                       <div className="min-w-0">
                         <p className="font-medium truncate">{r.name}</p>
                         <p className="text-xs text-muted-foreground">{P.label} · версія {r.version} · {mb(r.file_size)}</p>
+                        {r.author && <p className="text-xs text-muted-foreground">Розробник: {r.author}</p>}
                       </div>
                     </div>
                     {r.description && <p className="text-sm text-muted-foreground whitespace-pre-line">{r.description}</p>}
@@ -90,6 +91,7 @@ export function SoftwareManager() {
   const [platform, setPlatform] = useState<Platform>('windows');
   const [name, setName] = useState('');
   const [version, setVersion] = useState('1.0');
+  const [author, setAuthor] = useState('');
   const [description, setDescription] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
@@ -103,11 +105,11 @@ export function SoftwareManager() {
     const path = `${platform}/${Date.now()}-${safe}`;
     const { error: upErr } = await supabase.storage.from('software').upload(path, file, { contentType: file.type || 'application/octet-stream' });
     if (upErr) { setBusy(false); toast.error('Не вдалося завантажити файл'); return; }
-    const { error } = await db.from('software_releases').insert({ platform, name: name.trim(), version: version.trim() || '1.0', description: description.trim() || null, file_path: path, file_name: file.name, file_size: file.size, created_by: user.id });
+    const { error } = await db.from('software_releases').insert({ platform, name: name.trim(), version: version.trim() || '1.0', author: author.trim() || null, description: description.trim() || null, file_path: path, file_name: file.name, file_size: file.size, created_by: user.id });
     setBusy(false);
     if (error) { await supabase.storage.from('software').remove([path]); toast.error('Не вдалося зберегти програму'); return; }
     toast.success('Програму додано');
-    setName(''); setDescription(''); setFile(null); if (ref.current) ref.current.value = '';
+    setName(''); setAuthor(''); setDescription(''); setFile(null); if (ref.current) ref.current.value = '';
     qc.invalidateQueries({ queryKey: ['software_releases'] });
   };
 
@@ -131,6 +133,7 @@ export function SoftwareManager() {
           </Select>
           <Input placeholder="Версія" value={version} maxLength={40} onChange={(e) => setVersion(e.target.value)} />
           <Input className="sm:col-span-2" placeholder="Назва програми" value={name} maxLength={120} onChange={(e) => setName(e.target.value)} />
+          <Input className="sm:col-span-2" placeholder="Автор / розробник (необов'язково)" value={author} maxLength={120} onChange={(e) => setAuthor(e.target.value)} />
           <Textarea className="sm:col-span-2" placeholder="Опис (необов'язково)" value={description} maxLength={2000} onChange={(e) => setDescription(e.target.value)} />
           <Input ref={ref} className="sm:col-span-2" type="file" accept={PLATFORM[platform].accept} onChange={(e) => setFile(e.target.files?.[0] || null)} />
         </div>
@@ -140,7 +143,7 @@ export function SoftwareManager() {
             <div key={r.id} className="flex items-center gap-2 rounded-lg border p-2">
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{r.name} <span className="text-xs text-muted-foreground">({PLATFORM[r.platform].label}, {r.version})</span></p>
-                <p className="text-xs text-muted-foreground">{mb(r.file_size)} · завантажень: {r.downloads}</p>
+                <p className="text-xs text-muted-foreground">{mb(r.file_size)} · завантажень: {r.downloads}{r.author ? ` · ${r.author}` : ''}</p>
               </div>
               <Button size="icon" variant="ghost" className="text-destructive" aria-label="Видалити" onClick={() => remove(r)}><Trash2 className="h-4 w-4" /></Button>
             </div>
