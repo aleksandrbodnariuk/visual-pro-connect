@@ -80,7 +80,7 @@ export default function Marketplace() {
 
           <MarketplaceFilters filters={filters} onChange={handleFiltersChange} />
 
-          {filters.categoryId === 'digital' && <SoftwareDownloads />}
+          {(!filters.categoryId || filters.categoryId === 'digital') && <SoftwareDownloads />}
 
           {isLoading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
