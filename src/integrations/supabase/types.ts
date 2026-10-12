@@ -3376,6 +3376,7 @@ export type Database = {
       }
       software_releases: {
         Row: {
+          author: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -3390,6 +3391,7 @@ export type Database = {
           version: string
         }
         Insert: {
+          author?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -3404,6 +3406,7 @@ export type Database = {
           version?: string
         }
         Update: {
+          author?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null

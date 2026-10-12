@@ -1,0 +1,1 @@
+ALTER TABLE public.software_releases ADD COLUMN IF NOT EXISTS author text;
