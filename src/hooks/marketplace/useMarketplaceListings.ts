@@ -178,24 +178,36 @@ export function useUpdateListing() {
       if (error) throw error;
 
       if (imageUrls) {
-        // Перезаписуємо набір зображень: видаляємо старі та вставляємо нові
-        const { error: delErr } = await (supabase as any)
+        // Видаляємо лише прибрані фото — інакше тригер очищення сховища видаляє файли, які ще використовуються
+        const { data: existing, error: exErr } = await (supabase as any)
           .from('marketplace_listing_images')
-          .delete()
+          .select('id, image_url')
           .eq('listing_id', id);
-        if (delErr) throw delErr;
-
-        if (imageUrls.length > 0) {
-          const rows = imageUrls.map((url, idx) => ({
-            listing_id: id,
-            image_url: url,
-            sort_order: idx,
-            is_cover: idx === 0,
-          }));
-          const { error: insErr } = await (supabase as any)
+        if (exErr) throw exErr;
+        const rows = (existing || []) as { id: string; image_url: string }[];
+        const removed = rows.filter((r) => !imageUrls.includes(r.image_url)).map((r) => r.id);
+        if (removed.length > 0) {
+          const { error: delErr } = await (supabase as any)
             .from('marketplace_listing_images')
-            .insert(rows);
-          if (insErr) throw insErr;
+            .delete()
+            .in('id', removed);
+          if (delErr) throw delErr;
+        }
+        for (let idx = 0; idx < imageUrls.length; idx++) {
+          const url = imageUrls[idx];
+          const kept = rows.find((r) => r.image_url === url);
+          if (kept) {
+            const { error: upErr } = await (supabase as any)
+              .from('marketplace_listing_images')
+              .update({ sort_order: idx, is_cover: idx === 0 })
+              .eq('id', kept.id);
+            if (upErr) throw upErr;
+          } else {
+            const { error: insErr } = await (supabase as any)
+              .from('marketplace_listing_images')
+              .insert({ listing_id: id, image_url: url, sort_order: idx, is_cover: idx === 0 });
+            if (insErr) throw insErr;
+          }
         }
       }
       return { id };

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, Monitor, Smartphone, Trash2, Upload } from 'lucide-react';
+import { Download, Monitor, Pencil, Smartphone, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 const db = supabase as any;
@@ -97,19 +97,31 @@ export function SoftwareManager() {
   const [busy, setBusy] = useState(false);
   const ref = useRef<HTMLInputElement>(null);
 
+  const [editing, setEditing] = useState<Release | null>(null);
+  const reset = () => { setEditing(null); setName(''); setVersion('1.0'); setAuthor(''); setDescription(''); setFile(null); if (ref.current) ref.current.value = ''; };
+  const startEdit = (r: Release) => { setEditing(r); setPlatform(r.platform); setName(r.name); setVersion(r.version); setAuthor(r.author || ''); setDescription(r.description || ''); setFile(null); if (ref.current) ref.current.value = ''; window.scrollTo({ top: 0, behavior: 'smooth' }); };
+
   const save = async () => {
-    if (!user || !file || !name.trim()) { toast.error('Вкажіть назву і оберіть файл'); return; }
-    if (file.size > MAX) { toast.error('Файл завеликий — максимум 50 МБ'); return; }
+    if (!user || !name.trim() || (!file && !editing)) { toast.error('Вкажіть назву і оберіть файл'); return; }
+    if (file && file.size > MAX) { toast.error('Файл завеликий — максимум 50 МБ'); return; }
     setBusy(true);
-    const safe = file.name.replace(/[^\w.\-]/g, '_');
-    const path = `${platform}/${Date.now()}-${safe}`;
-    const { error: upErr } = await supabase.storage.from('software').upload(path, file, { contentType: file.type || 'application/octet-stream' });
-    if (upErr) { setBusy(false); toast.error('Не вдалося завантажити файл'); return; }
-    const { error } = await db.from('software_releases').insert({ platform, name: name.trim(), version: version.trim() || '1.0', author: author.trim() || null, description: description.trim() || null, file_path: path, file_name: file.name, file_size: file.size, created_by: user.id });
+    let path: string | null = null;
+    if (file) {
+      const safe = file.name.replace(/[^\w.\-]/g, '_');
+      path = `${platform}/${Date.now()}-${safe}`;
+      const { error: upErr } = await supabase.storage.from('software').upload(path, file, { contentType: file.type || 'application/octet-stream' });
+      if (upErr) { setBusy(false); toast.error('Не вдалося завантажити файл'); return; }
+    }
+    const fields: Record<string, any> = { platform, name: name.trim(), version: version.trim() || '1.0', author: author.trim() || null, description: description.trim() || null };
+    if (file && path) Object.assign(fields, { file_path: path, file_name: file.name, file_size: file.size });
+    const { error } = editing
+      ? await db.from('software_releases').update(fields).eq('id', editing.id)
+      : await db.from('software_releases').insert({ ...fields, created_by: user.id });
     setBusy(false);
-    if (error) { await supabase.storage.from('software').remove([path]); toast.error('Не вдалося зберегти програму'); return; }
-    toast.success('Програму додано');
-    setName(''); setAuthor(''); setDescription(''); setFile(null); if (ref.current) ref.current.value = '';
+    if (error) { if (path) await supabase.storage.from('software').remove([path]); toast.error('Не вдалося зберегти програму'); return; }
+    if (editing && path) await supabase.storage.from('software').remove([editing.file_path]);
+    toast.success(editing ? 'Програму оновлено' : 'Програму додано');
+    reset();
     qc.invalidateQueries({ queryKey: ['software_releases'] });
   };
 
@@ -137,7 +149,11 @@ export function SoftwareManager() {
           <Textarea className="sm:col-span-2" placeholder="Опис (необов'язково)" value={description} maxLength={2000} onChange={(e) => setDescription(e.target.value)} />
           <Input ref={ref} className="sm:col-span-2" type="file" accept={PLATFORM[platform].accept} onChange={(e) => setFile(e.target.files?.[0] || null)} />
         </div>
-        <Button onClick={save} disabled={busy} className="min-h-11"><Upload className="h-4 w-4 mr-1" />{busy ? 'Завантаження…' : 'Додати програму'}</Button>
+        {editing && <p className="text-sm text-muted-foreground">Редагування «{editing.name}». Файл можна не обирати — залишиться поточний.</p>}
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={save} disabled={busy} className="min-h-11"><Upload className="h-4 w-4 mr-1" />{busy ? 'Збереження…' : editing ? 'Зберегти зміни' : 'Додати програму'}</Button>
+          {editing && <Button variant="outline" className="min-h-11" onClick={reset}>Скасувати</Button>}
+        </div>
         <div className="space-y-2">
           {data.map((r) => (
             <div key={r.id} className="flex items-center gap-2 rounded-lg border p-2">
@@ -145,6 +161,7 @@ export function SoftwareManager() {
                 <p className="font-medium truncate">{r.name} <span className="text-xs text-muted-foreground">({PLATFORM[r.platform].label}, {r.version})</span></p>
                 <p className="text-xs text-muted-foreground">{mb(r.file_size)} · завантажень: {r.downloads}{r.author ? ` · ${r.author}` : ''}</p>
               </div>
+              <Button size="icon" variant="ghost" aria-label="Редагувати" onClick={() => startEdit(r)}><Pencil className="h-4 w-4" /></Button>
               <Button size="icon" variant="ghost" className="text-destructive" aria-label="Видалити" onClick={() => remove(r)}><Trash2 className="h-4 w-4" /></Button>
             </div>
           ))}
