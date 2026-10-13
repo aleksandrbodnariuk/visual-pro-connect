@@ -2141,6 +2141,9 @@ export type Database = {
           organization_id: string
           parent_id: string | null
           phone: string | null
+          quota_commission: number
+          quota_media: number
+          quota_observers: number
           region: string | null
           updated_at: string
         }
@@ -2155,6 +2158,9 @@ export type Database = {
           organization_id: string
           parent_id?: string | null
           phone?: string | null
+          quota_commission?: number
+          quota_media?: number
+          quota_observers?: number
           region?: string | null
           updated_at?: string
         }
@@ -2169,6 +2175,9 @@ export type Database = {
           organization_id?: string
           parent_id?: string | null
           phone?: string | null
+          quota_commission?: number
+          quota_media?: number
+          quota_observers?: number
           region?: string | null
           updated_at?: string
         }
@@ -5014,7 +5023,7 @@ export type Database = {
         | "client"
       hq_level: "central" | "oblast" | "okrug" | "city" | "otg" | "village"
       org_type: "party" | "company" | "ngo" | "other"
-      precinct_role: "commission" | "observer"
+      precinct_role: "commission" | "observer" | "media"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5157,7 +5166,7 @@ export const Constants = {
       ],
       hq_level: ["central", "oblast", "okrug", "city", "otg", "village"],
       org_type: ["party", "company", "ngo", "other"],
-      precinct_role: ["commission", "observer"],
+      precinct_role: ["commission", "observer", "media"],
     },
   },
 } as const
