@@ -8,7 +8,7 @@ import { sortHqsByOkrug } from '@/lib/hqSort';
 
 export type OrgType = 'party' | 'company' | 'ngo' | 'other';
 export type HqLevel = 'central' | 'oblast' | 'okrug' | 'city' | 'otg' | 'village';
-export type PrecinctRole = 'commission' | 'observer';
+export type PrecinctRole = 'commission' | 'observer' | 'media';
 
 export interface Organization {
   id: string;
