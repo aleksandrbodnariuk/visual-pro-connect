@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, Monitor, Smartphone, Trash2, Upload } from 'lucide-react';
+import { Download, Monitor, Pencil, Smartphone, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 const db = supabase as any;
@@ -149,7 +149,11 @@ export function SoftwareManager() {
           <Textarea className="sm:col-span-2" placeholder="Опис (необов'язково)" value={description} maxLength={2000} onChange={(e) => setDescription(e.target.value)} />
           <Input ref={ref} className="sm:col-span-2" type="file" accept={PLATFORM[platform].accept} onChange={(e) => setFile(e.target.files?.[0] || null)} />
         </div>
-        <Button onClick={save} disabled={busy} className="min-h-11"><Upload className="h-4 w-4 mr-1" />{busy ? 'Завантаження…' : 'Додати програму'}</Button>
+        {editing && <p className="text-sm text-muted-foreground">Редагування «{editing.name}». Файл можна не обирати — залишиться поточний.</p>}
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={save} disabled={busy} className="min-h-11"><Upload className="h-4 w-4 mr-1" />{busy ? 'Збереження…' : editing ? 'Зберегти зміни' : 'Додати програму'}</Button>
+          {editing && <Button variant="outline" className="min-h-11" onClick={reset}>Скасувати</Button>}
+        </div>
         <div className="space-y-2">
           {data.map((r) => (
             <div key={r.id} className="flex items-center gap-2 rounded-lg border p-2">
@@ -157,6 +161,7 @@ export function SoftwareManager() {
                 <p className="font-medium truncate">{r.name} <span className="text-xs text-muted-foreground">({PLATFORM[r.platform].label}, {r.version})</span></p>
                 <p className="text-xs text-muted-foreground">{mb(r.file_size)} · завантажень: {r.downloads}{r.author ? ` · ${r.author}` : ''}</p>
               </div>
+              <Button size="icon" variant="ghost" aria-label="Редагувати" onClick={() => startEdit(r)}><Pencil className="h-4 w-4" /></Button>
               <Button size="icon" variant="ghost" className="text-destructive" aria-label="Видалити" onClick={() => remove(r)}><Trash2 className="h-4 w-4" /></Button>
             </div>
           ))}
