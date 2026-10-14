@@ -10,6 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Plus, Trash2 } from 'lucide-react';
 import { partyActions, type Precinct, type PrecinctMember, type PrecinctRole } from '@/hooks/orgs/useOrganizations';
 import { toast } from 'sonner';
+import { okrugNumber } from '@/lib/hqSort';
 
 interface Props { orgId: string; hqId: string; canEdit: boolean }
 
@@ -105,6 +106,8 @@ export function PrecinctsPanel({ orgId, hqId, canEdit }: Props) {
   const [search, setSearch] = useState('');
   const [limit, setLimit] = useState(PAGE);
   const [open, setOpen] = useState('');
+  const [okrug, setOkrug] = useState<number | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const loadCounts = useCallback(async (ids: string[]) => {
     const m = new Map<string, CoverageCounts>();
@@ -123,7 +126,8 @@ export function PrecinctsPanel({ orgId, hqId, canEdit }: Props) {
     const list = (await partyActions.listPrecincts(hqId)).sort((a, b) => comparePrecinctNumber(a.number, b.number));
     setPrecincts(list);
     loadCounts(list.map((p) => p.id));
-    const { data: hq } = await (supabase as any).from('party_hqs').select('quota_observers,quota_commission,quota_media').eq('id', hqId).maybeSingle();
+    const { data: hq } = await (supabase as any).from('party_hqs').select('name,region,quota_observers,quota_commission,quota_media').eq('id', hqId).maybeSingle();
+    if (hq) setOkrug(okrugNumber(hq));
     if (hq) setQuotas({ observer: hq.quota_observers ?? 1, commission: hq.quota_commission ?? 1, media: hq.quota_media ?? 0 });
   }, [hqId, loadCounts]);
   useEffect(() => { load(); }, [load]);
@@ -151,6 +155,23 @@ export function PrecinctsPanel({ orgId, hqId, canEdit }: Props) {
     const { error } = await supabase.from('precincts').insert(rows);
     if (error) { toast.error('Не вдалося створити дільниці: ' + error.message); return; }
     toast.success(`Створено дільниць: ${rows.length}`); setBulkFrom(''); setBulkTo(''); load();
+  };
+
+  const importDrv = async () => {
+    if (!okrug) return;
+    setImporting(true);
+    try {
+      const data = (await import('@/data/chernivtsiPrecincts.json')).default as Record<string, { n: string; a: string; d: string; v: number }[]>;
+      const list = data[String(okrug)] || [];
+      const existing = new Set(precincts.map((p) => p.number));
+      const rows = list.filter((x) => !existing.has(x.n)).map((x) => ({ organization_id: orgId, hq_id: hqId, number: x.n, address: x.a, notes: x.d, voters_count: x.v }));
+      if (!rows.length) { toast.info('Усі дільниці округу вже створено'); return; }
+      for (let i = 0; i < rows.length; i += 100) {
+        const { error } = await supabase.from('precincts').insert(rows.slice(i, i + 100));
+        if (error) { toast.error('Не вдалося імпортувати дільниці: ' + error.message); return; }
+      }
+      toast.success(`Імпортовано з ДРВ дільниць: ${rows.length}`); load();
+    } finally { setImporting(false); }
   };
 
   const cnt = (id: string) => counts.get(id) || EMPTY;
@@ -193,6 +214,12 @@ export function PrecinctsPanel({ orgId, hqId, canEdit }: Props) {
 
       {canEdit && (
         <Card className="p-3 space-y-3">
+          {okrug && okrug >= 201 && okrug <= 204 && (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between rounded-md border p-3">
+              <p className="text-sm">Офіційні дільниці округу №{okrug} з Державного реєстру виборців (адреси, межі, кількість виборців)</p>
+              <Button size="sm" onClick={importDrv} disabled={importing}>{importing ? 'Імпорт…' : 'Імпортувати з ДРВ'}</Button>
+            </div>
+          )}
           <div>
             <p className="text-sm font-medium mb-2">Додати дільницю</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
