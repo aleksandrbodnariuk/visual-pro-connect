@@ -108,6 +108,9 @@ export function PrecinctsPanel({ orgId, hqId, canEdit }: Props) {
   const [open, setOpen] = useState('');
   const [okrug, setOkrug] = useState<number | null>(null);
   const [importing, setImporting] = useState(false);
+  const [hqNames, setHqNames] = useState<Map<string, string>>(new Map());
+  const [childOkrugs, setChildOkrugs] = useState<{ id: string; okrug: number }[]>([]);
+  const [hqFilter, setHqFilter] = useState('all');
 
   const loadCounts = useCallback(async (ids: string[]) => {
     const m = new Map<string, CoverageCounts>();
@@ -123,13 +126,26 @@ export function PrecinctsPanel({ orgId, hqId, canEdit }: Props) {
   }, []);
 
   const load = useCallback(async () => {
-    const list = (await partyActions.listPrecincts(hqId)).sort((a, b) => comparePrecinctNumber(a.number, b.number));
+    const { data: allHqs } = await (supabase as any).from('party_hqs').select('id,name,region,parent_id').eq('organization_id', orgId);
+    const hqs = (allHqs || []) as { id: string; name: string; region: string | null; parent_id: string | null }[];
+    const ids = [hqId]; const names = new Map<string, string>();
+    for (let i = 0; i < ids.length; i++) hqs.filter((h) => h.parent_id === ids[i]).forEach((h) => { ids.push(h.id); });
+    hqs.forEach((h) => names.set(h.id, h.name));
+    setHqNames(names);
+    setChildOkrugs(hqs.filter((h) => h.id !== hqId && ids.includes(h.id)).map((h) => ({ id: h.id, okrug: okrugNumber(h) || 0 })).filter((h) => h.okrug >= 201 && h.okrug <= 204));
+    const raw: Precinct[] = [];
+    for (let from = 0; ; from += 1000) {
+      const { data } = await supabase.from('precincts').select('*').in('hq_id', ids).range(from, from + 999);
+      raw.push(...((data as Precinct[]) || []));
+      if (!data || data.length < 1000) break;
+    }
+    const list = raw.sort((a, b) => comparePrecinctNumber(a.number, b.number));
     setPrecincts(list);
     loadCounts(list.map((p) => p.id));
     const { data: hq } = await (supabase as any).from('party_hqs').select('name,region,quota_observers,quota_commission,quota_media').eq('id', hqId).maybeSingle();
     if (hq) setOkrug(okrugNumber(hq));
     if (hq) setQuotas({ observer: hq.quota_observers ?? 1, commission: hq.quota_commission ?? 1, media: hq.quota_media ?? 0 });
-  }, [hqId, loadCounts]);
+  }, [hqId, orgId, loadCounts]);
   useEffect(() => { load(); }, [load]);
 
   const saveQuotas = async () => {
@@ -174,13 +190,33 @@ export function PrecinctsPanel({ orgId, hqId, canEdit }: Props) {
     } finally { setImporting(false); }
   };
 
+  const importAll = async () => {
+    setImporting(true);
+    try {
+      const data = (await import('@/data/chernivtsiPrecincts.json')).default as Record<string, { n: string; a: string; d: string; v: number }[]>;
+      const existing = new Set(precincts.map((p) => p.number));
+      let total = 0;
+      for (const c of childOkrugs) {
+        const rows = (data[String(c.okrug)] || []).filter((x) => !existing.has(x.n)).map((x) => ({ organization_id: orgId, hq_id: c.id, number: x.n, address: x.a, notes: x.d, voters_count: x.v }));
+        for (let i = 0; i < rows.length; i += 100) {
+          const { error } = await supabase.from('precincts').insert(rows.slice(i, i + 100));
+          if (error) { toast.error(`Округ №${c.okrug}: не вдалося імпортувати — ${error.message}`); load(); return; }
+        }
+        total += rows.length;
+      }
+      if (total) toast.success(`Імпортовано з ДРВ дільниць: ${total}`); else toast.info('Усі дільниці вже створено');
+      load();
+    } finally { setImporting(false); }
+  };
+
   const cnt = (id: string) => counts.get(id) || EMPTY;
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
-    return precincts.filter((p) => matchesFilter(cnt(p.id), quotas, filter)
+    return precincts.filter((p) => (hqFilter === 'all' || p.hq_id === hqFilter) && matchesFilter(cnt(p.id), quotas, filter)
       && (!s || p.number.includes(s) || (p.name || '').toLowerCase().includes(s) || (p.address || '').toLowerCase().includes(s)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [precincts, counts, quotas, filter, search]);
+  }, [precincts, counts, quotas, filter, search, hqFilter]);
+  const subHqIds = Array.from(new Set(precincts.map((p) => p.hq_id).filter((id) => id && id !== hqId))) as string[];
 
   const stat = (r: keyof CoverageCounts) => precincts.filter((p) => cnt(p.id)[r] > 0 && cnt(p.id)[r] >= quotas[r]).length;
   const cells = precincts.map((p) => {
@@ -214,6 +250,12 @@ export function PrecinctsPanel({ orgId, hqId, canEdit }: Props) {
 
       {canEdit && (
         <Card className="p-3 space-y-3">
+          {childOkrugs.length > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between rounded-md border p-3">
+              <p className="text-sm">Імпортувати всі дільниці ДРВ по окружних штабах ({childOkrugs.map((c) => '№' + c.okrug).join(', ')}) — кожна потрапить у свій штаб</p>
+              <Button size="sm" onClick={importAll} disabled={importing}>{importing ? 'Імпорт…' : 'Імпортувати всі дільниці ДРВ'}</Button>
+            </div>
+          )}
           {okrug && okrug >= 201 && okrug <= 204 && (
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between rounded-md border p-3">
               <p className="text-sm">Офіційні дільниці округу №{okrug} з Державного реєстру виборців (адреси, межі, кількість виборців)</p>
@@ -241,13 +283,21 @@ export function PrecinctsPanel({ orgId, hqId, canEdit }: Props) {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className={`grid grid-cols-1 gap-2 ${subHqIds.length ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+        {subHqIds.length > 0 && (
+          <select className="h-11 rounded-md border bg-background px-3 text-sm" value={hqFilter} onChange={(e) => { setHqFilter(e.target.value); setLimit(PAGE); }}>
+            <option value="all">Усі штаби</option>
+            {[hqId, ...subHqIds].filter((id) => id === hqId ? precincts.some((p) => p.hq_id === hqId) : true)
+              .sort((a, b) => (hqNames.get(a) || '').localeCompare(hqNames.get(b) || '', 'uk', { numeric: true }))
+              .map((id) => <option key={id} value={id}>{hqNames.get(id) || 'Штаб'}</option>)}
+          </select>
+        )}
         <select className="h-11 rounded-md border bg-background px-3 text-sm" value={filter} onChange={(e) => { setFilter(e.target.value as CoverageFilter); setLimit(PAGE); }}>
           {FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
         </select>
         <Input placeholder="Пошук за номером або адресою" value={search} onChange={(e) => { setSearch(e.target.value); setLimit(PAGE); }} />
       </div>
-      <p className="text-xs text-muted-foreground">Знайдено: {filtered.length} з {precincts.length}</p>
+      <p className="text-xs text-muted-foreground">Показано {Math.min(limit, filtered.length)} з {filtered.length}{filtered.length !== precincts.length ? ` (усього дільниць: ${precincts.length})` : ''}</p>
 
       {filtered.length === 0 ? (
         <p className="text-sm text-muted-foreground">{precincts.length ? 'Немає дільниць за цим фільтром' : 'Дільниць ще немає'}</p>
@@ -260,6 +310,7 @@ export function PrecinctsPanel({ orgId, hqId, canEdit }: Props) {
                 <AccordionTrigger>
                   <div className="flex flex-wrap items-center gap-2 text-left">
                     <span className="font-medium">Дільниця №{p.number}</span>
+                    {p.hq_id !== hqId && hqNames.get(p.hq_id as string) && <Badge variant="secondary">{hqNames.get(p.hq_id as string)}</Badge>}
                     {p.name && <span className="text-sm text-muted-foreground">{p.name}</span>}
                     <Badge variant={st === 'full' ? 'default' : 'outline'}>
                       С {c.observer}/{quotas.observer} · К {c.commission}/{quotas.commission} · ЗМІ {c.media}/{quotas.media}
@@ -282,7 +333,12 @@ export function PrecinctsPanel({ orgId, hqId, canEdit }: Props) {
           })}
         </Accordion>
       )}
-      {filtered.length > limit && <Button variant="outline" className="w-full" onClick={() => setLimit(limit + PAGE)}>Показати ще ({filtered.length - limit})</Button>}
+      {filtered.length > limit && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <Button variant="outline" onClick={() => setLimit(limit + PAGE)}>Показати ще ({Math.min(PAGE, filtered.length - limit)})</Button>
+          <Button variant="secondary" onClick={() => setLimit(filtered.length)}>Показати всі ({filtered.length})</Button>
+        </div>
+      )}
     </div>
   );
 }
