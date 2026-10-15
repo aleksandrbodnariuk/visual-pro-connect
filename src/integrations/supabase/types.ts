@@ -558,6 +558,64 @@ export type Database = {
           },
         ]
       }
+      campaign_trainees: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          created_by: string | null
+          full_name: string | null
+          id: string
+          organization_id: string
+          precinct_id: string | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          created_by?: string | null
+          full_name?: string | null
+          id?: string
+          organization_id: string
+          precinct_id?: string | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          full_name?: string | null
+          id?: string
+          organization_id?: string
+          precinct_id?: string | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_trainees_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "election_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_trainees_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_trainees_precinct_id_fkey"
+            columns: ["precinct_id"]
+            isOneToOne: false
+            referencedRelation: "precincts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           color: string
@@ -4820,6 +4878,15 @@ export type Database = {
       is_ad_manager: { Args: { _user_id: string }; Returns: boolean }
       is_admin: { Args: { user_id: string }; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
+      is_campaign_trainee: {
+        Args: {
+          _campaign_id: string
+          _precinct_id: string
+          _role: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_conversation_member: {
         Args: { _conv_id: string; _user_id: string }
         Returns: boolean
