@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { ArrowLeft, Plus, Trash2, Vote, FileCheck2, RefreshCw, Star, FlaskConical } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
-import { CAMPAIGN_MODES, campaignPrecincts, type CampaignMode } from '@/lib/campaignMode';
+import { CAMPAIGN_MODES, MODE_BADGE, campaignPrecincts, type CampaignMode } from '@/lib/campaignMode';
+import { TrainingPanel, TraineeTasks, type Trainee } from './TrainingPanel';
 import { ProtocolPhotos } from './ProtocolPhotos';
 import { TentsPanel } from './TentsPanel';
 import { ElectionDayPanel } from './ElectionDayPanel';
@@ -66,7 +67,7 @@ export function CampaignsPanel({ orgId, isAdmin }: { orgId: string; isAdmin: boo
               <div className="min-w-0">
                 <div className="flex flex-wrap gap-1 mb-1">
                   <Badge variant="secondary">{typeLabel(c)}</Badge>
-                  {c.mode && c.mode !== 'real' && <Badge variant="outline" className="border-primary text-primary"><FlaskConical className="h-3 w-3 mr-1" />{c.mode === 'test' ? 'Тест' : 'Навчання'}</Badge>}
+                  {c.mode && c.mode !== 'real' && <Badge variant="outline" className="border-primary text-primary"><FlaskConical className="h-3 w-3 mr-1" />{MODE_BADGE[c.mode]}</Badge>}
                 </div>
                 <p className="font-semibold">{c.name}</p>
                 <p className="text-xs text-muted-foreground">
@@ -177,6 +178,7 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
   const [managed, setManaged] = useState<Set<string>>(new Set());
   const [mine, setMine] = useState<Set<string>>(new Set());
   const [officerBodies, setOfficerBodies] = useState<Set<string>>(new Set());
+  const [trainees, setTrainees] = useState<Trainee[]>([]);
   const [proto, setProto] = useState<Precinct | null>(null);
   const [results, setResults] = useState<Awaited<ReturnType<typeof partyExtra.results>>>({ votes: [], progress: [] });
   const candLabel = ELECTION_TYPES.find((t) => t.value === campaign.election_type)?.candidateLabel || 'Кандидат';
@@ -194,7 +196,11 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
       const { data: ob } = await (supabase as any).from('party_unit_officers').select('body, party_members!inner(user_id)').eq('organization_id', orgId).eq('party_members.user_id', user.id);
       setOfficerBodies(new Set((ob || []).map((x: any) => x.body)));
     }
-  }, [campaign.id, orgId, user?.id]);
+    if (campaign.mode === 'training') {
+      const { data: tr } = await (supabase as any).from('campaign_trainees').select('id, user_id, full_name, role, precinct_id').eq('campaign_id', campaign.id);
+      setTrainees((tr || []) as Trainee[]);
+    }
+  }, [campaign.id, campaign.mode, orgId, user?.id]);
   useEffect(() => { load(); }, [load]);
 
   const byId = useMemo(() => new Map(hqs.map((h) => [h.id, h])), [hqs]);
@@ -204,10 +210,15 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
     while (cur && g++ < 10) { if (managed.has(cur.id)) return true; cur = cur.parent_id ? byId.get(cur.parent_id) : undefined; }
     return false;
   };
-  const canEditPrecinct = (p: Precinct) => campaign.status !== 'finished' && (canManageHq(p.hq_id) || mine.has(p.id));
-  const isObserver = mine.size > 0 && !isAdmin && managed.size === 0;
-  const isLawyer = officerBodies.has('lawyer');
-  const isAgitation = officerBodies.has('agitation');
+  const myTrainee = trainees.filter((t) => t.user_id === user?.id);
+  const trainObs = new Set(myTrainee.filter((t) => t.role === 'observer' && t.precinct_id).map((t) => t.precinct_id!));
+  const myPrecincts = trainObs.size ? new Set([...mine, ...trainObs]) : mine;
+  const canEditPrecinct = (p: Precinct) => campaign.status !== 'finished' && (canManageHq(p.hq_id) || myPrecincts.has(p.id));
+  const isObserver = trainObs.size > 0 || (mine.size > 0 && !isAdmin && managed.size === 0);
+  const isLawyer = officerBodies.has('lawyer') || myTrainee.some((t) => t.role === 'lawyer');
+  const isAgitation = officerBodies.has('agitation') || myTrainee.some((t) => t.role === 'agitation');
+  const isAnalyst = myTrainee.some((t) => t.role === 'analyst');
+  const canSimulate = (isAdmin || managed.size > 0) && (campaign.mode === 'training' || campaign.mode === 'demo');
 
   return (
     <div className="space-y-4">
@@ -218,7 +229,7 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
         <p className="text-sm text-muted-foreground">{campaign.election_date ? new Date(campaign.election_date).toLocaleDateString('uk-UA') : ''}{campaign.round > 1 ? ` · ${campaign.round} тур` : ''}</p>
         {campaign.mode && campaign.mode !== 'real' && (
           <p className="text-xs mt-2 text-primary flex items-center gap-1"><FlaskConical className="h-3.5 w-3.5" />
-            {campaign.mode === 'test' ? 'Тестова' : 'Навчальна'} кампанія · {precincts.length} дільниць · дані можна видалити без шкоди для штабів</p>
+            {campaign.mode === 'test' ? 'Тестова' : campaign.mode === 'demo' ? 'Демонстраційна' : 'Навчальна'} кампанія · {precincts.length} дільниць · дані можна видалити без шкоди для штабів</p>
         )}
       </Card>
       {campaign.mode === 'training' && (
@@ -233,14 +244,16 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
           </ol>
         </Card>
       )}
+      {myTrainee.length > 0 && <TraineeTasks campaignId={campaign.id} trainees={myTrainee} precincts={precincts} />}
       {isObserver && (
         <Card className="p-3 text-sm border-primary/40">
           <p className="font-medium">Кабінет спостерігача</p>
           <p className="text-muted-foreground text-xs">Тут ваші дільниці: підтвердьте відкриття, передайте явку о 12, 16 і 20 годині, повідомляйте про порушення, а після підрахунку натисніть «Протокол» — внесіть результати й сфотографуйте аркуші.</p>
         </Card>
       )}
-      <Tabs defaultValue={isObserver ? 'day' : 'results'} key={isObserver ? 'obs' : 'hq'}>
+      <Tabs defaultValue={isObserver ? 'day' : isLawyer && myTrainee.length ? 'incidents' : isAgitation && myTrainee.length ? 'tents' : isAnalyst ? 'board' : canSimulate ? 'sim' : 'results'} key={isObserver ? 'obs' : 'hq'}>
         <TabsList className="flex-wrap h-auto">
+          {canSimulate && <TabsTrigger value="sim">{campaign.mode === 'demo' ? 'Демо' : 'Навчання'}</TabsTrigger>}
           <TabsTrigger value="results">Результати</TabsTrigger>
           <TabsTrigger value="board">Табло</TabsTrigger>
           <TabsTrigger value="day">{isObserver ? 'Моя дільниця' : 'День виборів'}</TabsTrigger>
@@ -249,6 +262,7 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
           <TabsTrigger value="candidates">{campaign.election_type === 'parliamentary' ? 'Партії / кандидати' : 'Кандидати'} ({candidates.length})</TabsTrigger>
           <TabsTrigger value="tents">Намети</TabsTrigger>
         </TabsList>
+        {canSimulate && <TabsContent value="sim"><TrainingPanel orgId={orgId} campaign={campaign} precincts={precincts} candidates={candidates} trainees={trainees} onChanged={load} /></TabsContent>}
         <TabsContent value="results"><ResultsView hqs={hqs} candidates={candidates} results={results} onRefresh={load} /></TabsContent>
         <TabsContent value="board"><HqBoardPanel campaign={campaign} hqs={hqs} precincts={precincts} protocols={protocols} onRefresh={load} onOpen={candidates.length ? setProto : undefined} /></TabsContent>
         <TabsContent value="day"><ElectionDayPanel orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={canManageHq} onProtocol={candidates.length ? setProto : undefined} protocolIds={new Set(protocols.map((x) => x.precinct_id))} /></TabsContent>
