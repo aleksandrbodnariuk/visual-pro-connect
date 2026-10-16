@@ -1,3 +1,4 @@
+import { fetchPaged } from '@/lib/fetchPaged';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -71,7 +72,7 @@ export function TrainingPanel({ orgId, campaign, precincts, candidates, trainees
     try {
       const base = { organization_id: orgId, campaign_id: campaign.id, created_by: user.id };
       if (stage === 'protocols') {
-        const { data: ex } = await db.from('precinct_protocols').select('precinct_id').eq('campaign_id', campaign.id).limit(5000);
+        const ex = await fetchPaged(() => db.from('precinct_protocols').select('precinct_id').eq('campaign_id', campaign.id).order('id'));
         const have = new Set((ex || []).map((x: any) => x.precinct_id));
         const todo = botPrecincts.filter((p) => !have.has(p.id));
         const ids = candidates.map((c) => c.id);
@@ -91,7 +92,7 @@ export function TrainingPanel({ orgId, campaign, precincts, candidates, trainees
         toast.success(`Система подала ${todo.length} протоколів. Результати рахуються по-справжньому.`);
       } else {
         const kind = stage === 'opened' ? 'opened' : stage === 'incidents' ? 'incident' : 'turnout';
-        const { data: ex } = await db.from('election_day_reports').select('precinct_id, slot').eq('campaign_id', campaign.id).eq('kind', kind).limit(5000);
+        const ex = await fetchPaged(() => db.from('election_day_reports').select('precinct_id, slot').eq('campaign_id', campaign.id).eq('kind', kind).order('id'));
         const have = new Set((ex || []).filter((x: any) => kind !== 'turnout' || x.slot === stage).map((x: any) => x.precinct_id));
         const rows = botPrecincts.filter((p) => !have.has(p.id)).flatMap((p) => {
           const seed = campaign.id + p.id;
@@ -196,7 +197,7 @@ export function TraineeTasks({ campaignId, trainees, precincts }: { campaignId: 
   const obsIds = trainees.filter((t) => t.role === 'observer' && t.precinct_id).map((t) => t.precinct_id!);
   const key = obsIds.join(',');
   useEffect(() => {
-    db.from('election_day_reports').select('precinct_id, kind, slot, incident_status').eq('campaign_id', campaignId).limit(2000).then(({ data }: any) => setRows(data || []));
+    fetchPaged(() => db.from('election_day_reports').select('precinct_id, kind, slot, incident_status').eq('campaign_id', campaignId).order('id')).then(setRows);
     if (key) db.from('precinct_protocols').select('precinct_id').eq('campaign_id', campaignId).in('precinct_id', key.split(',')).then(({ data }: any) => setProtos(new Set((data || []).map((x: any) => x.precinct_id))));
   }, [campaignId, key]);
   const Step = ({ ok, children }: { ok: boolean; children: React.ReactNode }) => (
