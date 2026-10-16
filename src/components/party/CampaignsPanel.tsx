@@ -213,6 +213,8 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
   const myTrainee = trainees.filter((t) => t.user_id === user?.id);
   const trainObs = new Set(myTrainee.filter((t) => t.role === 'observer' && t.precinct_id).map((t) => t.precinct_id!));
   const myPrecincts = trainObs.size ? new Set([...mine, ...trainObs]) : mine;
+  const trainKey = [...trainObs].join(',');
+  const extraMine = useMemo(() => new Set(trainKey ? trainKey.split(',') : []), [trainKey]);
   const canEditPrecinct = (p: Precinct) => campaign.status !== 'finished' && (canManageHq(p.hq_id) || myPrecincts.has(p.id));
   const isObserver = trainObs.size > 0 || (mine.size > 0 && !isAdmin && managed.size === 0);
   const isLawyer = officerBodies.has('lawyer') || myTrainee.some((t) => t.role === 'lawyer');
@@ -265,7 +267,7 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
         {canSimulate && <TabsContent value="sim"><TrainingPanel orgId={orgId} campaign={campaign} precincts={precincts} candidates={candidates} trainees={trainees} onChanged={load} /></TabsContent>}
         <TabsContent value="results"><ResultsView hqs={hqs} candidates={candidates} results={results} onRefresh={load} /></TabsContent>
         <TabsContent value="board"><HqBoardPanel campaign={campaign} hqs={hqs} precincts={precincts} protocols={protocols} onRefresh={load} onOpen={candidates.length ? setProto : undefined} /></TabsContent>
-        <TabsContent value="day"><ElectionDayPanel orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={canManageHq} onProtocol={candidates.length ? setProto : undefined} protocolIds={new Set(protocols.map((x) => x.precinct_id))} /></TabsContent>
+        <TabsContent value="day"><ElectionDayPanel extraMine={extraMine} orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={trainObs.size ? () => false : canManageHq} onProtocol={candidates.length ? setProto : undefined} protocolIds={new Set(protocols.map((x) => x.precinct_id))} /></TabsContent>
         <TabsContent value="incidents"><IncidentsPanel campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={(id) => canManageHq(id) || isLawyer} /></TabsContent>
         <TabsContent value="protocols">
           <ProtocolsView orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} protocols={protocols} candidates={candidates} canEditPrecinct={canEditPrecinct} onSaved={load} />

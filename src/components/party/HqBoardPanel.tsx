@@ -1,3 +1,4 @@
+import { fetchPaged } from '@/lib/fetchPaged';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ export function HqBoardPanel({ campaign, hqs, precincts, protocols, onRefresh, o
   const [root, setRoot] = useState<string>('');
 
   const load = useCallback(async () => {
-    const { data } = await db.from('election_day_reports').select('precinct_id,kind,slot').eq('campaign_id', campaign.id).limit(5000);
+    const data = await fetchPaged(() => db.from('election_day_reports').select('precinct_id,kind,slot').eq('campaign_id', campaign.id).order('id'));
     setReports(data || []);
   }, [campaign.id]);
   useEffect(() => {
