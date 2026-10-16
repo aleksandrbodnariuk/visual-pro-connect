@@ -8,6 +8,7 @@ import { Upload, X, Edit2 } from "lucide-react";
 import { toast } from "sonner";
 import { uploadToStorage } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { z } from "zod";
 import { ImageCropEditor } from "@/components/ui/ImageCropEditor";
 import { compressImageAsFile, dataUrlToBlob, OUTPUT_FORMAT, OUTPUT_EXTENSION } from "@/lib/imageCompression";
@@ -39,6 +40,7 @@ export function EditPublicationModal({
   post,
   onSuccess 
 }: EditPublicationModalProps) {
+  const { user } = useAuth();
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("");
   const [videoOrientation, setVideoOrientation] = useState<"auto" | "vertical" | "horizontal">("auto");
@@ -175,7 +177,8 @@ export function EditPublicationModal({
       if (selectedFile) {
         const fileExtension = selectedFile.name.split('.').pop() || 'jpg';
         const uniqueFileName = `post-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExtension}`;
-        const filePath = `posts/${uniqueFileName}`;
+        if (!user?.id) throw new Error("Увійдіть, щоб завантажити фото");
+        const filePath = `${user.id}/${uniqueFileName}`;
         
         mediaUrl = await uploadToStorage('posts', filePath, selectedFile, selectedFile.type);
       }

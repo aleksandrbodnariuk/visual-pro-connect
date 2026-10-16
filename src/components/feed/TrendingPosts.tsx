@@ -5,6 +5,9 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getDailyPostWindow, getPostExcerpt } from "@/lib/dailyPosts";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { extractVideoEmbed } from "@/lib/videoEmbed";
+import { useEmbedThumbnail } from "@/hooks/useEmbedThumbnail";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 export function TrendingPosts() {
@@ -26,7 +29,18 @@ export function TrendingPosts() {
         ? await supabase.from("groups").select("id, name").in("id", groupIds)
         : { data: [], error: null };
       if (groupError) throw groupError;
-      return rows.map(post => ({ ...post, groupName: groups?.find(g => g.id === post.group_id)?.name }));
+      const userIds = [...new Set(rows.filter(p => !p.posted_as_group).map(p => p.user_id))].filter(Boolean);
+      const { data: profiles } = userIds.length
+        ? await supabase.rpc("get_safe_public_profiles_by_ids", { _ids: userIds })
+        : { data: [] };
+      return rows.map(post => {
+        const author = !post.posted_as_group ? profiles?.find(u => u.id === post.user_id) : undefined;
+        return {
+          ...post,
+          authorName: post.posted_as_group ? groups?.find(g => g.id === post.group_id)?.name : author?.full_name,
+          authorAvatar: author?.avatar_url ?? null,
+        };
+      });
     },
   });
 
@@ -58,30 +72,54 @@ export function TrendingPosts() {
           <p className="py-3 text-sm text-muted-foreground">Сьогодні ще немає публікацій із реакціями.</p>
         ) : (
           <CarouselContent className="-ml-3">
-            {posts.map((post, index) => {
-              const image = post.media_url && /\.(jpe?g|png|webp|gif|avif)(?:[?#]|$)/i.test(post.media_url);
-              const Icon = post.category === "music" ? Music : post.category === "video" ? Video : MessageSquare;
-              return (
-                <CarouselItem key={post.id} className="basis-[78%] pl-3 sm:basis-[48%]">
-                  <Link to={`/post/${post.id}`} className="group flex h-52 flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground transition-colors hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    <div className="relative h-24 shrink-0 overflow-hidden bg-muted">
-                      {image && post.media_url ? (
-                        <img src={post.media_url} alt="" loading="lazy" className="h-full w-full object-cover" onError={event => { event.currentTarget.hidden = true; }} />
-                      ) : <div className="flex h-full items-center justify-center"><Icon className="h-8 w-8 text-muted-foreground" /></div>}
-                      <span className="absolute left-2 top-2 rounded bg-background/90 px-2 py-1 text-xs font-semibold text-foreground">{index + 1}</span>
-                    </div>
-                    <div className="flex min-h-0 flex-1 flex-col gap-1 p-3">
-                      {post.groupName && <p className="truncate text-xs text-muted-foreground">{post.groupName}</p>}
-                      <p className="line-clamp-2 break-words text-sm font-medium">{getPostExcerpt(post.content)}</p>
-                      <span className="mt-auto flex items-center gap-1.5 text-xs text-muted-foreground"><ThumbsUp className="h-3.5 w-3.5" />{post.reaction_count}</span>
-                    </div>
-                  </Link>
-                </CarouselItem>
-              );
-            })}
+            {posts.map((post, index) => (
+              <CarouselItem key={post.id} className="basis-[82%] pl-3 sm:basis-[48%] lg:basis-[40%]">
+                <TrendingCard post={post} index={index} />
+              </CarouselItem>
+            ))}
           </CarouselContent>
         )}
       </Carousel>
     </section>
+  );
+}
+
+type TrendingPost = { id: string; content: string; media_url: string | null; category: string | null; reaction_count: number; authorName?: string | null; authorAvatar?: string | null };
+
+function TrendingCard({ post, index }: { post: TrendingPost; index: number }) {
+  const isImage = Boolean(post.media_url && /\.(jpe?g|png|webp|gif|avif)(?:[?#]|$)/i.test(post.media_url));
+  const embed = extractVideoEmbed(post.content || "");
+  const thumb = useEmbedThumbnail(embed && embed.platform !== "link" ? embed : null);
+  const cover = isImage ? post.media_url : thumb;
+  const Icon = post.category === "music" ? Music : post.category === "video" || embed ? Video : MessageSquare;
+  const text = getPostExcerpt(post.content);
+  const name = post.authorName || "Учасник спільноти";
+  return (
+    <Link to={`/post/${post.id}`} className="group flex h-full min-h-56 flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground transition-colors hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      {cover ? (
+        <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-muted">
+          <img src={cover} alt="" loading="lazy" className="h-full w-full object-cover" onError={e => { e.currentTarget.style.display = "none"; }} />
+          {!isImage && <span className="absolute inset-0 flex items-center justify-center"><Video className="h-9 w-9 rounded-full bg-background/80 p-2 text-foreground" /></span>}
+          <span className="absolute left-2 top-2 rounded bg-background/90 px-2 py-1 text-xs font-semibold text-foreground">{index + 1}</span>
+        </div>
+      ) : (
+        <div className="relative flex flex-1 items-start gap-2 bg-gradient-to-br from-primary/15 via-card to-accent/10 p-3 pt-10">
+          <span className="absolute left-2 top-2 rounded bg-background/90 px-2 py-1 text-xs font-semibold text-foreground">{index + 1}</span>
+          <Icon className="absolute right-3 top-3 h-5 w-5 text-muted-foreground" />
+          <p className="line-clamp-5 whitespace-pre-line break-words text-sm font-medium">{text || "Публікація без тексту"}</p>
+        </div>
+      )}
+      <div className="flex flex-col gap-2 p-3">
+        {cover && text && <p className="line-clamp-2 break-words text-sm font-medium">{text}</p>}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Avatar className="h-6 w-6">
+            {post.authorAvatar && <AvatarImage src={post.authorAvatar} alt="" />}
+            <AvatarFallback className="text-[10px]">{name.slice(0, 1)}</AvatarFallback>
+          </Avatar>
+          <span className="min-w-0 flex-1 truncate">{name}</span>
+          <span className="flex items-center gap-1"><ThumbsUp className="h-3.5 w-3.5" />{post.reaction_count}</span>
+        </div>
+      </div>
+    </Link>
   );
 }

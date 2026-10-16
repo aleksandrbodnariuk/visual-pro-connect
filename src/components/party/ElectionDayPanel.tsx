@@ -1,3 +1,4 @@
+import { fetchPaged } from '@/lib/fetchPaged';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +19,7 @@ const SLOTS = ['12', '16', '20'] as const;
 type Kind = 'opened' | 'turnout' | 'incident';
 interface Row { id: string; precinct_id: string; kind: Kind; slot: string | null; voted: number | null; quorum: boolean | null; notes: string | null; photos: ProtocolPhoto[]; created_at: string }
 
-export function ElectionDayPanel({ orgId, campaign, hqs, precincts, canManageHq, onProtocol, protocolIds }: { orgId: string; campaign: Campaign; hqs: PartyHq[]; precincts: Precinct[]; canManageHq: (id: string) => boolean; onProtocol?: (p: Precinct) => void; protocolIds?: Set<string> }) {
+export function ElectionDayPanel({ orgId, campaign, hqs, precincts, canManageHq, onProtocol, protocolIds, extraMine }: { extraMine?: Set<string>; orgId: string; campaign: Campaign; hqs: PartyHq[]; precincts: Precinct[]; canManageHq: (id: string) => boolean; onProtocol?: (p: Precinct) => void; protocolIds?: Set<string> }) {
   const { user } = useAuth();
   const [rows, setRows] = useState<Row[]>([]);
   const [mine, setMine] = useState<Set<string>>(new Set());
@@ -28,13 +29,13 @@ export function ElectionDayPanel({ orgId, campaign, hqs, precincts, canManageHq,
   const hqName = useMemo(() => new Map(hqs.map((h) => [h.id, h.name])), [hqs]);
 
   const load = useCallback(async () => {
-    const { data } = await db.from('election_day_reports').select('*').eq('campaign_id', campaign.id).order('created_at', { ascending: false }).limit(1000);
-    setRows(data || []);
+    const data = await fetchPaged(() => db.from('election_day_reports').select('*').eq('campaign_id', campaign.id).order('created_at', { ascending: false }));
+    setRows(data as Row[]);
     if (user?.id) {
       const { data: m } = await db.from('precinct_members').select('precinct_id').eq('organization_id', orgId).eq('user_id', user.id);
-      setMine(new Set((m || []).map((x: any) => x.precinct_id)));
+      setMine(new Set([...(m || []).map((x: any) => x.precinct_id), ...(extraMine || [])]));
     }
-  }, [campaign.id, orgId, user?.id]);
+  }, [campaign.id, orgId, user?.id, extraMine]);
   useEffect(() => { load(); }, [load]);
 
   const canWrite = (p: Precinct) => campaign.status !== 'finished' && (mine.has(p.id) || canManageHq(p.hq_id));
