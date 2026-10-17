@@ -6,7 +6,7 @@ import { Download, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Campaign, PartyHq, Precinct, Protocol } from '@/hooks/orgs/useOrganizations';
 import { downloadCsv } from '@/lib/csvExport';
-import { STATUS_META, STATUS_ORDER, precinctStatus, subtreeIds, type PrecinctStatus } from '@/lib/precinctStatus';
+import { STATUS_META, STATUS_ORDER, precinctMilestones, precinctStatus, subtreeIds, type PrecinctStatus } from '@/lib/precinctStatus';
 
 const db = supabase as any;
 
@@ -25,16 +25,28 @@ export function HqBoardPanel({ campaign, hqs, precincts, protocols, onRefresh, o
     return () => clearInterval(t);
   }, [load, campaign.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const status = useMemo(() => {
+  const { status, milestones } = useMemo(() => {
     const done = new Set(protocols.filter((p) => p.status === 'submitted' || p.status === 'accepted').map((p) => p.precinct_id));
     const m = new Map<string, PrecinctStatus>();
-    for (const p of precincts) m.set(p.id, precinctStatus(reports.filter((r) => r.precinct_id === p.id), done.has(p.id)));
-    return m;
+    const stages = new Map<string, Record<PrecinctStatus, boolean>>();
+    const byPrecinct = new Map<string, typeof reports>();
+    for (const report of reports) {
+      const list = byPrecinct.get(report.precinct_id) || [];
+      list.push(report);
+      byPrecinct.set(report.precinct_id, list);
+    }
+    for (const p of precincts) {
+      const saved = byPrecinct.get(p.id) || [];
+      m.set(p.id, precinctStatus(saved, done.has(p.id)));
+      stages.set(p.id, precinctMilestones(saved, done.has(p.id)));
+    }
+    return { status: m, milestones: stages };
   }, [precincts, reports, protocols]);
 
   const scope = root ? subtreeIds(hqs, root) : null;
   const list = precincts.filter((p) => !scope || scope.has(p.hq_id));
-  const count = (ps: Precinct[]) => STATUS_ORDER.map((s) => ps.filter((p) => status.get(p.id) === s).length);
+  const count = (ps: Precinct[]) => STATUS_ORDER.map((s) => ps.filter((p) => milestones.get(p.id)?.[s]).length);
+  const currentCount = (ps: Precinct[]) => STATUS_ORDER.map((s) => ps.filter((p) => status.get(p.id) === s).length);
   const children = hqs.filter((h) => (root ? h.parent_id === root : !h.parent_id));
 
   const exportCsv = () => {
@@ -65,7 +77,7 @@ export function HqBoardPanel({ campaign, hqs, precincts, protocols, onRefresh, o
         <Card className="p-3 space-y-2">
           <p className="font-medium text-sm">Підрозділи</p>
           {children.map((h) => {
-            const sub = subtreeIds(hqs, h.id); const ps = precincts.filter((p) => sub.has(p.hq_id)); const c = count(ps);
+            const sub = subtreeIds(hqs, h.id); const ps = precincts.filter((p) => sub.has(p.hq_id)); const c = currentCount(ps);
             return (
               <button key={h.id} onClick={() => setRoot(h.id)} className="w-full text-left rounded-md hover:bg-muted p-2 space-y-1">
                 <div className="flex justify-between text-sm"><span className="truncate">{h.name}</span><span className="text-muted-foreground shrink-0">{c[4]}/{ps.length} протоколів</span></div>
