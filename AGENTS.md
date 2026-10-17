@@ -9,3 +9,4 @@
 - Test and training election campaigns reuse real precincts via a campaign mode and participant list, so deleting them removes only campaign protocols and never the real structure.
 
 - Election simulation (demo/training) only writes input reports and protocols as the system observer; all totals come from the regular counting functions, so demo data exercises the real pipeline.
+- Election board counters use independent recorded milestones in every campaign mode; tile colours and stacked bars use the exclusive current status, because later stages must not erase earlier counts or make stacked bars exceed 100%.

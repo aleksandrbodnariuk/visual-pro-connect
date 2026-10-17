@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Зберегти накопичувальні показники етапів табло в усіх режимах кампанії та перевірити регресії (17 тестів).
+- [ ] Перевірити табло з реальними даними під акаунтом — заблоковано: зовнішня авторизована сесія недоступна.
+
 - [x] Diagnose profile post loading, mobile menu parity, and admin mobile overflow.
 - [x] Paginate profile posts in batches of 10 and add «Показати ще».
 - [x] Add Groups and Organizations to the mobile menu and align it with desktop navigation.

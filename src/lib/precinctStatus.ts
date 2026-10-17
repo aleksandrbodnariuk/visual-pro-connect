@@ -9,6 +9,14 @@ export const STATUS_META: Record<PrecinctStatus, { label: string; cls: string }>
 };
 export const STATUS_ORDER: PrecinctStatus[] = ['silent', 'opened', 'turnout', 'counting', 'accepted'];
 
+/** Recorded milestones are independent; reaching a later stage never hides earlier reports. */
+export function precinctMilestones(reports: { kind: string; slot: string | null }[], hasProtocol: boolean): Record<PrecinctStatus, boolean> {
+  const opened = reports.some((r) => r.kind === 'opened');
+  const turnout = reports.some((r) => r.kind === 'turnout');
+  const counting = hasProtocol || reports.some((r) => r.kind === 'turnout' && r.slot === '20');
+  return { silent: !opened && !turnout && !hasProtocol, opened, turnout, counting, accepted: hasProtocol };
+}
+
 /** Status of one precinct from its election-day reports and protocol. */
 export function precinctStatus(reports: { kind: string; slot: string | null }[], hasProtocol: boolean): PrecinctStatus {
   if (hasProtocol) return 'accepted';

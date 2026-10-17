@@ -39,8 +39,8 @@ export function TrainingPanel({ orgId, campaign, precincts, candidates, trainees
   }, [orgId, isTraining]);
 
   const refreshDone = useCallback(async () => {
-    const [{ data: r }, { count }] = await Promise.all([
-      db.from('election_day_reports').select('kind, slot').eq('campaign_id', campaign.id).limit(1000),
+    const [r, { count }] = await Promise.all([
+      fetchPaged(() => db.from('election_day_reports').select('kind, slot').eq('campaign_id', campaign.id).order('id')),
       db.from('precinct_protocols').select('id', { count: 'exact', head: true }).eq('campaign_id', campaign.id),
     ]);
     const s = new Set<SimStage>();
