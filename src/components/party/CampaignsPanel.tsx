@@ -221,6 +221,8 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
   const isAgitation = officerBodies.has('agitation') || myTrainee.some((t) => t.role === 'agitation');
   const isAnalyst = myTrainee.some((t) => t.role === 'analyst');
   const canSimulate = (isAdmin || managed.size > 0) && (campaign.mode === 'training' || campaign.mode === 'demo');
+  // Спостерігач без штабних прав бачить лише власний кабінет.
+  const observerOnly = isObserver && !isAdmin && managed.size === 0 && !isLawyer && !isAgitation && !isAnalyst;
 
   return (
     <div className="space-y-4">
@@ -267,7 +269,7 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
         {canSimulate && <TabsContent value="sim"><TrainingPanel orgId={orgId} campaign={campaign} precincts={precincts} candidates={candidates} trainees={trainees} onChanged={load} /></TabsContent>}
         <TabsContent value="results"><ResultsView hqs={hqs} candidates={candidates} results={results} onRefresh={load} /></TabsContent>
         <TabsContent value="board"><HqBoardPanel campaign={campaign} hqs={hqs} precincts={precincts} protocols={protocols} onRefresh={load} onOpen={candidates.length ? setProto : undefined} /></TabsContent>
-        <TabsContent value="day"><ElectionDayPanel extraMine={extraMine} orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={trainObs.size ? () => false : canManageHq} onProtocol={candidates.length ? setProto : undefined} protocolIds={new Set(protocols.map((x) => x.precinct_id))} /></TabsContent>
+        <TabsContent value="day"><ElectionDayPanel extraMine={extraMine} orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={trainObs.size ? () => false : canManageHq} onProtocol={setProto} protocolIds={new Set(protocols.map((x) => x.precinct_id))} /></TabsContent>
         <TabsContent value="incidents"><IncidentsPanel campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={(id) => canManageHq(id) || isLawyer} /></TabsContent>
         <TabsContent value="protocols">
           <ProtocolsView orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} protocols={protocols} candidates={candidates} canEditPrecinct={canEditPrecinct} onSaved={load} />
@@ -277,6 +279,7 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
         </TabsContent>
         <TabsContent value="tents"><TentsPanel orgId={orgId} campaign={campaign} hqs={hqs} canManageHq={(id) => canManageHq(id) || isAgitation} /></TabsContent>
       </Tabs>
+      )}
       {proto && (
         <ProtocolDialog orgId={orgId} campaign={campaign} precinct={proto} protocol={protocols.find((x) => x.precinct_id === proto.id) || null}
           candidates={candidates} readOnly={!canEditPrecinct(proto)} onClose={() => setProto(null)} onSaved={() => { setProto(null); load(); }} />
@@ -418,6 +421,7 @@ function ProtocolDialog({ orgId, campaign, precinct, protocol, candidates, readO
           <div><Label className="text-xs">Отримали бюлетені</Label>{num(ballots, setBallots)}</div>
           <div><Label className="text-xs">Недійсні</Label>{num(invalid, setInvalid)}</div>
         </div>
+        {candidates.length === 0 && <p className="text-sm text-destructive">Штаб ще не вніс кандидатів у цю кампанію — голоси можна буде внести після цього. Фото протоколу вже можна додати.</p>}
         <div className="space-y-2">
           {candidates.map((c) => (
             <div key={c.id} className="flex items-center gap-2">
