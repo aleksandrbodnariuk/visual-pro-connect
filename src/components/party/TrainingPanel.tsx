@@ -94,7 +94,7 @@ export function TrainingPanel({ orgId, campaign, precincts, candidates, trainees
         const kind = stage === 'opened' ? 'opened' : stage === 'incidents' ? 'incident' : 'turnout';
         const ex = await fetchPaged(() => db.from('election_day_reports').select('precinct_id, slot').eq('campaign_id', campaign.id).eq('kind', kind).order('id'));
         const have = new Set((ex || []).filter((x: any) => kind !== 'turnout' || x.slot === stage).map((x: any) => x.precinct_id));
-        const rows = botPrecincts.filter((p) => !have.has(p.id)).flatMap((p) => {
+        const rows = botPrecincts.filter((p) => !have.has(p.id)).flatMap((p): Record<string, unknown>[] => {
           const seed = campaign.id + p.id;
           if (kind === 'opened') return [{ ...base, precinct_id: p.id, kind, quorum: true, notes: '[Система] Дільницю відкрито вчасно', photos: [] }];
           if (kind === 'turnout') return [{ ...base, precinct_id: p.id, kind, slot: stage, voted: precinctTurnout(seed, p.voters_count || 1000)[stage as '12'], photos: [] }];
