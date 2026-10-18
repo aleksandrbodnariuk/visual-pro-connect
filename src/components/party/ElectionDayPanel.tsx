@@ -114,7 +114,7 @@ export function ElectionDayPanel({ orgId, campaign, hqs, precincts, canManageHq,
           );
         })}
       </div>
-      {shown.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Дільниць немає</p>}
+      {shown.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">{observerOnly ? 'Вас ще не закріплено за дільницею — зверніться до штабу' : 'Дільниць немає'}</p>}
 
       <Dialog open={!!dlg} onOpenChange={(o) => !o && setDlg(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
