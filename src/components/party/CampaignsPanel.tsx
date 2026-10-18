@@ -255,6 +255,9 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
           <p className="text-muted-foreground text-xs">Тут ваші дільниці: підтвердьте відкриття, передайте явку о 12, 16 і 20 годині, повідомляйте про порушення, а після підрахунку натисніть «Протокол» — внесіть результати й сфотографуйте аркуші.</p>
         </Card>
       )}
+      {observerOnly ? (
+        <ElectionDayPanel observerOnly extraMine={extraMine} orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts.filter((p) => myPrecincts.has(p.id))} canManageHq={() => false} onProtocol={setProto} protocolIds={new Set(protocols.map((x) => x.precinct_id))} />
+      ) : (
       <Tabs defaultValue={isObserver ? 'day' : isLawyer && myTrainee.length ? 'incidents' : isAgitation && myTrainee.length ? 'tents' : isAnalyst ? 'board' : canSimulate ? 'sim' : 'results'} key={isObserver ? 'obs' : 'hq'}>
         <TabsList className="flex-wrap h-auto">
           {canSimulate && <TabsTrigger value="sim">{campaign.mode === 'demo' ? 'Демо' : 'Навчання'}</TabsTrigger>}
