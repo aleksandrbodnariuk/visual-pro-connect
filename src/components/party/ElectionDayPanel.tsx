@@ -19,7 +19,7 @@ const SLOTS = ['12', '16', '20'] as const;
 type Kind = 'opened' | 'turnout' | 'incident';
 interface Row { id: string; precinct_id: string; kind: Kind; slot: string | null; voted: number | null; quorum: boolean | null; notes: string | null; photos: ProtocolPhoto[]; created_at: string }
 
-export function ElectionDayPanel({ orgId, campaign, hqs, precincts, canManageHq, onProtocol, protocolIds, extraMine }: { extraMine?: Set<string>; orgId: string; campaign: Campaign; hqs: PartyHq[]; precincts: Precinct[]; canManageHq: (id: string) => boolean; onProtocol?: (p: Precinct) => void; protocolIds?: Set<string> }) {
+export function ElectionDayPanel({ orgId, campaign, hqs, precincts, canManageHq, onProtocol, protocolIds, extraMine, observerOnly }: { observerOnly?: boolean; extraMine?: Set<string>; orgId: string; campaign: Campaign; hqs: PartyHq[]; precincts: Precinct[]; canManageHq: (id: string) => boolean; onProtocol?: (p: Precinct) => void; protocolIds?: Set<string> }) {
   const { user } = useAuth();
   const [rows, setRows] = useState<Row[]>([]);
   const [mine, setMine] = useState<Set<string>>(new Set());
@@ -40,7 +40,7 @@ export function ElectionDayPanel({ orgId, campaign, hqs, precincts, canManageHq,
 
   const canWrite = (p: Precinct) => campaign.status !== 'finished' && (mine.has(p.id) || canManageHq(p.hq_id));
   const visible = precincts.filter((p) => !onlyMine || canWrite(p));
-  const shown = onlyMine && visible.length === 0 ? precincts : visible;
+  const shown = observerOnly ? precincts : onlyMine && visible.length === 0 ? precincts : visible;
 
   const open = (p: Precinct, kind: Kind, slot?: string) => {
     const ex = rows.find((r) => r.precinct_id === p.id && r.kind === kind && (kind !== 'turnout' || r.slot === slot));
@@ -71,7 +71,7 @@ export function ElectionDayPanel({ orgId, campaign, hqs, precincts, canManageHq,
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+      {!observerOnly && <><div className="grid grid-cols-2 md:grid-cols-5 gap-2">
         <Card className="p-3"><p className="text-xs text-muted-foreground">Відкрились</p><p className="text-lg font-bold">{opened} / {precincts.length}</p></Card>
         {SLOTS.map((s) => {
           const list = rows.filter((r) => r.kind === 'turnout' && r.slot === s);
@@ -81,7 +81,7 @@ export function ElectionDayPanel({ orgId, campaign, hqs, precincts, canManageHq,
         })}
         <Card className="p-3"><p className="text-xs text-muted-foreground">Порушень</p><p className="text-lg font-bold">{incidents.length}</p></Card>
       </div>
-      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} /> Лише мої дільниці</label>
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} /> Лише мої дільниці</label></>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         {shown.map((p) => {
