@@ -184,23 +184,35 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
   const candLabel = ELECTION_TYPES.find((t) => t.value === campaign.election_type)?.candidateLabel || 'Кандидат';
 
   const load = useCallback(async () => {
-    const [c, h, p, pr, m, r] = await Promise.all([
-      partyExtra.listCandidates(campaign.id), partyActions.listHqs(orgId), partyExtra.listOrgPrecincts(orgId),
-      partyExtra.listProtocols(campaign.id), partyExtra.listManagers(orgId), partyExtra.results(campaign.id),
+    const sb = supabase as any;
+    // 1. Спершу з'ясовуємо роль користувача — від неї залежить, скільки дільниць завантажувати.
+    const [c, h, m, pm, ob, tr] = await Promise.all([
+      partyExtra.listCandidates(campaign.id), partyActions.listHqs(orgId), partyExtra.listManagers(orgId),
+      user?.id ? sb.from('precinct_members').select('precinct_id').eq('organization_id', orgId).eq('user_id', user.id) : Promise.resolve({ data: [] }),
+      user?.id ? sb.from('party_unit_officers').select('body, party_members!inner(user_id)').eq('organization_id', orgId).eq('party_members.user_id', user.id) : Promise.resolve({ data: [] }),
+      campaign.mode === 'training' ? sb.from('campaign_trainees').select('id, user_id, full_name, role, precinct_id').eq('campaign_id', campaign.id) : Promise.resolve({ data: [] }),
+    ]);
+    const myManaged = m.filter((x) => x.user_id === user?.id).map((x) => x.hq_id);
+    const myMine = ((pm.data || []) as any[]).map((x) => x.precinct_id as string);
+    const bodies = new Set(((ob.data || []) as any[]).map((x) => x.body as string));
+    const allTrainees = (tr.data || []) as Trainee[];
+    const meTr = allTrainees.filter((t) => t.user_id === user?.id);
+    const wideRole = bodies.has('lawyer') || bodies.has('agitation') || meTr.some((t) => t.role !== 'observer');
+    const scope = resolvePrecinctScope({
+      isAdmin, managedHqIds: myManaged, hqs: h, wideRole,
+      myPrecinctIds: [...myMine, ...meTr.filter((t) => t.role === 'observer' && t.precinct_id).map((t) => t.precinct_id!)],
+    });
+    // 2. Завантажуємо лише потрібні дільниці й протоколи.
+    const p = scope.kind === 'all' ? await partyExtra.listOrgPrecincts(orgId)
+      : scope.kind === 'hqs' ? await partyExtra.listPrecinctsByHqs(orgId, scope.hqIds)
+      : await partyExtra.listPrecinctsByIds(scope.precinctIds);
+    const [pr, r] = await Promise.all([
+      partyExtra.listProtocols(campaign.id, scope.kind === 'all' ? undefined : p.map((x) => x.id)),
+      scope.kind === 'precincts' ? Promise.resolve({ votes: [], progress: [] }) : partyExtra.results(campaign.id),
     ]);
     setCandidates(c); setHqs(h); setPrecincts(campaignPrecincts(p, campaign.mode, campaign.precinct_ids)); setProtocols(pr); setResults(r);
-    setManaged(new Set(m.filter((x) => x.user_id === user?.id).map((x) => x.hq_id)));
-    if (user?.id) {
-      const { data: pm } = await (supabase as any).from('precinct_members').select('precinct_id').eq('organization_id', orgId).eq('user_id', user.id);
-      setMine(new Set((pm || []).map((x: any) => x.precinct_id)));
-      const { data: ob } = await (supabase as any).from('party_unit_officers').select('body, party_members!inner(user_id)').eq('organization_id', orgId).eq('party_members.user_id', user.id);
-      setOfficerBodies(new Set((ob || []).map((x: any) => x.body)));
-    }
-    if (campaign.mode === 'training') {
-      const { data: tr } = await (supabase as any).from('campaign_trainees').select('id, user_id, full_name, role, precinct_id').eq('campaign_id', campaign.id);
-      setTrainees((tr || []) as Trainee[]);
-    }
-  }, [campaign.id, campaign.mode, orgId, user?.id]);
+    setManaged(new Set(myManaged)); setMine(new Set(myMine)); setOfficerBodies(bodies); setTrainees(allTrainees);
+  }, [campaign.id, campaign.mode, campaign.precinct_ids, orgId, user?.id, isAdmin]);
   useEffect(() => { load(); }, [load]);
 
   const byId = useMemo(() => new Map(hqs.map((h) => [h.id, h])), [hqs]);
