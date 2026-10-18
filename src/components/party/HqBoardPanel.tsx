@@ -9,10 +9,14 @@ import { downloadCsv } from '@/lib/csvExport';
 import { STATUS_META, STATUS_ORDER, precinctMilestones, precinctStatus, subtreeIds, type PrecinctStatus } from '@/lib/precinctStatus';
 
 const db = supabase as any;
+/** Скільки плиток дільниць малювати за раз — щоб табло на 30 000 дільниць не підвисало. */
+const PAGE = 300;
 
 export function HqBoardPanel({ campaign, hqs, precincts, protocols, onRefresh, onOpen }: { campaign: Campaign; hqs: PartyHq[]; precincts: Precinct[]; protocols: Protocol[]; onRefresh: () => void; onOpen?: (p: Precinct) => void }) {
   const [reports, setReports] = useState<{ precinct_id: string; kind: string; slot: string | null }[]>([]);
   const [root, setRoot] = useState<string>('');
+  const [limit, setLimit] = useState(PAGE);
+  useEffect(() => setLimit(PAGE), [root]);
 
   const load = useCallback(async () => {
     const data = await fetchPaged(() => db.from('election_day_reports').select('precinct_id,kind,slot').eq('campaign_id', campaign.id).order('id'));
@@ -91,10 +95,15 @@ export function HqBoardPanel({ campaign, hqs, precincts, protocols, onRefresh, o
       )}
 
       <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-8 xl:grid-cols-12 gap-1.5">
-        {list.map((p) => { const s = status.get(p.id) || 'silent'; return (
+        {list.slice(0, limit).map((p) => { const s = status.get(p.id) || 'silent'; return (
           <button type="button" key={p.id} disabled={!onOpen} onClick={() => onOpen?.(p)} title={`№ ${p.number} — ${STATUS_META[s].label}`} className={`rounded-md p-2 min-h-[44px] text-center text-xs font-semibold hover:opacity-80 ${STATUS_META[s].cls}`}>{p.number}</button>
         ); })}
       </div>
+      {list.length > limit && (
+        <Button variant="outline" className="w-full min-h-[44px]" onClick={() => setLimit((l) => l + PAGE)}>
+          Показати ще {Math.min(PAGE, list.length - limit)} (показано {limit} з {list.length})
+        </Button>
+      )}
       {onOpen && list.length > 0 && <p className="text-xs text-muted-foreground">Натисніть на дільницю, щоб переглянути протокол: голоси та фото.</p>}
       {list.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Дільниць немає</p>}
     </div>

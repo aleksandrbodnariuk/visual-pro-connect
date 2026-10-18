@@ -463,7 +463,23 @@ export const partyExtra = {
   async listOrgPrecincts(orgId: string) {
     return (await fetchAll(() => db.from('precincts').select('*').eq('organization_id', orgId).order('number'))) as Precinct[];
   },
-  async listProtocols(campaignId: string) {
+  /** Дільниці лише вказаних штабів (окружний штаб бачить тільки свій округ). */
+  async listPrecinctsByHqs(orgId: string, hqIds: string[]) {
+    const parts = await Promise.all(chunk(hqIds).map((ids) => fetchAll(() => db.from('precincts').select('*').eq('organization_id', orgId).in('hq_id', ids).order('number'))));
+    return (parts.flat() as Precinct[]).sort((a, b) => String(a.number).localeCompare(String(b.number), 'uk', { numeric: true }));
+  },
+  /** Лише конкретні дільниці (спостерігач завантажує тільки свою). */
+  async listPrecinctsByIds(ids: string[]) {
+    if (!ids.length) return [] as Precinct[];
+    const parts = await Promise.all(chunk(ids).map((part) => db.from('precincts').select('*').in('id', part).then((r: any) => r.data || [])));
+    return parts.flat() as Precinct[];
+  },
+  async listProtocols(campaignId: string, precinctIds?: string[]) {
+    if (precinctIds) {
+      if (!precinctIds.length) return [] as Protocol[];
+      const parts = await Promise.all(chunk(precinctIds).map((ids) => fetchAll(() => db.from('precinct_protocols').select('*').eq('campaign_id', campaignId).in('precinct_id', ids))));
+      return parts.flat() as Protocol[];
+    }
     return (await fetchAll(() => db.from('precinct_protocols').select('*').eq('campaign_id', campaignId))) as Protocol[];
   },
   async loadProtocolVotes(protocolId: string) {
