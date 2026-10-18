@@ -1,4 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -20,6 +22,25 @@ export default function OrganizationPage() {
   const { orgId } = useParams();
   const navigate = useNavigate();
   const { organization, isAdmin, hasParty, loading, reload } = useOrganization(orgId);
+
+  const { user } = useAuth();
+  // Спостерігач без штабних прав бачить лише «Вибори» зі своєю дільницею.
+  const [observerOnly, setObserverOnly] = useState(false);
+  useEffect(() => {
+    if (!orgId || !user?.id || isAdmin || !hasParty) { setObserverOnly(false); return; }
+    const sb = supabase as any;
+    Promise.all([
+      sb.from('precinct_members').select('id', { count: 'exact', head: true }).eq('organization_id', orgId).eq('user_id', user.id),
+      sb.from('campaign_trainees').select('role').eq('user_id', user.id),
+      sb.from('hq_managers').select('id', { count: 'exact', head: true }).eq('organization_id', orgId).eq('user_id', user.id),
+      sb.from('party_unit_officers').select('id, party_members!inner(user_id)', { count: 'exact', head: true }).eq('organization_id', orgId).eq('party_members.user_id', user.id),
+    ]).then(([pm, tr, mg, of]: any[]) => {
+      const roles = ((tr.data || []) as { role: string }[]).map((x) => x.role);
+      const observer = (pm.count || 0) > 0 || roles.includes('observer');
+      setObserverOnly(observer && !(mg.count || 0) && !(of.count || 0) && roles.every((r) => r === 'observer'));
+    });
+  }, [orgId, user?.id, isAdmin, hasParty]);
+  const showParty = hasParty && !observerOnly;
 
   useEffect(() => { if (organization) document.title = `${organization.name} — Організації`; }, [organization]);
 
@@ -50,10 +71,10 @@ export default function OrganizationPage() {
               </div>
             </Card>
 
-            <Tabs defaultValue={hasParty ? 'party' : 'about'}>
+            <Tabs key={observerOnly ? 'obs' : 'full'} defaultValue={observerOnly ? 'campaigns' : hasParty ? 'party' : 'about'}>
               <TabsList className="flex-wrap h-auto">
                 <TabsTrigger value="about">Про організацію</TabsTrigger>
-                {hasParty && <TabsTrigger value="party"><Flag className="h-4 w-4 mr-1" />Партія</TabsTrigger>}
+                {showParty && <TabsTrigger value="party"><Flag className="h-4 w-4 mr-1" />Партія</TabsTrigger>}
                 {hasParty && <TabsTrigger value="campaigns"><Vote className="h-4 w-4 mr-1" />Вибори</TabsTrigger>}
                 {isAdmin && <TabsTrigger value="access"><ShieldCheck className="h-4 w-4 mr-1" />Доступи</TabsTrigger>}
               </TabsList>
@@ -66,7 +87,7 @@ export default function OrganizationPage() {
                 <PartySymbols org={organization} canEdit={isAdmin} onChanged={reload} />
                 </div>
               </TabsContent>
-              {hasParty && (
+              {showParty && (
                 <TabsContent value="party">
                   <Tabs defaultValue="hqs">
                     <TabsList className="flex-wrap h-auto mb-2">
