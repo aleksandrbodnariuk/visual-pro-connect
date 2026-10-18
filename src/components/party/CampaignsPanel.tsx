@@ -12,6 +12,7 @@ import { ArrowLeft, Plus, Trash2, Vote, FileCheck2, RefreshCw, Star, FlaskConica
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { CAMPAIGN_MODES, MODE_BADGE, campaignPrecincts, type CampaignMode } from '@/lib/campaignMode';
+import { resolvePrecinctScope } from '@/lib/precinctScope';
 import { TrainingPanel, TraineeTasks, type Trainee } from './TrainingPanel';
 import { ProtocolPhotos } from './ProtocolPhotos';
 import { TentsPanel } from './TentsPanel';
