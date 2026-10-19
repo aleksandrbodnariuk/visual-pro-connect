@@ -45,7 +45,7 @@ export function ProtocolPhotos({ photos, onChange, readOnly, campaignId, precinc
       const path = `${campaignId}/${precinctId}/${user.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const { error } = await supabase.storage.from('protocols').upload(path, file, { contentType: file.type });
       if (error) { toast.error('Не вдалося завантажити фото'); continue; }
-      next.push({ url: PRIVATE_PREFIX + path, label: `Аркуш ${next.length + 1}` });
+      next.push({ url: PRIVATE_PREFIX + path, label: `Аркуш ${next.length + 1}`, author_id: user.id, author_name: (user.user_metadata as any)?.full_name || user.email?.split('@')[0] || null, created_at: new Date().toISOString() });
     }
     onChange(next);
     setBusy(false);
@@ -70,6 +70,7 @@ export function ProtocolPhotos({ photos, onChange, readOnly, campaignId, precinc
             <button type="button" onClick={() => src(p.url) && setView({ ...p, url: src(p.url) })} className="block w-full aspect-[3/4] rounded-md overflow-hidden border bg-muted">
               {src(p.url) && <img src={src(p.url)} alt={p.label} loading="lazy" className="w-full h-full object-cover" />}
             </button>
+            {p.author_name && <p className="text-[11px] text-muted-foreground truncate">{p.author_name}{p.created_at ? `, ${new Date(p.created_at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })}` : ''}</p>}
             <div className="flex gap-1">
               <Input value={p.label} disabled={readOnly} className="h-8 text-xs" maxLength={60}
                 onChange={(e) => onChange(photos.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} />

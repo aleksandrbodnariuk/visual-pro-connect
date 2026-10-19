@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { chunk } from '@/lib/precinctScope';
+import { mergeProtocolPhotos } from '@/lib/protocolPhotosMerge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
@@ -367,7 +368,7 @@ export interface Campaign {
   mode?: CampaignMode; precinct_ids?: string[] | null;
 }
 export interface Candidate { id: string; campaign_id: string; name: string; party: string | null; ballot_number: number | null; is_ours: boolean }
-export interface ProtocolPhoto { url: string; label: string }
+export interface ProtocolPhoto { url: string; label: string; author_id?: string | null; author_name?: string | null; created_at?: string | null }
 export interface Protocol { id: string; campaign_id: string; precinct_id: string; voters_on_list: number; ballots_issued: number; invalid_ballots: number; status: string; photos?: ProtocolPhoto[] | null }
 
 export const ELECTION_TYPES: { value: ElectionType; label: string; candidateLabel: string }[] = [
@@ -488,8 +489,13 @@ export const partyExtra = {
     return (data as { candidate_id: string; votes: number }[]) || [];
   },
   async saveProtocol(orgId: string, campaignId: string, precinctId: string,
-    p: { voters_on_list: number; ballots_issued: number; invalid_ballots: number; status: string; photos?: ProtocolPhoto[] }, votes: Record<string, number>) {
+    p: { voters_on_list: number; ballots_issued: number; invalid_ballots: number; status: string; photos?: ProtocolPhoto[] }, votes: Record<string, number>, originalPhotos: ProtocolPhoto[] = []) {
     const me = (await supabase.auth.getUser()).data.user?.id ?? null;
+    if (p.photos) {
+      // Фото колег, завантажені паралельно, не затираються.
+      const { data: cur } = await db.from('precinct_protocols').select('photos').eq('campaign_id', campaignId).eq('precinct_id', precinctId).maybeSingle();
+      p = { ...p, photos: mergeProtocolPhotos(Array.isArray(cur?.photos) ? cur.photos : [], originalPhotos, p.photos) };
+    }
     const { data, error } = await db.from('precinct_protocols')
       .upsert({ organization_id: orgId, campaign_id: campaignId, precinct_id: precinctId, ...p, submitted_by: me }, { onConflict: 'campaign_id,precinct_id' })
       .select('id').maybeSingle();
