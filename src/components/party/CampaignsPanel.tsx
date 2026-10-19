@@ -36,11 +36,35 @@ export function CampaignsPanel({ orgId, isAdmin }: { orgId: string; isAdmin: boo
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState<Campaign | null>(null);
   const [busy, setBusy] = useState(false);
+  const { user } = useAuth();
+  const [done, setDone] = useState<Set<string>>(new Set());
   const load = useCallback(async () => setList(await partyExtra.listCampaigns(orgId)), [orgId]);
   const hasTest = list.some((c) => c.is_test);
   useEffect(() => { load(); }, [load]);
+  // Позначки «протокол здано» для власних протоколів користувача в кожній кампанії.
+  useEffect(() => {
+    if (!user?.id || !list.length) return;
+    (supabase as any).from('precinct_protocols').select('campaign_id').eq('organization_id', orgId).eq('submitted_by', user.id)
+      .then(({ data }: any) => setDone(new Set((data || []).map((x: any) => x.campaign_id))));
+  }, [orgId, user?.id, list.length, current?.id]);
+  const active = list.filter((c) => c.status !== 'finished');
 
-  if (current) return <CampaignView orgId={orgId} campaign={current} isAdmin={isAdmin} onBack={() => setCurrent(null)} />;
+  if (current) return (
+    <div className="space-y-3">
+      {active.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" role="tablist" aria-label="Вибори">
+          {active.map((c) => (
+            <Button key={c.id} size="sm" role="tab" aria-selected={c.id === current.id} variant={c.id === current.id ? 'default' : 'outline'}
+              className="shrink-0 min-h-[44px]" onClick={() => setCurrent(c)}>
+              <Vote className="h-4 w-4 mr-1" />{typeLabel(c)}
+              {done.has(c.id) ? <span className="ml-1">✓</span> : <span className="ml-1 text-xs opacity-70">· очікує</span>}
+            </Button>
+          ))}
+        </div>
+      )}
+      <CampaignView key={current.id} orgId={orgId} campaign={current} isAdmin={isAdmin} onBack={() => setCurrent(null)} />
+    </div>
+  );
 
   return (
     <div className="space-y-3">
