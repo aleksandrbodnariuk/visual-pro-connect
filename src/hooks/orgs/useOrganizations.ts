@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { chunk } from '@/lib/precinctScope';
+import { mergeProtocolPhotos } from '@/lib/protocolPhotosMerge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';

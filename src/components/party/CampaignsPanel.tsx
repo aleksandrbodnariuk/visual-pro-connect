@@ -21,6 +21,7 @@ import { HqBoardPanel } from './HqBoardPanel';
 import { IncidentsPanel } from './IncidentsPanel';
 import { supabase } from '@/integrations/supabase/client';
 import type { ProtocolPhoto } from '@/hooks/orgs/useOrganizations';
+import { ProtocolsZipButton } from './ProtocolsZipButton';
 import {
   ELECTION_TYPES, HQ_LEVELS, LOCAL_KINDS, levelPlural, campaignLevelPlural, partyActions, partyExtra,
   type Campaign, type Candidate, type ElectionType, type HqLevel, type LocalKind, type PartyHq, type Precinct, type Protocol,
@@ -312,6 +313,7 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
         <TabsContent value="day"><ElectionDayPanel extraMine={extraMine} orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={trainObs.size ? () => false : canManageHq} onProtocol={setProto} protocolIds={new Set(protocols.map((x) => x.precinct_id))} /></TabsContent>
         <TabsContent value="incidents"><IncidentsPanel campaign={campaign} hqs={hqs} precincts={precincts} canManageHq={(id) => canManageHq(id) || isLawyer} /></TabsContent>
         <TabsContent value="protocols">
+          {(isAdmin || managed.size > 0 || isLawyer || isAnalyst) && <div className="flex justify-end mb-2"><ProtocolsZipButton campaign={campaign} hqs={hqs} precincts={precincts} protocols={protocols} /></div>}
           <ProtocolsView orgId={orgId} campaign={campaign} hqs={hqs} precincts={precincts} protocols={protocols} candidates={candidates} canEditPrecinct={canEditPrecinct} onSaved={load} />
         </TabsContent>
         <TabsContent value="candidates">
@@ -440,7 +442,7 @@ function ProtocolDialog({ orgId, campaign, precinct, protocol, candidates, readO
   const save = async () => {
     setSaving(true);
     const all = Object.fromEntries(candidates.map((c) => [c.id, votes[c.id] || 0]));
-    const ok = await partyExtra.saveProtocol(orgId, campaign.id, precinct.id, { voters_on_list: voters, ballots_issued: ballots, invalid_ballots: invalid, status: 'submitted', photos }, all);
+    const ok = await partyExtra.saveProtocol(orgId, campaign.id, precinct.id, { voters_on_list: voters, ballots_issued: ballots, invalid_ballots: invalid, status: 'submitted', photos }, all, Array.isArray(protocol?.photos) ? protocol!.photos! : []);
     setSaving(false);
     if (ok) {
       toast.success(`Протокол дільниці № ${precinct.number} збережено`, {
