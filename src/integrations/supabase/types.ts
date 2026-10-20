@@ -4609,6 +4609,16 @@ export type Database = {
           total_unallocated: number
         }[]
       }
+      get_group_daily_stats: {
+        Args: { _days?: number; _group_id: string }
+        Returns: {
+          day: string
+          guest_views: number
+          member_views: number
+          unique_viewers: number
+          views: number
+        }[]
+      }
       get_group_stats: {
         Args: { _group_id: string }
         Returns: {
