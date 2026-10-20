@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { compressImageAsFile, validateImageSize, OUTPUT_FORMAT, OUTPUT_EXTENSION } from '@/lib/imageCompression';
 import { uploadToStorage, deleteOldFile } from '@/lib/storage';
+import { GroupStatsPanel } from './GroupStatsPanel';
 import { groupActions, type Group } from '@/hooks/groups/useGroups';
 
 interface Props {
@@ -38,7 +39,6 @@ export function GroupSettingsDialog({ open, onOpenChange, group, onSaved }: Prop
   const [avatarUrl, setAvatarUrl] = useState<string | null>(group.avatar_url);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [stats, setStats] = useState<Stats | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -48,10 +48,6 @@ export function GroupSettingsDialog({ open, onOpenChange, group, onSaved }: Prop
     setPrivacy(group.privacy);
     setPostPolicy(group.post_policy);
     setAvatarUrl(group.avatar_url);
-    supabase.rpc('get_group_stats', { _group_id: group.id }).then(({ data }) => {
-      const row = Array.isArray(data) ? data[0] : data;
-      if (row) setStats(row as unknown as Stats);
-    });
   }, [open, group]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,20 +91,10 @@ export function GroupSettingsDialog({ open, onOpenChange, group, onSaved }: Prop
     if (ok) { onSaved(); onOpenChange(false); }
   };
 
-  const statItems = stats
-    ? [
-        { label: 'Переглядів усього', value: stats.views_total },
-        { label: 'За 7 днів', value: stats.views_7d },
-        { label: 'За 30 днів', value: stats.views_30d },
-        { label: 'Унікальних відвідувачів', value: stats.unique_viewers },
-        { label: 'Учасників', value: stats.members_count },
-        { label: 'Дописів', value: stats.posts_count },
-      ]
-    : [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader><DialogTitle>Налаштування групи</DialogTitle></DialogHeader>
 
         <Tabs defaultValue="general">
@@ -176,18 +162,7 @@ export function GroupSettingsDialog({ open, onOpenChange, group, onSaved }: Prop
           </TabsContent>
 
           <TabsContent value="stats" className="mt-4">
-            {!stats ? (
-              <p className="text-sm text-muted-foreground">Завантаження статистики…</p>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {statItems.map((s) => (
-                  <div key={s.label} className="rounded-lg border p-3">
-                    <div className="text-2xl font-bold">{s.value}</div>
-                    <div className="text-xs text-muted-foreground">{s.label}</div>
-                  </div>
-                ))}
-              </div>
-            )}
+            {open && <GroupStatsPanel groupId={group.id} />}
           </TabsContent>
         </Tabs>
 
