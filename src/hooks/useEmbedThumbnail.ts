@@ -58,10 +58,10 @@ async function fetchThumbnail(url: string): Promise<string | null> {
  * YouTube має готовий thumbnailUrl, для Facebook/Instagram/TikTok
  * тягнемо og:image через edge-функцію fetch-link-preview.
  */
-export function useEmbedThumbnail(embed?: VideoEmbed | null): string | null {
+export function useEmbedThumbnail(embed?: VideoEmbed | null, opts?: { includeLinks?: boolean }): string | null {
   const directThumb = embed?.thumbnailUrl ?? null;
   const url = embed?.originalUrl ?? null;
-  const shouldFetch = !!url && !directThumb && !!embed && embed.platform !== "link";
+  const shouldFetch = !!url && !directThumb && !!embed && (opts?.includeLinks || embed.platform !== "link");
 
   const [thumbnail, setThumbnail] = useState<string | null>(
     directThumb ?? (url && shouldFetch ? readCache(url) ?? null : null)

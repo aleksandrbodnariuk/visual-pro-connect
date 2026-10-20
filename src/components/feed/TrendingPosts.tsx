@@ -89,9 +89,11 @@ type TrendingPost = { id: string; content: string; media_url: string | null; cat
 function TrendingCard({ post, index }: { post: TrendingPost; index: number }) {
   const isImage = Boolean(post.media_url && /\.(jpe?g|png|webp|gif|avif)(?:[?#]|$)/i.test(post.media_url));
   const embed = extractVideoEmbed(post.content || "");
-  const thumb = useEmbedThumbnail(embed && embed.platform !== "link" ? embed : null);
+  const isLink = embed?.platform === "link";
+  const isVideo = post.category === "video" || (!!embed && !isLink);
+  const thumb = useEmbedThumbnail(embed, { includeLinks: true });
   const cover = isImage ? post.media_url : thumb;
-  const Icon = post.category === "music" ? Music : post.category === "video" || embed ? Video : MessageSquare;
+  const Icon = post.category === "music" ? Music : isVideo ? Video : isLink ? Newspaper : MessageSquare;
   const text = getPostExcerpt(post.content);
   const name = post.authorName || "Учасник спільноти";
   return (
@@ -99,7 +101,7 @@ function TrendingCard({ post, index }: { post: TrendingPost; index: number }) {
       {cover ? (
         <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-muted">
           <img src={cover} alt="" loading="lazy" className="h-full w-full object-cover" onError={e => { e.currentTarget.style.display = "none"; }} />
-          {!isImage && <span className="absolute inset-0 flex items-center justify-center"><Video className="h-9 w-9 rounded-full bg-background/80 p-2 text-foreground" /></span>}
+          {isVideo && !isImage && <span className="absolute inset-0 flex items-center justify-center"><Video className="h-9 w-9 rounded-full bg-background/80 p-2 text-foreground" /></span>}
           <span className="absolute left-2 top-2 rounded bg-background/90 px-2 py-1 text-xs font-semibold text-foreground">{index + 1}</span>
         </div>
       ) : (
