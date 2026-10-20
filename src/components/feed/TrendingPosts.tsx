@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Flame, MessageSquare, Music, Video, ThumbsUp } from "lucide-react";
+import { Flame, MessageSquare, Music, Video, ThumbsUp, Newspaper } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getDailyPostWindow, getPostExcerpt } from "@/lib/dailyPosts";
@@ -26,7 +26,7 @@ export function TrendingPosts() {
       const groupIds = [...new Set(rows.filter(p => p.posted_as_group && p.group_id).map(p => p.group_id))]
         .filter((id): id is string => Boolean(id));
       const { data: groups, error: groupError } = groupIds.length
-        ? await supabase.from("groups").select("id, name").in("id", groupIds)
+        ? await supabase.from("groups").select("id, name, avatar_url").in("id", groupIds)
         : { data: [], error: null };
       if (groupError) throw groupError;
       const userIds = [...new Set(rows.filter(p => !p.posted_as_group).map(p => p.user_id))].filter(Boolean);
@@ -38,7 +38,7 @@ export function TrendingPosts() {
         return {
           ...post,
           authorName: post.posted_as_group ? groups?.find(g => g.id === post.group_id)?.name : author?.full_name,
-          authorAvatar: author?.avatar_url ?? null,
+          authorAvatar: post.posted_as_group ? (groups?.find(g => g.id === post.group_id)?.avatar_url ?? null) : (author?.avatar_url ?? null),
         };
       });
     },
@@ -89,9 +89,11 @@ type TrendingPost = { id: string; content: string; media_url: string | null; cat
 function TrendingCard({ post, index }: { post: TrendingPost; index: number }) {
   const isImage = Boolean(post.media_url && /\.(jpe?g|png|webp|gif|avif)(?:[?#]|$)/i.test(post.media_url));
   const embed = extractVideoEmbed(post.content || "");
-  const thumb = useEmbedThumbnail(embed && embed.platform !== "link" ? embed : null);
+  const isLink = embed?.platform === "link";
+  const isVideo = post.category === "video" || (!!embed && !isLink);
+  const thumb = useEmbedThumbnail(embed, { includeLinks: true });
   const cover = isImage ? post.media_url : thumb;
-  const Icon = post.category === "music" ? Music : post.category === "video" || embed ? Video : MessageSquare;
+  const Icon = post.category === "music" ? Music : isVideo ? Video : isLink ? Newspaper : MessageSquare;
   const text = getPostExcerpt(post.content);
   const name = post.authorName || "Учасник спільноти";
   return (
@@ -99,14 +101,14 @@ function TrendingCard({ post, index }: { post: TrendingPost; index: number }) {
       {cover ? (
         <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-muted">
           <img src={cover} alt="" loading="lazy" className="h-full w-full object-cover" onError={e => { e.currentTarget.style.display = "none"; }} />
-          {!isImage && <span className="absolute inset-0 flex items-center justify-center"><Video className="h-9 w-9 rounded-full bg-background/80 p-2 text-foreground" /></span>}
+          {isVideo && !isImage && <span className="absolute inset-0 flex items-center justify-center"><Video className="h-9 w-9 rounded-full bg-background/80 p-2 text-foreground" /></span>}
           <span className="absolute left-2 top-2 rounded bg-background/90 px-2 py-1 text-xs font-semibold text-foreground">{index + 1}</span>
         </div>
       ) : (
         <div className="relative flex flex-1 items-start gap-2 bg-gradient-to-br from-primary/15 via-card to-accent/10 p-3 pt-10">
           <span className="absolute left-2 top-2 rounded bg-background/90 px-2 py-1 text-xs font-semibold text-foreground">{index + 1}</span>
           <Icon className="absolute right-3 top-3 h-5 w-5 text-muted-foreground" />
-          <p className="line-clamp-5 whitespace-pre-line break-words text-sm font-medium">{text || "Публікація без тексту"}</p>
+          <p className="line-clamp-5 whitespace-pre-line break-words text-sm font-medium">{text || (isLink ? (() => { try { return "Стаття · " + new URL(embed!.originalUrl).hostname.replace(/^www\./, ""); } catch { return "Стаття"; } })() : "Публікація без тексту")}</p>
         </div>
       )}
       <div className="flex flex-col gap-2 p-3">
