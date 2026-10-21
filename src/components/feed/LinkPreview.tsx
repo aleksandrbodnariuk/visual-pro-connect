@@ -22,31 +22,30 @@ export function LinkPreview({ url }: LinkPreviewProps) {
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchPreview = async () => {
       setLoading(true);
       setError(false);
-      
-      try {
-        const { data, error: fetchError } = await supabase.functions.invoke('fetch-link-preview', {
-          body: { url }
-        });
-
-        if (fetchError || !data?.success) {
-          console.error('Error fetching link preview:', fetchError || data?.error);
-          setError(true);
-          return;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const { data, error: fetchError } = await supabase.functions.invoke('fetch-link-preview', {
+            body: { url }
+          });
+          if (!fetchError && data?.success && data.data) {
+            if (!cancelled) { setPreview(data.data); setLoading(false); }
+            return;
+          }
+        } catch {
+          /* retry */
         }
-
-        setPreview(data.data);
-      } catch (err) {
-        console.error('Error fetching link preview:', err);
-        setError(true);
-      } finally {
-        setLoading(false);
+        if (cancelled) return;
+        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
       }
+      if (!cancelled) { setError(true); setLoading(false); }
     };
 
     fetchPreview();
+    return () => { cancelled = true; };
   }, [url]);
 
   // Loading state
@@ -63,17 +62,23 @@ export function LinkPreview({ url }: LinkPreviewProps) {
     );
   }
 
-  // Error or no preview - show simple link
+  // Error or no preview - show compact article card
   if (error || !preview) {
+    let host = url;
+    try { host = new URL(url).hostname.replace('www.', ''); } catch { /* ignore */ }
     return (
-      <a 
+      <a
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-2 text-primary hover:underline text-sm break-all"
+        className="flex items-center gap-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors p-3 min-h-[44px]"
       >
-        <ExternalLink className="h-4 w-4 shrink-0" />
-        {url}
+        <Globe className="h-8 w-8 shrink-0 text-muted-foreground" />
+        <div className="min-w-0">
+          <div className="text-xs uppercase font-medium text-muted-foreground">{host}</div>
+          <div className="text-sm text-primary truncate">Відкрити статтю</div>
+        </div>
+        <ExternalLink className="h-4 w-4 shrink-0 ml-auto text-muted-foreground" />
       </a>
     );
   }
