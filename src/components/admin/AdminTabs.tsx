@@ -1,32 +1,33 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UsersTab } from "./tabs/UsersTab";
-import { ShareholdersTab } from "./tabs/ShareholdersTab";
-import { SpecialistsTab } from "./tabs/SpecialistsTab";
-import { RepresentativesTab } from "./tabs/RepresentativesTab";
-import { AdminOrdersTab } from "./tabs/AdminOrdersTab";
-import { AdOrdersTab } from "./tabs/AdOrdersTab";
-import { FeedAdsTab } from "./tabs/FeedAdsTab";
-import { StockExchangeTab } from "./tabs/StockExchangeTab";
-import { PostsTab } from "./tabs/PostsTab";
-import { SettingsTab } from "./tabs/SettingsTab";
-import { CategoriesTab } from "./tabs/CategoriesTab";
-import { PortfolioCategoriesTab } from "./tabs/PortfolioCategoriesTab";
-import { AnalyticsTab } from "./tabs/AnalyticsTab";
-import { FinancialStatsTab } from "./tabs/FinancialStatsTab";
-import { CalculationHistoryTab } from "./tabs/CalculationHistoryTab";
-import { AssetValuationTab } from "./tabs/AssetValuationTab";
-import { PayoutsTab } from "./tabs/PayoutsTab";
-import { NotificationsTab } from "./tabs/NotificationsTab";
-import { SupportTab } from "./tabs/SupportTab";
-import { CertificatesTab } from "./tabs/CertificatesTab";
-import { VipTab } from "./tabs/VipTab";
-import { MarketplaceTab } from "./tabs/MarketplaceTab";
-import { StorageTab } from "./tabs/StorageTab";
-import { ClientsTab } from "./tabs/ClientsTab";
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const UsersTab = lazy(() => import("./tabs/UsersTab").then(m => ({ default: m.UsersTab })));
+const ShareholdersTab = lazy(() => import("./tabs/ShareholdersTab").then(m => ({ default: m.ShareholdersTab })));
+const SpecialistsTab = lazy(() => import("./tabs/SpecialistsTab").then(m => ({ default: m.SpecialistsTab })));
+const RepresentativesTab = lazy(() => import("./tabs/RepresentativesTab").then(m => ({ default: m.RepresentativesTab })));
+const AdminOrdersTab = lazy(() => import("./tabs/AdminOrdersTab").then(m => ({ default: m.AdminOrdersTab })));
+const AdOrdersTab = lazy(() => import("./tabs/AdOrdersTab").then(m => ({ default: m.AdOrdersTab })));
+const FeedAdsTab = lazy(() => import("./tabs/FeedAdsTab").then(m => ({ default: m.FeedAdsTab })));
+const StockExchangeTab = lazy(() => import("./tabs/StockExchangeTab").then(m => ({ default: m.StockExchangeTab })));
+const PostsTab = lazy(() => import("./tabs/PostsTab").then(m => ({ default: m.PostsTab })));
+const SettingsTab = lazy(() => import("./tabs/SettingsTab").then(m => ({ default: m.SettingsTab })));
+const CategoriesTab = lazy(() => import("./tabs/CategoriesTab").then(m => ({ default: m.CategoriesTab })));
+const PortfolioCategoriesTab = lazy(() => import("./tabs/PortfolioCategoriesTab").then(m => ({ default: m.PortfolioCategoriesTab })));
+const AnalyticsTab = lazy(() => import("./tabs/AnalyticsTab").then(m => ({ default: m.AnalyticsTab })));
+const FinancialStatsTab = lazy(() => import("./tabs/FinancialStatsTab").then(m => ({ default: m.FinancialStatsTab })));
+const CalculationHistoryTab = lazy(() => import("./tabs/CalculationHistoryTab").then(m => ({ default: m.CalculationHistoryTab })));
+const AssetValuationTab = lazy(() => import("./tabs/AssetValuationTab").then(m => ({ default: m.AssetValuationTab })));
+const PayoutsTab = lazy(() => import("./tabs/PayoutsTab").then(m => ({ default: m.PayoutsTab })));
+const NotificationsTab = lazy(() => import("./tabs/NotificationsTab").then(m => ({ default: m.NotificationsTab })));
+const SupportTab = lazy(() => import("./tabs/SupportTab").then(m => ({ default: m.SupportTab })));
+const CertificatesTab = lazy(() => import("./tabs/CertificatesTab").then(m => ({ default: m.CertificatesTab })));
+const VipTab = lazy(() => import("./tabs/VipTab").then(m => ({ default: m.VipTab })));
+const MarketplaceTab = lazy(() => import("./tabs/MarketplaceTab").then(m => ({ default: m.MarketplaceTab })));
+const StorageTab = lazy(() => import("./tabs/StorageTab").then(m => ({ default: m.StorageTab })));
+const ClientsTab = lazy(() => import("./tabs/ClientsTab").then(m => ({ default: m.ClientsTab })));
 
 const ADMIN_SECTIONS = [
   ["users", "Користувачі"], ["specialists", "Фахівці"], ["shareholders", "Акціонери"],
@@ -111,6 +112,7 @@ export function AdminTabs() {
       </TabsList>
       
       <div className="min-w-0 max-w-full overflow-x-hidden">
+      <Suspense fallback={<p className="py-8 text-center text-sm text-muted-foreground">Завантаження розділу…</p>}>
       <TabsContent value="users">
         <UsersTab />
       </TabsContent>
@@ -206,6 +208,7 @@ export function AdminTabs() {
       <TabsContent value="storage">
         <StorageTab />
       </TabsContent>
+      </Suspense>
       </div>
     </Tabs>
   );
