@@ -35,14 +35,23 @@ async function fetchThumbnail(url: string): Promise<string | null> {
 
   const promise = (async () => {
     try {
-      const { data, error } = await supabase.functions.invoke("fetch-link-preview", {
-        body: { url },
-      });
-      const image = !error && data?.success ? (data.data?.image ?? null) : null;
-      writeCache(url, image);
-      return image;
-    } catch {
-      writeCache(url, null);
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const { data, error } = await supabase.functions.invoke("fetch-link-preview", {
+            body: { url },
+          });
+          if (!error && data?.success) {
+            const image = data.data?.image ?? null;
+            // Кешуємо лише успішну відповідь; тимчасові збої не запам'ятовуємо.
+            if (image) writeCache(url, image);
+            else memoryCache.set(url, null);
+            return image;
+          }
+        } catch {
+          /* retry */
+        }
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
+      }
       return null;
     } finally {
       inflight.delete(url);
