@@ -37,13 +37,15 @@ export function SoftwareDownloads() {
   const { isAuthenticated } = useAuth();
   const { data = [], isLoading } = useSoftwareReleases(isAuthenticated);
   const [busy, setBusy] = useState<string | null>(null);
+  const qc = useQueryClient();
 
   const download = async (r: Release) => {
     setBusy(r.id);
     const { data: s, error } = await supabase.storage.from('software').createSignedUrl(r.file_path, 600, { download: r.file_name });
     setBusy(null);
     if (error || !s) { toast.error('Не вдалося отримати файл'); return; }
-    db.rpc('count_software_download', { _id: r.id }).then(() => {});
+    await db.rpc('count_software_download', { _id: r.id });
+    qc.invalidateQueries({ queryKey: ['software_releases'] });
     window.location.href = s.signedUrl;
   };
 
@@ -66,6 +68,7 @@ export function SoftwareDownloads() {
                       <div className="min-w-0">
                         <p className="font-medium truncate">{r.name}</p>
                         <p className="text-xs text-muted-foreground">{P.label} · версія {r.version} · {mb(r.file_size)}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1"><Download className="h-3 w-3" />Завантажень: {(r.downloads ?? 0).toLocaleString('uk-UA')}</p>
                         {r.author && <p className="text-xs text-muted-foreground">Розробник: {r.author}</p>}
                       </div>
                     </div>
