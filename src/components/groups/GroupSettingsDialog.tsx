@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,8 +12,9 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { compressImageAsFile, validateImageSize, OUTPUT_FORMAT, OUTPUT_EXTENSION } from '@/lib/imageCompression';
 import { uploadToStorage, deleteOldFile } from '@/lib/storage';
-import { GroupStatsPanel } from './GroupStatsPanel';
 import { groupActions, type Group } from '@/hooks/groups/useGroups';
+
+const GroupStatsPanel = lazy(() => import('./GroupStatsPanel').then(m => ({ default: m.GroupStatsPanel })));
 
 interface Props {
   open: boolean;
@@ -162,7 +163,7 @@ export function GroupSettingsDialog({ open, onOpenChange, group, onSaved }: Prop
           </TabsContent>
 
           <TabsContent value="stats" className="mt-4">
-            {open && <GroupStatsPanel groupId={group.id} />}
+            {open && <Suspense fallback={<p className="text-sm text-muted-foreground">Завантаження статистики…</p>}><GroupStatsPanel groupId={group.id} /></Suspense>}
           </TabsContent>
         </Tabs>
 
