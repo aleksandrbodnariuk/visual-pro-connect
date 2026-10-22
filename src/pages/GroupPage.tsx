@@ -10,13 +10,14 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Globe, Lock, Users, ArrowLeft, LogOut, Trash2, Settings } from 'lucide-react';
+import { Globe, Lock, Users, ArrowLeft, LogOut, Trash2, Settings, UserPlus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useGroup, groupActions } from '@/hooks/groups/useGroups';
 import { GroupComposer } from '@/components/groups/GroupComposer';
 import { GroupFeed } from '@/components/groups/GroupFeed';
 import { GroupMembersPanel } from '@/components/groups/GroupMembersPanel';
 import { OrderSongButton } from '@/components/groups/OrderSongButton';
+import { InviteToGroupDialog } from '@/components/groups/InviteToGroupDialog';
 import { GroupSettingsDialog } from '@/components/groups/GroupSettingsDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -29,6 +30,15 @@ export default function GroupPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [myInvite, setMyInvite] = useState<{ id: string } | null>(null);
+
+  useEffect(() => {
+    if (!groupId || !user?.id) return;
+    supabase.from('group_invites' as any).select('id').eq('group_id', groupId)
+      .eq('invitee_id', user.id).eq('status', 'pending').maybeSingle()
+      .then(({ data }) => setMyInvite((data as any) || null));
+  }, [groupId, user?.id]);
 
   useEffect(() => {
     if (group) document.title = `${group.name} — група`;
@@ -79,6 +89,18 @@ export default function GroupPage() {
     if (!user?.id) return;
     if (await groupActions.leave(group.id, user.id)) reload();
   };
+  const acceptInvite = async () => {
+    if (!user?.id || !myInvite) return;
+    const { error } = await supabase.from('group_members').insert({ group_id: group.id, user_id: user.id } as any);
+    if (error && !String(error.message).includes('duplicate')) { toast.error('Не вдалося приєднатися'); return; }
+    await supabase.from('group_invites' as any).update({ status: 'accepted' } as any).eq('id', myInvite.id);
+    setMyInvite(null); toast.success('Ви приєдналися до групи'); reload();
+  };
+  const declineInvite = async () => {
+    if (!myInvite) return;
+    await supabase.from('group_invites' as any).update({ status: 'declined' } as any).eq('id', myInvite.id);
+    setMyInvite(null);
+  };
   const removeGroup = async () => {
     if (await groupActions.remove(group.id)) navigate('/groups');
   };
@@ -115,7 +137,12 @@ export default function GroupPage() {
                 <OrderSongButton ownerId={group.created_by} groupName={group.name} />
               )}
               {myMembership?.status === 'pending' && <Badge variant="outline">Заявка на розгляді</Badge>}
-              {!myMembership && (
+              {isApproved && user?.id && (
+                <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
+                  <UserPlus className="h-4 w-4 mr-1" /> Запросити друзів
+                </Button>
+              )}
+              {!myMembership && !myInvite && (
                 <Button size="sm" onClick={join}>
                   {group.privacy === 'private' ? 'Подати заявку' : 'Приєднатися'}
                 </Button>
@@ -137,6 +164,16 @@ export default function GroupPage() {
               )}
             </div>
           </div>
+
+          {myInvite && !isApproved && (
+            <div className="creative-card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <p className="flex-1 text-sm">Вас запросили до цієї групи.</p>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={acceptInvite}>Прийняти</Button>
+                <Button size="sm" variant="outline" onClick={declineInvite}>Відхилити</Button>
+              </div>
+            </div>
+          )}
 
           <Tabs defaultValue="feed">
             <TabsList>
@@ -173,6 +210,16 @@ export default function GroupPage() {
           </Tabs>
         </main>
       </div>
+
+      {isApproved && user?.id && (
+        <InviteToGroupDialog
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
+          groupId={group.id}
+          userId={user.id}
+          memberIds={members.map((m) => m.user_id)}
+        />
+      )}
 
       {isGroupAdmin && (
         <GroupSettingsDialog
