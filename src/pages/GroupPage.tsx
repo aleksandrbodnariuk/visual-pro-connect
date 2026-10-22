@@ -16,6 +16,7 @@ import { useGroup, groupActions } from '@/hooks/groups/useGroups';
 import { GroupComposer } from '@/components/groups/GroupComposer';
 import { GroupFeed } from '@/components/groups/GroupFeed';
 import { GroupMembersPanel } from '@/components/groups/GroupMembersPanel';
+import { OrderSongButton } from '@/components/groups/OrderSongButton';
 import { GroupSettingsDialog } from '@/components/groups/GroupSettingsDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -109,7 +110,10 @@ export default function GroupPage() {
               </div>
               {group.description && <p className="text-sm text-muted-foreground mt-2">{group.description}</p>}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {(group as any).song_orders_enabled && (
+                <OrderSongButton ownerId={group.created_by} groupName={group.name} />
+              )}
               {myMembership?.status === 'pending' && <Badge variant="outline">Заявка на розгляді</Badge>}
               {!myMembership && (
                 <Button size="sm" onClick={join}>

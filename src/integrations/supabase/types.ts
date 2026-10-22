@@ -2619,6 +2619,35 @@ export type Database = {
           },
         ]
       }
+      post_plays: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_plays_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       post_shares: {
         Row: {
           created_at: string | null
@@ -4887,7 +4916,6 @@ export type Database = {
         Returns: boolean
       }
       has_stock_market_access: { Args: { _user_id: string }; Returns: boolean }
-      increment_post_play: { Args: { _post_id: string }; Returns: number }
       invoke_push_notification: {
         Args: { _body: string; _title: string; _url: string; _user_id: string }
         Returns: undefined
