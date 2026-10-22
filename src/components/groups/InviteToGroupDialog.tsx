@@ -45,7 +45,8 @@ export function InviteToGroupDialog({ open, onOpenChange, groupId, userId, membe
       } else setFriends([]);
       setLoading(false);
     })();
-  }, [open, groupId, userId, memberIds]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, groupId, userId]);
 
   const send = async () => {
     setSending(true);
