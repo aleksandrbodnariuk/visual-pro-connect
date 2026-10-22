@@ -1,15 +1,38 @@
 
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Volume2, VolumeX, Music } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, Music, Headphones } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 
 interface AudioPlayerProps {
   src: string;
   title?: string;
+  /** When set, plays are counted for this post */
+  postId?: string;
 }
 
-export function AudioPlayer({ src, title }: AudioPlayerProps) {
+export function AudioPlayer({ src, title, postId }: AudioPlayerProps) {
+  const { user } = useAuth();
+  const [plays, setPlays] = useState<number | null>(null);
+  const countedRef = useRef(false);
+
+  useEffect(() => {
+    if (!postId) return;
+    supabase.from("posts").select("play_count").eq("id", postId).maybeSingle()
+      .then(({ data }) => setPlays((data as any)?.play_count ?? 0));
+  }, [postId]);
+
+  const countPlay = () => {
+    if (!postId || !user?.id || countedRef.current) return;
+    countedRef.current = true;
+    setPlays((p) => (p ?? 0) + 1);
+    supabase.from("post_plays" as any).insert({ post_id: postId, user_id: user.id } as any).then(({ error }) => {
+      if (error) { countedRef.current = false; setPlays((p) => Math.max(0, (p ?? 1) - 1)); }
+    });
+  };
+
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -71,7 +94,7 @@ export function AudioPlayer({ src, title }: AudioPlayerProps) {
 
   return (
     <div className="rounded-xl bg-gradient-to-r from-primary/10 via-accent/10 to-primary/5 border p-4">
-      <audio ref={audioRef} src={src} preload="none" onPause={() => setIsPlaying(false)} onPlay={() => setIsPlaying(true)} />
+      <audio ref={audioRef} src={src} preload="none" onPause={() => setIsPlaying(false)} onPlay={() => { setIsPlaying(true); countPlay(); }} />
       
       <div className="flex items-center gap-3">
         {/* Album art placeholder */}
@@ -81,7 +104,14 @@ export function AudioPlayer({ src, title }: AudioPlayerProps) {
 
         <div className="flex-1 min-w-0">
           {/* Title */}
-          <p className="text-sm font-medium truncate mb-2">{displayTitle}</p>
+          <div className="flex items-center gap-2 mb-2">
+            <p className="text-sm font-medium truncate flex-1">{displayTitle}</p>
+            {postId && plays !== null && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0" title="Прослуховувань">
+                <Headphones className="h-3.5 w-3.5" /> {plays}
+              </span>
+            )}
+          </div>
 
           {/* Progress bar */}
           <div className="flex items-center gap-2">

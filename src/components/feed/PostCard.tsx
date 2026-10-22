@@ -199,7 +199,7 @@ export function PostCard({
 
       {/* Media first (Facebook-style) */}
       {isAudioUrl && imageUrl && (
-        <div className="px-3 pt-2"><AudioPlayer src={imageUrl} /></div>
+        <div className="px-3 pt-2"><AudioPlayer src={imageUrl} postId={id} /></div>
       )}
 
       {imageUrl && !isAudioUrl && (
