@@ -1401,6 +1401,7 @@ export type Database = {
           post_policy: string
           privacy: string
           slug: string
+          song_orders_enabled: boolean
           updated_at: string
         }
         Insert: {
@@ -1414,6 +1415,7 @@ export type Database = {
           post_policy?: string
           privacy?: string
           slug: string
+          song_orders_enabled?: boolean
           updated_at?: string
         }
         Update: {
@@ -1427,6 +1429,7 @@ export type Database = {
           post_policy?: string
           privacy?: string
           slug?: string
+          song_orders_enabled?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -2662,6 +2665,7 @@ export type Database = {
           id: string
           likes_count: number
           media_url: string | null
+          play_count: number
           poll_id: string | null
           posted_as_group: boolean
           user_id: string | null
@@ -2676,6 +2680,7 @@ export type Database = {
           id?: string
           likes_count?: number
           media_url?: string | null
+          play_count?: number
           poll_id?: string | null
           posted_as_group?: boolean
           user_id?: string | null
@@ -2690,6 +2695,7 @@ export type Database = {
           id?: string
           likes_count?: number
           media_url?: string | null
+          play_count?: number
           poll_id?: string | null
           posted_as_group?: boolean
           user_id?: string | null
@@ -4881,6 +4887,7 @@ export type Database = {
         Returns: boolean
       }
       has_stock_market_access: { Args: { _user_id: string }; Returns: boolean }
+      increment_post_play: { Args: { _post_id: string }; Returns: number }
       invoke_push_notification: {
         Args: { _body: string; _title: string; _url: string; _user_id: string }
         Returns: undefined
