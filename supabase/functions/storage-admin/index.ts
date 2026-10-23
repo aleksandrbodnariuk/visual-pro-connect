@@ -229,25 +229,42 @@ Deno.serve(async (req) => {
       }
       const objs = await listAllObjects(admin, bucket);
       const referenced = await getReferencedPaths(admin, bucket);
+      const now = Date.now();
+      let protectedCount = 0;
+      let recentCount = 0;
       const orphans = objs
-        .filter((o) => !referenced.has(o.name))
-        .map((o) => ({ path: o.name, bytes: o.size }));
+        .filter((o) => {
+          if (referenced.has(o.name)) return false;
+          if (isProtectedPath(o.name)) { protectedCount++; return false; }
+          const t = o.created_at ? Date.parse(o.created_at) : NaN;
+          if (!Number.isNaN(t) && now - t < MIN_AGE_MS) { recentCount++; return false; }
+          return true;
+        })
+        .map((o) => ({ path: o.name, bytes: o.size, created_at: o.created_at, mimetype: o.mimetype }));
       return json({
         bucket,
         orphans,
+        protected_skipped: protectedCount,
+        recent_skipped: recentCount,
         total_orphan_bytes: orphans.reduce((s, o) => s + o.bytes, 0),
       });
     }
 
     if (action === "delete-orphans") {
       const bucket = body.bucket as string;
-      const paths: string[] = Array.isArray(body.paths) ? body.paths : [];
-      if (!bucket || paths.length === 0) return json({ error: "bad request" }, 400);
+      const paths: string[] = Array.isArray(body.paths) ? body.paths.filter((p: unknown) => typeof p === "string") : [];
+      if (!bucket || !(bucket in BUCKET_REFS) || BUCKET_REFS[bucket].length === 0 || paths.length === 0) {
+        return json({ error: "bad request" }, 400);
+      }
+      if (paths.length > 500) return json({ error: "Не більше 500 файлів за раз" }, 400);
+      if (body.confirm !== "ВИДАЛИТИ") return json({ error: "Потрібне підтвердження" }, 400);
       // Re-verify each path is still an orphan to avoid TOCTOU
       const referenced = await getReferencedPaths(admin, bucket);
-      const safe = paths.filter((p) => !referenced.has(p));
+      const safe = paths.filter((p) => !referenced.has(p) && !isProtectedPath(p));
+      if (safe.length === 0) return json({ ok: true, removed: 0, skipped: paths.length });
       const { data, error } = await admin.storage.from(bucket).remove(safe);
       if (error) throw error;
+      console.log(`storage-admin: user ${userId} removed ${data?.length ?? 0} files from ${bucket}`);
       return json({ ok: true, removed: data?.length ?? 0, skipped: paths.length - safe.length });
     }
 
