@@ -14,7 +14,11 @@ const BUCKET_REFS: Record<string, Array<{ table: string; column: string }>> = {
     { table: "users", column: "banner_url" },
     { table: "user_vip_memberships", column: "custom_banner_url" },
   ],
-  "group-avatars": [{ table: "conversations", column: "avatar_url" }],
+  "group-avatars": [
+    { table: "conversations", column: "avatar_url" },
+    { table: "groups", column: "avatar_url" },
+    { table: "groups", column: "cover_url" },
+  ],
   logos: [], // managed via site_settings JSON — treat all as referenced
   marketplace: [
     { table: "marketplace_listings", column: "cover_image_url" },
@@ -29,24 +33,45 @@ const BUCKET_REFS: Record<string, Array<{ table: string; column: string }>> = {
   posts: [
     { table: "posts", column: "media_url" },
     { table: "user_files", column: "file_url" },
+    { table: "comments", column: "image_url" },
+    { table: "feed_ads", column: "media_url" },
+    { table: "organizations", column: "logo_url" },
+    { table: "organizations", column: "flag_url" },
+    { table: "groups", column: "avatar_url" },
+    { table: "groups", column: "cover_url" },
   ],
   "support-attachments": [{ table: "support_tickets", column: "attachment_url" }],
 };
 
+// Folders that are never treated as orphans, regardless of DB references.
+const PROTECTED_SEGMENTS = ["org-symbols", "ads", "branding", "system", "defaults", "logos"];
+// Files newer than this are never treated as orphans (upload may not be saved yet).
+const MIN_AGE_MS = 24 * 60 * 60 * 1000;
+
+function isProtectedPath(path: string): boolean {
+  return path.split("/").some((seg) => PROTECTED_SEGMENTS.includes(seg));
+}
+
 function pathFromUrl(url: string | null, bucket: string): string | null {
   if (!url) return null;
+  const clean = String(url).split("?")[0];
   const marker = `/storage/v1/object/public/${bucket}/`;
-  const idx = url.indexOf(marker);
-  if (idx === -1) return null;
-  return url.substring(idx + marker.length).split("?")[0] || null;
+  const idx = clean.indexOf(marker);
+  if (idx !== -1) return decodeURIComponent(clean.substring(idx + marker.length)) || null;
+  // Relative path stored directly (e.g. "uid/file.png" or "bucket/uid/file.png")
+  if (!/^https?:\/\//i.test(clean)) {
+    const rel = clean.replace(/^\/+/, "");
+    return rel.startsWith(`${bucket}/`) ? rel.slice(bucket.length + 1) : rel;
+  }
+  return null;
 }
 
 async function listAllObjects(
   admin: ReturnType<typeof createClient>,
   bucket: string,
   prefix = "",
-): Promise<Array<{ name: string; size: number }>> {
-  const out: Array<{ name: string; size: number }> = [];
+): Promise<Array<{ name: string; size: number; created_at?: string; mimetype?: string }>> {
+  const out: Array<{ name: string; size: number; created_at?: string; mimetype?: string }> = [];
   const limit = 1000;
   let offset = 0;
   while (true) {
@@ -65,6 +90,8 @@ async function listAllObjects(
         out.push({
           name: fullPath,
           size: Number((entry.metadata as any)?.size ?? 0),
+          created_at: (entry as any).created_at,
+          mimetype: (entry.metadata as any)?.mimetype,
         });
       }
     }
