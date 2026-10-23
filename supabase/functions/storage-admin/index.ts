@@ -14,7 +14,11 @@ const BUCKET_REFS: Record<string, Array<{ table: string; column: string }>> = {
     { table: "users", column: "banner_url" },
     { table: "user_vip_memberships", column: "custom_banner_url" },
   ],
-  "group-avatars": [{ table: "conversations", column: "avatar_url" }],
+  "group-avatars": [
+    { table: "conversations", column: "avatar_url" },
+    { table: "groups", column: "avatar_url" },
+    { table: "groups", column: "cover_url" },
+  ],
   logos: [], // managed via site_settings JSON — treat all as referenced
   marketplace: [
     { table: "marketplace_listings", column: "cover_image_url" },
@@ -29,24 +33,45 @@ const BUCKET_REFS: Record<string, Array<{ table: string; column: string }>> = {
   posts: [
     { table: "posts", column: "media_url" },
     { table: "user_files", column: "file_url" },
+    { table: "comments", column: "image_url" },
+    { table: "feed_ads", column: "media_url" },
+    { table: "organizations", column: "logo_url" },
+    { table: "organizations", column: "flag_url" },
+    { table: "groups", column: "avatar_url" },
+    { table: "groups", column: "cover_url" },
   ],
   "support-attachments": [{ table: "support_tickets", column: "attachment_url" }],
 };
 
+// Folders that are never treated as orphans, regardless of DB references.
+const PROTECTED_SEGMENTS = ["org-symbols", "ads", "branding", "system", "defaults", "logos"];
+// Files newer than this are never treated as orphans (upload may not be saved yet).
+const MIN_AGE_MS = 24 * 60 * 60 * 1000;
+
+function isProtectedPath(path: string): boolean {
+  return path.split("/").some((seg) => PROTECTED_SEGMENTS.includes(seg));
+}
+
 function pathFromUrl(url: string | null, bucket: string): string | null {
   if (!url) return null;
+  const clean = String(url).split("?")[0];
   const marker = `/storage/v1/object/public/${bucket}/`;
-  const idx = url.indexOf(marker);
-  if (idx === -1) return null;
-  return url.substring(idx + marker.length).split("?")[0] || null;
+  const idx = clean.indexOf(marker);
+  if (idx !== -1) return decodeURIComponent(clean.substring(idx + marker.length)) || null;
+  // Relative path stored directly (e.g. "uid/file.png" or "bucket/uid/file.png")
+  if (!/^https?:\/\//i.test(clean)) {
+    const rel = clean.replace(/^\/+/, "");
+    return rel.startsWith(`${bucket}/`) ? rel.slice(bucket.length + 1) : rel;
+  }
+  return null;
 }
 
 async function listAllObjects(
   admin: ReturnType<typeof createClient>,
   bucket: string,
   prefix = "",
-): Promise<Array<{ name: string; size: number }>> {
-  const out: Array<{ name: string; size: number }> = [];
+): Promise<Array<{ name: string; size: number; created_at?: string; mimetype?: string }>> {
+  const out: Array<{ name: string; size: number; created_at?: string; mimetype?: string }> = [];
   const limit = 1000;
   let offset = 0;
   while (true) {
@@ -65,6 +90,8 @@ async function listAllObjects(
         out.push({
           name: fullPath,
           size: Number((entry.metadata as any)?.size ?? 0),
+          created_at: (entry as any).created_at,
+          mimetype: (entry.metadata as any)?.mimetype,
         });
       }
     }
@@ -202,25 +229,42 @@ Deno.serve(async (req) => {
       }
       const objs = await listAllObjects(admin, bucket);
       const referenced = await getReferencedPaths(admin, bucket);
+      const now = Date.now();
+      let protectedCount = 0;
+      let recentCount = 0;
       const orphans = objs
-        .filter((o) => !referenced.has(o.name))
-        .map((o) => ({ path: o.name, bytes: o.size }));
+        .filter((o) => {
+          if (referenced.has(o.name)) return false;
+          if (isProtectedPath(o.name)) { protectedCount++; return false; }
+          const t = o.created_at ? Date.parse(o.created_at) : NaN;
+          if (!Number.isNaN(t) && now - t < MIN_AGE_MS) { recentCount++; return false; }
+          return true;
+        })
+        .map((o) => ({ path: o.name, bytes: o.size, created_at: o.created_at, mimetype: o.mimetype }));
       return json({
         bucket,
         orphans,
+        protected_skipped: protectedCount,
+        recent_skipped: recentCount,
         total_orphan_bytes: orphans.reduce((s, o) => s + o.bytes, 0),
       });
     }
 
     if (action === "delete-orphans") {
       const bucket = body.bucket as string;
-      const paths: string[] = Array.isArray(body.paths) ? body.paths : [];
-      if (!bucket || paths.length === 0) return json({ error: "bad request" }, 400);
+      const paths: string[] = Array.isArray(body.paths) ? body.paths.filter((p: unknown) => typeof p === "string") : [];
+      if (!bucket || !(bucket in BUCKET_REFS) || BUCKET_REFS[bucket].length === 0 || paths.length === 0) {
+        return json({ error: "bad request" }, 400);
+      }
+      if (paths.length > 500) return json({ error: "Не більше 500 файлів за раз" }, 400);
+      if (body.confirm !== "ВИДАЛИТИ") return json({ error: "Потрібне підтвердження" }, 400);
       // Re-verify each path is still an orphan to avoid TOCTOU
       const referenced = await getReferencedPaths(admin, bucket);
-      const safe = paths.filter((p) => !referenced.has(p));
+      const safe = paths.filter((p) => !referenced.has(p) && !isProtectedPath(p));
+      if (safe.length === 0) return json({ ok: true, removed: 0, skipped: paths.length });
       const { data, error } = await admin.storage.from(bucket).remove(safe);
       if (error) throw error;
+      console.log(`storage-admin: user ${userId} removed ${data?.length ?? 0} files from ${bucket}`);
       return json({ ok: true, removed: data?.length ?? 0, skipped: paths.length - safe.length });
     }
 

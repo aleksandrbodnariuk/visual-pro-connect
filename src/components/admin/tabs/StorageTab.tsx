@@ -4,7 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, RefreshCw, HardDrive, Database, Trash2, Search } from "lucide-react";
+import { Loader2, RefreshCw, HardDrive, Database, Trash2, Search, ShieldCheck, File as FileIcon } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 type BucketStat = { bucket: string; files: number; bytes: number };
@@ -15,7 +17,11 @@ type Stats = {
   storage_total_files: number;
   db: { db_bytes: number; tables: TableStat[] };
 };
-type Orphan = { path: string; bytes: number };
+type Orphan = { path: string; bytes: number; created_at?: string; mimetype?: string };
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const isImage = (o: Orphan) => (o.mimetype || "").startsWith("image/") || /\.(png|jpe?g|webp|gif|svg)$/i.test(o.path);
+const publicUrl = (bucket: string, path: string) => `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path.split("/").map(encodeURIComponent).join("/")}`;
 
 function fmt(bytes: number): string {
   if (!bytes) return "0 Б";
@@ -32,8 +38,11 @@ export function StorageTab() {
   const [activeBucket, setActiveBucket] = useState<string | null>(null);
   const [orphansLoading, setOrphansLoading] = useState(false);
   const [orphans, setOrphans] = useState<Orphan[]>([]);
+  const [skipped, setSkipped] = useState<{ prot: number; recent: number }>({ prot: 0, recent: 0 });
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
 
   const loadStats = async () => {
     setLoading(true);
@@ -59,24 +68,26 @@ export function StorageTab() {
       });
       if (error) throw error;
       setOrphans(data?.orphans || []);
-      if (data?.note) toast.info(data.note);
+      setSkipped({ prot: data?.protected_skipped || 0, recent: data?.recent_skipped || 0 });
+      if (data?.note) toast.info("Цей бакет керується окремо, його файли не перевіряються як сміття.");
     } catch (e: any) {
       toast.error("Не вдалося отримати неприв'язані файли: " + (e?.message || e));
     } finally { setOrphansLoading(false); }
   };
 
   const deleteSelected = async () => {
-    if (!activeBucket || selected.size === 0) return;
-    if (!confirm(`Видалити ${selected.size} файл(ів) з бакету ${activeBucket}? Цю дію не можна скасувати.`)) return;
+    if (!activeBucket || selected.size === 0 || confirmText !== "ВИДАЛИТИ") return;
     setDeleting(true);
     try {
       const paths = Array.from(selected);
       const { data, error } = await supabase.functions.invoke("storage-admin", {
-        body: { action: "delete-orphans", bucket: activeBucket, paths },
+        body: { action: "delete-orphans", bucket: activeBucket, paths, confirm: "ВИДАЛИТИ" },
       });
       if (error) throw error;
       toast.success(`Видалено ${data?.removed ?? 0} файл(ів)` + (data?.skipped ? `, пропущено ${data.skipped}` : ""));
       setSelected(new Set());
+      setConfirmOpen(false);
+      setConfirmText("");
       await loadOrphans(activeBucket);
       loadStats();
     } catch (e: any) {
@@ -206,7 +217,8 @@ export function StorageTab() {
                   Неприв'язані файли — <Badge variant="outline">{activeBucket}</Badge>
                 </CardTitle>
                 <CardDescription>
-                  Файли в бакеті, на які немає посилань у базі даних. Безпечно видаляти.
+                  Файли без посилань у базі даних. Перегляньте кожен файл перед видаленням — відновити видалене неможливо.
+                  Символіка організацій, реклама, системні файли та завантаження за останні 24 години захищені й сюди не потрапляють.
                 </CardDescription>
               </div>
               <div className="flex gap-2 flex-wrap">
@@ -215,16 +227,16 @@ export function StorageTab() {
                 </Button>
                 {orphans.length > 0 && (
                   <>
-                    <Button size="sm" variant="outline" onClick={() => setSelected(new Set(orphans.map((o) => o.path)))}>
-                      Виділити всі ({orphans.length})
-                    </Button>
+                    {selected.size > 0 && (
+                      <Button size="sm" variant="outline" onClick={() => setSelected(new Set())}>Зняти виділення</Button>
+                    )}
                     <Button
                       size="sm"
                       variant="destructive"
                       disabled={selected.size === 0 || deleting}
-                      onClick={deleteSelected}
+                      onClick={() => { setConfirmText(""); setConfirmOpen(true); }}
                     >
-                      {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Trash2 className="h-4 w-4 mr-1" />}
+                      <Trash2 className="h-4 w-4 mr-1" />
                       Видалити вибрані ({selected.size})
                     </Button>
                   </>
@@ -233,6 +245,12 @@ export function StorageTab() {
             </div>
           </CardHeader>
           <CardContent>
+            {(skipped.prot > 0 || skipped.recent > 0) && (
+              <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                Захищено від очищення: {skipped.prot} системних/символіки/реклами, {skipped.recent} нових (до 24 год).
+              </p>
+            )}
             {orphansLoading ? (
               <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
             ) : orphans.length === 0 ? (
@@ -243,14 +261,16 @@ export function StorageTab() {
               <>
                 <p className="text-sm text-muted-foreground mb-3">
                   Знайдено <b>{orphans.length}</b> неприв'язаних файлів загальним розміром{" "}
-                  <b>{fmt(orphans.reduce((s, o) => s + o.bytes, 0))}</b>.
+                  <b>{fmt(orphans.reduce((s, o) => s + o.bytes, 0))}</b>. Позначайте файли вручну.
                 </p>
                 <div className="max-h-[500px] max-w-full overflow-auto rounded-md border">
-                  <table className="min-w-[420px] w-full text-sm">
+                  <table className="min-w-[520px] w-full text-sm">
                     <thead className="bg-muted/40 sticky top-0">
                       <tr>
                         <th className="w-10 p-2"></th>
+                        <th className="w-16 p-2 text-left">Вигляд</th>
                         <th className="text-left p-2">Шлях</th>
+                        <th className="text-right p-2 w-28">Дата</th>
                         <th className="text-right p-2 w-24">Розмір</th>
                       </tr>
                     </thead>
@@ -267,7 +287,17 @@ export function StorageTab() {
                               }}
                             />
                           </td>
+                          <td className="p-2">
+                            {isImage(o) ? (
+                              <a href={publicUrl(activeBucket, o.path)} target="_blank" rel="noreferrer">
+                                <img src={publicUrl(activeBucket, o.path)} alt="" loading="lazy" className="h-12 w-12 rounded object-cover border bg-muted" />
+                              </a>
+                            ) : (
+                              <div className="h-12 w-12 rounded border bg-muted flex items-center justify-center"><FileIcon className="h-5 w-5 text-muted-foreground" /></div>
+                            )}
+                          </td>
                           <td className="p-2 font-mono text-xs break-all">{o.path}</td>
+                          <td className="p-2 text-right text-xs">{o.created_at ? new Date(o.created_at).toLocaleDateString("uk-UA") : "—"}</td>
                           <td className="p-2 text-right">{fmt(o.bytes)}</td>
                         </tr>
                       ))}
@@ -279,6 +309,25 @@ export function StorageTab() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={confirmOpen} onOpenChange={(o) => !deleting && setConfirmOpen(o)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Остаточне видалення файлів</DialogTitle>
+            <DialogDescription>
+              Буде видалено {selected.size} файл(ів) з бакету «{activeBucket}». Відновити їх буде неможливо.
+              Щоб підтвердити, введіть слово <b>ВИДАЛИТИ</b>.
+            </DialogDescription>
+          </DialogHeader>
+          <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder="ВИДАЛИТИ" autoFocus />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={deleting}>Скасувати</Button>
+            <Button variant="destructive" onClick={deleteSelected} disabled={confirmText !== "ВИДАЛИТИ" || deleting}>
+              {deleting && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Видалити
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
