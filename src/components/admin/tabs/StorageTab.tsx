@@ -15,7 +15,11 @@ type Stats = {
   storage_total_files: number;
   db: { db_bytes: number; tables: TableStat[] };
 };
-type Orphan = { path: string; bytes: number };
+type Orphan = { path: string; bytes: number; created_at?: string; mimetype?: string };
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const isImage = (o: Orphan) => (o.mimetype || "").startsWith("image/") || /\.(png|jpe?g|webp|gif|svg)$/i.test(o.path);
+const publicUrl = (bucket: string, path: string) => `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path.split("/").map(encodeURIComponent).join("/")}`;
 
 function fmt(bytes: number): string {
   if (!bytes) return "0 Б";
@@ -32,8 +36,11 @@ export function StorageTab() {
   const [activeBucket, setActiveBucket] = useState<string | null>(null);
   const [orphansLoading, setOrphansLoading] = useState(false);
   const [orphans, setOrphans] = useState<Orphan[]>([]);
+  const [skipped, setSkipped] = useState<{ prot: number; recent: number }>({ prot: 0, recent: 0 });
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
 
   const loadStats = async () => {
     setLoading(true);
@@ -59,24 +66,26 @@ export function StorageTab() {
       });
       if (error) throw error;
       setOrphans(data?.orphans || []);
-      if (data?.note) toast.info(data.note);
+      setSkipped({ prot: data?.protected_skipped || 0, recent: data?.recent_skipped || 0 });
+      if (data?.note) toast.info("Цей бакет керується окремо, його файли не перевіряються як сміття.");
     } catch (e: any) {
       toast.error("Не вдалося отримати неприв'язані файли: " + (e?.message || e));
     } finally { setOrphansLoading(false); }
   };
 
   const deleteSelected = async () => {
-    if (!activeBucket || selected.size === 0) return;
-    if (!confirm(`Видалити ${selected.size} файл(ів) з бакету ${activeBucket}? Цю дію не можна скасувати.`)) return;
+    if (!activeBucket || selected.size === 0 || confirmText !== "ВИДАЛИТИ") return;
     setDeleting(true);
     try {
       const paths = Array.from(selected);
       const { data, error } = await supabase.functions.invoke("storage-admin", {
-        body: { action: "delete-orphans", bucket: activeBucket, paths },
+        body: { action: "delete-orphans", bucket: activeBucket, paths, confirm: "ВИДАЛИТИ" },
       });
       if (error) throw error;
       toast.success(`Видалено ${data?.removed ?? 0} файл(ів)` + (data?.skipped ? `, пропущено ${data.skipped}` : ""));
       setSelected(new Set());
+      setConfirmOpen(false);
+      setConfirmText("");
       await loadOrphans(activeBucket);
       loadStats();
     } catch (e: any) {
