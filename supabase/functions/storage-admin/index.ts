@@ -105,7 +105,15 @@ async function getReferencedPaths(
   admin: ReturnType<typeof createClient>,
   bucket: string,
 ): Promise<Set<string>> {
-  const refs = BUCKET_REFS[bucket] || [];
+  // Check every known URL column, not just this bucket's: files are sometimes
+  // stored in another bucket (e.g. old portfolio songs live in "posts").
+  const seen = new Set<string>();
+  const refs = Object.values(BUCKET_REFS).flat().filter((r) => {
+    const k = `${r.table}.${r.column}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
   const set = new Set<string>();
   for (const ref of refs) {
     let from = 0;

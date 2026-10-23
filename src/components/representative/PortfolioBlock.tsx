@@ -69,7 +69,7 @@ export function PortfolioBlock() {
   const [filter, setFilter] = useState<string>('all');
   const [playingVideo, setPlayingVideo] = useState<{ embedUrl: string; title: string } | null>(null);
   const [viewingPhotoIndex, setViewingPhotoIndex] = useState<number | null>(null);
-  const [playingAudio, setPlayingAudio] = useState<{ url: string; title: string } | null>(null);
+  const [playingAudio, setPlayingAudio] = useState<{ url: string; title: string; error?: boolean } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -354,7 +354,20 @@ export function PortfolioBlock() {
                 </div>
                 <h3 className="font-medium text-foreground truncate">{playingAudio.title}</h3>
               </div>
-              <audio ref={audioRef} src={playingAudio.url} controls autoPlay className="w-full" />
+              <audio
+                ref={audioRef}
+                src={playingAudio.url}
+                controls
+                autoPlay
+                preload="metadata"
+                className="w-full"
+                onError={() => setPlayingAudio((p) => (p ? { ...p, error: true } : p))}
+              />
+              {playingAudio.error && (
+                <p className="text-sm text-destructive">
+                  Файл пісні недоступний або видалений. Автор має завантажити його повторно в портфоліо.
+                </p>
+              )}
             </div>
           )}
         </DialogContent>
