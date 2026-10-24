@@ -20,6 +20,7 @@ import { uploadToStorage } from "@/lib/storage";
 import {
   uploadPortfolioImageVariants,
   deletePortfolioVariants,
+  resolveUploadMime,
 } from "@/lib/portfolioMediaPipeline";
 import {
   Select,
@@ -50,6 +51,7 @@ interface PortfolioManagerProps {
 const PAGE_SIZE = 12;
 const MAX_INPUT_BYTES = 10 * 1024 * 1024; // 10MB pre-compression limit
 const MAX_OUTPUT_BYTES = 5 * 1024 * 1024; // 5MB hard cap after compression
+const MAX_MEDIA_BYTES = 50 * 1024 * 1024; // 50MB for audio/video (no compression)
 
 // Функція парсингу YouTube/Vimeo посилань
 const parseVideoUrl = (url: string) => {
@@ -87,9 +89,10 @@ const readFileAsDataUrl = (file: File) =>
   });
 
 const getMediaTypeFromFile = (file: File) => {
-  if (file.type.startsWith("image/")) return "photo";
-  if (file.type.startsWith("video/")) return "video";
-  if (file.type.startsWith("audio/")) return "audio";
+  const mime = resolveUploadMime(file);
+  if (mime.startsWith("image/")) return "photo";
+  if (mime.startsWith("video/")) return "video";
+  if (mime.startsWith("audio/")) return "audio";
   return "photo";
 };
 
@@ -111,8 +114,10 @@ const getStorageLocationFromUrl = (url: string) => {
  * which generates preview + display variants automatically.
  */
 function validateForUpload(file: File) {
-  if (file.size > MAX_INPUT_BYTES && !file.type.startsWith('image/')) {
-    throw new Error(`Файл занадто великий (${(file.size / 1024 / 1024).toFixed(1)}MB). Максимум 10MB.`);
+  const mime = resolveUploadMime(file);
+  if (mime.startsWith('image/')) return; // images are compressed by the pipeline
+  if (file.size > MAX_MEDIA_BYTES) {
+    throw new Error(`Файл занадто великий (${(file.size / 1024 / 1024).toFixed(1)}MB). Максимум 50MB для аудіо/відео.`);
   }
 }
 
@@ -285,7 +290,12 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
 
       try {
         const mediaType = getMediaTypeFromFile(currentFile);
-        const variants = await uploadPortfolioImageVariants(currentFile, userId);
+        // Audio is not allowed in the 'portfolio' bucket — it goes to 'posts'
+        const variants = await uploadPortfolioImageVariants(
+          currentFile,
+          userId,
+          getStorageBucketForMediaType(mediaType),
+        );
 
         // For multi-upload, append index to title for uniqueness
         const itemTitle = isMulti ? `${title} (${i + 1})` : title;
@@ -381,7 +391,11 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
           editItem.media_display_url,
         ]);
 
-        const variants = await uploadPortfolioImageVariants(editFile, userId);
+        const variants = await uploadPortfolioImageVariants(
+          editFile,
+          userId,
+          getStorageBucketForMediaType(updatedMediaType),
+        );
         updatedMediaUrl = variants.originalUrl;
         updatedPreviewUrl = variants.previewUrl;
         updatedDisplayUrl = variants.displayUrl;
@@ -535,7 +549,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
                   disabled={isUploading}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Можна обрати декілька файлів. Зображення стискаються в WebP. Максимум 10MB до стиснення / 5MB після.
+                  Можна обрати декілька файлів. Зображення стискаються в WebP. Аудіо та відео — до 50MB.
                 </p>
                 {files.length > 0 && uploadProgress.length === 0 && (
                   <p className="text-xs text-muted-foreground mt-2">

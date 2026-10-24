@@ -19,6 +19,31 @@ const DISPLAY_QUALITY = 0.85;
 const OUTPUT_FORMAT = 'image/webp' as const;
 const OUTPUT_EXTENSION = '.webp' as const;
 
+/** Fallback MIME types by extension — some OS/browsers report an empty file.type */
+const EXT_MIME: Record<string, string> = {
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  ogg: 'audio/ogg',
+  flac: 'audio/flac',
+  aac: 'audio/aac',
+  m4a: 'audio/x-m4a',
+  mp4: 'video/mp4',
+  mov: 'video/quicktime',
+  avi: 'video/x-msvideo',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+};
+
+/** Resolve a reliable MIME type for a File, falling back to its extension. */
+export function resolveUploadMime(file: File): string {
+  if (file.type) return file.type;
+  const ext = file.name.split('.').pop()?.toLowerCase() || '';
+  return EXT_MIME[ext] || 'application/octet-stream';
+}
+
 export interface PortfolioMediaVariants {
   /** Lightweight preview for grids (≤400px WebP) */
   previewUrl: string | null;
@@ -99,23 +124,25 @@ async function renderVariant(
 export async function uploadPortfolioImageVariants(
   file: File,
   userId: string,
+  bucket: string = 'portfolio',
 ): Promise<PortfolioMediaVariants> {
   const ts = Date.now();
   const rand = Math.random().toString(36).slice(2, 8);
   const baseKey = `${userId}/${ts}-${rand}`;
+  const mime = resolveUploadMime(file);
 
   // Non-image: upload as-is, no variants
-  if (!file.type.startsWith('image/')) {
+  if (!mime.startsWith('image/')) {
     const ext = file.name.split('.').pop() || 'bin';
     const path = `${baseKey}-original.${ext}`;
-    const url = await uploadToStorage('portfolio', path, file, file.type);
+    const url = await uploadToStorage(bucket, path, file, mime);
     return { previewUrl: null, displayUrl: null, originalUrl: url };
   }
 
   // GIF: keep original (animation), skip variants
-  if (file.type === 'image/gif') {
+  if (mime === 'image/gif') {
     const path = `${baseKey}-original.gif`;
-    const url = await uploadToStorage('portfolio', path, file, file.type);
+    const url = await uploadToStorage(bucket, path, file, mime);
     return { previewUrl: null, displayUrl: null, originalUrl: url };
   }
 
@@ -137,8 +164,8 @@ export async function uploadPortfolioImageVariants(
   });
 
   const [previewUrl, displayUrl] = await Promise.all([
-    uploadToStorage('portfolio', `${baseKey}-preview${OUTPUT_EXTENSION}`, previewFile, OUTPUT_FORMAT),
-    uploadToStorage('portfolio', `${baseKey}-display${OUTPUT_EXTENSION}`, displayFile, OUTPUT_FORMAT),
+    uploadToStorage(bucket, `${baseKey}-preview${OUTPUT_EXTENSION}`, previewFile, OUTPUT_FORMAT),
+    uploadToStorage(bucket, `${baseKey}-display${OUTPUT_EXTENSION}`, displayFile, OUTPUT_FORMAT),
   ]);
 
   console.log(
