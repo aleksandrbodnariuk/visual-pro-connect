@@ -164,8 +164,8 @@ export async function uploadPortfolioImageVariants(
   });
 
   const [previewUrl, displayUrl] = await Promise.all([
-    uploadToStorage('portfolio', `${baseKey}-preview${OUTPUT_EXTENSION}`, previewFile, OUTPUT_FORMAT),
-    uploadToStorage('portfolio', `${baseKey}-display${OUTPUT_EXTENSION}`, displayFile, OUTPUT_FORMAT),
+    uploadToStorage(bucket, `${baseKey}-preview${OUTPUT_EXTENSION}`, previewFile, OUTPUT_FORMAT),
+    uploadToStorage(bucket, `${baseKey}-display${OUTPUT_EXTENSION}`, displayFile, OUTPUT_FORMAT),
   ]);
 
   console.log(

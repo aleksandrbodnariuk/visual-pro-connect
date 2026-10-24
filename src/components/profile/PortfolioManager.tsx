@@ -20,6 +20,7 @@ import { uploadToStorage } from "@/lib/storage";
 import {
   uploadPortfolioImageVariants,
   deletePortfolioVariants,
+  resolveUploadMime,
 } from "@/lib/portfolioMediaPipeline";
 import {
   Select,
@@ -87,9 +88,10 @@ const readFileAsDataUrl = (file: File) =>
   });
 
 const getMediaTypeFromFile = (file: File) => {
-  if (file.type.startsWith("image/")) return "photo";
-  if (file.type.startsWith("video/")) return "video";
-  if (file.type.startsWith("audio/")) return "audio";
+  const mime = resolveUploadMime(file);
+  if (mime.startsWith("image/")) return "photo";
+  if (mime.startsWith("video/")) return "video";
+  if (mime.startsWith("audio/")) return "audio";
   return "photo";
 };
 
