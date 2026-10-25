@@ -367,3 +367,15 @@ select option:checked { background-color: #3b82f6 !important; color: #ffffff !im
 @media (prefers-reduced-motion: reduce) {
   .feed-card { animation: none; }
 }
+
+/* Portfolio music: a playback indicator, not a decoded waveform. */
+.portfolio-meter-bar { width: 4px; height: 6px; border-radius: 2px; background: hsl(var(--accent)); opacity: .45; }
+.portfolio-meter-bar:nth-child(3n) { height: 16px; }
+.portfolio-meter-bar:nth-child(3n + 1) { height: 10px; }
+.portfolio-meter-playing { animation: portfolio-meter 900ms ease-in-out infinite alternate; opacity: 1; }
+.portfolio-meter-playing:nth-child(2n) { animation-delay: -400ms; }
+.portfolio-meter-playing:nth-child(3n) { animation-delay: -650ms; }
+@keyframes portfolio-meter { from { transform: scaleY(.4); } to { transform: scaleY(1); } }
+.portfolio-native-audio { color-scheme: light; }
+.dark .portfolio-native-audio { color-scheme: dark; }
+@media (prefers-reduced-motion: reduce) { .portfolio-meter-playing { animation: none; } }
