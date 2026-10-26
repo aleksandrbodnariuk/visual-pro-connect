@@ -5,6 +5,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, Video, Music, ImageIcon, Play, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { PortfolioCollection } from '@/components/profile/PortfolioCollection';
+import { PortfolioMusicProvider } from '@/components/profile/PortfolioMusic';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   OTHER_CATEGORY_LABEL,
@@ -69,13 +72,6 @@ export function PortfolioBlock() {
   const [filter, setFilter] = useState<string>('all');
   const [playingVideo, setPlayingVideo] = useState<{ embedUrl: string; title: string } | null>(null);
   const [viewingPhotoIndex, setViewingPhotoIndex] = useState<number | null>(null);
-  const [playingAudio, setPlayingAudio] = useState<{ url: string; title: string; error?: boolean } | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    return () => { audioRef.current?.pause(); audioRef.current = null; };
-  }, []);
-
   useEffect(() => {
     async function load() {
       try {
@@ -125,10 +121,10 @@ export function PortfolioBlock() {
     groups.set('__other', { key: '__other', label: OTHER_CATEGORY_LABEL, items: [] });
     filtered.forEach((item) => {
       const key = item.category && groups.has(item.category) ? item.category : '__other';
-      groups.get(key)!.items.push(item);
+      groups.get(key)?.items.push(item);
     });
     return Array.from(groups.values()).filter((g) => g.items.length > 0);
-  }, [filtered]);
+  }, [filtered, portfolioCategories]);
 
   const handlePrevPhoto = useCallback(() => {
     setViewingPhotoIndex(prev => prev !== null && prev > 0 ? prev - 1 : prev);
@@ -163,6 +159,7 @@ export function PortfolioBlock() {
 
   return (
     <Card>
+      <PortfolioMusicProvider>
       <CardHeader className="pb-3">
         <CardTitle className="text-base sm:text-lg flex items-center gap-2">
           <ImageIcon className="h-5 w-5 text-muted-foreground" />
@@ -173,7 +170,7 @@ export function PortfolioBlock() {
         <div className="overflow-x-auto -mx-3 px-3 pb-1">
           <div className="flex gap-2 min-w-max">
             {FILTERS.map((f) => (
-              <button
+              <Button variant="outline"
                 key={f.key}
                 onClick={() => setFilter(f.key)}
                 className={cn(
@@ -185,7 +182,7 @@ export function PortfolioBlock() {
               >
                 <f.icon className="h-3.5 w-3.5" />
                 {f.label}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -206,83 +203,20 @@ export function PortfolioBlock() {
                     <h4 className="text-sm font-semibold text-foreground">{group.label}</h4>
                     <span className="text-xs text-muted-foreground">({group.items.length})</span>
                   </div>
-                  <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                    {group.items.map((item) => {
-              const profile = profiles.get(item.user_id);
-              const Icon = TYPE_ICON[item.media_type] || Camera;
-              const isVideo = item.media_type === 'video';
-              const isAudio = item.media_type === 'audio';
-              const isPhoto = item.media_type === 'photo';
-              const videoData = isVideo ? parseVideoUrl(item.media_url) : null;
-              // Grid uses preview (lightweight); falls back to display, then legacy media_url
-              const photoSrc = item.media_preview_url || item.media_display_url || item.media_url;
-              const thumbnailSrc = isVideo && videoData ? videoData.thumbnail : (isPhoto ? photoSrc : null);
-
-              return (
-                <div
-                  key={item.id}
-                  className="group relative aspect-square rounded-lg overflow-hidden border bg-muted/30 cursor-pointer"
-                  onClick={() => {
-                    if (isVideo && videoData) {
-                      setPlayingVideo({ embedUrl: videoData.embedUrl, title: item.title });
-                    } else if (isPhoto) {
-                      const idx = photoItems.findIndex(p => p.id === item.id);
-                      setViewingPhotoIndex(idx >= 0 ? idx : 0);
-                    } else if (isAudio) {
-                      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-                      setPlayingAudio({ url: item.media_url, title: item.title });
-                    }
-                  }}
-                >
-                  {thumbnailSrc ? (
-                    <img
-                      src={thumbnailSrc}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : isAudio ? (
-                    <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                      <Music className="h-10 w-10 text-white" />
-                    </div>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Icon className="h-10 w-10 text-muted-foreground/50" />
-                    </div>
-                  )}
-
-                  {isVideo && videoData && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="h-12 w-12 rounded-full bg-background/80 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
-                        <Play className="h-6 w-6 ml-0.5 fill-current text-foreground" />
-                      </div>
-                    </div>
-                  )}
-
-                  {isAudio && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="h-12 w-12 rounded-full bg-background/80 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
-                        <Play className="h-6 w-6 ml-0.5 fill-current text-foreground" />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2.5">
-                    <p className="text-white text-xs font-medium truncate">{item.title}</p>
-                    {profile && (
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <Avatar className="h-4 w-4">
-                          <AvatarImage src={profile.avatar_url} />
-                          <AvatarFallback className="text-[8px]">{(profile.full_name || '?')[0]}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-white/70 text-[10px] truncate">{profile.full_name}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-                    })}
-                  </div>
+                  <PortfolioCollection category={group.label} items={group.items.map(item => ({
+                    id: item.id, type: item.media_type, title: item.title, url: item.media_url,
+                    coverUrl: item.media_preview_url || item.media_display_url, description: item.description,
+                    authorId: item.user_id, authorName: profiles.get(item.user_id)?.full_name,
+                    authorAvatar: profiles.get(item.user_id)?.avatar_url,
+                    thumbnailUrl: item.media_type === 'video' ? parseVideoUrl(item.media_url)?.thumbnail : (item.media_preview_url || item.media_display_url || item.media_url),
+                  }))} onOpen={id => {
+                    const item = group.items.find(item => item.id === id);
+                    if (!item) return;
+                    if (item.media_type === 'video') {
+                      const video = parseVideoUrl(item.media_url);
+                      if (video) setPlayingVideo({ embedUrl: video.embedUrl, title: item.title });
+                    } else setViewingPhotoIndex(photoItems.findIndex(photo => photo.id === id));
+                  }} />
                 </section>
               );
             })}
@@ -341,37 +275,7 @@ export function PortfolioBlock() {
         </DialogContent>
       </Dialog>
 
-      {/* Audio player */}
-      <Dialog open={!!playingAudio} onOpenChange={(open) => {
-        if (!open) { audioRef.current?.pause(); setPlayingAudio(null); }
-      }}>
-        <DialogContent className="max-w-md">
-          {playingAudio && (
-            <div className="space-y-4 pt-4">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-                  <Music className="h-6 w-6 text-white" />
-                </div>
-                <h3 className="font-medium text-foreground truncate">{playingAudio.title}</h3>
-              </div>
-              <audio
-                ref={audioRef}
-                src={playingAudio.url}
-                controls
-                autoPlay
-                preload="metadata"
-                className="w-full"
-                onError={() => setPlayingAudio((p) => (p ? { ...p, error: true } : p))}
-              />
-              {playingAudio.error && (
-                <p className="text-sm text-destructive">
-                  Файл пісні недоступний або видалений. Автор має завантажити його повторно в портфоліо.
-                </p>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      </PortfolioMusicProvider>
     </Card>
   );
 }

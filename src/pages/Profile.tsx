@@ -506,6 +506,8 @@ export default function Profile() {
                     items={[]} 
                     userId={user?.id} 
                     isOwner={isCurrentUser}
+                    authorName={user?.name}
+                    authorAvatar={user?.avatarUrl}
                     onAddItem={handleAddToPortfolio}
                   />
                 </Suspense>
