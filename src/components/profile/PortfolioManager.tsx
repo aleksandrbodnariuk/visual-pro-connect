@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { PortfolioMusicProvider, PortfolioAudioCard } from "./PortfolioMusic";
+import vinyl from "@/assets/portfolio-vinyl.jpg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -131,6 +133,8 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<string>("");
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgressItem[]>([]);
@@ -278,6 +282,11 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       files.map((f) => ({ name: f.name, status: "pending" as const }))
     );
 
+    let uploadedCover: Awaited<ReturnType<typeof uploadPortfolioImageVariants>> | null = null;
+    if (coverFile && files.some(file => getMediaTypeFromFile(file) === 'audio')) {
+      try { uploadedCover = await uploadPortfolioImageVariants(coverFile, userId); }
+      catch (error) { toast.error('Не вдалося завантажити обкладинку'); setIsUploading(false); setUploadProgress([]); return; }
+    }
     let successCount = 0;
     let failCount = 0;
     const isMulti = files.length > 1;
@@ -307,8 +316,8 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
             title: itemTitle,
             description,
             media_url: variants.originalUrl,
-            media_preview_url: variants.previewUrl,
-            media_display_url: variants.displayUrl,
+            media_preview_url: mediaType === "audio" ? uploadedCover?.previewUrl || uploadedCover?.originalUrl || null : variants.previewUrl,
+            media_display_url: mediaType === "audio" ? uploadedCover?.displayUrl || uploadedCover?.originalUrl || null : variants.displayUrl,
             media_type: mediaType,
             category: category || null,
           });
@@ -341,6 +350,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       setDescription("");
       setCategory("");
       setFiles([]);
+      setCoverFile(null);
       await fetchPortfolioItems();
       onUpdate();
     } else {
@@ -354,6 +364,8 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
 
   const handleOpenEditDialog = (item: PortfolioItem) => {
     setEditItem(item);
+    setEditFile(null);
+    setEditCoverFile(null);
     setEditTitle(item.title);
     setEditDescription(item.description || "");
     setEditCategory(item.category || "");
@@ -384,23 +396,21 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
 
         updatedMediaType = getMediaTypeFromFile(editFile);
 
-        // Best-effort cleanup of old variants before uploading new ones
-        await deletePortfolioVariants([
-          editItem.media_url,
-          editItem.media_preview_url,
-          editItem.media_display_url,
-        ]);
-
         const variants = await uploadPortfolioImageVariants(
           editFile,
           userId,
           getStorageBucketForMediaType(updatedMediaType),
         );
         updatedMediaUrl = variants.originalUrl;
-        updatedPreviewUrl = variants.previewUrl;
-        updatedDisplayUrl = variants.displayUrl;
+        updatedPreviewUrl = updatedMediaType === 'audio' && editItem.media_type === 'audio' ? editItem.media_preview_url : variants.previewUrl;
+        updatedDisplayUrl = updatedMediaType === 'audio' && editItem.media_type === 'audio' ? editItem.media_display_url : variants.displayUrl;
       }
 
+      if (editCoverFile && updatedMediaType === 'audio') {
+        const cover = await uploadPortfolioImageVariants(editCoverFile, userId);
+        updatedPreviewUrl = cover.previewUrl || cover.originalUrl;
+        updatedDisplayUrl = cover.displayUrl || cover.originalUrl;
+      }
       const { error: updateError } = await supabase
         .from("portfolio")
         .update({
@@ -414,6 +424,9 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
         })
         .eq("id", editItem.id);
       if (updateError) throw updateError;
+      const retained = new Set([updatedMediaUrl, updatedPreviewUrl, updatedDisplayUrl]);
+      await deletePortfolioVariants([editItem.media_url, editItem.media_preview_url, editItem.media_display_url].filter(url => !retained.has(url)));
+      setEditCoverFile(null);
 
       toast.success("Файл успішно оновлено");
       setEditItem(null);
@@ -476,7 +489,8 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
   };
 
   return (
-    <Card className="p-6">
+    <PortfolioMusicProvider>
+    <div className="p-2 sm:p-4">
       <div className="space-y-6">
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Додати нове медіа</h3>
@@ -601,6 +615,10 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
             </TabsContent>
           </Tabs>
 
+          {uploadType === 'file' && files.some(file => getMediaTypeFromFile(file) === 'audio') && <div className="space-y-2">
+            <Label htmlFor="audio-cover">Обкладинка пісні (необов’язково)</Label>
+            <Input id="audio-cover" type="file" accept="image/*" disabled={isUploading} onChange={event => setCoverFile(event.target.files?.[0] || null)} />
+          </div>}
           <Button onClick={handleUpload} disabled={isUploading} className="w-full">
             {isUploading ? "Завантаження..." : "Завантажити"}
           </Button>
@@ -610,7 +628,10 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Моє портфоліо</h3>
             <div className="grid gap-4 md:grid-cols-2">
-              {portfolioItems.map((item) => (
+              {portfolioItems.map((item) => item.media_type === 'audio' ? <div key={item.id} className="min-w-0">
+                <PortfolioAudioCard category={portfolioCategories.find(c => c.key === item.category)?.label || OTHER_CATEGORY_LABEL} track={{ id: item.id, title: item.title, description: item.description, url: item.media_url, coverUrl: item.media_preview_url || item.media_display_url }} />
+                <div className="flex gap-2 py-2"><Button variant="outline" className="min-h-11" onClick={() => handleOpenEditDialog(item)}><Edit />Редагувати</Button><Button variant="ghost" size="icon" className="h-11 w-11" aria-label={`Видалити: ${item.title}`} onClick={() => handleOpenDeleteDialog(item)}><Trash2 /></Button></div>
+              </div> : (
                 <Card key={item.id} className="overflow-hidden">
                   <div className="aspect-video bg-muted relative">
                     {item.media_type === "photo" ? (
@@ -739,6 +760,10 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
                   </SelectContent>
                 </Select>
               </div>
+              {(editItem?.media_type === 'audio' || (editFile && getMediaTypeFromFile(editFile) === 'audio')) && <div className="space-y-2">
+                <Label htmlFor="edit-audio-cover">Замінити обкладинку пісні</Label>
+                <Input id="edit-audio-cover" type="file" accept="image/*" disabled={isUploading} onChange={event => setEditCoverFile(event.target.files?.[0] || null)} />
+              </div>}
               <div>
                 <Label htmlFor="editFile">Замінити файл (необов'язково)</Label>
                 <Input
@@ -781,6 +806,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
           </DialogContent>
         </Dialog>
       </div>
-    </Card>
+    </div>
+    </PortfolioMusicProvider>
   );
 }
