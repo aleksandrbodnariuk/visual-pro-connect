@@ -12,3 +12,5 @@
 - Election board counters use independent recorded milestones in every campaign mode; tile colours and stacked bars use the exclusive current status, because later stages must not erase earlier counts or make stacked bars exceed 100%.
 - Election screens load precincts by role scope (admin: all, HQ manager: own subtree, observer: only assigned precincts) via `resolvePrecinctScope`, because loading every national precinct on phones does not scale.
 - Admin tabs and chart-heavy panels are lazy-loaded with a Suspense fallback, because eager imports made the admin chunk exceed 1 MB.
+
+- Portfolio audio always plays `media_url`; preview/display columns hold optional cover images, and both public portfolio views share one active music player, because artwork must never replace the playable source.

@@ -32,6 +32,9 @@ import {
   OtherCategoryIcon,
 } from "@/lib/portfolioCategories";
 import { usePortfolioCategories } from "@/hooks/usePortfolioCategories";
+import { PortfolioCollection } from "./PortfolioCollection";
+import { PortfolioMusicProvider } from "./PortfolioMusic";
+import { getPortfolioMediaSources } from "@/lib/portfolioPresentation";
 import { deletePortfolioVariants } from "@/lib/portfolioMediaPipeline";
 
 interface PortfolioItem {
@@ -44,6 +47,8 @@ interface PortfolioItem {
   title: string;
   likes: number;
   comments: number;
+  description?: string | null;
+  coverUrl?: string | null;
   category?: string | null;
 }
 
@@ -53,9 +58,12 @@ interface PortfolioGridProps {
   userId?: string;
   isOwner?: boolean;
   onAddItem?: () => void;
+  authorName?: string;
+  authorAvatar?: string | null;
 }
 
 interface PortfolioRecord {
+  description?: string | null;
   id: string;
   title: string;
   media_url: string;
@@ -106,7 +114,8 @@ const mapPortfolioRecordToItem = (item: PortfolioRecord): PortfolioItem => {
   // Preview = small/fast for grid; Display = high-quality for lightbox
   // Fallback chain: preview → display → legacy media_url
   const thumbnailUrl = item.media_preview_url || item.media_display_url || item.media_url;
-  const displayUrl = item.media_display_url || item.media_url;
+  const sources = getPortfolioMediaSources(item);
+  const displayUrl = sources.playbackUrl;
 
   return {
     id: item.id,
@@ -114,6 +123,8 @@ const mapPortfolioRecordToItem = (item: PortfolioRecord): PortfolioItem => {
     thumbnailUrl,
     displayUrl,
     title: item.title,
+    description: item.description,
+    coverUrl: sources.coverUrl,
     likes: 0,
     comments: 0,
     category: item.category ?? null,
@@ -131,7 +142,7 @@ const FILTERS = [
 // shows all sections at once instead of only the most-recent page.
 const PAGE_SIZE = 500;
 
-export const PortfolioGrid = memo(({ items: initialItems, className, userId, isOwner = false, onAddItem }: PortfolioGridProps) => {
+export const PortfolioGrid = memo(({ items: initialItems, className, userId, isOwner = false, onAddItem, authorName, authorAvatar }: PortfolioGridProps) => {
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(initialItems);
   const { categories: portfolioCategories } = usePortfolioCategories();
   const [loading, setLoading] = useState(false);
@@ -140,8 +151,6 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
   const [filter, setFilter] = useState<string>('all');
   const [playingItem, setPlayingItem] = useState<{ embedUrl: string; title: string } | null>(null);
   const [viewingPhotoIndex, setViewingPhotoIndex] = useState<number | null>(null);
-  const [playingAudio, setPlayingAudio] = useState<{ url: string; title: string } | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   // Cursor for keyset pagination by created_at DESC
   const [lastCreatedAt, setLastCreatedAt] = useState<string | null>(null);
   // Dedup set (mirrors loaded items by id)
@@ -176,11 +185,11 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
 
     filteredItems.forEach((item) => {
       const key = item.category && groups.has(item.category) ? item.category : "__other";
-      groups.get(key)!.items.push(item);
+      groups.get(key)?.items.push(item);
     });
 
     return Array.from(groups.values()).filter((g) => g.items.length > 0);
-  }, [filteredItems]);
+  }, [filteredItems, portfolioCategories]);
   
   useEffect(() => {
     if (!userId) {
@@ -383,10 +392,6 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
     return () => window.removeEventListener('keydown', handleKey);
   }, [viewingPhotoIndex, handlePrevPhoto, handleNextPhoto]);
 
-  const handlePlayAudio = (item: PortfolioItem) => {
-    setPlayingAudio({ url: item.displayUrl, title: item.title });
-  };
-
   if (loading) {
     return (
       <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4", className)}>
@@ -418,12 +423,12 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
   }
 
   return (
-    <>
+    <PortfolioMusicProvider>
       {/* Filter buttons */}
       <div className="overflow-x-auto -mx-3 px-3 pb-1 mb-4">
         <div className="flex gap-2 min-w-max">
           {FILTERS.map((f) => (
-            <button
+            <Button variant="outline"
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={cn(
@@ -435,7 +440,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
             >
               <f.icon className="h-3.5 w-3.5" />
               {f.label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -456,90 +461,21 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
                 <h3 className="text-base font-semibold text-foreground">{group.label}</h3>
                 <span className="text-xs text-muted-foreground">({group.items.length})</span>
               </div>
-              <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4", className)}>
-                {group.items.map((item) => {
-          const videoData = item.type === "video" ? parseVideoUrl(item.displayUrl) : null;
-          const thumbnailSrc = videoData?.thumbnail || item.thumbnailUrl;
-          const isVideo = item.type === "video";
-          const isAudio = item.type === "audio";
-          const isPhoto = item.type === "photo";
-
-          return (
-            <div
-              key={item.id}
-              className="group relative overflow-hidden rounded-lg cursor-pointer"
-              onClick={() => {
-                if (isVideo) handlePlayVideo(item);
-                else if (isAudio) handlePlayAudio(item);
-                else if (isPhoto) handleClickPhoto(item);
-              }}
-            >
-              <div className="aspect-[4/3] w-full overflow-hidden bg-muted">
-                {isAudio ? (
-                  <div className="h-full w-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                    <Music className="h-16 w-16 text-white" />
-                  </div>
-                ) : (
-                  <img
-                    src={thumbnailSrc}
-                    alt={item.title}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                )}
-              </div>
-              
-              {/* Media type icon */}
-              <div className="absolute left-2 top-2 rounded-full bg-black/70 p-1.5 text-white">
-                {isPhoto && <Camera className="h-4 w-4" />}
-                {isVideo && <Video className="h-4 w-4" />}
-                {isAudio && <Music className="h-4 w-4" />}
-              </div>
-              
-              {/* Play button for video/audio */}
-              {(isVideo || isAudio) && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="rounded-full bg-black/40 p-3 backdrop-blur-sm group-hover:bg-black/60 transition-colors">
-                    <Play className="h-8 w-8 text-white" fill="white" />
-                  </div>
-                </div>
-              )}
-              
-              {/* Owner actions */}
-              {isOwner && (
-                <div className="absolute right-2 top-2 z-10" onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="rounded-full bg-black/70 p-1.5 text-white hover:bg-black/90">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openEditDialog(item)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Редагувати
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => setDeletingItem(item)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Видалити
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              )}
-              
-              {/* Hover overlay */}
-              <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/80 to-transparent p-3 opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none">
-                <h3 className="text-sm font-medium text-white">{item.title}</h3>
-              </div>
-            </div>
-          );
-                })}
-              </div>
+              <PortfolioCollection category={group.label} items={group.items.map(item => ({
+                id: item.id, type: item.type, title: item.title, url: item.displayUrl,
+                coverUrl: item.coverUrl, description: item.description,
+                authorId: userId, authorName, authorAvatar,
+                thumbnailUrl: item.type === 'video' ? parseVideoUrl(item.displayUrl)?.thumbnail : item.thumbnailUrl,
+              }))} onOpen={id => {
+                const item = group.items.find(item => item.id === id);
+                if (!item) return;
+                if (item.type === 'video') handlePlayVideo(item); else handleClickPhoto(item);
+              }} actions={isOwner ? id => {
+                const item = group.items.find(item => item.id === id);
+                if (!item) return null;
+                return <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="h-11 w-11" aria-label={`Дії: ${item.title}`}><MoreHorizontal /></Button></DropdownMenuTrigger>
+                  <DropdownMenuContent align="end"><DropdownMenuItem onClick={() => openEditDialog(item)}><Edit className="mr-2 h-4 w-4" />Редагувати</DropdownMenuItem><DropdownMenuItem onClick={() => setDeletingItem(item)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" />Видалити</DropdownMenuItem></DropdownMenuContent></DropdownMenu>;
+              } : undefined} />
             </section>
           );
         })}
@@ -600,34 +536,6 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
                 allowFullScreen
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 title={playingItem.title}
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Audio player dialog */}
-      <Dialog open={!!playingAudio} onOpenChange={(open) => {
-        if (!open) {
-          audioRef.current?.pause();
-          setPlayingAudio(null);
-        }
-      }}>
-        <DialogContent className="max-w-md">
-          {playingAudio && (
-            <div className="space-y-4 pt-4">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-                  <Music className="h-6 w-6 text-white" />
-                </div>
-                <h3 className="font-medium text-foreground truncate">{playingAudio.title}</h3>
-              </div>
-              <audio
-                ref={audioRef}
-                src={playingAudio.url}
-                controls
-                autoPlay
-                className="w-full"
               />
             </div>
           )}
@@ -719,7 +627,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </PortfolioMusicProvider>
   );
 });
 
