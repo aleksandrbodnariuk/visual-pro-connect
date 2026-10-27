@@ -186,16 +186,25 @@ export async function uploadPortfolioImageVariants(
  * Accepts URLs to remove from the portfolio bucket.
  */
 export async function deletePortfolioVariants(urls: (string | null | undefined)[]): Promise<void> {
-  const paths: string[] = [];
+  const buckets = new Map<string, Set<string>>();
   for (const url of urls) {
     if (!url) continue;
-    const m = url.match(/\/storage\/v1\/object\/public\/portfolio\/(.+)$/);
-    if (m) paths.push(decodeURIComponent(m[1].split(/[?#]/)[0]));
+    const m = url.match(/\/storage\/v1\/object\/public\/(portfolio|posts)\/(.+)$/);
+    if (!m) continue;
+    const paths = buckets.get(m[1]) || new Set<string>();
+    paths.add(decodeURIComponent(m[2].split(/[?#]/)[0]));
+    buckets.set(m[1], paths);
   }
-  if (paths.length === 0) return;
-  try {
-    await supabase.storage.from('portfolio').remove(paths);
-  } catch (e) {
-    console.warn('[portfolio pipeline] cleanup failed:', e);
-  }
+  await Promise.all(Array.from(buckets, async ([bucket, paths]) => {
+    try {
+      const { error } = await supabase.storage.from(bucket).remove([...paths]);
+      if (error) console.warn('[portfolio pipeline] cleanup failed:', error);
+    } catch (e) { console.warn('[portfolio pipeline] cleanup failed:', e); }
+  }));
+}
+
+export async function uploadPortfolioCover(file: File, userId: string) {
+  if (!resolveUploadMime(file).startsWith('image/')) throw new Error('Оберіть зображення для обкладинки');
+  if (file.size > 50 * 1024 * 1024) throw new Error('Обкладинка має бути не більшою за 50 МБ');
+  return uploadPortfolioImageVariants(file, userId);
 }

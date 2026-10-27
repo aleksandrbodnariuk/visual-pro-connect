@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { PortfolioMusicProvider, PortfolioAudioCard } from "./PortfolioMusic";
-import vinyl from "@/assets/portfolio-vinyl.jpg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +22,7 @@ import {
   uploadPortfolioImageVariants,
   deletePortfolioVariants,
   resolveUploadMime,
+  uploadPortfolioCover,
 } from "@/lib/portfolioMediaPipeline";
 import {
   Select,
@@ -284,7 +284,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
 
     let uploadedCover: Awaited<ReturnType<typeof uploadPortfolioImageVariants>> | null = null;
     if (coverFile && files.some(file => getMediaTypeFromFile(file) === 'audio')) {
-      try { uploadedCover = await uploadPortfolioImageVariants(coverFile, userId); }
+      try { uploadedCover = await uploadPortfolioCover(coverFile, userId); }
       catch (error) { toast.error('Не вдалося завантажити обкладинку'); setIsUploading(false); setUploadProgress([]); return; }
     }
     let successCount = 0;
@@ -407,7 +407,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       }
 
       if (editCoverFile && updatedMediaType === 'audio') {
-        const cover = await uploadPortfolioImageVariants(editCoverFile, userId);
+        const cover = await uploadPortfolioCover(editCoverFile, userId);
         updatedPreviewUrl = cover.previewUrl || cover.originalUrl;
         updatedDisplayUrl = cover.displayUrl || cover.originalUrl;
       }
@@ -466,16 +466,6 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
         selectedItem.media_preview_url,
         selectedItem.media_display_url,
       ]);
-      // Audio files live in the 'posts' bucket (legacy convention) — fall back to old cleanup
-      const storageLocation = getStorageLocationFromUrl(selectedItem.media_url);
-      if (storageLocation && storageLocation.bucket !== 'portfolio') {
-        try {
-          await supabase.storage.from(storageLocation.bucket).remove([storageLocation.path]);
-        } catch (e) {
-          console.warn("Не вдалося видалити файл зі сховища:", e);
-        }
-      }
-
       setPortfolioItems(prev => prev.filter(i => i.id !== selectedItem.id));
       toast.success("Файл успішно видалено");
       onUpdate();
@@ -642,11 +632,6 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
                         loading="lazy"
                         decoding="async"
                       />
-                    ) : item.media_type === "audio" ? (
-                      <div className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-purple-500 to-pink-500 gap-2">
-                        <Music className="h-12 w-12 text-white" />
-                        <span className="text-white text-xs">Аудіо</span>
-                      </div>
                     ) : (() => {
                       const vd = parseVideoUrl(item.media_url);
                       return vd?.thumbnail ? (
