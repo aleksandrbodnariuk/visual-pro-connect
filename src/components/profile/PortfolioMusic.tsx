@@ -13,6 +13,7 @@ export interface PortfolioTrack {
 }
 interface MusicState {
   track: PortfolioTrack | null; playing: boolean; loading: boolean; error: boolean;
+  durations: Record<string, number>;
   toggle: (track: PortfolioTrack) => void;
 }
 const MusicContext = createContext<MusicState | null>(null);
@@ -23,6 +24,7 @@ export function PortfolioMusicProvider({ children }: { children: ReactNode }) {
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [durations, setDurations] = useState<Record<string, number>>({});
   useEffect(() => {
     if (!track || !ref.current) return;
     setLoading(true);
@@ -36,7 +38,7 @@ export function PortfolioMusicProvider({ children }: { children: ReactNode }) {
     if (playing) ref.current.pause();
     else { setError(false); setLoading(true); ref.current.play().catch(() => setLoading(false)); }
   };
-  return <MusicContext.Provider value={{ track, playing, loading, error, toggle }}>
+  return <MusicContext.Provider value={{ track, playing, loading, error, durations, toggle }}>
     {children}
     {track && <div className="sticky bottom-0 z-20 mt-6 border-t border-border bg-background p-3 shadow-lg" aria-label="Плеєр портфоліо">
       <div className="flex items-center gap-3 min-w-0">
@@ -45,6 +47,7 @@ export function PortfolioMusicProvider({ children }: { children: ReactNode }) {
         <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" aria-label="Закрити плеєр" title="Закрити плеєр" onClick={() => { ref.current?.pause(); setTrack(null); setPlaying(false); }}><X /></Button>
       </div>
       <audio key={track.id} ref={ref} src={track.url} controls preload="metadata" className="mt-2 w-full h-10 portfolio-native-audio"
+        onLoadedMetadata={event => { const seconds = event.currentTarget.duration; if (Number.isFinite(seconds)) setDurations(previous => ({ ...previous, [track.id]: seconds })); }}
         onPlaying={() => { setPlaying(true); setLoading(false); }} onPause={() => { setPlaying(false); setLoading(false); }} onEnded={() => setPlaying(false)}
         onWaiting={() => setLoading(true)} onCanPlay={() => setLoading(false)} onError={() => { setError(true); setPlaying(false); setLoading(false); }} />
       {error && <p role="alert" className="text-sm text-destructive mt-2">Файл пісні недоступний. Автор має завантажити його повторно.</p>}
@@ -69,13 +72,13 @@ export function PortfolioAudioCard({ track, category, actions }: { track: Portfo
   return <article className="min-w-0 overflow-hidden rounded-lg border border-border bg-card">
     <div className="relative aspect-square overflow-hidden bg-muted">
       <img src={!coverFailed && track.coverUrl ? track.coverUrl : vinyl} alt={`Обкладинка: ${track.title}`} onError={() => setCoverFailed(true)} loading="lazy" decoding="async" width={768} height={768} className="w-full h-full object-cover" />
-      <div className="absolute top-3 left-3 bg-background/90 px-2 py-1 text-xs font-medium rounded">{category}</div>
       {actions && <div className="absolute top-2 right-2">{actions}</div>}
       <Button size="icon" className="absolute bottom-3 right-3 h-12 w-12 rounded-full" onClick={() => music?.toggle(track)} aria-label={`${playing ? 'Призупинити' : 'Відтворити'}: ${track.title}`} title={playing ? 'Призупинити' : 'Відтворити'}>
         {active && music?.loading ? <Loader2 className="animate-spin" /> : playing ? <Pause /> : <Play />}
       </Button>
     </div>
     <div className="p-4 space-y-3">
+      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground"><span className="break-words">{category}</span>{music?.durations[track.id] !== undefined && <span className="tabular-nums shrink-0">{Math.floor(music.durations[track.id] / 60)}:{Math.floor(music.durations[track.id] % 60).toString().padStart(2, '0')}</span>}</div>
       <h4 className="font-semibold text-base break-words leading-snug">{track.title}</h4>
       {track.authorName && <div className="flex items-center gap-2 min-w-0"><Avatar className="h-6 w-6 shrink-0"><AvatarImage src={track.authorAvatar || undefined} /><AvatarFallback className="text-xs">{track.authorName[0]}</AvatarFallback></Avatar><span className="text-xs text-muted-foreground break-words">{track.authorName}</span></div>}
       {track.description && <p className="text-sm text-muted-foreground line-clamp-2 break-words">{track.description}</p>}
