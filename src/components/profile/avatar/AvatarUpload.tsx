@@ -6,6 +6,9 @@ import { AvatarDisplay } from './AvatarDisplay';
 import { useAvatarUpload } from './useAvatarUpload';
 import { ImageCropEditor } from '@/components/ui/ImageCropEditor';
 import { Crop, Loader2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface AvatarUploadProps {
   userId: string;
@@ -24,6 +27,23 @@ export function AvatarUpload({ userId, avatarUrl, onAvatarChange }: AvatarUpload
 
   const [showEditor, setShowEditor] = useState(false);
   const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null);
+  const [publishUrl, setPublishUrl] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+
+  const publishToFeed = async () => {
+    if (!publishUrl) return;
+    setPublishing(true);
+    const { error } = await supabase.from('posts').insert([{
+      user_id: userId,
+      media_url: publishUrl,
+      category: 'photo',
+      content: 'Оновив(ла) фото профілю',
+    }]);
+    setPublishing(false);
+    setPublishUrl(null);
+    if (error) toast.error('Не вдалося опублікувати фото в стрічці');
+    else toast.success('Фото профілю опубліковано в стрічці новин');
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -55,7 +75,8 @@ export function AvatarUpload({ userId, avatarUrl, onAvatarChange }: AvatarUpload
 
   const handleCropComplete = async (croppedImage: string) => {
     if (uploadCroppedImage) {
-      await uploadCroppedImage(croppedImage);
+      const url = await uploadCroppedImage(croppedImage);
+      if (url) setPublishUrl(url);
     }
     setSelectedImageSrc(null);
   };
@@ -119,6 +140,23 @@ export function AvatarUpload({ userId, avatarUrl, onAvatarChange }: AvatarUpload
             circularCrop={true}
           />
         )}
+        <AlertDialog open={!!publishUrl} onOpenChange={(o) => { if (!o && !publishing) setPublishUrl(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Опублікувати фото в стрічці новин?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Друзі побачать нове фото профілю у стрічці та зможуть ставити реакції й коментувати. Якщо відмовитесь — фото зміниться лише у профілі.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {publishUrl && <img src={publishUrl} alt="Нове фото профілю" className="mx-auto h-40 w-40 rounded-full object-cover" />}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={publishing}>Ні, лише в профілі</AlertDialogCancel>
+              <AlertDialogAction onClick={(e) => { e.preventDefault(); publishToFeed(); }} disabled={publishing}>
+                {publishing ? 'Публікація...' : 'Опублікувати'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
