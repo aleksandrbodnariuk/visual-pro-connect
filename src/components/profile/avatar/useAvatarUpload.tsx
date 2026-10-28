@@ -20,7 +20,7 @@ export function useAvatarUpload(
     }
   }, [initialAvatarUrl]);
 
-  const uploadCroppedImage = async (croppedDataUrl: string) => {
+  const uploadCroppedImage = async (croppedDataUrl: string): Promise<string | null> => {
     setIsUploading(true);
 
     try {
@@ -39,7 +39,11 @@ export function useAvatarUpload(
       console.log('Розмір файлу:', file.size, 'байт');
       
       // Delete old avatar from storage before uploading new one
-      await deleteOldFile('avatars', avatarUrl);
+      // Keep the old avatar file if it was published as a feed post
+      if (avatarUrl) {
+        const { count } = await supabase.from('posts').select('id', { count: 'exact', head: true }).eq('media_url', avatarUrl);
+        if (!count) await deleteOldFile('avatars', avatarUrl);
+      }
       
       // Create unique file name
       const uniqueFileName = `${userId}-${Date.now()}${OUTPUT_EXTENSION}`;
@@ -87,9 +91,11 @@ export function useAvatarUpload(
       }
 
       toast.success('Аватар успішно оновлено');
+      return publicUrl;
     } catch (error) {
       console.error('Помилка при завантаженні аватара:', error);
       toast.error('Не вдалося завантажити аватар. Перевірте підключення до інтернету та спробуйте ще раз.');
+      return null;
     } finally {
       setIsUploading(false);
     }
