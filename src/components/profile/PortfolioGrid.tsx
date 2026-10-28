@@ -35,7 +35,7 @@ import { usePortfolioCategories } from "@/hooks/usePortfolioCategories";
 import { PortfolioCollection } from "./PortfolioCollection";
 import { PortfolioMusicProvider } from "./PortfolioMusic";
 import { getPortfolioMediaSources } from "@/lib/portfolioPresentation";
-import { deletePortfolioVariants } from "@/lib/portfolioMediaPipeline";
+import { deletePortfolioVariants, uploadPortfolioCover } from "@/lib/portfolioMediaPipeline";
 
 interface PortfolioItem {
   id: string;
@@ -147,7 +147,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
   const { categories: portfolioCategories } = usePortfolioCategories();
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(!!userId);
   const [filter, setFilter] = useState<string>('all');
   const [playingItem, setPlayingItem] = useState<{ embedUrl: string; title: string } | null>(null);
   const [viewingPhotoIndex, setViewingPhotoIndex] = useState<number | null>(null);
@@ -157,6 +157,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
   const knownIdsRef = useRef<Set<string>>(new Set());
   // Edit dialog state
   const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null);
+  const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editCategory, setEditCategory] = useState<string>("");
   const [editVideoUrl, setEditVideoUrl] = useState("");
@@ -273,6 +274,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
   
   const openEditDialog = (item: PortfolioItem) => {
     setEditingItem(item);
+    setEditCoverFile(null);
     setEditTitle(item.title || "");
     setEditCategory(item.category || "");
     setEditVideoUrl(item.type === "video" ? item.displayUrl : "");
@@ -302,6 +304,13 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
         updates.media_display_url = editVideoUrl.trim();
       }
 
+      let newCover: string | null = null;
+      if (editingItem.type === 'audio' && editCoverFile && userId) {
+        const cover = await uploadPortfolioCover(editCoverFile, userId);
+        updates.media_preview_url = cover.previewUrl || cover.originalUrl;
+        updates.media_display_url = cover.displayUrl || cover.originalUrl;
+        newCover = cover.previewUrl || cover.originalUrl;
+      }
       const { error } = await supabase
         .from("portfolio")
         .update(updates)
@@ -315,6 +324,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
             ? {
                 ...it,
                 title: editTitle.trim(),
+                ...(newCover ? { coverUrl: newCover, thumbnailUrl: newCover } : {}),
                 category: editCategory || null,
                 ...(editingItem.type === "video" && editVideoUrl.trim()
                   ? { displayUrl: editVideoUrl.trim(), thumbnailUrl: editVideoUrl.trim() }
@@ -426,7 +436,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
     <PortfolioMusicProvider>
       {/* Filter buttons */}
       <div className="overflow-x-auto -mx-3 px-3 pb-1 mb-4">
-        <div className="flex gap-2 min-w-max">
+        <div className="flex flex-wrap gap-2">
           {FILTERS.map((f) => (
             <Button variant="outline"
               key={f.key}
@@ -581,6 +591,7 @@ export const PortfolioGrid = memo(({ items: initialItems, className, userId, isO
                   </SelectContent>
                 </Select>
               </div>
+              {editingItem.type === 'audio' && <div className="space-y-2"><Label htmlFor="grid-audio-cover">Замінити обкладинку пісні</Label><Input id="grid-audio-cover" type="file" accept="image/*" disabled={savingEdit} onChange={event => setEditCoverFile(event.target.files?.[0] || null)} /></div>}
               {editingItem.type === "video" && (
                 <div>
                   <Label htmlFor="edit-pf-video">Посилання на відео</Label>
