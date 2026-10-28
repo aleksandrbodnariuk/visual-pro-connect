@@ -168,7 +168,7 @@ export function PortfolioBlock() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="overflow-x-auto -mx-3 px-3 pb-1">
-          <div className="flex gap-2 min-w-max">
+          <div className="flex flex-wrap gap-2">
             {FILTERS.map((f) => (
               <Button variant="outline"
                 key={f.key}

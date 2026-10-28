@@ -282,11 +282,6 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
       files.map((f) => ({ name: f.name, status: "pending" as const }))
     );
 
-    let uploadedCover: Awaited<ReturnType<typeof uploadPortfolioImageVariants>> | null = null;
-    if (coverFile && files.some(file => getMediaTypeFromFile(file) === 'audio')) {
-      try { uploadedCover = await uploadPortfolioCover(coverFile, userId); }
-      catch (error) { toast.error('Не вдалося завантажити обкладинку'); setIsUploading(false); setUploadProgress([]); return; }
-    }
     let successCount = 0;
     let failCount = 0;
     const isMulti = files.length > 1;
@@ -306,6 +301,7 @@ export function PortfolioManager({ userId, onUpdate }: PortfolioManagerProps) {
           getStorageBucketForMediaType(mediaType),
         );
 
+        const uploadedCover = mediaType === 'audio' && coverFile ? await uploadPortfolioCover(coverFile, userId) : null;
         // For multi-upload, append index to title for uniqueness
         const itemTitle = isMulti ? `${title} (${i + 1})` : title;
 
