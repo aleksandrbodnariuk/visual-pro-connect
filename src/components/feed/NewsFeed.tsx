@@ -23,6 +23,7 @@ import { RecommendedGroupPosts } from "./RecommendedGroupPosts";
 import { SponsoredPostCard } from "@/components/ads/SponsoredPostCard";
 import { useActiveFeedAds } from "@/hooks/ads/useFeedAds";
 import { interleaveAds } from "@/lib/feedAds";
+import { FOLLOWED_PRIORITY_LIMIT, followedSinceIso, mergeFollowedFirst } from "@/lib/followedFeed";
 
 const PAGE_SIZE = 12;
 const PREFETCH_THRESHOLD = 0.7; // trigger loadMore at 70% scroll
@@ -150,15 +151,49 @@ export function NewsFeed() {
     }));
   };
 
+  /** Fresh posts of people I follow (Facebook-style priority block). */
+  const fetchFollowedPriority = async (): Promise<any[]> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return [];
+    const { data: follows } = await (supabase as any).from('user_follows')
+      .select('following_id').eq('follower_id', uid).limit(1000);
+    const ids = (follows || []).map((f: any) => f.following_id).filter(Boolean);
+    if (ids.length === 0) return [];
+    const myGroups = await getMyGroupIds();
+    const { data } = await supabase.from('posts').select('*')
+      .in('user_id', ids)
+      .or(buildFeedGroupFilter(myGroups))
+      .gte('created_at', followedSinceIso())
+      .order('created_at', { ascending: false })
+      .limit(FOLLOWED_PRIORITY_LIMIT);
+    if (!data || data.length === 0) return [];
+    const { data: authors } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: [...new Set(data.map(p => p.user_id))] as string[] });
+    const groupIds = [...new Set(data.map((p: any) => p.group_id).filter(Boolean))] as string[];
+    const { data: groupsData } = groupIds.length > 0
+      ? await supabase.from('groups').select('id, name, avatar_url').in('id', groupIds)
+      : { data: [] as any[] };
+    return data.map(post => ({
+      ...post,
+      followed: true,
+      author: authors?.find((a: any) => a.id === post.user_id) || null,
+      group: groupsData?.find((g: any) => g.id === (post as any).group_id) || null,
+    }));
+  };
+
   const loadInitialPosts = async () => {
     try {
       setLoading(true);
       const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
-      const result = await Promise.race([fetchPostsCursor(null), timeout]);
+      const [regular, followed] = await Promise.race([
+        Promise.all([fetchPostsCursor(null), fetchFollowedPriority().catch(() => [])]),
+        timeout,
+      ]);
+      const result = mergeFollowedFirst(followed, regular);
       knownPostIdsRef.current = new Set(result.map((p: any) => p.id));
       setPosts(result);
-      setHasMore(result.length === PAGE_SIZE);
-      setLastCreatedAt(result.length > 0 ? result[result.length - 1].created_at : null);
+      setHasMore(regular.length === PAGE_SIZE);
+      setLastCreatedAt(regular.length > 0 ? regular[regular.length - 1].created_at : null);
     } catch (error) {
       console.error("Error loading posts:", error);
       setPosts([]);
