@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { UserPlus, MessageCircle } from "lucide-react";
+import { UserPlus, MessageCircle, UserCheck, Rss } from "lucide-react";
+import { useFollow } from "@/hooks/useFollow";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import { MapPin, Link as LinkIcon, Calendar, Edit } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -57,6 +58,7 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
     isCurrentUser
   } = user;
 
+  const follow = useFollow(userId);
   const { vip } = useUserVip(userId);
   const { tiers } = useVipTiers(false);
   const vipTier = vip ? getVipTier(vip.tier, tiers) : null;
@@ -217,7 +219,15 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Написати
                 </Button>
-                <Button className="bg-gradient-purple">Підписатися</Button>
+                <Button
+                  variant={follow.isFollowing ? "outline" : "default"}
+                  className={follow.isFollowing ? "gap-2" : "bg-gradient-purple gap-2"}
+                  onClick={follow.toggle}
+                  disabled={follow.busy}
+                >
+                  {follow.isFollowing ? <UserCheck className="w-4 h-4" /> : <Rss className="w-4 h-4" />}
+                  {follow.isFollowing ? "Ви підписані" : "Підписатися"}
+                </Button>
                 {!isFriend && (
                   <Button 
                     variant="secondary" 
