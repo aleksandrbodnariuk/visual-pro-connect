@@ -256,11 +256,11 @@ export function ProfileHeader({ user, onEditProfile }: ProfileHeaderProps) {
               <span className="text-xs text-muted-foreground">Публікацій</span>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-lg font-bold">{followersCount}</span>
+              <span className="text-lg font-bold">{follow.followersCount}</span>
               <span className="text-xs text-muted-foreground">Підписників</span>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-lg font-bold">{followingCount}</span>
+              <span className="text-lg font-bold">{follow.followingCount}</span>
               <span className="text-xs text-muted-foreground">Підписок</span>
             </div>
           </div>
