@@ -199,7 +199,31 @@ export default function Notifications() {
   };
 
   const isInviteNotification = (link: string | null) => {
-    return link?.startsWith('/accept-invite/');
+    return link?.startsWith('/accept-invite/') || link?.startsWith('/friend-request/');
+  };
+  const isFriendRequest = (link: string | null) => !!link?.startsWith('/friend-request/');
+
+  const handleFriendRequest = async (notificationId: string, link: string, action: 'accepted' | 'rejected') => {
+    setAcceptingInvite(notificationId);
+    try {
+      const requestId = link.replace('/friend-request/', '');
+      const { data, error } = await supabase
+        .from('friend_requests')
+        .update({ status: action })
+        .eq('id', requestId)
+        .eq('receiver_id', authUser?.id ?? '')
+        .eq('status', 'pending')
+        .select('id');
+      if (error) throw error;
+      if (!data?.length) toast.info('Запит уже оброблено або скасовано');
+      else toast.success(action === 'accepted' ? 'Запит у друзі прийнято' : 'Запит відхилено');
+      await deleteNotification(notificationId);
+    } catch (err) {
+      console.error(err);
+      toast.error('Не вдалося обробити запит у друзі');
+    } finally {
+      setAcceptingInvite(null);
+    }
   };
 
   const getInviteId = (link: string) => {
@@ -348,7 +372,24 @@ export default function Notifications() {
                           </div>
                         </div>
                         <p className="text-muted-foreground">{notification.message || notification.content}</p>
-                        {isInviteNotification(notification.link) && (
+                        {isFriendRequest(notification.link) && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Button size="sm" className="min-h-[44px]" disabled={acceptingInvite === notification.id}
+                              onClick={(e) => { e.stopPropagation(); handleFriendRequest(notification.id, notification.link, 'accepted'); }}>
+                              {acceptingInvite === notification.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                              Підтвердити
+                            </Button>
+                            <Button size="sm" variant="outline" className="min-h-[44px]" disabled={acceptingInvite === notification.id}
+                              onClick={(e) => { e.stopPropagation(); handleFriendRequest(notification.id, notification.link, 'rejected'); }}>
+                              Відхилити
+                            </Button>
+                            <Button size="sm" variant="ghost" className="min-h-[44px]"
+                              onClick={(e) => { e.stopPropagation(); navigate('/friends'); }}>
+                              Усі запити
+                            </Button>
+                          </div>
+                        )}
+                        {isInviteNotification(notification.link) && !isFriendRequest(notification.link) && (
                           <div className="mt-3">
                             <Button
                               size="sm"
