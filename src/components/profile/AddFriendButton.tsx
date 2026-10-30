@@ -9,7 +9,7 @@ interface AddFriendButtonProps {
 }
 
 export function AddFriendButton({ userId, userName }: AddFriendButtonProps) {
-  const { checkFriendshipStatus, sendFriendRequest } = useFriendRequests();
+  const { checkFriendshipStatus, sendFriendRequest, respondToFriendRequest, refreshFriendRequests } = useFriendRequests();
   
   const friendshipStatus = checkFriendshipStatus(userId);
   
@@ -37,10 +37,15 @@ export function AddFriendButton({ userId, userName }: AddFriendButtonProps) {
 
   if (friendshipStatus.status === 'pending-received') {
     return (
-      <Button variant="outline" disabled>
-        <Clock className="w-4 h-4 mr-2" />
-        Очікує відповіді
-      </Button>
+      <div className="flex gap-2">
+        <Button onClick={async () => { if (friendshipStatus.requestId) { await respondToFriendRequest(friendshipStatus.requestId, 'accept'); refreshFriendRequests(); } }}>
+          <UserCheck className="w-4 h-4 mr-2" />
+          Підтвердити
+        </Button>
+        <Button variant="outline" onClick={async () => { if (friendshipStatus.requestId) { await respondToFriendRequest(friendshipStatus.requestId, 'reject'); refreshFriendRequests(); } }}>
+          Відхилити
+        </Button>
+      </div>
     );
   }
 
