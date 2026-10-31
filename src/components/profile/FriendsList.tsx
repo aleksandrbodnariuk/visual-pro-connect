@@ -315,6 +315,18 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
         </CardContent>
       </Card>
 
+      {listsEnabled && (
+        <FriendListsManager
+          open={manageOpen}
+          onOpenChange={setManageOpen}
+          lists={fl.lists}
+          counts={listCounts}
+          createList={fl.createList}
+          renameList={fl.renameList}
+          deleteList={fl.deleteList}
+        />
+      )}
+
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
