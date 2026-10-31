@@ -1283,6 +1283,65 @@ export type Database = {
         }
         Relationships: []
       }
+      friend_list_members: {
+        Row: {
+          created_at: string
+          friend_id: string
+          id: string
+          list_id: string
+          owner_id: string
+        }
+        Insert: {
+          created_at?: string
+          friend_id: string
+          id?: string
+          list_id: string
+          owner_id: string
+        }
+        Update: {
+          created_at?: string
+          friend_id?: string
+          id?: string
+          list_id?: string
+          owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friend_list_members_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "friend_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      friend_lists: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       friend_requests: {
         Row: {
           created_at: string | null
