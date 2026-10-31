@@ -152,31 +152,38 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
     const online = isUserOnline(lastSeenMap.get(friend!.id) ?? null);
     
     const cardContent = (
-      <Link
-        to={`/profile/${friend?.id}`}
-        className="group"
-      >
-        <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
-          {friend?.avatar_url ? (
-            <img
-              src={friend.avatar_url}
-              alt={friend.full_name || 'Друг'}
-              loading="lazy"
-              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
-            />
-          ) : (
-            <div className="h-full w-full flex items-center justify-center text-xl sm:text-2xl md:text-3xl font-medium text-muted-foreground">
-              {getInitials(friend?.full_name)}
-            </div>
-          )}
-          {online && (
-            <span className="absolute bottom-2 right-2 block h-4 w-4 rounded-full bg-green-500 ring-2 ring-background" />
-          )}
-        </div>
-        <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-medium truncate text-center">
-          {friend?.full_name || 'Користувач'}
-        </p>
-      </Link>
+      <div className="relative">
+        <Link
+          to={`/profile/${friend?.id}`}
+          className="group block"
+        >
+          <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
+            {friend?.avatar_url ? (
+              <img
+                src={friend.avatar_url}
+                alt={friend.full_name || 'Друг'}
+                loading="lazy"
+                className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
+              />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center text-xl sm:text-2xl md:text-3xl font-medium text-muted-foreground">
+                {getInitials(friend?.full_name)}
+              </div>
+            )}
+            {online && (
+              <span className="absolute bottom-2 right-2 block h-4 w-4 rounded-full bg-green-500 ring-2 ring-background" />
+            )}
+          </div>
+          <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-medium truncate text-center">
+            {friend?.full_name || 'Користувач'}
+          </p>
+        </Link>
+        {listsEnabled && (
+          <div className="absolute top-1.5 right-1.5">
+            {renderPicker(friend, "relative h-9 w-9 bg-background/80 backdrop-blur hover:bg-background")}
+          </div>
+        )}
+      </div>
     );
 
     if (!isCurrentUser) {
@@ -234,6 +241,34 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
             )}
           </div>
 
+          {listsEnabled && friendsList.length > 0 && (
+            <div className="flex items-center gap-2 mb-3 overflow-x-auto scrollbar-hide pb-1">
+              <Button
+                size="sm"
+                variant={activeList === "all" ? "default" : "outline"}
+                className="min-h-10 shrink-0 rounded-full"
+                onClick={() => setActiveList("all")}
+              >
+                Всі <span className="ml-1 opacity-70">{friendsList.length}</span>
+              </Button>
+              {fl.lists.map((l) => (
+                <Button
+                  key={l.id}
+                  size="sm"
+                  variant={activeList === l.id ? "default" : "outline"}
+                  className="min-h-10 shrink-0 rounded-full"
+                  onClick={() => setActiveList(l.id)}
+                >
+                  {l.name} <span className="ml-1 opacity-70">{listCounts[l.id] ?? 0}</span>
+                </Button>
+              ))}
+              <Button size="sm" variant="ghost" className="min-h-10 shrink-0" onClick={() => setManageOpen(true)}>
+                <Settings2 className="h-4 w-4 mr-1" />
+                {fl.lists.length === 0 ? "Створити списки" : "Керувати"}
+              </Button>
+            </div>
+          )}
+
           {friendsList.length > 0 && (
             <div className="flex flex-wrap items-center gap-3 mb-4">
               <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as "grid" | "list")}>
@@ -249,7 +284,11 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
             </div>
           )}
 
-          {friendsList.length > 0 ? (
+          {friendsList.length > 0 && displayedFriends.length === 0 ? (
+            <p className="text-muted-foreground text-center py-6 sm:py-8">
+              У цьому списку ще немає друзів. Натисніть значок міток на фото друга, щоб додати його сюди.
+            </p>
+          ) : friendsList.length > 0 ? (
             viewMode === "grid" ? (
               <div className="grid gap-2 sm:gap-3" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${tileSize}px, 1fr))` }}>
                 {displayedFriends.map(renderFriendCard)}
@@ -259,10 +298,13 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
                 {displayedFriends.map((f: any) => {
                   const online = isUserOnline(lastSeenMap.get(f.id) ?? null);
                   return (
-                    <Link key={f.id} to={`/profile/${f.id}`} className="flex items-center gap-3 min-h-11 py-2 px-1 hover:bg-muted/50 rounded">
-                      <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${online ? "bg-green-500" : "bg-muted-foreground/30"}`} />
-                      <span className="text-sm font-medium truncate">{f.full_name || "Користувач"}</span>
-                    </Link>
+                    <div key={f.id} className="flex items-center gap-2 py-1">
+                      <Link to={`/profile/${f.id}`} className="flex flex-1 min-w-0 items-center gap-3 min-h-11 py-1 px-1 hover:bg-muted/50 rounded">
+                        <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${online ? "bg-green-500" : "bg-muted-foreground/30"}`} />
+                        <span className="text-sm font-medium truncate">{f.full_name || "Користувач"}</span>
+                      </Link>
+                      {renderPicker(f, "relative h-10 w-10 shrink-0")}
+                    </div>
                   );
                 })}
               </div>
