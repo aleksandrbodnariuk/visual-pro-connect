@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { test } from "node:test";
+import assert from "node:assert/strict";
 import { filterFriendsByList } from "./friendLists";
 
 const friends = [{ id: "a" }, { id: "b" }, { id: "c" }];
@@ -8,15 +9,15 @@ const memberships = [
   { list_id: "colleagues", friend_id: "b" },
 ];
 
-describe("filterFriendsByList", () => {
-  it("'Всі' shows every friend", () => {
-    expect(filterFriendsByList(friends, memberships, "all").map((f) => f.id)).toEqual(["a", "b", "c"]);
-  });
-  it("a selected list shows only its friends", () => {
-    expect(filterFriendsByList(friends, memberships, "colleagues").map((f) => f.id)).toEqual(["a", "b"]);
-  });
-  it("one friend can be in several lists at once", () => {
-    expect(filterFriendsByList(friends, memberships, "family").map((f) => f.id)).toEqual(["a"]);
-    expect(filterFriendsByList(friends, memberships, "colleagues").map((f) => f.id)).toContain("a");
-  });
+test("'Всі' shows every friend", () => {
+  assert.deepEqual(filterFriendsByList(friends, memberships, "all").map((f) => f.id), ["a", "b", "c"]);
+});
+
+test("a selected list shows only its friends", () => {
+  assert.deepEqual(filterFriendsByList(friends, memberships, "colleagues").map((f) => f.id), ["a", "b"]);
+});
+
+test("one friend can be in several lists at once", () => {
+  assert.deepEqual(filterFriendsByList(friends, memberships, "family").map((f) => f.id), ["a"]);
+  assert.ok(filterFriendsByList(friends, memberships, "colleagues").some((f) => f.id === "a"));
 });
