@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Trash2, Ban } from "lucide-react";
+import { Trash2, Ban, LayoutGrid, List } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -30,6 +32,10 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [blockTarget, setBlockTarget] = useState<{ id: string; name: string } | null>(null);
   const [lastSeenMap, setLastSeenMap] = useState<Map<string, string | null>>(new Map());
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => (localStorage.getItem("friends_view") === "list" ? "list" : "grid"));
+  const [tileSize, setTileSize] = useState<number>(() => Number(localStorage.getItem("friends_tile")) || 120);
+  useEffect(() => { localStorage.setItem("friends_view", viewMode); }, [viewMode]);
+  useEffect(() => { localStorage.setItem("friends_tile", String(tileSize)); }, [tileSize]);
 
   useEffect(() => {
     const loadFriendData = async () => {
@@ -201,10 +207,39 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
             )}
           </div>
 
-          {friendsList.length > 0 ? (
-            <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-3 gap-2 sm:gap-3">
-              {displayedFriends.map(renderFriendCard)}
+          {friendsList.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as "grid" | "list")}>
+                <ToggleGroupItem value="grid" aria-label="Плитка з фото" className="h-11 w-11"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
+                <ToggleGroupItem value="list" aria-label="Список без фото" className="h-11 w-11"><List className="h-4 w-4" /></ToggleGroupItem>
+              </ToggleGroup>
+              {viewMode === "grid" && (
+                <div className="flex items-center gap-2 flex-1 min-w-[160px] max-w-xs">
+                  <span className="text-xs text-muted-foreground">Розмір</span>
+                  <Slider min={64} max={220} step={4} value={[tileSize]} onValueChange={(v) => setTileSize(v[0])} aria-label="Розмір аватарів" />
+                </div>
+              )}
             </div>
+          )}
+
+          {friendsList.length > 0 ? (
+            viewMode === "grid" ? (
+              <div className="grid gap-2 sm:gap-3" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${tileSize}px, 1fr))` }}>
+                {displayedFriends.map(renderFriendCard)}
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {displayedFriends.map((f: any) => {
+                  const online = isUserOnline(lastSeenMap.get(f.id) ?? null);
+                  return (
+                    <Link key={f.id} to={`/profile/${f.id}`} className="flex items-center gap-3 min-h-11 py-2 px-1 hover:bg-muted/50 rounded">
+                      <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${online ? "bg-green-500" : "bg-muted-foreground/30"}`} />
+                      <span className="text-sm font-medium truncate">{f.full_name || "Користувач"}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )
           ) : (
             <p className="text-muted-foreground text-center py-6 sm:py-8">Поки що немає друзів</p>
           )}
