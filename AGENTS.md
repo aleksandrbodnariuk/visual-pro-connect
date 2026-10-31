@@ -14,3 +14,4 @@
 - Admin tabs and chart-heavy panels are lazy-loaded with a Suspense fallback, because eager imports made the admin chunk exceed 1 MB.
 
 - Portfolio audio always plays `media_url`; preview/display columns hold optional cover images, and both public portfolio views share one active music player, because artwork must never replace the playable source.
+- Personal friend lists (friend_lists + friend_list_members) are owner-only via RLS and many-to-many, because tags are private and one friend may belong to several lists.
