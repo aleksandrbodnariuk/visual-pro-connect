@@ -24,6 +24,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { isUserOnline } from "@/lib/onlineStatus";
+import { useFriendLists } from "@/hooks/friends/useFriendLists";
+import { filterFriendsByList } from "@/lib/friendLists";
+import { FriendListsManager, FriendListPicker } from "@/components/profile/FriendListsControls";
+import { Settings2 } from "lucide-react";
 
 export function FriendsList({ userId, isCurrentUser = true, showAll = false }: { userId?: string; isCurrentUser?: boolean; showAll?: boolean }) {
   const { friends: myFriends, refreshFriendRequests, removeFriend, blockUser } = useFriendRequests();
@@ -34,6 +38,12 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
   const [lastSeenMap, setLastSeenMap] = useState<Map<string, string | null>>(new Map());
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => (localStorage.getItem("friends_view") === "list" ? "list" : "grid"));
   const [tileSize, setTileSize] = useState<number>(() => Number(localStorage.getItem("friends_tile")) || 120);
+  const fl = useFriendLists();
+  const [activeList, setActiveList] = useState<string | "all">("all");
+  const [manageOpen, setManageOpen] = useState(false);
+  useEffect(() => {
+    if (activeList !== "all" && !fl.lists.some((l) => l.id === activeList)) setActiveList("all");
+  }, [fl.lists, activeList]);
   useEffect(() => { localStorage.setItem("friends_view", viewMode); }, [viewMode]);
   useEffect(() => { localStorage.setItem("friends_tile", String(tileSize)); }, [tileSize]);
 
@@ -93,7 +103,24 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
     return name.charAt(0);
   };
 
-  const displayedFriends = showAll ? friendsList : friendsList.slice(0, 9);
+  const listsEnabled = isCurrentUser && showAll;
+  const filteredFriends = listsEnabled ? filterFriendsByList(friendsList as any[], fl.memberships, activeList) : friendsList;
+  const displayedFriends = showAll ? filteredFriends : filteredFriends.slice(0, 9);
+  const listCounts: Record<string, number> = {};
+  const friendIdSet = new Set(friendsList.map((f: any) => f?.id));
+  fl.memberships.forEach((m) => { if (friendIdSet.has(m.friend_id)) listCounts[m.list_id] = (listCounts[m.list_id] ?? 0) + 1; });
+
+  const renderPicker = (friend: any, className?: string) =>
+    listsEnabled ? (
+      <FriendListPicker
+        friendName={friend?.full_name || "Користувач"}
+        lists={fl.lists}
+        selected={fl.listsOf(friend.id)}
+        onToggle={(listId) => fl.toggleMember(listId, friend.id)}
+        onManage={() => setManageOpen(true)}
+        className={className}
+      />
+    ) : null;
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
