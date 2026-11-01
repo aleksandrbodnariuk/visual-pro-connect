@@ -4,7 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Check, Pencil, Plus, Tags, Trash2, X } from "lucide-react";
+import { Check, MoreHorizontal, Pencil, Plus, Tags, Trash2, X } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { FRIEND_LIST_NAME_MAX, FRIEND_LIST_PRESETS } from "@/lib/friendLists";
 import type { FriendListItem } from "@/hooks/friends/useFriendLists";
 
@@ -115,42 +119,49 @@ interface PickerProps {
 
 export function FriendListPicker({ friendName, lists, selected, onToggle, onManage, className }: PickerProps) {
   return (
-    <Popover>
-      <PopoverTrigger asChild>
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
         <Button
           type="button"
-          variant="secondary"
+          variant="ghost"
           size="icon"
-          aria-label={`Списки для ${friendName}`}
+          aria-label={`Дії для ${friendName}`}
           className={className ?? "h-9 w-9"}
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
         >
-          <Tags className="h-4 w-4" />
+          <MoreHorizontal className="h-4 w-4" />
           {selected.length > 0 && (
-            <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] leading-4 text-center">
+            <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] leading-4 text-center">
               {selected.length}
             </span>
           )}
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-64 p-2" align="end" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs text-muted-foreground px-2 pb-2 truncate">{friendName}</p>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-64" align="end">
+        <DropdownMenuLabel className="truncate">{friendName}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <p className="text-xs text-muted-foreground px-2 py-1">Списки</p>
         {lists.length === 0 ? (
           <p className="text-sm px-2 pb-2">Ще немає списків.</p>
         ) : (
           <div className="max-h-64 overflow-y-auto">
             {lists.map((l) => (
-              <label key={l.id} className="flex items-center gap-2 px-2 min-h-10 rounded hover:bg-muted cursor-pointer">
-                <Checkbox checked={selected.includes(l.id)} onCheckedChange={() => onToggle(l.id)} />
-                <span className="text-sm truncate">{l.name}</span>
-              </label>
+              <DropdownMenuCheckboxItem
+                key={l.id}
+                checked={selected.includes(l.id)}
+                onSelect={(e) => e.preventDefault()}
+                onCheckedChange={() => onToggle(l.id)}
+                className="min-h-10"
+              >
+                <span className="truncate">{l.name}</span>
+              </DropdownMenuCheckboxItem>
             ))}
           </div>
         )}
-        <Button variant="ghost" size="sm" className="w-full mt-1 justify-start" onClick={onManage}>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={onManage} className="min-h-10">
           <Pencil className="h-3.5 w-3.5 mr-2" /> Керувати списками
-        </Button>
-      </PopoverContent>
-    </Popover>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
