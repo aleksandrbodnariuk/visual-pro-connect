@@ -1,9 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Trash2, Ban, LayoutGrid, List } from "lucide-react";
+import { Trash2, Ban, LayoutGrid, List, ChevronLeft, ChevronRight } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -41,6 +41,7 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
   const fl = useFriendLists();
   const [activeList, setActiveList] = useState<string | "all">("all");
   const [manageOpen, setManageOpen] = useState(false);
+  const chipsRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (activeList !== "all" && !fl.lists.some((l) => l.id === activeList)) setActiveList("all");
   }, [fl.lists, activeList]);
@@ -242,29 +243,41 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
           </div>
 
           {listsEnabled && friendsList.length > 0 && (
-            <div className="flex items-center gap-2 mb-3 overflow-x-auto scrollbar-hide pb-1">
-              <Button
-                size="sm"
-                variant={activeList === "all" ? "default" : "outline"}
-                className="min-h-10 shrink-0 rounded-full"
-                onClick={() => setActiveList("all")}
-              >
-                Всі <span className="ml-1 opacity-70">{friendsList.length}</span>
+            <div className="flex items-center gap-1 mb-3">
+              <Button size="icon" variant="ghost" className="h-10 w-10 shrink-0" aria-label="Прокрутити ліворуч" onClick={() => chipsRef.current?.scrollBy({ left: -240, behavior: "smooth" })}>
+                <ChevronLeft className="h-4 w-4" />
               </Button>
-              {fl.lists.map((l) => (
+              <div
+                ref={chipsRef}
+                onWheel={(e) => { if (chipsRef.current && Math.abs(e.deltaY) > Math.abs(e.deltaX)) chipsRef.current.scrollLeft += e.deltaY; }}
+                className="flex flex-1 min-w-0 items-center gap-2 overflow-x-auto pb-2 [scrollbar-width:thin]"
+              >
                 <Button
-                  key={l.id}
                   size="sm"
-                  variant={activeList === l.id ? "default" : "outline"}
+                  variant={activeList === "all" ? "default" : "outline"}
                   className="min-h-10 shrink-0 rounded-full"
-                  onClick={() => setActiveList(l.id)}
+                  onClick={() => setActiveList("all")}
                 >
-                  {l.name} <span className="ml-1 opacity-70">{listCounts[l.id] ?? 0}</span>
+                  Всі <span className="ml-1 opacity-70">{friendsList.length}</span>
                 </Button>
-              ))}
+                {fl.lists.map((l) => (
+                  <Button
+                    key={l.id}
+                    size="sm"
+                    variant={activeList === l.id ? "default" : "outline"}
+                    className="min-h-10 shrink-0 rounded-full"
+                    onClick={() => setActiveList(l.id)}
+                  >
+                    {l.name} <span className="ml-1 opacity-70">{listCounts[l.id] ?? 0}</span>
+                  </Button>
+                ))}
+              </div>
+              <Button size="icon" variant="ghost" className="h-10 w-10 shrink-0" aria-label="Прокрутити праворуч" onClick={() => chipsRef.current?.scrollBy({ left: 240, behavior: "smooth" })}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
               <Button size="sm" variant="ghost" className="min-h-10 shrink-0" onClick={() => setManageOpen(true)}>
                 <Settings2 className="h-4 w-4 mr-1" />
-                {fl.lists.length === 0 ? "Створити списки" : "Керувати"}
+                <span className="hidden sm:inline">{fl.lists.length === 0 ? "Створити списки" : "Керувати"}</span>
               </Button>
             </div>
           )}
