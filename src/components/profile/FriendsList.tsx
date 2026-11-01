@@ -174,15 +174,15 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
               <span className="absolute bottom-2 right-2 block h-4 w-4 rounded-full bg-green-500 ring-2 ring-background" />
             )}
           </div>
-          <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-medium truncate text-center">
-            {friend?.full_name || 'Користувач'}
-          </p>
         </Link>
-        {listsEnabled && (
-          <div className="absolute top-1.5 right-1.5">
-            {renderPicker(friend, "relative h-9 w-9 bg-background/80 backdrop-blur hover:bg-background")}
-          </div>
-        )}
+        <div className="mt-1.5 sm:mt-2 flex items-center gap-1">
+          <Link to={`/profile/${friend?.id}`} className="flex-1 min-w-0">
+            <p className={`text-xs sm:text-sm font-medium truncate ${listsEnabled ? "text-left" : "text-center"}`}>
+              {friend?.full_name || 'Користувач'}
+            </p>
+          </Link>
+          {listsEnabled && renderPicker(friend, "relative h-8 w-8 shrink-0")}
+        </div>
       </div>
     );
 
