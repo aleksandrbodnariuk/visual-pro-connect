@@ -12,10 +12,10 @@ describe("wordArtifactsCleaner", () => {
   });
 });
 
-import { cleanWordText as c2 } from "./wordArtifactsCleaner";
+
 describe("split mailto stitching", () => {
   it("joins e-mail fragmented by Word fields", () => {
     const s = 'BMBG aleksandrbodnariuk HYPERLINK "mailto:aleksandrbodnariuk@gmail.com"@ HYPERLINK "mailto:aleksandrbodnariuk@gmail.com"gmail HYPERLINK "mailto:aleksandrbodnariuk@gmail.com". HYPERLINK "mailto:aleksandrbodnariuk@gmail.com"com ютуб';
-    expect(c2(s)).toBe("BMBG aleksandrbodnariuk@gmail.com ютуб");
+    expect(cleanWordText(s)).toBe("BMBG aleksandrbodnariuk@gmail.com ютуб");
   });
 });
