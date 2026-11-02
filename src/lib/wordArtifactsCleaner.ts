@@ -6,10 +6,23 @@
 const FIELD_RE =
   /\b(?:HYPERLINK|MERGEFIELD|PAGEREF|TOC|REF|PAGE|NUMPAGES|INCLUDEPICTURE|SHAPE|EMBED|FORMTEXT|FORMCHECKBOX|SEQ|DATE|TIME)\b\s+(?:\\[a-z*]\s*)*(?:"[^"]*"\s*)?(?:\\[a-z*]\s*(?:"[^"]*"\s*)?)*/g;
 
+// Word splits a linked e-mail into pieces, each prefixed by the same field:
+// `name HYPERLINK "mailto:X"@ HYPERLINK "mailto:X"gmail ... "mailto:X"com`
+const SPLIT_MAILTO_RE =
+  /(\S+\s+)?HYPERLINK\s+["“”]mailto:([^"“”\s]+)["“”][^\s"“”]*(?:\s*HYPERLINK\s+["“”]mailto:\2["“”][^\s"“”]*)*/g;
+
+/** Join e-mails that Word broke into HYPERLINK fragments back into one address. */
+export function stitchMailtoFields(text: string): string {
+  return text.replace(SPLIT_MAILTO_RE, (_m, prefix: string | undefined, email: string) => {
+    const word = prefix?.trim() ?? "";
+    if (word && email.toLowerCase().startsWith(word.toLowerCase())) return email;
+    return (prefix ?? "") + email;
+  });
+}
+
 /** Remove field codes like `HYPERLINK "mailto:a@b.c"` from plain text. */
 export function cleanWordText(text: string): string {
-  return text
-    .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F]/g, "")
+  return stitchMailtoFields(text.replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F]/g, ""))
     .replace(FIELD_RE, "")
     .replace(/[ \t]{2,}/g, " ")
     .replace(/\n{3,}/g, "\n\n");

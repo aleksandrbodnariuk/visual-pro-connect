@@ -729,6 +729,26 @@ export default function VipEditor() {
               <Button type="button" variant="ghost" size="icon" className={toolBtn} onClick={() => exec("removeFormat")} title="Очистити формат">
                 <RemoveFormatting className="h-4 w-4" />
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 shrink-0"
+                title="Прибрати службові вставки Word (HYPERLINK тощо)"
+                onClick={() => {
+                  const el = editorRef.current;
+                  if (!el) return;
+                  const before = el.innerHTML;
+                  const after = cleanWordHtml(before);
+                  if (after === before) return toast.message("Сміття Word не знайдено");
+                  el.innerHTML = after;
+                  setDirty(true);
+                  updateStats();
+                  toast.success("Текст очищено. Натисніть «Зберегти»");
+                }}
+              >
+                Очистити сміття Word
+              </Button>
             </div>
 
             {/* Бібліотека документів */}

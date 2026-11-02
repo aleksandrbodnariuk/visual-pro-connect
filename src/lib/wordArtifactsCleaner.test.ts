@@ -11,3 +11,11 @@ describe("wordArtifactsCleaner", () => {
     expect(out).toBe('<p style="color:red">Привіт</p>');
   });
 });
+
+
+describe("split mailto stitching", () => {
+  it("joins e-mail fragmented by Word fields", () => {
+    const s = 'BMBG aleksandrbodnariuk HYPERLINK "mailto:aleksandrbodnariuk@gmail.com"@ HYPERLINK "mailto:aleksandrbodnariuk@gmail.com"gmail HYPERLINK "mailto:aleksandrbodnariuk@gmail.com". HYPERLINK "mailto:aleksandrbodnariuk@gmail.com"com ютуб';
+    expect(cleanWordText(s)).toBe("BMBG aleksandrbodnariuk@gmail.com ютуб");
+  });
+});
