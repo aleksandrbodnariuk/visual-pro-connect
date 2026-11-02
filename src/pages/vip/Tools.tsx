@@ -18,6 +18,9 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUserVip } from "@/hooks/vip/useUserVip";
+import { useEffect, useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Settings2 } from "lucide-react";
 
 type Tool = {
   id: string;
@@ -98,6 +101,17 @@ export default function VipTools() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { vip, loading } = useUserVip(user?.id);
+  const storageKey = `vip_hidden_tools_${user?.id ?? "anon"}`;
+  const [hidden, setHidden] = useState<string[]>([]);
+  const [customize, setCustomize] = useState(false);
+  useEffect(() => {
+    try { setHidden(JSON.parse(localStorage.getItem(storageKey) || "[]")); } catch { setHidden([]); }
+  }, [storageKey]);
+  const toggleTool = (id: string) => {
+    const next = hidden.includes(id) ? hidden.filter((h) => h !== id) : [...hidden, id];
+    setHidden(next);
+    localStorage.setItem(storageKey, JSON.stringify(next));
+  };
 
   if (!user) {
     return (
@@ -135,7 +149,12 @@ export default function VipTools() {
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
               <Sparkles className="h-7 w-7 text-amber-500" /> VIP-інструменти
             </h1>
-            <Button variant="outline" onClick={() => navigate("/vip/moi")}>Мій VIP</Button>
+            <div className="flex gap-2">
+              <Button variant={customize ? "default" : "outline"} onClick={() => setCustomize((c) => !c)}>
+                <Settings2 className="h-4 w-4 mr-1" /> {customize ? "Готово" : "Налаштувати"}
+              </Button>
+              <Button variant="outline" onClick={() => navigate("/vip/moi")}>Мій VIP</Button>
+            </div>
           </div>
 
           {!vip && (
@@ -151,8 +170,20 @@ export default function VipTools() {
             </Card>
           )}
 
+          {customize && (
+            <Card className="p-4 space-y-2">
+              <p className="text-sm text-muted-foreground">Позначте інструменти, які показувати в розділі VIP:</p>
+              {TOOLS.map((t) => (
+                <label key={t.id} className="flex items-center gap-3 min-h-11 cursor-pointer">
+                  <Checkbox checked={!hidden.includes(t.id)} onCheckedChange={() => toggleTool(t.id)} />
+                  <span>{t.title}</span>
+                </label>
+              ))}
+            </Card>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {TOOLS.map((tool) => {
+            {TOOLS.filter((t) => !hidden.includes(t.id)).map((tool) => {
               const Icon = tool.icon;
               const lockedByVip = !vip;
               const comingSoon = !tool.available;
