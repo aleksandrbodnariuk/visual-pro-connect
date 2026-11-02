@@ -777,6 +777,16 @@ export default function VipEditor() {
                 ref={editorRef}
                 contentEditable
                 suppressContentEditableWarning
+                onPaste={(e) => {
+                  const html = e.clipboardData.getData("text/html");
+                  const text = e.clipboardData.getData("text/plain");
+                  if (!html && !text) return;
+                  e.preventDefault();
+                  const clean = html ? cleanWordHtml(html) : textToHtml(text);
+                  document.execCommand("insertHTML", false, clean);
+                  setDirty(true);
+                  updateStats();
+                }}
                 onInput={() => {
                   setDirty(true);
                   updateStats();
