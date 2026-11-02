@@ -59,6 +59,7 @@ import {
   type VipDocument,
 } from "@/hooks/vip/useVipDocuments";
 import { toast } from "sonner";
+import { cleanWordHtml, cleanWordText, textToHtml } from "@/lib/wordArtifactsCleaner";
 import { format } from "date-fns";
 import { uk } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -143,7 +144,8 @@ function extractLegacyDocText(buffer: ArrayBuffer): string {
     .replace(/\r/g, "\n")
     .replace(/\u0007|\u0013|\u0014|\u0015/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
-    .trim();
+    .trim()
+    .split("\n").map(cleanWordText).join("\n");
 }
 
 export default function VipEditor() {
@@ -294,7 +296,7 @@ export default function VipEditor() {
         id: docId,
         userId: user.id,
         title: title.trim() || "Без назви",
-        content: editorRef.current?.innerHTML || "",
+        content: cleanWordHtml(editorRef.current?.innerHTML || ""),
       });
       setDocId(id);
       setDirty(false);
@@ -311,7 +313,7 @@ export default function VipEditor() {
   const openDocument = (doc: VipDocument) => {
     setDocId(doc.id);
     setTitle(doc.title);
-    if (editorRef.current) editorRef.current.innerHTML = doc.content;
+    if (editorRef.current) editorRef.current.innerHTML = cleanWordHtml(doc.content);
     setDirty(false);
     setShowLibrary(false);
     updateStats();
@@ -359,7 +361,7 @@ export default function VipEditor() {
         const mammoth = await import("mammoth");
         const arrayBuffer = await file.arrayBuffer();
         const result = await mammoth.convertToHtml({ arrayBuffer });
-        if (editorRef.current) editorRef.current.innerHTML = result.value;
+        if (editorRef.current) editorRef.current.innerHTML = cleanWordHtml(result.value);
       } else if (lower.endsWith(".doc")) {
         const arrayBuffer = await file.arrayBuffer();
         // ZIP signature -> actually a .docx renamed
@@ -367,36 +369,28 @@ export default function VipEditor() {
         if (sig[0] === 0x50 && sig[1] === 0x4b) {
           const mammoth = await import("mammoth");
           const result = await mammoth.convertToHtml({ arrayBuffer });
-          if (editorRef.current) editorRef.current.innerHTML = result.value;
+          if (editorRef.current) editorRef.current.innerHTML = cleanWordHtml(result.value);
         } else {
           const head = new TextDecoder("latin1").decode(new Uint8Array(arrayBuffer.slice(0, 512)));
           if (/<html|<body|<w:worddocument/i.test(head)) {
             const html = new TextDecoder("windows-1251").decode(new Uint8Array(arrayBuffer));
-            if (editorRef.current) editorRef.current.innerHTML = html;
+            if (editorRef.current) editorRef.current.innerHTML = cleanWordHtml(html);
           } else {
             const text = extractLegacyDocText(arrayBuffer);
             if (!text.trim()) {
               toast.error("Не вдалося прочитати цей .doc. Збережіть його як .docx");
               return;
             }
-            if (editorRef.current)
-              editorRef.current.innerHTML = text
-                .split(/\n{2,}/)
-                .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
-                .join("");
+            if (editorRef.current) editorRef.current.innerHTML = textToHtml(text);
             toast.message("Старий формат .doc відкрито як текст (форматування спрощено)");
           }
         }
       } else if (/\.(html?|htm)$/i.test(file.name)) {
         const text = await file.text();
-        if (editorRef.current) editorRef.current.innerHTML = text;
+        if (editorRef.current) editorRef.current.innerHTML = cleanWordHtml(text);
       } else if (/\.(txt|md|rtf)$/i.test(file.name)) {
         const text = await file.text();
-        if (editorRef.current)
-          editorRef.current.innerHTML = text
-            .split(/\n{2,}/)
-            .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
-            .join("");
+        if (editorRef.current) editorRef.current.innerHTML = textToHtml(text);
       } else {
         toast.error("Непідтримуваний формат файлу");
         return;
@@ -783,6 +777,16 @@ export default function VipEditor() {
                 ref={editorRef}
                 contentEditable
                 suppressContentEditableWarning
+                onPaste={(e) => {
+                  const html = e.clipboardData.getData("text/html");
+                  const text = e.clipboardData.getData("text/plain");
+                  if (!html && !text) return;
+                  e.preventDefault();
+                  const clean = html ? cleanWordHtml(html) : textToHtml(text);
+                  document.execCommand("insertHTML", false, clean);
+                  setDirty(true);
+                  updateStats();
+                }}
                 onInput={() => {
                   setDirty(true);
                   updateStats();
