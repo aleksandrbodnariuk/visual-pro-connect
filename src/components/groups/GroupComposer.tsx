@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { uploadToStorage } from '@/lib/storage';
 import { CreatePollDialog, type PollDraft } from '@/components/messages/CreatePollDialog';
 import type { Group } from '@/hooks/groups/useGroups';
+import { GreetingRecipientPicker, type GreetingRecipient } from './GreetingRecipientPicker';
 
 interface Props {
   group: Group;
@@ -26,6 +27,8 @@ export function GroupComposer({ group, currentUser, canPostAsGroup, onPosted }: 
   const [busy, setBusy] = useState(false);
   const [pollOpen, setPollOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [recipient, setRecipient] = useState<GreetingRecipient | null>(null);
+  const greetingEnabled = !!(group as any).song_orders_enabled && canPostAsGroup;
 
   const pickFile = (f: File | null) => {
     if (!f) return;
@@ -117,6 +120,8 @@ export function GroupComposer({ group, currentUser, canPostAsGroup, onPosted }: 
           maxLength={10000}
         />
       </div>
+
+      {greetingEnabled && <GreetingRecipientPicker value={recipient} onChange={setRecipient} />}
 
       {preview && (
         <div className="relative">
