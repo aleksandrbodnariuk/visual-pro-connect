@@ -15,3 +15,4 @@
 
 - Portfolio audio always plays `media_url`; preview/display columns hold optional cover images, and both public portfolio views share one active music player, because artwork must never replace the playable source.
 - Personal friend lists (friend_lists + friend_list_members) are owner-only via RLS and many-to-many, because tags are private and one friend may belong to several lists.
+- Birthday greetings are single group posts tagged with `posts.target_user_id` and shown on the recipient profile wall (not duplicated), with tagging restricted to greeting-group admins by a database trigger, because copies would split reactions and comments.
