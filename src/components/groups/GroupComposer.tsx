@@ -57,9 +57,10 @@ export function GroupComposer({ group, currentUser, canPostAsGroup, onPosted }: 
         media_url: mediaUrl,
         group_id: group.id,
         posted_as_group: canPostAsGroup && asGroup,
-      }]);
+        ...(greetingEnabled && recipient ? { target_user_id: recipient.id } : {}),
+      } as any]);
       if (error) throw error;
-      setContent(''); clearFile();
+      setContent(''); clearFile(); setRecipient(null);
       toast.success('Опубліковано');
       onPosted();
     } catch (e: any) {
