@@ -33,7 +33,7 @@ export function GroupFeed({ group, currentUser, refreshKey }: Props) {
     if (error) throw error;
     const list = data || [];
     const more = offset + list.length < (count ?? offset + list.length);
-    const authorIds = [...new Set(list.map((p: any) => p.user_id).filter(Boolean))] as string[];
+    const authorIds = [...new Set(list.flatMap((p: any) => [p.user_id, p.target_user_id]).filter(Boolean))] as string[];
     let authors: any[] = [];
     if (authorIds.length > 0) {
       const { data: a } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: authorIds });
@@ -41,7 +41,7 @@ export function GroupFeed({ group, currentUser, refreshKey }: Props) {
     }
     return {
       more,
-      list: list.map((p: any) => ({ ...p, author: authors.find((a) => a.id === p.user_id) || null })),
+      list: list.map((p: any) => ({ ...p, author: authors.find((a) => a.id === p.user_id) || null, target: p.target_user_id ? authors.find((a) => a.id === p.target_user_id) || null : null })),
     };
   }, [group.id]);
 
@@ -135,6 +135,7 @@ export function GroupFeed({ group, currentUser, refreshKey }: Props) {
               profession: asGroup ? '' : (author?.title || ''),
             }}
             groupInfo={{ id: group.id, name: group.name, avatarUrl: group.avatar_url || '', postedAsGroup: asGroup }}
+            greetingFor={post.target_user_id ? { id: post.target_user_id, name: post.target?.full_name || 'іменинника' } : null}
             imageUrl={post.media_url || undefined}
             caption={post.content || ''}
             pollId={post.poll_id ?? null}
