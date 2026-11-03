@@ -15,6 +15,10 @@ interface Post {
   };
   imageUrl: string;
   caption: string;
+  groupInfo?: { id: string; name: string; avatarUrl?: string; postedAsGroup?: boolean } | null;
+  greetingFor?: { id: string; name: string } | null;
+  pollId?: string | null;
+  videoOrientation?: "vertical" | "horizontal" | null;
   likes: number;
   comments: number;
   timeAgo: string;

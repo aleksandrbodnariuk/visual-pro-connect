@@ -24,6 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { EditPublicationModal } from "@/components/publications/EditPublicationModal";
 import { FriendsList } from "@/components/profile/FriendsList";
 import { CreatePostBar } from "@/components/profile/CreatePostBar";
+import { mapWallPosts, wallFilter } from "@/lib/profileWall";
 
 const LoadingSpinner = () => (
   <div className="min-h-screen">
@@ -113,8 +114,7 @@ export default function Profile() {
           const { count } = await supabase
             .from('posts')
             .select('*', { count: 'exact', head: true })
-            .eq('user_id', targetUserId)
-            .is('group_id', null);
+            .or(wallFilter(targetUserId));
           
           postsCount = count || 0;
 
@@ -122,8 +122,7 @@ export default function Profile() {
           const { data: postsResult } = await supabase
             .from('posts')
             .select('*')
-            .eq('user_id', targetUserId)
-            .is('group_id', null)
+            .or(wallFilter(targetUserId))
             .order('created_at', { ascending: false })
             .range(0, POSTS_PER_PAGE - 1);
           
@@ -199,22 +198,14 @@ export default function Profile() {
         });
         
         if (postsData.length > 0) {
-          setPosts(postsData.map((post: any) => ({
-            id: post.id,
-            author: {
-              id: targetUserId,
-              name: userData.full_name || userData.firstName + ' ' + userData.lastName || "Користувач",
-              username: userData.phone_number || userData.phoneNumber || `user_${post.user_id.substring(0, 5)}`,
-              avatarUrl: userData.avatar_url || userData.avatarUrl || "https://i.pravatar.cc/150?img=1",
-              profession: userData.categories && userData.categories.length > 0 ? userData.categories[0] : "",
-              categories: userData.categories || []
-            },
-            imageUrl: post.media_url,
-            caption: post.content,
-            likes: post.likes_count,
-            comments: post.comments_count,
-            timeAgo: new Date(post.created_at).toLocaleDateString()
-          })));
+          const ownerName = userData.full_name || userData.firstName + ' ' + userData.lastName || "Користувач";
+          setPosts(await mapWallPosts(postsData, {
+            id: targetUserId,
+            name: ownerName,
+            avatarUrl: userData.avatar_url || userData.avatarUrl,
+            profession: userData.categories && userData.categories.length > 0 ? userData.categories[0] : "",
+            categories: userData.categories || [],
+          }));
         } else {
           setPosts([]);
         }
@@ -376,30 +367,20 @@ export default function Profile() {
       const { data: morePosts, error: fetchError } = await supabase
         .from('posts')
         .select('*')
-        .eq('user_id', targetUserId)
-        .is('group_id', null)
+        .or(wallFilter(targetUserId))
         .order('created_at', { ascending: false })
         .range(posts.length, posts.length + POSTS_PER_PAGE - 1);
 
       if (fetchError) throw fetchError;
 
       if (morePosts && morePosts.length > 0) {
-        const enrichedPosts = morePosts.map((post: any) => ({
-          id: post.id,
-          author: {
-            id: targetUserId,
-            name: user.name,
-            username: user.username || `user_${post.user_id.substring(0, 5)}`,
-            avatarUrl: user.avatarUrl || "https://i.pravatar.cc/150?img=1",
-            profession: user.profession || "",
-            categories: user.categories || []
-          },
-          imageUrl: post.media_url,
-          caption: post.content,
-          likes: post.likes_count,
-          comments: post.comments_count,
-          timeAgo: new Date(post.created_at).toLocaleDateString()
-        }));
+        const enrichedPosts = await mapWallPosts(morePosts, {
+          id: targetUserId,
+          name: user.name,
+          avatarUrl: user.avatarUrl,
+          profession: user.profession || "",
+          categories: user.categories || [],
+        });
 
         setPosts(prev => [...prev, ...enrichedPosts]);
         setHasMore(posts.length + morePosts.length < user.postsCount);
