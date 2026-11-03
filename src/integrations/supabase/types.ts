@@ -2791,6 +2791,7 @@ export type Database = {
           play_count: number
           poll_id: string | null
           posted_as_group: boolean
+          target_user_id: string | null
           user_id: string | null
           video_orientation: string | null
         }
@@ -2806,6 +2807,7 @@ export type Database = {
           play_count?: number
           poll_id?: string | null
           posted_as_group?: boolean
+          target_user_id?: string | null
           user_id?: string | null
           video_orientation?: string | null
         }
@@ -2821,6 +2823,7 @@ export type Database = {
           play_count?: number
           poll_id?: string | null
           posted_as_group?: boolean
+          target_user_id?: string | null
           user_id?: string | null
           video_orientation?: string | null
         }
@@ -5119,6 +5122,15 @@ export type Database = {
       remove_member_from_group: {
         Args: { _conv_id: string; _user_id: string }
         Returns: undefined
+      }
+      search_greeting_recipients: {
+        Args: { _q: string }
+        Returns: {
+          avatar_url: string
+          date_of_birth: string
+          full_name: string
+          id: string
+        }[]
       }
       search_marketplace_listings: {
         Args: {
