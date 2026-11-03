@@ -44,6 +44,8 @@ export interface PostCardProps {
     avatarUrl?: string;
     postedAsGroup?: boolean;
   } | null;
+  /** Birthday person tagged in a greeting post */
+  greetingFor?: { id: string; name: string } | null;
   imageUrl?: string;
   caption: string;
   pollId?: string | null;
@@ -73,6 +75,7 @@ export function PostCard({
   id,
   author,
   groupInfo,
+  greetingFor,
   imageUrl,
   caption,
   pollId,
@@ -196,6 +199,14 @@ export function PostCard({
         </Link>
       <PostMenu postId={id} isAuthor={isAuthor} onEdit={onEdit} onDelete={onDelete} caption={caption} videoOrientation={videoOrientation ?? null} />
       </div>
+
+      {greetingFor && (
+        <div className="mx-3 mb-2 flex items-center gap-2 rounded-md bg-primary/10 px-2 py-1.5 text-xs">
+          <span aria-hidden>🎂</span>
+          <span className="text-muted-foreground">Привітання для</span>
+          <Link to={`/profile/${greetingFor.id}`} className="font-semibold text-primary hover:underline truncate">{greetingFor.name}</Link>
+        </div>
+      )}
 
       {/* Media first (Facebook-style) */}
       {isAudioUrl && imageUrl && (
