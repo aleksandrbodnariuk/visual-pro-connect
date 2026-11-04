@@ -159,6 +159,96 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_assistant_conversations: {
+        Row: {
+          created_at: string
+          credits_used: number
+          duration_ms: number
+          guest_token: string | null
+          id: string
+          input_tokens: number
+          messages: Json
+          output_tokens: number
+          request_count: number
+          source: string
+          status: string
+          title: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          credits_used?: number
+          duration_ms?: number
+          guest_token?: string | null
+          id?: string
+          input_tokens?: number
+          messages?: Json
+          output_tokens?: number
+          request_count?: number
+          source?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          credits_used?: number
+          duration_ms?: number
+          guest_token?: string | null
+          id?: string
+          input_tokens?: number
+          messages?: Json
+          output_tokens?: number
+          request_count?: number
+          source?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      ai_assistant_settings: {
+        Row: {
+          assistant_name: string
+          greeting: string
+          id: number
+          instructions: string
+          is_active: boolean
+          knowledge_base: string
+          model: string
+          quick_questions: string
+          studio_url: string
+          updated_at: string
+        }
+        Insert: {
+          assistant_name?: string
+          greeting?: string
+          id?: number
+          instructions?: string
+          is_active?: boolean
+          knowledge_base?: string
+          model?: string
+          quick_questions?: string
+          studio_url?: string
+          updated_at?: string
+        }
+        Update: {
+          assistant_name?: string
+          greeting?: string
+          id?: number
+          instructions?: string
+          is_active?: boolean
+          knowledge_base?: string
+          model?: string
+          quick_questions?: string
+          studio_url?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           city: string | null
