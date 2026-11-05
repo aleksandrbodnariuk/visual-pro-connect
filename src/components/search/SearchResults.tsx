@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
+import { StudioTeamBadge } from "@/components/assistant/StudioTeamBanner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, UserPlus, Trash2 } from "lucide-react";
@@ -186,6 +187,7 @@ export function SearchResults({ category }: { category: string }) {
                 
                 <div className="flex-1">
                   <h3 className="font-semibold">{professional.full_name || "Користувач"}</h3>
+                  <StudioTeamBadge />
                   <div className="flex flex-wrap gap-1 mt-1">
                     {professional.categories?.map((cat: string) => (
                       <span 

@@ -37,8 +37,9 @@ const ADMIN_SECTIONS = [
   ["ad-orders", "Реклама"], ["feed-ads", "Реклама в стрічці"], ["finances", "Фінанси"], ["payouts", "Виплати"],
   ["history", "Історія розрахунків"], ["stock-exchange", "Облік акцій"], ["assets", "Облік майна"],
   ["support", "Підтримка"], ["certificates", "Сертифікати"], ["vip", "VIP"],
-  ["marketplace", "Маркетплейс"], ["storage", "Сховище"]
+  ["marketplace", "Маркетплейс"], ["storage", "Сховище"], ["ai-assistant", "ШІ помічник"]
 ] as const;
+const AiAssistantTab = lazy(() => import("./tabs/AiAssistantTab").then(m => ({ default: m.AiAssistantTab })));
 
 export function AdminTabs() {
   const navigate = useNavigate();
@@ -109,6 +110,7 @@ export function AdminTabs() {
         <TabsTrigger value="vip">VIP</TabsTrigger>
         <TabsTrigger value="marketplace">Маркетплейс</TabsTrigger>
         <TabsTrigger value="storage">Сховище</TabsTrigger>
+        <TabsTrigger value="ai-assistant">ШІ помічник</TabsTrigger>
       </TabsList>
       
       <div className="min-w-0 max-w-full overflow-x-hidden">
@@ -207,6 +209,9 @@ export function AdminTabs() {
 
       <TabsContent value="storage">
         <StorageTab />
+      </TabsContent>
+      <TabsContent value="ai-assistant">
+        <AiAssistantTab />
       </TabsContent>
       </Suspense>
       </div>

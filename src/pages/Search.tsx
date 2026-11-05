@@ -24,6 +24,8 @@ import {
   Loader2
 } from "lucide-react";
 import { SearchCategories } from "@/components/search/SearchCategories";
+import { StudioTeamBanner } from "@/components/assistant/StudioTeamBanner";
+import { AssistantChat } from "@/components/assistant/AssistantChat";
 import { useDynamicCategories, getIconComponent } from "@/hooks/useDynamicCategories";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -271,6 +273,11 @@ export default function Search() {
       </div>
       
       <div className="container mt-8">
+        <StudioTeamBanner />
+        <div className="mx-auto mb-8 max-w-3xl">
+          <h2 className="mb-3 text-xl font-bold">ШІ-помічник: знайти послугу</h2>
+          <AssistantChat source="services" />
+        </div>
         <SearchCategories />
         
         <div className="mt-8">
