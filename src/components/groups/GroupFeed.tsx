@@ -195,6 +195,7 @@ export function GroupFeed({ group, currentUser, refreshKey }: Props) {
           Ви переглянули всі публікації групи
         </p>
       )}
+      {editModal}
     </div>
   );
 }

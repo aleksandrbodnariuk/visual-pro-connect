@@ -115,7 +115,9 @@ export function GroupComposer({ group, currentUser, canPostAsGroup, onPosted }: 
         <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder={`Напишіть допис у групі «${group.name}»`}
+          placeholder={greetingEnabled
+            ? 'Текст привітання + посилання на пісню (YouTube тощо) — усе в одному дописі'
+            : `Напишіть допис у групі «${group.name}»`}
           rows={2}
           maxLength={10000}
         />
