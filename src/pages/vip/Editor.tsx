@@ -411,7 +411,7 @@ export default function VipEditor() {
     `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${title}</title>` +
     `<style>@page{size:${orientation === "portrait" ? "A4 portrait" : "A4 landscape"};margin:2cm}` +
     `body{font-family:Arial, sans-serif;font-size:12pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px}</style>` +
-    `</head><body>${editorRef.current?.innerHTML || ""}</body></html>`;
+    `</head><body>${cleanWordHtml(editorRef.current?.innerHTML || "")}</body></html>`;
 
   const downloadBlob = (blob: Blob, ext: string) => {
     const url = URL.createObjectURL(blob);
@@ -430,7 +430,7 @@ export default function VipEditor() {
     downloadBlob(new Blob([buildWordHtml()], { type: "text/html;charset=utf-8" }), "html");
   const exportTxt = () =>
     downloadBlob(
-      new Blob([editorRef.current?.innerText || ""], { type: "text/plain;charset=utf-8" }),
+      new Blob([cleanWordText(editorRef.current?.innerText || "")], { type: "text/plain;charset=utf-8" }),
       "txt"
     );
   const printPdf = () => {

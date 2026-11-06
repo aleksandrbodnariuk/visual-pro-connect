@@ -162,6 +162,25 @@ export function UserMenu({ currentUser }: UserMenuProps) {
                 <BookOpen className="mr-2 h-4 w-4 text-amber-500" />
                 <span>VIP-інструменти</span>
               </DropdownMenuItem>
+              {[
+                { id: "notebook", label: "Нотатник", path: "/vip/notebook" },
+                { id: "calculator", label: "Калькулятор", path: "/vip/calculator" },
+                { id: "reminders", label: "Нагадування", path: "/vip/reminders" },
+                { id: "planner", label: "Планувальник", path: "/vip/planner" },
+                { id: "analytics", label: "Аналітика витрат", path: "/vip/analytics" },
+                { id: "editor", label: "Текстовий редактор", path: "/vip/editor" },
+              ]
+                .filter((tool) => {
+                  try {
+                    const hidden: string[] = JSON.parse(localStorage.getItem(`vip_hidden_tools_${currentUser?.id ?? "anon"}`) || "[]");
+                    return !hidden.includes(tool.id);
+                  } catch { return true; }
+                })
+                .map((tool) => (
+                  <DropdownMenuItem key={tool.id} className="pl-8" onClick={() => handleNavigate(tool.path)}>
+                    <span>{tool.label}</span>
+                  </DropdownMenuItem>
+                ))}
             </>
           )}
         </DropdownMenuGroup>
