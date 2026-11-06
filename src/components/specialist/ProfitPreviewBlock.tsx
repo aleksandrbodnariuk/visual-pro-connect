@@ -49,6 +49,8 @@ interface Props {
   participants: OrderParticipant[];
   participantInfos: Record<string, SpecialistInfo>;
   representativeId?: string | null;
+  /** Повідомляє реальний пул фахівців (з урахуванням представників і фонду витрат). */
+  onSpecialistsPoolChange?: (pool: number | null) => void;
 }
 
 // ─── Допоміжні компоненти ─────────────────────────────────────────────────────
@@ -89,6 +91,7 @@ export function ProfitPreviewBlock({
   participants,
   participantInfos,
   representativeId,
+  onSpecialistsPoolChange,
 }: Props) {
   const [loading, setLoading] = useState(true);
   const [totalShares, setTotalShares] = useState<number>(0);
@@ -250,6 +253,10 @@ export function ProfitPreviewBlock({
     );
     setDistribution(dist);
   }, [orderAmount, orderExpenses, shareholders, totalShares, loading, distConfig, distConfigLoading, repChain, repConfig, unallocatedFunds]);
+
+  useEffect(() => {
+    onSpecialistsPoolChange?.(distribution && distribution.netProfit > 0 ? distribution.specialistsPool : distribution ? 0 : null);
+  }, [distribution, onSpecialistsPoolChange]);
 
   // ── Розрахунок частки фахівця ───────────────────────────────────────────────
   const specialistCount = participants.length;

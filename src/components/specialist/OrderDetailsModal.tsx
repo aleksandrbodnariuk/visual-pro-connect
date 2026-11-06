@@ -74,6 +74,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
   const [specPayoutsExist, setSpecPayoutsExist] = useState<boolean>(false);
   const [savingSpecPayouts, setSavingSpecPayouts] = useState(false);
   const [existingSpecPayouts, setExistingSpecPayouts] = useState<any[]>([]);
+  const [realSpecialistsPool, setRealSpecialistsPool] = useState<number | null>(null);
 
   useEffect(() => {
     if (order) {
@@ -558,6 +559,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                 participants={participants}
                 participantInfos={participantInfos}
                 representativeId={order.representative_id}
+                onSpecialistsPoolChange={setRealSpecialistsPool}
               />
             </>
           )}
@@ -619,16 +621,38 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                     Розподіл коштів фахівцям
                   </h4>
                   {(() => {
-                    const np = calcNetProfit(savedAmount ?? 0, savedExpenses ?? 0);
-                    const pools = calcProfitPools(np);
+                    const pool = realSpecialistsPool ?? calcProfitPools(calcNetProfit(savedAmount ?? 0, savedExpenses ?? 0)).specialistsPool;
                     const totalAssigned = participants.reduce((s, p) => s + parseFloat(specAmounts[p.specialist_id] || '0'), 0);
-                    const remaining = pools.specialistsPool - totalAssigned;
+                    const remaining = pool - totalAssigned;
+                    const autoFill = () => {
+                      const cents = Math.round(pool * 100);
+                      const n = participants.length;
+                      const base = Math.floor(cents / n);
+                      let extra = cents - base * n;
+                      const next: Record<string, string> = {};
+                      participants.forEach(p => {
+                        const c = base + (extra > 0 ? 1 : 0);
+                        if (extra > 0) extra--;
+                        next[p.specialist_id] = (c / 100).toFixed(2);
+                      });
+                      setSpecAmounts(next);
+                    };
                     return (
                       <>
                         <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Пул фахівців (50%):</span>
-                          <span className="font-medium">{pools.specialistsPool.toFixed(2)} $</span>
+                          <span>Пул фахівців{realSpecialistsPool == null ? ' (завантаження…)' : ''}:</span>
+                          <span className="font-medium">{pool.toFixed(2)} $</span>
                         </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                          disabled={realSpecialistsPool == null || pool <= 0}
+                          onClick={autoFill}
+                        >
+                          {participants.length === 1 ? 'Заповнити автоматично (усю суму)' : `Заповнити автоматично (порівну на ${participants.length})`}
+                        </Button>
                         <div className="space-y-2">
                           {participants.map(p => {
                             const info = participantInfos[p.specialist_id];
@@ -656,7 +680,7 @@ export function OrderDetailsModal({ order, participants, open, onOpenChange, onU
                             );
                           })}
                         </div>
-                        <div className={`flex justify-between text-xs font-medium ${remaining < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        <div className={`flex justify-between text-xs font-medium ${remaining < -0.005 ? 'text-destructive' : Math.abs(remaining) <= 0.005 ? 'text-primary' : 'text-muted-foreground'}`}>
                           <span>Залишок:</span>
                           <span>{remaining.toFixed(2)} $</span>
                         </div>
