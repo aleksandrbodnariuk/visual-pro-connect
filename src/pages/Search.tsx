@@ -24,10 +24,12 @@ import {
   Loader2
 } from "lucide-react";
 import { SearchCategories } from "@/components/search/SearchCategories";
-import { StudioTeamBanner } from "@/components/assistant/StudioTeamBanner";
+import { StudioTeamBanner, StudioTeamBadge } from "@/components/assistant/StudioTeamBanner";
 import { AssistantChat } from "@/components/assistant/AssistantChat";
 import { useDynamicCategories, getIconComponent } from "@/hooks/useDynamicCategories";
 import { supabase } from "@/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StudioPartnersTab, StudioSiteLink } from "@/components/search/StudioPartnersTab";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -115,7 +117,7 @@ export default function Search() {
           full_name: user.full_name || "Користувач без імені",
           avatar_url: user.avatar_url,
           categories: user.categories || [],
-          bio: user.bio || "Фахівець спільноти B&C",
+          bio: user.bio || "Фахівець команди B&C studio",
           location: user.city && user.country 
             ? `${user.city}, ${user.country}` 
             : user.city || user.country || "",
@@ -215,10 +217,10 @@ export default function Search() {
       <div className="bg-gradient-to-b from-secondary/10 to-background/5 py-10">
         <div className="container">
           <h1 className="mb-6 text-center text-3xl font-bold md:text-4xl">
-            Знайти професіоналів
+            Знайти послугу
           </h1>
           
-          <div className="mx-auto max-w-3xl rounded-2xl bg-white/80 p-6 shadow-md backdrop-blur-sm">
+          <div className="mx-auto max-w-3xl rounded-2xl bg-card/80 p-6 shadow-md backdrop-blur-sm">
             <div className="mb-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <div className="lg:col-span-2">
                 <label className="mb-2 block text-sm font-medium">Що шукаєте?</label>
@@ -273,6 +275,15 @@ export default function Search() {
       </div>
       
       <div className="container mt-8">
+        <Tabs defaultValue="studio">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <TabsList className="h-auto flex-wrap">
+              <TabsTrigger value="studio" className="min-h-[44px]">★ Послуги B&C studio</TabsTrigger>
+              <TabsTrigger value="partners" className="min-h-[44px]">Партнери студії</TabsTrigger>
+            </TabsList>
+            <StudioSiteLink />
+          </div>
+          <TabsContent value="studio">
         <StudioTeamBanner />
         <div className="mx-auto mb-8 max-w-3xl">
           <h2 className="mb-3 text-xl font-bold">ШІ-помічник: знайти послугу</h2>
@@ -311,6 +322,7 @@ export default function Search() {
                         
                         <div>
                           <h3 className="font-semibold">{professional.full_name}</h3>
+                          <div className="mb-1"><StudioTeamBadge /></div>
                           <div className="flex items-center gap-1">
                             <span className="flex items-center gap-1 rounded-full bg-secondary/10 px-2 py-0.5 text-xs">
                               {getCategoryIcon(professional.categories)}
@@ -342,7 +354,7 @@ export default function Search() {
                             className="bg-gradient-purple flex-1"
                             onClick={() => navigate(`/messages?user=${professional.id}`)}
                           >
-                            Написати
+                            Замовити послугу
                           </Button>
                         </div>
                       </div>
@@ -353,6 +365,9 @@ export default function Search() {
             </>
           )}
         </div>
+          </TabsContent>
+          <TabsContent value="partners"><StudioPartnersTab /></TabsContent>
+        </Tabs>
       </div>
     </div>
   );
