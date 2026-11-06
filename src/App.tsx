@@ -56,6 +56,8 @@ const VipReminders = lazy(() => import("./pages/vip/Reminders"));
 const VipPlanner = lazy(() => import("./pages/vip/Planner"));
 const VipAnalytics = lazy(() => import("./pages/vip/Analytics"));
 const VipEditor = lazy(() => import("./pages/vip/Editor"));
+const VipSimpleCalculator = lazy(() => import("./pages/vip/SimpleCalculator"));
+const VipBible = lazy(() => import("./pages/vip/Bible"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
 const Groups = lazy(() => import("./pages/Groups"));
 const GroupPage = lazy(() => import("./pages/GroupPage"));
@@ -138,6 +140,8 @@ const AppContent = () => {
             <Route path="/vip/planner" element={<VipPlanner />} />
             <Route path="/vip/analytics" element={<VipAnalytics />} />
             <Route path="/vip/editor" element={<VipEditor />} />
+            <Route path="/vip/simple-calculator" element={<VipSimpleCalculator />} />
+            <Route path="/vip/bible" element={<VipBible />} />
             <Route path="/market" element={<Marketplace />} />
             <Route path="/market/new" element={<MarketplaceNew />} />
             <Route path="/market/moi" element={<MarketplaceMine />} />
