@@ -89,7 +89,7 @@ export function SpecialistsTab() {
     <div className="flex gap-1">
       <Button size="sm" variant="outline" className="min-h-11" onClick={() => openEdit(s)}><Pencil className="mr-1 h-4 w-4" />Спеціальності</Button>
       <Button asChild size="sm" variant="ghost" className="min-h-11">
-        <a href={`/profile/${s.id}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1 h-4 w-4" />Профіль і портфоліо</a>
+        <a href={`/profile/${s.id}?tab=portfolio`} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1 h-4 w-4" />Профіль і портфоліо</a>
       </Button>
     </div>
   );

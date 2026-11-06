@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Suspense } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/layout/Navbar";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
@@ -68,6 +68,13 @@ export default function Profile() {
   const [portfolioManagerOpen, setPortfolioManagerOpen] = useState(false);
   const [portfolioRefreshKey, setPortfolioRefreshKey] = useState(0);
   const [isSpecialist, setIsSpecialist] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "posts";
+  const setActiveTab = (v: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (v === "posts") next.delete("tab"); else next.set("tab", v);
+    setSearchParams(next, { replace: true });
+  };
   
   const [servicesDialogOpen, setServicesDialogOpen] = useState(false);
   const [editPostOpen, setEditPostOpen] = useState(false);
@@ -210,21 +217,24 @@ export default function Profile() {
           setPosts([]);
         }
         
-        // Перевіряємо статус фахівця через RPC
+        // Фахівець: роль або наявні роботи в портфоліо (резерв, якщо перевірка ролі збоїть)
+        let specialist = false;
         try {
           const { data: hasSpecialistRole, error: roleError } = await supabase
             .rpc('has_role', { _user_id: targetUserId, _role: 'specialist' });
-          
-          if (roleError) {
-            console.warn("Помилка перевірки ролі фахівця:", roleError);
-            setIsSpecialist(false);
-          } else {
-            setIsSpecialist(!!hasSpecialistRole);
-          }
+          if (roleError) console.warn("Помилка перевірки ролі фахівця:", roleError);
+          specialist = !!hasSpecialistRole;
         } catch (roleError) {
           console.warn("Помилка перевірки ролі фахівця:", roleError);
-          setIsSpecialist(false);
         }
+        if (!specialist) {
+          const { count } = await supabase
+            .from('portfolio')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', targetUserId);
+          specialist = (count ?? 0) > 0;
+        }
+        setIsSpecialist(specialist);
       } catch (error: any) {
         console.error("Помилка при завантаженні даних:", error);
         setError(error.message || "Помилка при завантаженні профілю");
@@ -414,7 +424,7 @@ export default function Profile() {
           <ProfileHeader user={user} onEditProfile={handleEditProfile} />
           
           <main className="mt-6">
-          <Tabs defaultValue="posts" className="w-full">
+          <Tabs value={activeTab === "portfolio" && !isSpecialist ? "posts" : activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="mb-4 w-full overflow-x-auto flex justify-start scrollbar-hide">
               <TabsTrigger value="posts">Публікації</TabsTrigger>
               {isSpecialist && (
