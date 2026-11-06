@@ -35,6 +35,7 @@ const BUCKET_REFS: Record<string, Array<{ table: string; column: string }>> = {
     { table: "user_files", column: "file_url" },
     { table: "comments", column: "image_url" },
     { table: "feed_ads", column: "media_url" },
+    { table: "studio_partners", column: "logo_url" },
     { table: "organizations", column: "logo_url" },
     { table: "organizations", column: "flag_url" },
     { table: "groups", column: "avatar_url" },

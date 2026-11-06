@@ -3884,6 +3884,54 @@ export type Database = {
           },
         ]
       }
+      studio_partners: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          discount_offer: string | null
+          id: string
+          instagram_url: string | null
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          phone: string | null
+          sort_order: number
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          discount_offer?: string | null
+          id?: string
+          instagram_url?: string | null
+          is_active?: boolean
+          logo_url?: string | null
+          name: string
+          phone?: string | null
+          sort_order?: number
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          discount_offer?: string | null
+          id?: string
+          instagram_url?: string | null
+          is_active?: boolean
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+          sort_order?: number
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       support_tickets: {
         Row: {
           admin_response: string | null

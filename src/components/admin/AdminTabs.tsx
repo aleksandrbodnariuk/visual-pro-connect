@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 const UsersTab = lazy(() => import("./tabs/UsersTab").then(m => ({ default: m.UsersTab })));
 const ShareholdersTab = lazy(() => import("./tabs/ShareholdersTab").then(m => ({ default: m.ShareholdersTab })));
 const SpecialistsTab = lazy(() => import("./tabs/SpecialistsTab").then(m => ({ default: m.SpecialistsTab })));
+const PartnersTab = lazy(() => import("./tabs/PartnersTab").then(m => ({ default: m.PartnersTab })));
 const RepresentativesTab = lazy(() => import("./tabs/RepresentativesTab").then(m => ({ default: m.RepresentativesTab })));
 const AdminOrdersTab = lazy(() => import("./tabs/AdminOrdersTab").then(m => ({ default: m.AdminOrdersTab })));
 const AdOrdersTab = lazy(() => import("./tabs/AdOrdersTab").then(m => ({ default: m.AdOrdersTab })));
@@ -30,7 +31,7 @@ const StorageTab = lazy(() => import("./tabs/StorageTab").then(m => ({ default: 
 const ClientsTab = lazy(() => import("./tabs/ClientsTab").then(m => ({ default: m.ClientsTab })));
 
 const ADMIN_SECTIONS = [
-  ["users", "Користувачі"], ["specialists", "Фахівці"], ["shareholders", "Акціонери"],
+  ["users", "Користувачі"], ["specialists", "Фахівці"], ["partners", "Партнери"], ["shareholders", "Акціонери"],
   ["representatives", "Представники"], ["clients", "Клієнти"], ["posts", "Публікації"],
   ["categories", "Категорії"], ["portfolio-categories", "Категорії портфоліо"], ["analytics", "Аналітика"],
   ["notifications-admin", "Сповіщення"], ["settings", "Налаштування"], ["orders", "Замовлення"],
@@ -76,6 +77,7 @@ export function AdminTabs() {
       <TabsList className="mb-4 hidden w-full justify-start gap-1 overflow-x-auto pb-2 md:flex">
         <TabsTrigger value="users">Користувачі</TabsTrigger>
         <TabsTrigger value="specialists">Фахівці</TabsTrigger>
+        <TabsTrigger value="partners">Партнери</TabsTrigger>
         <TabsTrigger value="shareholders">Акціонери</TabsTrigger>
         <TabsTrigger value="representatives">Представники</TabsTrigger>
         <TabsTrigger value="clients">Клієнти</TabsTrigger>
@@ -125,6 +127,10 @@ export function AdminTabs() {
       
       <TabsContent value="specialists">
         <SpecialistsTab />
+      </TabsContent>
+
+      <TabsContent value="partners">
+        <PartnersTab />
       </TabsContent>
 
       <TabsContent value="representatives">
