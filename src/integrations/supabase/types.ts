@@ -219,6 +219,7 @@ export type Database = {
           is_active: boolean
           knowledge_base: string
           model: string
+          monthly_credit_limit: number
           quick_questions: string
           studio_url: string
           updated_at: string
@@ -231,6 +232,7 @@ export type Database = {
           is_active?: boolean
           knowledge_base?: string
           model?: string
+          monthly_credit_limit?: number
           quick_questions?: string
           studio_url?: string
           updated_at?: string
@@ -243,6 +245,7 @@ export type Database = {
           is_active?: boolean
           knowledge_base?: string
           model?: string
+          monthly_credit_limit?: number
           quick_questions?: string
           studio_url?: string
           updated_at?: string

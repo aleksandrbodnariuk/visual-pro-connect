@@ -10,6 +10,7 @@ export interface AssistantSettings {
   studio_url: string;
   model: string;
   is_active: boolean;
+  monthly_credit_limit: number;
 }
 
 export function useAssistantSettings() {

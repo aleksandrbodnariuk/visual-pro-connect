@@ -2,8 +2,12 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const IN_COST = 0.0000012;
-const OUT_COST = 0.00001;
+const DEFAULT_MODEL = "google/gemini-3.1-flash-lite";
+const PRICES: Record<string, [number, number]> = {
+  "google/gemini-3.1-flash-lite": [0.000001, 0.000006],
+  "google/gemini-3-flash-preview": [0.000002, 0.000012],
+  "google/gemini-3.8-flash": [0.000003, 0.000015],
+};
 const MAX_HISTORY = 12;
 
 const GUARDRAILS = `ЖОРСТКІ ПРАВИЛА (мають пріоритет над усім іншим):
@@ -49,6 +53,15 @@ Deno.serve(async (req) => {
 
   const { data: settings } = await admin.from("ai_assistant_settings").select("*").eq("id", 1).maybeSingle();
   if (!settings?.is_active) return json({ error: "Помічник тимчасово вимкнений" }, 503);
+  const model = PRICES[settings.model] ? settings.model : DEFAULT_MODEL;
+  const [IN_COST, OUT_COST] = PRICES[model];
+  const limit = Number(settings.monthly_credit_limit || 0);
+  if (limit > 0) {
+    const monthStart = new Date(); monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
+    const { data: rows } = await admin.from("ai_assistant_conversations").select("credits_used").gte("updated_at", monthStart.toISOString()).limit(10000);
+    const used = (rows || []).reduce((s: number, r: any) => s + Number(r.credits_used || 0), 0);
+    if (used >= limit) return json({ error: "Місячний ліміт помічника вичерпано. Зверніться до Служби підтримки" }, 429);
+  }
 
   let conv: any = null;
   if (conversationId) {
@@ -78,7 +91,7 @@ Deno.serve(async (req) => {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`, "X-Lovable-AIG-SDK": "fetch" },
     body: JSON.stringify({
-      model: settings.model || "google/gemini-2.5-flash",
+      model,
       stream: true,
       stream_options: { include_usage: true },
       messages: [

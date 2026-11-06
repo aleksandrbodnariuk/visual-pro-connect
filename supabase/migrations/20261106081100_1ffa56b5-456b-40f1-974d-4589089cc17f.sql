@@ -1,0 +1,2 @@
+ALTER TABLE public.ai_assistant_settings ADD COLUMN IF NOT EXISTS monthly_credit_limit numeric NOT NULL DEFAULT 5;
+UPDATE public.ai_assistant_settings SET model = 'google/gemini-3.1-flash-lite' WHERE id = 1;

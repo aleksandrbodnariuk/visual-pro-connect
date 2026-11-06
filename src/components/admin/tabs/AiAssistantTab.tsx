@@ -18,6 +18,31 @@ const STATUSES = [
   ["unread", "Не прочитані"], ["read", "Прочитані"], ["in_progress", "В роботі"], ["archived", "Архів"],
 ] as const;
 
+const MODELS = [
+  ["google/gemini-3.1-flash-lite", "Gemini 3.1 Flash Lite — економна (рекомендовано)"],
+  ["google/gemini-3-flash-preview", "Gemini 3 Flash (preview)"],
+  ["google/gemini-3.8-flash", "Gemini 3.8 Flash — найрозумніша, дорожча"],
+] as const;
+
+function UsageMeter({ data }: { data: any[] }) {
+  const { settings } = useAssistantSettings();
+  const limit = Number(settings?.monthly_credit_limit || 0);
+  const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+  const used = data.filter((c) => new Date(c.updated_at) >= monthStart).reduce((s, c) => s + Number(c.credits_used || 0), 0);
+  const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
+  const tone = pct >= 90 ? "bg-destructive" : pct >= 70 ? "bg-accent" : "bg-primary";
+  return (
+    <Card><CardContent className="p-3 space-y-2">
+      <div className="flex justify-between text-sm"><span className="font-medium">Ресурс цього місяця</span>
+        <span>{used.toFixed(4)} {limit > 0 ? `/ ${limit} кр.` : "кр. (без ліміту)"}</span></div>
+      {limit > 0 && <>
+        <div className="h-3 w-full overflow-hidden rounded-full bg-muted"><div className={`h-full ${tone}`} style={{ width: `${pct}%` }} /></div>
+        <div className="text-xs text-muted-foreground">Використано {pct.toFixed(1)}% · залишилось {Math.max(0, limit - used).toFixed(4)} кр. Після вичерпання помічник призупиняється до наступного місяця.</div>
+      </>}
+    </CardContent></Card>
+  );
+}
+
 function fmtDuration(ms: number) {
   const s = Math.round(ms / 1000);
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
@@ -36,7 +61,8 @@ function SettingsForm() {
     const { error } = await db.from("ai_assistant_settings").update({
       assistant_name: form.assistant_name, greeting: form.greeting, knowledge_base: form.knowledge_base,
       instructions: form.instructions, quick_questions: form.quick_questions, studio_url: form.studio_url.trim(),
-      is_active: form.is_active, updated_at: new Date().toISOString(),
+      is_active: form.is_active, model: form.model,
+      monthly_credit_limit: Math.max(0, Number(form.monthly_credit_limit) || 0), updated_at: new Date().toISOString(),
     }).eq("id", 1);
     setSaving(false);
     if (error) toast.error("Не вдалося зберегти: " + error.message); else { toast.success("Налаштування збережено"); refetch(); }
@@ -50,7 +76,14 @@ function SettingsForm() {
       <div><Label>База знань (послуги фото, відео, музики, ціни, умови)</Label><Textarea rows={10} value={form.knowledge_base} onChange={(e) => set("knowledge_base", e.target.value)} /></div>
       <div><Label>Інструкції (як поводитися)</Label><Textarea rows={5} value={form.instructions} onChange={(e) => set("instructions", e.target.value)} /></div>
       <div><Label>Швидкі запитання (кожне з нового рядка)</Label><Textarea rows={5} value={form.quick_questions} onChange={(e) => set("quick_questions", e.target.value)} /></div>
-      <p className="text-xs text-muted-foreground">Модель: {form.model}. Помічник не має доступу до акцій, інвесторів, замовлень, виплат і представників.</p>
+      <div><Label>Модель ШІ</Label>
+        <Select value={form.model} onValueChange={(v) => set("model", v)}>
+          <SelectTrigger className="min-h-[44px]"><SelectValue /></SelectTrigger>
+          <SelectContent>{MODELS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+      <div><Label>Місячний ліміт кредитів (0 — без ліміту)</Label><Input type="number" min={0} step="0.5" value={form.monthly_credit_limit ?? 0} onChange={(e) => set("monthly_credit_limit", e.target.value)} /></div>
+      <p className="text-xs text-muted-foreground">Помічник не має доступу до акцій, інвесторів, замовлень, виплат і представників.</p>
       <Button onClick={save} disabled={saving} className="min-h-[44px]">{saving ? "Збереження…" : "Зберегти"}</Button>
     </div>
   );
@@ -82,6 +115,7 @@ function Conversations() {
 
   return (
     <div className="space-y-4">
+      <UsageMeter data={data} />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         {[["Діалогів", data.length], ["Запитів", totals.req], ["Токенів", (totals.inT + totals.outT).toLocaleString("uk-UA")],
           ["Кредитів", totals.cr.toFixed(4)], ["Час роботи", fmtDuration(totals.ms)]].map(([l, v]) => (
