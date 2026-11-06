@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Group } from '@/hooks/groups/useGroups';
+import { EditPublicationModal } from '@/components/publications/EditPublicationModal';
 
 interface Props {
   group: Group;
@@ -91,6 +92,29 @@ export function GroupFeed({ group, currentUser, refreshKey }: Props) {
     toast.success('Допис видалено');
   };
 
+  const [editPost, setEditPost] = useState<any | null>(null);
+  const canTagGreeting = !!(group as any).song_orders_enabled;
+
+  const handleEdit = (postId: string) => {
+    const p = posts.find((x) => x.id === postId);
+    if (!p) return;
+    setEditPost({
+      id: p.id, content: p.content || '', media_url: p.media_url, category: p.category,
+      video_orientation: p.video_orientation ?? null,
+      target: p.target_user_id ? { id: p.target_user_id, full_name: p.target?.full_name || null, avatar_url: p.target?.avatar_url || null } : null,
+    });
+  };
+
+  const editModal = (
+    <EditPublicationModal
+      open={!!editPost}
+      onOpenChange={(o) => { if (!o) setEditPost(null); }}
+      post={editPost}
+      allowGreeting={canTagGreeting}
+      onSuccess={() => load()}
+    />
+  );
+
   if (loading) {
     return (
       <div className="space-y-4" aria-label="Завантаження дописів" aria-busy="true">
@@ -145,6 +169,7 @@ export function GroupFeed({ group, currentUser, refreshKey }: Props) {
             timeAgo="щойно"
             currentUser={currentUser}
             onDelete={handleDelete}
+            onEdit={handleEdit}
             feedComments={feed.getCommentsForPost(post.id)}
             postLikesData={feed.getPostLikes(post.id)}
             getCommentLikes={feed.getCommentLikes}

@@ -136,7 +136,7 @@ export function NewsFeed() {
     const { data: supabasePosts, error } = await query;
     if (error && error.code !== 'PGRST116') console.error("Error loading posts:", error);
     if (!supabasePosts || supabasePosts.length === 0) return [];
-    const authorIds = [...new Set(supabasePosts.map(p => p.user_id).filter(Boolean))] as string[];
+    const authorIds = [...new Set(supabasePosts.flatMap((p: any) => [p.user_id, p.target_user_id]).filter(Boolean))] as string[];
     const { data: authors } = authorIds.length > 0
       ? await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: authorIds })
       : { data: [] as any[] };
@@ -147,6 +147,7 @@ export function NewsFeed() {
     return supabasePosts.map(post => ({
       ...post,
       author: authors?.find((a: any) => a.id === post.user_id) || null,
+      target: (post as any).target_user_id ? authors?.find((a: any) => a.id === (post as any).target_user_id) || null : null,
       group: groupsData?.find((g: any) => g.id === (post as any).group_id) || null,
     }));
   };
@@ -168,7 +169,7 @@ export function NewsFeed() {
       .order('created_at', { ascending: false })
       .limit(FOLLOWED_PRIORITY_LIMIT);
     if (!data || data.length === 0) return [];
-    const { data: authors } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: [...new Set(data.map(p => p.user_id))] as string[] });
+    const { data: authors } = await supabase.rpc('get_safe_public_profiles_by_ids', { _ids: [...new Set(data.flatMap((p: any) => [p.user_id, p.target_user_id]).filter(Boolean))] as string[] });
     const groupIds = [...new Set(data.map((p: any) => p.group_id).filter(Boolean))] as string[];
     const { data: groupsData } = groupIds.length > 0
       ? await supabase.from('groups').select('id, name, avatar_url').in('id', groupIds)
@@ -177,6 +178,7 @@ export function NewsFeed() {
       ...post,
       followed: true,
       author: authors?.find((a: any) => a.id === post.user_id) || null,
+      target: (post as any).target_user_id ? authors?.find((a: any) => a.id === (post as any).target_user_id) || null : null,
       group: groupsData?.find((g: any) => g.id === (post as any).group_id) || null,
     }));
   };
@@ -593,6 +595,7 @@ export function NewsFeed() {
                     avatarUrl: post.group.avatar_url || '',
                     postedAsGroup: !!(post as any).posted_as_group,
                   } : null}
+                  greetingFor={(post as any).target_user_id ? { id: (post as any).target_user_id, name: (post as any).target?.full_name || 'іменинника' } : null}
                   imageUrl={post.media_url || undefined}
                   caption={post.content || ''}
                   pollId={(post as any).poll_id ?? null}

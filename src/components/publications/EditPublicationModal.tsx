@@ -14,6 +14,7 @@ import { ImageCropEditor } from "@/components/ui/ImageCropEditor";
 import { compressImageAsFile, dataUrlToBlob, OUTPUT_FORMAT, OUTPUT_EXTENSION } from "@/lib/imageCompression";
 import { extractVideoEmbed } from "@/lib/videoEmbed";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { GreetingRecipientPicker, type GreetingRecipient } from "@/components/groups/GreetingRecipientPicker";
 
 const postSchema = z.object({
   content: z.string()
@@ -30,17 +31,22 @@ interface EditPublicationModalProps {
     media_url?: string | null;
     category?: string | null;
     video_orientation?: "vertical" | "horizontal" | null;
+    target?: GreetingRecipient | null;
   } | null;
   onSuccess?: () => void;
+  /** Show the birthday-person picker (greeting groups only). */
+  allowGreeting?: boolean;
 }
 
 export function EditPublicationModal({ 
   open, 
   onOpenChange, 
   post,
-  onSuccess 
+  onSuccess,
+  allowGreeting = false,
 }: EditPublicationModalProps) {
   const { user } = useAuth();
+  const [recipient, setRecipient] = useState<GreetingRecipient | null>(null);
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("");
   const [videoOrientation, setVideoOrientation] = useState<"auto" | "vertical" | "horizontal">("auto");
@@ -58,6 +64,7 @@ export function EditPublicationModal({
   useEffect(() => {
     if (post && open) {
       setContent(post.content || "");
+      setRecipient(post.target || null);
       setCategory(post.category || "");
       setPreviewUrl(post.media_url || null);
       setSelectedFile(null);
@@ -192,6 +199,7 @@ export function EditPublicationModal({
         media_url: mediaUrl,
         video_orientation: hasVideoEmbed && videoOrientation !== "auto" ? videoOrientation : null,
       };
+      if (allowGreeting) updatePayload.target_user_id = recipient?.id ?? null;
 
       // Оновлюємо публікацію в базі даних
       const { error } = await supabase
@@ -255,6 +263,13 @@ export function EditPublicationModal({
               />
               <p className="text-xs text-muted-foreground mt-1">{content.length}/10000</p>
             </div>
+
+            {allowGreeting && (
+              <div className="space-y-1">
+                <Label>Іменинник</Label>
+                <GreetingRecipientPicker value={recipient} onChange={setRecipient} />
+              </div>
+            )}
 
             {(() => {
               const embed = extractVideoEmbed(content);
