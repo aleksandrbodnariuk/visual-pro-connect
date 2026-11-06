@@ -1,3 +1,4 @@
+import { fetchPartyConversationIds } from "@/lib/partyConversations";
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -73,7 +74,9 @@ export class MessagesService {
         return { chats: [] };
       }
 
-      const conversationsList = (convs || []) as any[];
+      const rawList = (convs || []) as any[];
+      const partyIds = await fetchPartyConversationIds(rawList.map(c => c.id ?? c.conversation_id).filter(Boolean));
+      const conversationsList = rawList.filter(c => !partyIds.has(c.id ?? c.conversation_id));
 
       // 2. Collect all member ids across all conversations to fetch profiles in one shot
       const allMemberIds = new Set<string>();

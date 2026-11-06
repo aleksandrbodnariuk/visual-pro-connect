@@ -1,3 +1,4 @@
+import { fetchPartyConversationIds } from "@/lib/partyConversations";
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -115,7 +116,9 @@ async function fetchUnreadFromDb(uid: string): Promise<number> {
     return 0;
   }
   let total = 0;
-  for (const row of data as any[]) {
+  const rows = data as any[];
+  const partyIds = await fetchPartyConversationIds(rows.map(r => r.id ?? r.conversation_id).filter(Boolean));
+  for (const row of rows.filter(r => !partyIds.has(r.id ?? r.conversation_id))) {
     total += Number(row.unread_count || 0);
   }
   return total;
