@@ -216,7 +216,7 @@ export default function PostPage() {
         </Button>
 
         {/* Post */}
-        <Card className="mb-6">
+        <Card className="rounded-b-none border-b-0">
           <CardContent className="p-6">
             {/* Author info */}
             <div className="flex items-center justify-between mb-4">
@@ -320,7 +320,7 @@ export default function PostPage() {
         </Card>
 
         {/* Comments section - inline like main feed */}
-        <div className="creative-card p-4">
+        <div className="rounded-b-lg border border-t-0 bg-card px-6 pb-4">
           {/* Comments list */}
           {comments.length > 0 && (
             <div className="space-y-1 mb-3">

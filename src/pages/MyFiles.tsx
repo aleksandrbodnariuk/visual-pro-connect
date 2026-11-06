@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { extractVideoEmbed, VideoEmbed } from "@/lib/videoEmbed";
 import { VideoPreview } from "@/components/feed/VideoPreview";
 import { EmbedThumbnail } from "@/components/feed/EmbedThumbnail";
+import { PhotoViewer } from "@/components/media/PhotoViewer";
 import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
@@ -206,6 +207,11 @@ export default function MyFiles() {
     if (f.source === 'uploaded' && f.folder_id) return false;
     return true;
   });
+
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const photoList = activeTab === "photos"
+    ? filtered.filter(f => f.media_url).map(f => ({ id: f.id, media_url: f.media_url!, isPost: f.source === 'post' }))
+    : [];
 
   const buildTabUrl = (tabId: string) => {
     if (isOwnFiles) return `/my-files/${tabId}`;
@@ -542,7 +548,7 @@ export default function MyFiles() {
               toggleSelectFile(file.id);
               return;
             }
-            file.source === 'post' ? navigate(`/post/${file.id}`) : window.open(file.media_url!, '_blank');
+            setViewerIndex(photoList.findIndex(p => p.id === file.id));
           }}
         >
           <img
@@ -659,6 +665,7 @@ export default function MyFiles() {
 
   return (
     <div className="h-screen overflow-hidden bg-background">
+      <PhotoViewer photos={photoList} index={viewerIndex} onIndexChange={setViewerIndex} />
       <Navbar />
       <div className="container mx-auto px-2 sm:px-3 md:px-4 grid grid-cols-12 gap-0 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] 3xl:h-[calc(100vh-5rem)]">
         {/* Left Sidebar */}

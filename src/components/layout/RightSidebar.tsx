@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { extractVideoEmbed, VideoEmbed } from "@/lib/videoEmbed";
 import { EmbedThumbnail } from "@/components/feed/EmbedThumbnail";
 import { AudioPlayer } from "@/components/feed/AudioPlayer";
+import { PhotoViewer } from "@/components/media/PhotoViewer";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthState } from "@/hooks/auth/useAuthState";
@@ -77,6 +78,8 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
   }, [userId]);
 
   const photos = files.filter(f => getFileType(f) === "photos");
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const viewerPhotos = photos.map(f => ({ id: f.id, media_url: f.media_url!, isPost: true }));
   const videos = files.filter(f => getFileType(f) === "videos");
   const music = files.filter(f => getFileType(f) === "music");
 
@@ -111,6 +114,7 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
 
   return (
     <div className={cn("space-y-3", className)}>
+      <PhotoViewer photos={viewerPhotos} index={viewerIndex} onIndexChange={setViewerIndex} />
       <h2 className="font-bold text-sm flex items-center gap-2 px-1">
         <FolderOpen className="h-4 w-4 text-primary" />
         {isOwnFiles ? "Мої файли" : "Файли"}
@@ -132,11 +136,11 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
             </button>
           </div>
           <div className="grid grid-cols-3 gap-1 rounded-lg overflow-hidden">
-            {photos.slice(0, 9).map(file => (
+            {photos.slice(0, 9).map((file, i) => (
               <div
                 key={file.id}
                 className="aspect-square cursor-pointer overflow-hidden bg-muted group"
-                onClick={() => navigate(`/post/${file.id}`)}
+                onClick={() => setViewerIndex(i)}
               >
                 <img
                   src={file.media_url!}
