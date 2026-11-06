@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { ArrowLeft, Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, Loader2, Trash2, Highlighter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 // Переклад Івана Огієнка (UBIO) через відкритий API bolls.life
 const API = "https://bolls.life";
@@ -47,15 +48,31 @@ export default function VipBible() {
   const scrollTarget = useRef<number | null>(null);
   const verseRefs = useRef<Record<number, HTMLElement | null>>({});
 
+  const syncTimer = useRef<ReturnType<typeof setTimeout>>();
   const save = useCallback((next: Store) => {
     setStore(next);
     try { localStorage.setItem(key, JSON.stringify(next)); } catch { /* quota */ }
-  }, [key]);
+    if (!user?.id) return;
+    clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase as any).from("vip_bible_state").upsert({ user_id: user.id, data: next }).then(() => {});
+    }, 1500);
+  }, [key, user?.id]);
 
   // load saved state & resume position
   useEffect(() => {
+    let alive = true;
+    (async () => {
+    let remote: Store | null = null;
+    if (user?.id) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any).from("vip_bible_state").select("data").eq("user_id", user.id).maybeSingle();
+      if (data?.data && Object.keys(data.data).length) remote = data.data as Store;
+    }
+    if (!alive) return;
     try {
-      const s: Store = JSON.parse(localStorage.getItem(key) || "null") || { bookmarks: [], highlights: {} };
+      const s: Store = remote || JSON.parse(localStorage.getItem(key) || "null") || { bookmarks: [], highlights: {} };
       setStore({ bookmarks: s.bookmarks || [], highlights: s.highlights || {}, progress: s.progress });
       if (s.progress) {
         setBook(s.progress.book);
@@ -64,7 +81,9 @@ export default function VipBible() {
       }
     } catch { /* ignore */ }
     setLoadedStore(true);
-  }, [key]);
+    })();
+    return () => { alive = false; };
+  }, [key, user?.id]);
 
   useEffect(() => {
     fetch(`${API}/get-books/${TR}/`).then((r) => r.json()).then(setBooks).catch(() => setError("Не вдалося завантажити перелік книг"));
@@ -217,7 +236,7 @@ export default function VipBible() {
         </Card>
 
         <h1 className="text-2xl font-bold mb-1">{currentBook?.name ?? "Біблія"} {chapter}</h1>
-        <p className="text-xs text-muted-foreground mb-4">Переклад Івана Огієнка. Місце читання зберігається автоматично. Натисніть на вірш, щоб виділити або додати закладку.</p>
+        <p className="text-xs text-muted-foreground mb-4">Переклад Івана Огієнка. Місце читання, закладки й виділення зберігаються у вашому акаунті та доступні на всіх пристроях. Натисніть на вірш, щоб виділити або додати закладку.</p>
 
         {loading ? (
           <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
