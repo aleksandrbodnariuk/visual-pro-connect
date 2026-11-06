@@ -20,6 +20,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { OrderRefList } from '@/components/payouts/OrderRefList';
+import { PayoutOrderFilter } from '@/components/payouts/PayoutOrderFilter';
 
 interface RepPayoutRow {
   id: string;
@@ -278,9 +279,15 @@ export function RepPayoutsSection() {
     setForceLoading(false);
   };
 
-  const pending = useMemo(() => payouts.filter(p => p.status === 'pending'), [payouts]);
-  const paid = useMemo(() => payouts.filter(p => p.status === 'paid'), [payouts]);
-  const confirmed = useMemo(() => payouts.filter(p => p.status === 'confirmed'), [payouts]);
+  const [orderFilter, setOrderFilter] = useState<Set<string> | null>(null);
+
+  const allOrderIds = useMemo(() => payouts.flatMap(p => p.order_ids), [payouts]);
+
+  const fp = useMemo(() => orderFilter ? payouts.filter(p => p.order_ids.some(id => orderFilter.has(id))) : payouts, [payouts, orderFilter]);
+
+  const pending = useMemo(() => fp.filter(p => p.status === 'pending'), [fp]);
+  const paid = useMemo(() => fp.filter(p => p.status === 'paid'), [fp]);
+  const confirmed = useMemo(() => fp.filter(p => p.status === 'confirmed'), [fp]);
 
   const totals = useMemo(() => ({
     pending: pending.reduce((s, p) => s + p.amount, 0),
@@ -348,6 +355,7 @@ export function RepPayoutsSection() {
       </div>
 
       {/* Tabs */}
+      <PayoutOrderFilter orderIds={allOrderIds} onChange={setOrderFilter} />
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="pending">

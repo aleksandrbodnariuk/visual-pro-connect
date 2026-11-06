@@ -4,6 +4,7 @@ export type OrderStatus = 'pending' | 'confirmed' | 'archived';
 
 export interface SpecialistOrder {
   id: string;
+  order_number?: number;
   title: string;
   description: string | null;
   order_type: OrderType;

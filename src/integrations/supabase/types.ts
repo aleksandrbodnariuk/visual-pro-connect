@@ -3759,6 +3759,7 @@ export type Database = {
           order_amount: number | null
           order_date: string
           order_expenses: number | null
+          order_number: number
           order_type: string
           price: number | null
           representative_id: string | null
@@ -3778,6 +3779,7 @@ export type Database = {
           order_amount?: number | null
           order_date: string
           order_expenses?: number | null
+          order_number?: number
           order_type?: string
           price?: number | null
           representative_id?: string | null
@@ -3797,6 +3799,7 @@ export type Database = {
           order_amount?: number | null
           order_date?: string
           order_expenses?: number | null
+          order_number?: number
           order_type?: string
           price?: number | null
           representative_id?: string | null

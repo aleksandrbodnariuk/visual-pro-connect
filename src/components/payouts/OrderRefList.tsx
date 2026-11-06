@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle, ChevronDown, ChevronRight, FlaskConical } from 'lucide-react';
 
-interface OrderRef {
+export interface OrderRef {
   id: string;
+  order_number: number | null;
   title: string;
   order_date: string;
   description: string | null;
@@ -21,12 +22,12 @@ interface OrderRef {
 // Global small cache so multiple lists on the same page don't refetch
 const cache = new Map<string, OrderRef>();
 
-async function fetchOrders(ids: string[]): Promise<OrderRef[]> {
+export async function fetchOrders(ids: string[]): Promise<OrderRef[]> {
   const missing = ids.filter(id => !cache.has(id));
   if (missing.length > 0) {
     const { data } = await (supabase as any)
       .from('specialist_orders')
-      .select('id, title, order_date, description, order_amount, is_test')
+      .select('id, order_number, title, order_date, description, order_amount, is_test')
       .in('id', missing);
     if (data) {
       for (const o of data as OrderRef[]) cache.set(o.id, o);
@@ -107,6 +108,9 @@ export function OrderRefList({ orderIds, previewCount = 2, className }: Props) {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
+                  {o.order_number != null && (
+                    <Badge variant="secondary" className="font-mono text-[10px] px-1.5 py-0 h-4">№ {o.order_number}</Badge>
+                  )}
                   <span className="font-medium truncate">{o.title}</span>
                   {o.is_test && (
                     <Badge variant="destructive" className="text-[9px] px-1 py-0 h-3.5">ТЕСТ</Badge>

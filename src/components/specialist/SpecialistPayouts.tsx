@@ -11,6 +11,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { OrderRefList } from '@/components/payouts/OrderRefList';
+import { PayoutOrderFilter } from '@/components/payouts/PayoutOrderFilter';
 
 interface PayoutRow {
   id: string;
@@ -85,9 +86,15 @@ export function SpecialistPayouts({ userId }: Props) {
     setConfirmLoading(false);
   };
 
-  const pending = useMemo(() => payouts.filter(p => p.status === 'pending'), [payouts]);
-  const awaitingConfirm = useMemo(() => payouts.filter(p => p.status === 'paid'), [payouts]);
-  const confirmed = useMemo(() => payouts.filter(p => p.status === 'confirmed'), [payouts]);
+  const [orderFilter, setOrderFilter] = useState<Set<string> | null>(null);
+
+  const allOrderIds = useMemo(() => payouts.flatMap(p => [p.order_id]), [payouts]);
+
+  const fp = useMemo(() => orderFilter ? payouts.filter(p => [p.order_id].some(id => orderFilter.has(id))) : payouts, [payouts, orderFilter]);
+
+  const pending = useMemo(() => fp.filter(p => p.status === 'pending'), [fp]);
+  const awaitingConfirm = useMemo(() => fp.filter(p => p.status === 'paid'), [fp]);
+  const confirmed = useMemo(() => fp.filter(p => p.status === 'confirmed'), [fp]);
 
   const totalPending = pending.reduce((s, p) => s + p.amount, 0);
   const totalAwaitingConfirm = awaitingConfirm.reduce((s, p) => s + p.amount, 0);
@@ -131,6 +138,7 @@ export function SpecialistPayouts({ userId }: Props) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <PayoutOrderFilter orderIds={allOrderIds} onChange={setOrderFilter} />
         {/* Summary */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="rounded-lg border p-3 text-center">

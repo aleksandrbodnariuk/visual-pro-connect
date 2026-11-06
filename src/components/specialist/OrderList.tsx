@@ -42,6 +42,7 @@ export function OrderList({ orders, selectedDate, onSelectOrder, selectedOrderId
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <div className={cn('w-2.5 h-2.5 rounded-full flex-shrink-0', ORDER_TYPE_COLORS[order.order_type as keyof typeof ORDER_TYPE_COLORS])} />
+                {order.order_number != null && <span className="font-mono text-xs text-muted-foreground flex-shrink-0">№ {order.order_number}</span>}
                 <h4 className="font-medium text-sm truncate">{order.title}</h4>
                 {order.is_test && (
                   <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 gap-1 flex-shrink-0">
