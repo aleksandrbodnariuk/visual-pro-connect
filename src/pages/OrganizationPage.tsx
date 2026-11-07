@@ -19,6 +19,7 @@ import { UnitOfficersPanel } from '@/components/party/UnitOfficersPanel';
 import { FlagBanner } from '@/components/party/FlagBanner';
 import { TeamBusinessPanel } from '@/components/team/TeamBusinessPanel';
 import { Briefcase } from 'lucide-react';
+import { OrgSettingsDialog } from '@/components/orgs/OrgSettingsDialog';
 import { TeamMembersPanel } from '@/components/team/TeamMembersPanel';
 
 export default function OrganizationPage() {
@@ -74,9 +75,7 @@ export default function OrganizationPage() {
                 <Badge variant="secondary">{ORG_TYPES.find((t) => t.value === organization.type)?.label}</Badge>
               </div>
               {isAdmin && (
-                <Button variant="ghost" size="sm" onClick={async () => {
-                  if (confirm('Видалити організацію з усіма даними?') && await orgActions.remove(organization.id)) navigate('/organizations');
-                }}><Trash2 className="h-4 w-4 mr-1 text-destructive" /> Видалити</Button>
+                <OrgSettingsDialog org={organization} isSiteAdmin={isAdmin} onChanged={reload} />
               )}
               </div>
             </Card>
