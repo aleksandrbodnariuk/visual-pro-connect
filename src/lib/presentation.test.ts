@@ -16,3 +16,16 @@ describe('presentation', () => {
     expect(presentationLink('https://x.app', 'e1', 'u1')).toBe('https://x.app/presentation/e1?ref=u1');
   });
 });
+
+import { newMeetingRoomUrl, isMeetingRoom, embedUrl as _embed } from './presentation';
+describe('online stage', () => {
+  it('creates an unguessable meeting room', () => {
+    const url = newMeetingRoomUrl(() => 'aaaa-bbbb');
+    expect(url).toBe('https://meet.jit.si/BC-Team-aaaabbbb');
+    expect(isMeetingRoom(url)).toBe(true);
+    expect(isMeetingRoom('https://zoom.us/j/1')).toBe(false);
+  });
+  it('embeds vimeo', () => {
+    expect(_embed('https://vimeo.com/123456')).toBe('https://player.vimeo.com/video/123456');
+  });
+});
