@@ -41,6 +41,9 @@ export default {
 			'4xl': '2560px',    // 2K / TV
 		},
 		extend: {
+			boxShadow: {
+				card: 'var(--card-shadow)',
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',

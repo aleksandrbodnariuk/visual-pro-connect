@@ -38,6 +38,7 @@
     --ring: 259 90% 66%;
 
     --radius: 0.75rem;
+    --card-shadow: 0 1px 0 0 hsl(0 0% 100% / 0.8) inset, 0 0 0 1px hsl(220 13% 91% / 0.4), 0 8px 24px -14px hsl(230 25% 15% / 0.18);
 
     --sidebar-background: 230 25% 15%;
     --sidebar-foreground: 0 0% 98%;
@@ -51,10 +52,10 @@
 
   .dark {
     /* Темна тема для ночі */
-    --background: 230 25% 15%;
+    --background: 228 22% 8%;
     --foreground: 0 0% 98%;
 
-    --card: 230 25% 15%;
+    --card: 228 22% 12%;
     --card-foreground: 0 0% 98%;
 
     --popover: 230 25% 15%;
@@ -75,8 +76,10 @@
     --destructive: 24 94% 53%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 217 10% 25%;
-    --input: 217 10% 25%;
+    --border: 225 14% 20%;
+    --input: 225 14% 22%;
+    --card-highlight: 0 0% 100% / 0.07;
+    --card-shadow: 0 1px 0 0 hsl(0 0% 100% / 0.06) inset, 0 0 0 1px hsl(0 0% 100% / 0.03), 0 10px 30px -12px hsl(0 0% 0% / 0.6);
     --ring: 259 90% 66%;
 
     /* Бічна панель для темної теми */

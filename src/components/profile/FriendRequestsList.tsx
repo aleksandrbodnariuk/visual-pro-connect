@@ -42,16 +42,7 @@ export function FriendRequestsList() {
   }
 
   if (incomingRequests.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Запити у друзі</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">Немає нових запитів у друзі</p>
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
   return (
