@@ -43,9 +43,9 @@ export function SlideViewer({ slides, title }: { slides: string[]; title?: strin
       <button aria-label="Наступний слайд" disabled={i === n - 1} onClick={() => go(1)}
         className="absolute right-1 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-background/70 flex items-center justify-center disabled:opacity-30"><ChevronRight className="h-6 w-6" /></button>
       <div className="flex items-center gap-2 p-2 bg-card">
-        <span className="text-sm tabular-nums">{i + 1} / {n}</span>
-        <input type="range" min={0} max={n - 1} value={i} onChange={(e) => setI(Number(e.target.value))} className="flex-1 accent-primary" aria-label="Перейти до слайда" />
-        <Button size="sm" variant="ghost" onClick={share}><Share2 className="h-4 w-4 mr-1" />Поділитися</Button>
+        <span className="text-sm tabular-nums whitespace-nowrap shrink-0">{i + 1} / {n}</span>
+        <input type="range" min={0} max={n - 1} value={i} onChange={(e) => setI(Number(e.target.value))} className="flex-1 min-w-0 accent-primary" aria-label="Перейти до слайда" />
+        <Button size="sm" variant="ghost" className="shrink-0 h-10 px-2 sm:px-3" onClick={share} aria-label="Поділитися"><Share2 className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Поділитися</span></Button>
         <Button size="icon" variant="ghost" aria-label="Повний екран"
           onClick={() => document.fullscreenElement ? document.exitFullscreen() : box.current?.requestFullscreen?.()}><Maximize2 className="h-4 w-4" /></Button>
       </div>
