@@ -3989,6 +3989,189 @@ export type Database = {
         }
         Relationships: []
       }
+      team_events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          kind: string
+          link: string | null
+          location: string | null
+          organization_id: string
+          starts_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          kind?: string
+          link?: string | null
+          location?: string | null
+          organization_id: string
+          starts_at: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          kind?: string
+          link?: string | null
+          location?: string | null
+          organization_id?: string
+          starts_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_materials: {
+        Row: {
+          body: string | null
+          category: string
+          created_at: string
+          id: string
+          organization_id: string
+          sort_order: number
+          title: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          body?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          body?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_materials_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_onboarding: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          step_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          step_key: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          step_key?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_onboarding_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_partners: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          notes: string | null
+          organization_id: string
+          personal_pv: number
+          phone: string | null
+          sponsor_id: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          full_name: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          personal_pv?: number
+          phone?: string | null
+          sponsor_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          personal_pv?: number
+          phone?: string | null
+          sponsor_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_partners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_partners_sponsor_id_fkey"
+            columns: ["sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "team_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tent_reports: {
         Row: {
           booklets: number
@@ -5237,6 +5420,10 @@ export type Database = {
         Returns: boolean
       }
       is_org_manager: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_org_member: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }

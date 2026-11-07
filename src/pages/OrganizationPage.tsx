@@ -17,6 +17,8 @@ import { PartyPeoplePanel } from '@/components/party/PartyPeoplePanel';
 import { PartySymbols } from '@/components/party/PartySymbols';
 import { UnitOfficersPanel } from '@/components/party/UnitOfficersPanel';
 import { FlagBanner } from '@/components/party/FlagBanner';
+import { TeamBusinessPanel } from '@/components/team/TeamBusinessPanel';
+import { Briefcase } from 'lucide-react';
 
 export default function OrganizationPage() {
   const { orgId } = useParams();
@@ -40,7 +42,9 @@ export default function OrganizationPage() {
       setObserverOnly(observer && !(mg.count || 0) && !(of.count || 0) && roles.every((r) => r === 'observer'));
     });
   }, [orgId, user?.id, isAdmin, hasParty]);
-  const showParty = hasParty && !observerOnly;
+  const isPartyOrg = organization?.type === 'party';
+  const showParty = hasParty && isPartyOrg && !observerOnly;
+  const isTeam = !!organization && organization.type !== 'party';
 
   useEffect(() => { if (organization) document.title = `${organization.name} — Організації`; }, [organization]);
 
@@ -71,11 +75,12 @@ export default function OrganizationPage() {
               </div>
             </Card>
 
-            <Tabs key={observerOnly ? 'obs' : 'full'} defaultValue={observerOnly ? 'campaigns' : hasParty ? 'party' : 'about'}>
+            <Tabs key={observerOnly ? 'obs' : 'full'} defaultValue={observerOnly ? 'campaigns' : organization.type !== 'party' ? 'business' : hasParty ? 'party' : 'about'}>
               <TabsList className="flex-wrap h-auto">
                 <TabsTrigger value="about">Про організацію</TabsTrigger>
                 {showParty && <TabsTrigger value="party"><Flag className="h-4 w-4 mr-1" />Партія</TabsTrigger>}
-                {hasParty && <TabsTrigger value="campaigns"><Vote className="h-4 w-4 mr-1" />Вибори</TabsTrigger>}
+                {hasParty && isPartyOrg && <TabsTrigger value="campaigns"><Vote className="h-4 w-4 mr-1" />Вибори</TabsTrigger>}
+                {isTeam && <TabsTrigger value="business"><Briefcase className="h-4 w-4 mr-1" />Бізнес-кабінет</TabsTrigger>}
                 {isAdmin && <TabsTrigger value="access"><ShieldCheck className="h-4 w-4 mr-1" />Доступи</TabsTrigger>}
               </TabsList>
               <TabsContent value="about">
@@ -107,9 +112,14 @@ export default function OrganizationPage() {
                   </Tabs>
                 </TabsContent>
               )}
-              {hasParty && (
+              {hasParty && isPartyOrg && (
                 <TabsContent value="campaigns">
                   <CampaignsPanel orgId={organization.id} isAdmin={isAdmin} />
+                </TabsContent>
+              )}
+              {isTeam && (
+                <TabsContent value="business">
+                  <TeamBusinessPanel orgId={organization.id} canEdit={isAdmin} />
                 </TabsContent>
               )}
               {isAdmin && (
