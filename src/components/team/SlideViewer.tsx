@@ -61,14 +61,14 @@ export function SlideViewer({ slides, title }: { slides: string[]; title?: strin
 
   if (!n) return null;
   return (
-    <div ref={box} className="relative bg-background rounded-md overflow-hidden select-none [&:fullscreen]:flex [&:fullscreen]:flex-col [&:fullscreen]:justify-center"
+    <div ref={box} className="relative bg-background rounded-2xl overflow-hidden ring-1 ring-border shadow-card select-none [&:fullscreen]:flex [&:fullscreen]:flex-col [&:fullscreen]:justify-center"
       onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
       onTouchEnd={(e) => { if (touch.current == null) return; const dx = e.changedTouches[0].clientX - touch.current; if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1); touch.current = null; }}>
       <SlideImage key={slides[i]} src={resolveSlideUrl(slides[i])} alt={`${title || 'Слайд'} ${i + 1}`} />
       <button aria-label="Попередній слайд" disabled={i === 0} onClick={() => go(-1)}
-        className="absolute left-1 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-background/70 flex items-center justify-center disabled:opacity-30"><ChevronLeft className="h-6 w-6" /></button>
+        className="absolute left-1 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-background/80 backdrop-blur-sm border shadow-card hover:bg-background transition-colors flex items-center justify-center disabled:opacity-30"><ChevronLeft className="h-6 w-6" /></button>
       <button aria-label="Наступний слайд" disabled={i === n - 1} onClick={() => go(1)}
-        className="absolute right-1 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-background/70 flex items-center justify-center disabled:opacity-30"><ChevronRight className="h-6 w-6" /></button>
+        className="absolute right-1 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-background/80 backdrop-blur-sm border shadow-card hover:bg-background transition-colors flex items-center justify-center disabled:opacity-30"><ChevronRight className="h-6 w-6" /></button>
       <div className="flex items-center gap-2 p-2 bg-card">
         <span className="text-sm tabular-nums whitespace-nowrap shrink-0">{i + 1} / {n}</span>
         <input type="range" min={0} max={n - 1} value={i} onChange={(e) => setI(Number(e.target.value))} className="flex-1 min-w-0 accent-primary" aria-label="Перейти до слайда" />

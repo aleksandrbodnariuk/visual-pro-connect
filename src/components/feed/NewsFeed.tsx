@@ -505,25 +505,25 @@ export function NewsFeed() {
           <div className="border-t mt-3 pt-3 flex items-center justify-between">
             <div className="flex items-center gap-1">
               <Button variant="ghost" size="sm" onClick={() => videoInputRef.current?.click()}
-                className="h-9 px-2 sm:px-3 text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5" title="Відео">
-                <Video className="h-5 w-5" /><span className="text-xs hidden sm:inline">Відео</span>
+                className="h-10 px-2.5 sm:px-3.5 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5" title="Відео">
+                <Video className="h-5 w-5" /><span className="text-sm font-medium hidden sm:inline">Відео</span>
               </Button>
               <Button variant="ghost" size="sm" onClick={() => imageInputRef.current?.click()}
-                className="h-9 px-2 sm:px-3 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950 gap-1.5" title="Фото">
-                <Image className="h-5 w-5" /><span className="text-xs hidden sm:inline">Фото</span>
+                className="h-10 px-2.5 sm:px-3.5 rounded-xl text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950 gap-1.5" title="Фото">
+                <Image className="h-5 w-5" /><span className="text-sm font-medium hidden sm:inline">Фото</span>
               </Button>
               <Button variant="ghost" size="sm" onClick={() => audioInputRef.current?.click()}
-                className="h-9 px-2 sm:px-3 text-orange-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950 gap-1.5" title="Музика">
-                <Music className="h-5 w-5" /><span className="text-xs hidden sm:inline">Музика</span>
+                className="h-10 px-2.5 sm:px-3.5 rounded-xl text-orange-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950 gap-1.5" title="Музика">
+                <Music className="h-5 w-5" /><span className="text-sm font-medium hidden sm:inline">Музика</span>
               </Button>
               <Button variant="ghost" size="sm" onClick={handleEventClick}
-                className="h-9 px-2 sm:px-3 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 gap-1.5" title="Подія">
-                <Users className="h-5 w-5" /><span className="text-xs hidden sm:inline">Подія</span>
+                className="h-10 px-2.5 sm:px-3.5 rounded-xl text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 gap-1.5" title="Подія">
+                <Users className="h-5 w-5" /><span className="text-sm font-medium hidden sm:inline">Подія</span>
               </Button>
               {isAdmin && (
                 <Button variant="ghost" size="sm" onClick={() => setPollDialogOpen(true)}
-                  className="h-9 px-2 sm:px-3 text-purple-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950 gap-1.5" title="Опитування">
-                  <BarChart3 className="h-5 w-5" /><span className="text-xs hidden sm:inline">Опитування</span>
+                  className="h-10 px-2.5 sm:px-3.5 rounded-xl text-purple-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950 gap-1.5" title="Опитування">
+                  <BarChart3 className="h-5 w-5" /><span className="text-sm font-medium hidden sm:inline">Опитування</span>
                 </Button>
               )}
             </div>

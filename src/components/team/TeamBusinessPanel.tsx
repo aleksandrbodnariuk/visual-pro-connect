@@ -522,7 +522,7 @@ export function TeamBusinessPanel({ orgId, canEdit }: { orgId: string; canEdit: 
     <>
     <TeamLiveBanner orgId={orgId} />
     <Tabs defaultValue="me">
-      <TabsList className="flex-wrap h-auto mb-2">
+      <TabsList className="flex-wrap h-auto mb-3 gap-1 rounded-2xl border bg-card p-1.5 shadow-card [&>button]:rounded-xl [&>button]:px-3 [&>button]:py-2 [&>button[data-state=active]]:bg-secondary [&>button[data-state=active]]:text-secondary-foreground">
         <TabsTrigger value="me"><UserRound className="h-4 w-4 mr-1" />Мій кабінет</TabsTrigger>
         <TabsTrigger value="chat"><MessageCircle className="h-4 w-4 mr-1" />Моя команда</TabsTrigger>
         <TabsTrigger value="plan"><Calculator className="h-4 w-4 mr-1" />Маркетинг-план</TabsTrigger>
