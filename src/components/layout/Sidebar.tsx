@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 import { useDynamicCategories, getIconComponent } from "@/hooks/useDynamicCategories";
+import { useHasOrgAccess } from "@/hooks/orgs/useHasOrgAccess";
 import { supabase } from "@/integrations/supabase/client";
 
 interface SidebarProps {
@@ -25,6 +26,7 @@ export function Sidebar({ className }: SidebarProps) {
   const { unreadCount } = useUnreadMessages();
   const { unreadCount: unreadNotifCount } = useUnreadNotifications();
   const { categories } = useDynamicCategories();
+  const hasOrgAccess = useHasOrgAccess();
   
   const currentUser = getCurrentUser();
   const [isShareholder, setIsShareholder] = useState(false);
@@ -106,9 +108,11 @@ export function Sidebar({ className }: SidebarProps) {
           <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/groups')} data-active={location.pathname.startsWith("/groups")}>
             <UsersRound className="mr-2 h-4 w-4" /> {t.groups}
           </Button>
+          {hasOrgAccess && (
           <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/organizations')} data-active={location.pathname.startsWith("/organizations")}>
             <Building2 className="mr-2 h-4 w-4" /> {t.organizations}
           </Button>
+          )}
           <Button variant="ghost" className="w-full justify-start" onClick={() => handleNavigate('/settings')} data-active={location.pathname === "/settings"}>
             <Settings className="mr-2 h-4 w-4" /> {t.settings}
           </Button>

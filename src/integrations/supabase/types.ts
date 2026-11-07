@@ -3994,11 +3994,14 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          duration_minutes: number
           id: string
+          is_public: boolean
           kind: string
           link: string | null
           location: string | null
           organization_id: string
+          public_until: string | null
           starts_at: string
           title: string
           updated_at: string
@@ -4007,11 +4010,14 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          duration_minutes?: number
           id?: string
+          is_public?: boolean
           kind?: string
           link?: string | null
           location?: string | null
           organization_id: string
+          public_until?: string | null
           starts_at: string
           title: string
           updated_at?: string
@@ -4020,11 +4026,14 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          duration_minutes?: number
           id?: string
+          is_public?: boolean
           kind?: string
           link?: string | null
           location?: string | null
           organization_id?: string
+          public_until?: string | null
           starts_at?: string
           title?: string
           updated_at?: string
@@ -4168,6 +4177,54 @@ export type Database = {
             columns: ["sponsor_id"]
             isOneToOne: false
             referencedRelation: "team_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_presentation_leads: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          inviter_id: string | null
+          message: string | null
+          name: string
+          organization_id: string
+          phone: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          inviter_id?: string | null
+          message?: string | null
+          name: string
+          organization_id: string
+          phone?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          inviter_id?: string | null
+          message?: string | null
+          name?: string
+          organization_id?: string
+          phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_presentation_leads_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "team_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_presentation_leads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -4930,6 +4987,10 @@ export type Database = {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
       }
+      can_view_organization: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
       cancel_share_transaction: {
         Args: { _transaction_id: string }
         Returns: undefined
@@ -5180,6 +5241,10 @@ export type Database = {
         Args: { _other_user_id: string }
         Returns: string
       }
+      get_public_presentation: {
+        Args: { _event_id: string; _ref: string }
+        Returns: Json
+      }
       get_representative_stats: {
         Args: { _user_id: string }
         Returns: {
@@ -5370,6 +5435,7 @@ export type Database = {
         }[]
       }
       has_active_vip: { Args: { _user_id: string }; Returns: boolean }
+      has_any_org_access: { Args: never; Returns: boolean }
       has_party_access: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
@@ -5551,6 +5617,16 @@ export type Database = {
       set_stock_market_access: {
         Args: { _access: string; _user_id: string }
         Returns: undefined
+      }
+      submit_presentation_lead: {
+        Args: {
+          _event_id: string
+          _message: string
+          _name: string
+          _phone: string
+          _ref: string
+        }
+        Returns: boolean
       }
       sync_all_shareholder_titles: { Args: never; Returns: undefined }
       sync_user_title: { Args: { _user_id: string }; Returns: undefined }

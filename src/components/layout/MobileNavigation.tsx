@@ -1,4 +1,5 @@
 import { useIsAdManager } from "@/hooks/ads/useFeedAds";
+import { useHasOrgAccess } from "@/hooks/orgs/useHasOrgAccess";
 import { Megaphone } from "lucide-react";
 
 import { useState, useEffect } from "react";
@@ -35,6 +36,7 @@ export function MobileNavigation() {
   const { language } = useLanguage();
   const t = translations[language];
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const hasOrgAccess = useHasOrgAccess();
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [isSpecialist, setIsSpecialist] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -182,6 +184,7 @@ export function MobileNavigation() {
                         <span>{t.groups}</span>
                       </Link>
 
+                      {hasOrgAccess && (
                       <Link
                         to="/organizations"
                         onClick={() => setIsMenuOpen(false)}
@@ -190,6 +193,7 @@ export function MobileNavigation() {
                         <Building2 className="h-5 w-5" />
                         <span>{t.organizations}</span>
                       </Link>
+                      )}
 
                       <Link
                         to="/sertyfikaty"

@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calculator, BookOpen, Network, GraduationCap, CalendarDays, Plus, Trash2, Phone, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
+import { Calculator, BookOpen, Network, GraduationCap, CalendarDays, Plus, Trash2, Phone, ChevronLeft, ChevronRight, Maximize2, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { presentationLink } from '@/lib/presentation';
 import { BONUS_SCALE, bonusPercent, differentialBonus, groupPv, nextLevel, type PlanNode } from '@/lib/amwayPlan';
 
 const sb = supabase as any;
@@ -312,21 +313,33 @@ function School({ orgId }: { orgId: string }) {
 /* ---------------- Події ---------------- */
 const EVENT_KINDS: Record<string, string> = { meeting: 'Бізнес-зустріч', seminar: 'Семінар', zoom: 'Онлайн-зустріч', client: 'День клієнта' };
 function Events({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
+  const { user } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
-  const [form, setForm] = useState({ title: '', kind: 'meeting', starts_at: '', location: '', link: '' });
+  const [leads, setLeads] = useState<any[]>([]);
+  const empty = { title: '', kind: 'zoom', starts_at: '', location: '', link: '', description: '', is_public: true, duration_minutes: 90 };
+  const [form, setForm] = useState(empty);
   const load = useCallback(async () => {
     const since = new Date(Date.now() - 86400000).toISOString();
-    const { data } = await sb.from('team_events').select('*').eq('organization_id', orgId).gte('starts_at', since).order('starts_at').limit(50);
-    setRows(data || []);
+    const [{ data }, l] = await Promise.all([
+      sb.from('team_events').select('*').eq('organization_id', orgId).gte('starts_at', since).order('starts_at').limit(50),
+      sb.from('team_presentation_leads').select('*').eq('organization_id', orgId).order('created_at', { ascending: false }).limit(100),
+    ]);
+    setRows(data || []); setLeads(l.data || []);
   }, [orgId]);
   useEffect(() => { load(); }, [load]);
   const add = async () => {
     if (!form.title.trim() || !form.starts_at) return toast.error('Вкажіть назву та дату');
     if (form.link && !/^https?:\/\//i.test(form.link)) return toast.error('Посилання має починатися з http(s)://');
-    const { error } = await sb.from('team_events').insert({ organization_id: orgId, title: form.title.trim(), kind: form.kind, starts_at: new Date(form.starts_at).toISOString(), location: form.location || null, link: form.link || null });
+    const { error } = await sb.from('team_events').insert({ organization_id: orgId, title: form.title.trim(), kind: form.kind, starts_at: new Date(form.starts_at).toISOString(), location: form.location || null, link: form.link || null, description: form.description.trim() || null, is_public: form.is_public, duration_minutes: Math.min(600, Math.max(15, Number(form.duration_minutes) || 90)), created_by: user?.id ?? null });
     if (error) return toast.error('Не вдалося додати подію');
-    setForm({ title: '', kind: 'meeting', starts_at: '', location: '', link: '' }); load();
+    setForm(empty); load();
   };
+  const copyLink = async (id: string) => {
+    const url = presentationLink(window.location.origin, id, user?.id);
+    try { await navigator.clipboard.writeText(url); toast.success('Ваше особисте посилання скопійовано'); }
+    catch { window.prompt('Скопіюйте посилання', url); }
+  };
+  const titleOf = (id: string) => rows.find((r) => r.id === id)?.title || 'Презентація';
   return (
     <div className="space-y-3">
       {rows.length === 0 ? <Card className="p-6 text-center text-sm text-muted-foreground">Найближчих подій немає</Card> : rows.map((e) => (
@@ -336,8 +349,10 @@ function Events({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
             <p className="text-sm text-muted-foreground">{new Date(e.starts_at).toLocaleString('uk-UA', { dateStyle: 'medium', timeStyle: 'short' })}{e.location ? ` · ${e.location}` : ''}</p>
           </div>
           <Badge variant="outline">{EVENT_KINDS[e.kind] || e.kind}</Badge>
-          {e.link && <Button asChild size="sm"><a href={e.link} target="_blank" rel="noreferrer">Приєднатися</a></Button>}
-          {canEdit && <Button size="icon" variant="ghost" onClick={async () => { await sb.from('team_events').delete().eq('id', e.id); load(); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+          {e.is_public && <Badge>Для гостей</Badge>}
+          {e.is_public && <Button size="sm" variant="secondary" className="h-10" onClick={() => copyLink(e.id)}><Link2 className="h-4 w-4 mr-1" />Запросити друзів</Button>}
+          {e.link && <Button asChild size="sm" className="h-10"><a href={e.link} target="_blank" rel="noreferrer">Приєднатися</a></Button>}
+          {canEdit && <Button size="icon" variant="ghost" onClick={async () => { if (!confirm('Видалити подію?')) return; await sb.from('team_events').delete().eq('id', e.id); load(); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
         </Card>
       ))}
       {canEdit && (
@@ -348,10 +363,23 @@ function Events({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
           </select>
           <Input type="datetime-local" value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} />
           <Input placeholder="Місце" value={form.location} maxLength={200} onChange={(e) => setForm({ ...form, location: e.target.value })} />
-          <Input placeholder="Посилання на трансляцію" value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} />
+          <Input placeholder="Посилання на трансляцію (YouTube, Zoom)" value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} />
+          <Input type="number" min={15} max={600} placeholder="Тривалість, хв" value={form.duration_minutes} onChange={(e) => setForm({ ...form, duration_minutes: Number(e.target.value) })} />
+          <Textarea className="sm:col-span-2 lg:col-span-3" placeholder="Опис для гостей" maxLength={2000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <label className="flex items-center gap-2 min-h-11 text-sm sm:col-span-2"><Checkbox checked={form.is_public} onCheckedChange={(v) => setForm({ ...form, is_public: !!v })} />Гостьова презентація — доступна за посиланням до кінця наступного дня</label>
           <Button onClick={add}><Plus className="h-4 w-4 mr-1" />Додати подію</Button>
         </Card>
       )}
+      <Card className="p-4 space-y-2">
+        <p className="font-medium">Заявки гостей ({leads.length})</p>
+        {leads.length === 0 ? <p className="text-sm text-muted-foreground">Поки немає заявок. Натисніть «Запросити друзів» і надішліть посилання.</p> : leads.map((l) => (
+          <div key={l.id} className="border-b last:border-0 py-2 text-sm">
+            <p className="font-medium">{l.name}{l.phone && <> · <a className="text-primary" href={`tel:${l.phone}`}>{l.phone}</a></>}</p>
+            <p className="text-muted-foreground">{titleOf(l.event_id)} · {new Date(l.created_at).toLocaleString('uk-UA', { dateStyle: 'short', timeStyle: 'short' })}</p>
+            {l.message && <p className="whitespace-pre-wrap">{l.message}</p>}
+          </div>
+        ))}
+      </Card>
     </div>
   );
 }

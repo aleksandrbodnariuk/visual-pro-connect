@@ -19,6 +19,7 @@ import { UnitOfficersPanel } from '@/components/party/UnitOfficersPanel';
 import { FlagBanner } from '@/components/party/FlagBanner';
 import { TeamBusinessPanel } from '@/components/team/TeamBusinessPanel';
 import { Briefcase } from 'lucide-react';
+import { TeamMembersPanel } from '@/components/team/TeamMembersPanel';
 
 export default function OrganizationPage() {
   const { orgId } = useParams();
@@ -45,6 +46,11 @@ export default function OrganizationPage() {
   const isPartyOrg = organization?.type === 'party';
   const showParty = hasParty && isPartyOrg && !observerOnly;
   const isTeam = !!organization && organization.type !== 'party';
+  const [isManager, setIsManager] = useState(false);
+  useEffect(() => {
+    if (!orgId || !user?.id) { setIsManager(false); return; }
+    (supabase as any).rpc('is_org_manager', { _org_id: orgId, _user_id: user.id }).then(({ data }: any) => setIsManager(data === true));
+  }, [orgId, user?.id]);
 
   useEffect(() => { if (organization) document.title = `${organization.name} — Організації`; }, [organization]);
 
@@ -81,7 +87,7 @@ export default function OrganizationPage() {
                 {showParty && <TabsTrigger value="party"><Flag className="h-4 w-4 mr-1" />Партія</TabsTrigger>}
                 {hasParty && isPartyOrg && <TabsTrigger value="campaigns"><Vote className="h-4 w-4 mr-1" />Вибори</TabsTrigger>}
                 {isTeam && <TabsTrigger value="business"><Briefcase className="h-4 w-4 mr-1" />Бізнес-кабінет</TabsTrigger>}
-                {isAdmin && <TabsTrigger value="access"><ShieldCheck className="h-4 w-4 mr-1" />Доступи</TabsTrigger>}
+                {(isAdmin || (isTeam && isManager)) && <TabsTrigger value="access"><ShieldCheck className="h-4 w-4 mr-1" />Доступи</TabsTrigger>}
               </TabsList>
               <TabsContent value="about">
                 <div className="space-y-3">
@@ -119,12 +125,12 @@ export default function OrganizationPage() {
               )}
               {isTeam && (
                 <TabsContent value="business">
-                  <TeamBusinessPanel orgId={organization.id} canEdit={isAdmin} />
+                  <TeamBusinessPanel orgId={organization.id} canEdit={isAdmin || isManager} />
                 </TabsContent>
               )}
-              {isAdmin && (
+              {(isAdmin || (isTeam && isManager)) && (
                 <TabsContent value="access">
-                  <PartyAccessPanel orgId={organization.id} />
+                  {isTeam ? <TeamMembersPanel orgId={organization.id} /> : <PartyAccessPanel orgId={organization.id} />}
                 </TabsContent>
               )}
             </Tabs>

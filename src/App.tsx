@@ -68,6 +68,7 @@ const MarketplaceMine = lazy(() => import("./pages/MarketplaceMine"));
 const MarketplaceFavorites = lazy(() => import("./pages/MarketplaceFavorites"));
 const Organizations = lazy(() => import("./pages/Organizations"));
 const OrganizationPage = lazy(() => import("./pages/OrganizationPage"));
+const Presentation = lazy(() => import("./pages/Presentation"));
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -152,6 +153,7 @@ const AppContent = () => {
             <Route path="/groups/:groupId" element={<GroupPage />} />
             <Route path="/organizations" element={<Organizations />} />
             <Route path="/organizations/:orgId" element={<OrganizationPage />} />
+            <Route path="/presentation/:eventId" element={<Presentation />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
