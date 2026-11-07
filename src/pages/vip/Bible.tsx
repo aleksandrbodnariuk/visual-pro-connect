@@ -179,7 +179,7 @@ export default function VipBible() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-6 max-w-3xl pb-32">
+      <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-32 max-w-3xl">
         <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
           <Button variant="ghost" onClick={() => navigate("/vip/tools")}>
             <ArrowLeft className="h-4 w-4 mr-1" /> VIP-інструменти
@@ -214,7 +214,7 @@ export default function VipBible() {
           </Sheet>
         </div>
 
-        <Card className="p-3 mb-4 flex gap-2 flex-wrap items-center sticky top-16 z-10">
+        <Card className="p-3 mb-4 flex gap-2 flex-wrap items-center sticky top-16 sm:top-20 z-10">
           <Select value={String(book)} onValueChange={(v) => go(Number(v), 1)}>
             <SelectTrigger className="flex-1 min-w-[160px]"><SelectValue placeholder="Книга" /></SelectTrigger>
             <SelectContent className="max-h-80">
