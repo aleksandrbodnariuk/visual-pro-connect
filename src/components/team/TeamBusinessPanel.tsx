@@ -1,3 +1,4 @@
+import RewardsCalculator from './RewardsCalculator';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -534,7 +535,7 @@ export function TeamBusinessPanel({ orgId, canEdit }: { orgId: string; canEdit: 
       <TabsContent value="life"><TeamAlbums orgId={orgId} /></TabsContent>
       <TabsContent value="me"><MyCabinet orgId={orgId} isLeader={canEdit} /></TabsContent>
       <TabsContent value="chat"><TeamChat orgId={orgId} canEdit={canEdit} /></TabsContent>
-      <TabsContent value="plan"><MarketingPlan /></TabsContent>
+      <TabsContent value="plan"><RewardsCalculator /></TabsContent>
       <TabsContent value="materials"><Materials orgId={orgId} canEdit={canEdit} /></TabsContent>
       <TabsContent value="tree"><TeamTree orgId={orgId} canEdit={canEdit} /></TabsContent>
       <TabsContent value="school"><School orgId={orgId} /></TabsContent>
