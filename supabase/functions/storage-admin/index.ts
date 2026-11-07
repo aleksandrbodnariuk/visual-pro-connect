@@ -45,7 +45,7 @@ const BUCKET_REFS: Record<string, Array<{ table: string; column: string }>> = {
 };
 
 // Folders that are never treated as orphans, regardless of DB references.
-const PROTECTED_SEGMENTS = ["org-symbols", "ads", "branding", "system", "defaults", "logos"];
+const PROTECTED_SEGMENTS = ["org-symbols", "ads", "branding", "system", "defaults", "logos", "team-slides"];
 // Files newer than this are never treated as orphans (upload may not be saved yet).
 const MIN_AGE_MS = 24 * 60 * 60 * 1000;
 
