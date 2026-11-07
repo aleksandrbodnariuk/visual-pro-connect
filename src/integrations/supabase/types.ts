@@ -4092,6 +4092,41 @@ export type Database = {
           },
         ]
       }
+      team_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_pinned: boolean
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          organization_id: string
+          user_id?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_onboarding: {
         Row: {
           created_at: string

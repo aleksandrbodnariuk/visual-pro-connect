@@ -12,6 +12,9 @@ import { Calculator, BookOpen, Network, GraduationCap, CalendarDays, Plus, Trash
 import { toast } from 'sonner';
 import { presentationLink, newMeetingRoomUrl, isMeetingRoom } from '@/lib/presentation';
 import { TeamLiveBanner } from './TeamLiveStage';
+import { TeamStructure } from './TeamStructure';
+import { TeamChat } from './TeamChat';
+import { MessageCircle, UserRound } from 'lucide-react';
 import { BONUS_SCALE, bonusPercent, differentialBonus, groupPv, nextLevel, type PlanNode } from '@/lib/amwayPlan';
 
 const sb = supabase as any;
@@ -247,8 +250,8 @@ function TeamTree({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
           {hints.map(({ r, n }) => <p key={r.id} className="text-sm">{r.full_name}: не вистачає <b>{n!.missing} PV</b> до рівня {n!.pct}% — зателефонуйте.</p>)}
         </Card>
       )}
-      <Card className="p-3 overflow-x-auto">
-        {rows.length === 0 ? <p className="text-sm text-muted-foreground py-4 text-center">Партнерів поки немає</p> : rows.filter((r) => !r.sponsor_id).map((r) => renderNode(r, 0))}
+      <Card className="p-3">
+        <TeamStructure rows={nodes} canEdit={canEdit} onSetPv={setPv} onDelete={async (id) => { if (confirm('Видалити партнера?')) { await sb.from('team_partners').delete().eq('id', id); load(); } }} />
       </Card>
       {canEdit && (
         <Card className="p-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
@@ -393,18 +396,84 @@ function Events({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
   );
 }
 
+/* ---------------- Мій кабінет ---------------- */
+function MyCabinet({ orgId, isLeader }: { orgId: string; isLeader: boolean }) {
+  const { user } = useAuth();
+  const [rows, setRows] = useState<any[]>([]);
+  const [steps, setSteps] = useState(0);
+  useEffect(() => {
+    (async () => {
+      const [{ data }, o] = await Promise.all([
+        sb.from('team_partners').select('*').eq('organization_id', orgId),
+        user?.id ? sb.from('team_onboarding').select('step_key').eq('organization_id', orgId).eq('user_id', user.id) : Promise.resolve({ data: [] }),
+      ]);
+      setRows(data || []); setSteps((o.data || []).length);
+    })();
+  }, [orgId, user?.id]);
+  const me = rows.find((r) => r.user_id === user?.id);
+  const sponsor = me?.sponsor_id ? rows.find((r) => r.id === me.sponsor_id) : null;
+  const g = me ? groupPv(rows, me.id) : 0;
+  const pct = bonusPercent(g); const nx = nextLevel(g);
+  const firstLine = me ? rows.filter((r) => r.sponsor_id === me.id) : [];
+  const newbie = !isLeader && pct < 9;
+  const school = Math.round((steps / STEPS.length) * 100);
+  const pulse = isLeader ? rows.map((r) => ({ r, n: nextLevel(groupPv(rows, r.id)) })).filter((x) => x.n && x.n.missing <= 150).slice(0, 8) : [];
+
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      <Card className="p-4 space-y-1">
+        <p className="text-xs text-muted-foreground">{isLeader ? 'Кабінет лідера' : newbie ? 'Кабінет новачка' : 'Кабінет партнера'}</p>
+        {me ? <>
+          <p className="text-2xl font-bold">{pct}%</p>
+          <p className="text-sm">Особисті бали: <b>{fmt(me.personal_pv)}</b> · Групові: <b>{fmt(g)}</b></p>
+          {nx ? <p className="text-sm">До рівня {nx.pct}% бракує <b>{fmt(nx.missing)} PV</b></p> : <p className="text-sm">Максимальний рівень шкали досягнуто 🎉</p>}
+          <p className="text-sm">Перша лінія: <b>{firstLine.length}</b></p>
+        </> : <p className="text-sm text-muted-foreground">Вашого профілю ще немає в структурі. Попросіть лідера прив'язати вас.</p>}
+      </Card>
+      {sponsor && (
+        <Card className="p-4 space-y-2">
+          <p className="text-xs text-muted-foreground">Мій спонсор</p>
+          <p className="font-semibold">{sponsor.full_name}</p>
+          {sponsor.phone && <div className="flex gap-2 flex-wrap">
+            <Button asChild size="sm"><a href={`tel:${sponsor.phone}`}><Phone className="h-4 w-4 mr-1" />Подзвонити</a></Button>
+            <Button asChild size="sm" variant="outline"><a href={`viber://chat?number=${encodeURIComponent(sponsor.phone.replace(/[^\d+]/g, ''))}`}>Viber</a></Button>
+          </div>}
+        </Card>
+      )}
+      {!isLeader && (
+        <Card className="p-4 space-y-2">
+          <p className="font-semibold text-sm">Школа новачка — {school}%</p>
+          <div className="h-2 rounded-full bg-muted"><div className="h-2 rounded-full bg-primary" style={{ width: `${school}%` }} /></div>
+          <p className="text-xs text-muted-foreground">Пройдіть усі кроки у вкладці «Школа новачка».</p>
+        </Card>
+      )}
+      {isLeader && (
+        <Card className="p-4 space-y-1">
+          <p className="font-semibold text-sm">Команда: {rows.length} партнерів · активних {rows.filter((r) => Number(r.personal_pv) >= 100).length}</p>
+          {pulse.length ? pulse.map(({ r, n }) => <p key={r.id} className="text-sm">{r.full_name}: бракує <b>{n!.missing} PV</b> до {n!.pct}%</p>)
+            : <p className="text-sm text-muted-foreground">Ніхто не близький до нового рівня.</p>}
+        </Card>
+      )}
+    </div>
+  );
+}
+
 export function TeamBusinessPanel({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
   return (
     <>
     <TeamLiveBanner orgId={orgId} />
-    <Tabs defaultValue="plan">
+    <Tabs defaultValue="me">
       <TabsList className="flex-wrap h-auto mb-2">
+        <TabsTrigger value="me"><UserRound className="h-4 w-4 mr-1" />Мій кабінет</TabsTrigger>
+        <TabsTrigger value="chat"><MessageCircle className="h-4 w-4 mr-1" />Моя команда</TabsTrigger>
         <TabsTrigger value="plan"><Calculator className="h-4 w-4 mr-1" />Маркетинг-план</TabsTrigger>
         <TabsTrigger value="materials"><BookOpen className="h-4 w-4 mr-1" />Матеріали</TabsTrigger>
         <TabsTrigger value="tree"><Network className="h-4 w-4 mr-1" />Структура</TabsTrigger>
         <TabsTrigger value="school"><GraduationCap className="h-4 w-4 mr-1" />Школа новачка</TabsTrigger>
         <TabsTrigger value="events"><CalendarDays className="h-4 w-4 mr-1" />Події</TabsTrigger>
       </TabsList>
+      <TabsContent value="me"><MyCabinet orgId={orgId} isLeader={canEdit} /></TabsContent>
+      <TabsContent value="chat"><TeamChat orgId={orgId} canEdit={canEdit} /></TabsContent>
       <TabsContent value="plan"><MarketingPlan /></TabsContent>
       <TabsContent value="materials"><Materials orgId={orgId} canEdit={canEdit} /></TabsContent>
       <TabsContent value="tree"><TeamTree orgId={orgId} canEdit={canEdit} /></TabsContent>
