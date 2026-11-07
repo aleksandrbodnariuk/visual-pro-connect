@@ -17,7 +17,8 @@ import { TeamChat } from './TeamChat';
 import { SlideViewer } from './SlideViewer';
 import { SlideEditor } from './SlideEditor';
 import { extractPptxSlideImages, toWebp } from '@/lib/pptxSlides';
-import { MessageCircle, UserRound } from 'lucide-react';
+import { MessageCircle, UserRound, Images } from 'lucide-react';
+import { TeamAlbums } from './TeamAlbums';
 import { BONUS_SCALE, bonusPercent, differentialBonus, groupPv, nextLevel, type PlanNode } from '@/lib/amwayPlan';
 
 const sb = supabase as any;
@@ -527,7 +528,9 @@ export function TeamBusinessPanel({ orgId, canEdit }: { orgId: string; canEdit: 
         <TabsTrigger value="tree"><Network className="h-4 w-4 mr-1" />Структура</TabsTrigger>
         <TabsTrigger value="school"><GraduationCap className="h-4 w-4 mr-1" />Школа новачка</TabsTrigger>
         <TabsTrigger value="events"><CalendarDays className="h-4 w-4 mr-1" />Події</TabsTrigger>
+        <TabsTrigger value="life"><Images className="h-4 w-4 mr-1" />Життя команди</TabsTrigger>
       </TabsList>
+      <TabsContent value="life"><TeamAlbums orgId={orgId} /></TabsContent>
       <TabsContent value="me"><MyCabinet orgId={orgId} isLeader={canEdit} /></TabsContent>
       <TabsContent value="chat"><TeamChat orgId={orgId} canEdit={canEdit} /></TabsContent>
       <TabsContent value="plan"><MarketingPlan /></TabsContent>

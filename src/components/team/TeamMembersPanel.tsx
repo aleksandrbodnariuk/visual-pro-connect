@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 
 const sb = supabase as any;
 interface Profile { id: string; full_name: string; avatar_url: string | null }
-const ROLES: Record<string, string> = { owner: 'Власник', admin: 'Керівник', member: 'Учасник' };
+const ROLES: Record<string, string> = { owner: 'Власник', admin: 'Керівник', leader: 'Лідер команди', member: 'Учасник' };
 
 /** Керування доступом до організації «Команда» — лише для власника/керівника. */
 export function TeamMembersPanel({ orgId }: { orgId: string }) {

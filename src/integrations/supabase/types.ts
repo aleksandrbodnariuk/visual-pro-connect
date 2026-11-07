@@ -3989,6 +3989,50 @@ export type Database = {
         }
         Relationships: []
       }
+      team_albums: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          event_date: string | null
+          id: string
+          organization_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          event_date?: string | null
+          id?: string
+          organization_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          event_date?: string | null
+          id?: string
+          organization_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_albums_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_events: {
         Row: {
           created_at: string
@@ -4225,6 +4269,54 @@ export type Database = {
             columns: ["sponsor_id"]
             isOneToOne: false
             referencedRelation: "team_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_photos: {
+        Row: {
+          album_id: string
+          caption: string | null
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          sort_order: number
+          url: string
+        }
+        Insert: {
+          album_id: string
+          caption?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          organization_id: string
+          sort_order?: number
+          url: string
+        }
+        Update: {
+          album_id?: string
+          caption?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          organization_id?: string
+          sort_order?: number
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_photos_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "team_albums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_photos_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -5543,6 +5635,10 @@ export type Database = {
       }
       is_party_officer: {
         Args: { _bodies: string[]; _org_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_team_album_editor: {
+        Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
       is_user_admin: { Args: { _user_id: string }; Returns: boolean }
