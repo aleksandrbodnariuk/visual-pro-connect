@@ -15,6 +15,7 @@ import { TeamLiveBanner } from './TeamLiveStage';
 import { TeamStructure } from './TeamStructure';
 import { TeamChat } from './TeamChat';
 import { SlideViewer } from './SlideViewer';
+import { SlideEditor } from './SlideEditor';
 import { extractPptxSlideImages, toWebp } from '@/lib/pptxSlides';
 import { MessageCircle, UserRound } from 'lucide-react';
 import { BONUS_SCALE, bonusPercent, differentialBonus, groupPv, nextLevel, type PlanNode } from '@/lib/amwayPlan';
@@ -163,6 +164,7 @@ function Materials({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
   const { user } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [busy, setBusy] = useState('');
   const uploadDeck = async (files: FileList | null) => {
     if (!files?.length || !user?.id) return;
@@ -215,14 +217,15 @@ function Materials({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
       {cat === 'presentation' && <Pitch />}
       <div className="grid gap-3 sm:grid-cols-2">
         {list.map((m: any, idx) => (
-          <Card key={m.id || idx} className={`p-4 space-y-1 ${openId === m.id ? 'sm:col-span-2' : ''}`}>
+          <Card key={m.id || idx} className={`p-4 space-y-1 ${openId === m.id || editId === m.id ? 'sm:col-span-2' : ''}`}>
             <div className="flex items-start justify-between gap-2">
               <p className="font-semibold">{m.title}</p>
               {m.id && canEdit && <Button size="icon" variant="ghost" className="h-9 w-9" onClick={async () => { await sb.from('team_materials').delete().eq('id', m.id); load(); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
             </div>
             {m.body && <p className="text-sm text-muted-foreground whitespace-pre-wrap">{m.body}</p>}
             {m.url && <a href={m.url} target="_blank" rel="noreferrer" className="text-sm text-primary underline">Відкрити</a>}
-            {m.slides?.length > 0 && (openId === m.id
+            {m.slides?.length > 0 && canEdit && editId !== m.id && <Button size="sm" variant="outline" onClick={() => { setEditId(m.id); setOpenId(null); }}>Змінити слайди</Button>}
+            {editId === m.id ? <SlideEditor material={m} orgId={orgId} onDone={() => { setEditId(null); load(); }} /> : m.slides?.length > 0 && (openId === m.id
               ? <><SlideViewer slides={m.slides} title={m.title} /><Button size="sm" variant="ghost" onClick={() => setOpenId(null)}>Згорнути</Button></>
               : <button className="block w-full text-left" onClick={() => setOpenId(m.id)}>
                   <img src={m.slides[0]} alt={m.title} loading="lazy" className="w-full rounded-md aspect-video object-cover" />
