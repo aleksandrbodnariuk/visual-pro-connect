@@ -21,6 +21,7 @@ import { TeamBusinessPanel } from '@/components/team/TeamBusinessPanel';
 import { Briefcase } from 'lucide-react';
 import { OrgSettingsDialog } from '@/components/orgs/OrgSettingsDialog';
 import { TeamMembersPanel } from '@/components/team/TeamMembersPanel';
+import { AmwayPremiumLetter } from '@/components/team/AmwayPremiumLetter';
 
 export default function OrganizationPage() {
   const { orgId } = useParams();
@@ -89,13 +90,13 @@ export default function OrganizationPage() {
                 {(isAdmin || (isTeam && isManager)) && <TabsTrigger value="access"><ShieldCheck className="h-4 w-4 mr-1" />Доступи</TabsTrigger>}
               </TabsList>
               <TabsContent value="about">
-                <div className="space-y-3">
+                {isTeam ? <AmwayPremiumLetter /> : <div className="space-y-3">
                 <Card className="p-4 space-y-2">
                   <p className="whitespace-pre-wrap text-sm">{organization.description || 'Опис відсутній'}</p>
                   {organization.website && <a href={organization.website} target="_blank" rel="noreferrer" className="text-primary text-sm underline">{organization.website}</a>}
                 </Card>
                 <PartySymbols org={organization} canEdit={isAdmin} onChanged={reload} />
-                </div>
+                </div>}
               </TabsContent>
               {showParty && (
                 <TabsContent value="party">

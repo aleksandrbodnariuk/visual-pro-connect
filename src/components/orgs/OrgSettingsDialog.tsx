@@ -69,7 +69,7 @@ export function OrgSettingsDialog({ org, isSiteAdmin, onChanged }: { org: Organi
 
           <section className="space-y-2">
             <h3 className="font-semibold">Логотип і обкладинка</h3>
-            <p className="text-xs text-muted-foreground">Прапор (обкладинка) показується у шапці; позицію можна змінити кнопкою на самій обкладинці.</p>
+            <p className="text-xs text-muted-foreground">{org.type === 'party' ? 'Прапор (обкладинка)' : 'Фон'} показується у шапці; позицію можна змінити кнопкою на самій обкладинці.</p>
             <PartySymbols org={org} canEdit onChanged={onChanged} />
           </section>
 

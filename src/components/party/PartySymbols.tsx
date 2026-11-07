@@ -44,15 +44,18 @@ export function PartySymbols({ org, canEdit, onChanged }: { org: Organization; c
 
   const items = [
     { field: 'logo_url' as const, title: 'Логотип', url: org.logo_url, icon: ImageIcon, ref: logoRef, hint: 'Для листівок, бейджів і наліпок', file: 'logotyp' },
-    { field: 'flag_url' as const, title: 'Прапор', url: org.flag_url, icon: Flag, ref: flagRef, hint: 'Для наметів, банерів і флагштоків', file: 'prapor' },
+    org.type === 'party'
+      ? { field: 'flag_url' as const, title: 'Прапор', url: org.flag_url, icon: Flag, ref: flagRef, hint: 'Для наметів, банерів і флагштоків', file: 'prapor' }
+      : { field: 'flag_url' as const, title: 'Фон', url: org.flag_url, icon: ImageIcon, ref: flagRef, hint: 'Для шапки сторінки та оформлення', file: 'fon' },
   ];
+  const isParty = org.type === 'party';
 
   return (
     <Card className="p-4 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-semibold">Офіційна символіка</h3>
+        <h3 className="font-semibold">{isParty ? 'Офіційна символіка' : 'Оформлення та бренд'}</h3>
         {org.logo_url && org.flag_url && (
-          <Button size="sm" variant="outline" onClick={async () => { await download(org.logo_url!, 'logotyp'); await download(org.flag_url!, 'prapor'); }}>
+          <Button size="sm" variant="outline" onClick={async () => { await download(org.logo_url!, 'logotyp'); await download(org.flag_url!, isParty ? 'prapor' : 'fon'); }}>
             <Download className="h-4 w-4 mr-1" /> Завантажити комплект
           </Button>
         )}
