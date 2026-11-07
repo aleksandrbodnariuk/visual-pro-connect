@@ -14,6 +14,8 @@ import { presentationLink, newMeetingRoomUrl, isMeetingRoom } from '@/lib/presen
 import { TeamLiveBanner } from './TeamLiveStage';
 import { TeamStructure } from './TeamStructure';
 import { TeamChat } from './TeamChat';
+import { SlideViewer } from './SlideViewer';
+import { extractPptxSlideImages, toWebp } from '@/lib/pptxSlides';
 import { MessageCircle, UserRound } from 'lucide-react';
 import { BONUS_SCALE, bonusPercent, differentialBonus, groupPv, nextLevel, type PlanNode } from '@/lib/amwayPlan';
 
@@ -158,7 +160,38 @@ function Pitch() {
 }
 
 function Materials({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
+  const { user } = useAuth();
   const [items, setItems] = useState<any[]>([]);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [busy, setBusy] = useState('');
+  const uploadDeck = async (files: FileList | null) => {
+    if (!files?.length || !user?.id) return;
+    if (!form.title.trim()) return toast.error('Спочатку вкажіть назву презентації');
+    try {
+      let blobs: Blob[] = [];
+      const list = [...files];
+      if (list.some((f) => /\.pptx$/i.test(f.name))) {
+        setBusy('Читаю слайди…');
+        blobs = await extractPptxSlideImages(list.find((f) => /\.pptx$/i.test(f.name))!);
+      } else blobs = list.filter((f) => f.type.startsWith('image/')).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+      if (!blobs.length) return toast.error('У файлі не знайдено слайдів-картинок');
+      if (blobs.length > 80) return toast.error('Максимум 80 слайдів');
+      const stamp = Date.now(); const urls: string[] = [];
+      for (let k = 0; k < blobs.length; k++) {
+        setBusy(`Завантажую слайд ${k + 1} з ${blobs.length}…`);
+        const webp = await toWebp(blobs[k]);
+        const path = `${user.id}/team-slides/${orgId}/${stamp}/${String(k + 1).padStart(2, '0')}.webp`;
+        const { error } = await supabase.storage.from('posts').upload(path, webp, { contentType: 'image/webp' });
+        if (error) throw error;
+        urls.push(supabase.storage.from('posts').getPublicUrl(path).data.publicUrl);
+      }
+      const { error } = await sb.from('team_materials').insert({ organization_id: orgId, category: 'presentation', title: form.title.trim(), body: form.body.slice(0, 10000) || null, slides: urls });
+      if (error) throw error;
+      toast.success(`Презентацію додано: ${urls.length} слайдів`);
+      setForm({ title: '', body: '', url: '' }); load();
+    } catch (e: any) { toast.error(e?.message?.includes('PowerPoint') ? e.message : 'Не вдалося завантажити презентацію'); }
+    finally { setBusy(''); }
+  };
   const [cat, setCat] = useState('presentation');
   const [form, setForm] = useState({ title: '', body: '', url: '' });
   const load = useCallback(async () => {
@@ -182,13 +215,19 @@ function Materials({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
       {cat === 'presentation' && <Pitch />}
       <div className="grid gap-3 sm:grid-cols-2">
         {list.map((m: any, idx) => (
-          <Card key={m.id || idx} className="p-4 space-y-1">
+          <Card key={m.id || idx} className={`p-4 space-y-1 ${openId === m.id ? 'sm:col-span-2' : ''}`}>
             <div className="flex items-start justify-between gap-2">
               <p className="font-semibold">{m.title}</p>
               {m.id && canEdit && <Button size="icon" variant="ghost" className="h-9 w-9" onClick={async () => { await sb.from('team_materials').delete().eq('id', m.id); load(); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
             </div>
             {m.body && <p className="text-sm text-muted-foreground whitespace-pre-wrap">{m.body}</p>}
             {m.url && <a href={m.url} target="_blank" rel="noreferrer" className="text-sm text-primary underline">Відкрити</a>}
+            {m.slides?.length > 0 && (openId === m.id
+              ? <><SlideViewer slides={m.slides} title={m.title} /><Button size="sm" variant="ghost" onClick={() => setOpenId(null)}>Згорнути</Button></>
+              : <button className="block w-full text-left" onClick={() => setOpenId(m.id)}>
+                  <img src={m.slides[0]} alt={m.title} loading="lazy" className="w-full rounded-md aspect-video object-cover" />
+                  <span className="text-sm text-primary">▶ Переглянути презентацію · {m.slides.length} слайдів</span>
+                </button>)}
           </Card>
         ))}
       </div>
@@ -198,7 +237,15 @@ function Materials({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
           <Input placeholder="Назва" value={form.title} maxLength={200} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           <Textarea placeholder="Текст (необов'язково)" value={form.body} maxLength={10000} onChange={(e) => setForm({ ...form, body: e.target.value })} />
           <Input placeholder="Посилання на файл чи відео (необов'язково)" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
-          <Button onClick={save}><Plus className="h-4 w-4 mr-1" />Додати</Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={save} disabled={!!busy}><Plus className="h-4 w-4 mr-1" />Додати</Button>
+            {cat === 'presentation' && (
+              <label className={`inline-flex h-10 items-center rounded-md border border-input px-3 text-sm cursor-pointer hover:bg-muted ${busy ? 'pointer-events-none opacity-60' : ''}`}>
+                <input type="file" className="hidden" multiple accept=".pptx,image/*" onChange={(e) => { uploadDeck(e.target.files); e.target.value = ''; }} />
+                {busy || 'Завантажити презентацію (.pptx або картинки)'}
+              </label>
+            )}
+          </div>
         </Card>
       )}
     </div>
@@ -320,7 +367,9 @@ function Events({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
   const { user } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
   const [leads, setLeads] = useState<any[]>([]);
-  const empty = { title: '', kind: 'zoom', starts_at: '', location: '', link: '', description: '', is_public: true, duration_minutes: 90, format: 'stream' };
+  const [decks, setDecks] = useState<any[]>([]);
+  useEffect(() => { sb.from('team_materials').select('id,title,slides').eq('organization_id', orgId).neq('slides', '{}').then(({ data }: any) => setDecks(data || [])); }, [orgId]);
+  const empty = { title: '', kind: 'zoom', starts_at: '', location: '', link: '', description: '', is_public: true, duration_minutes: 90, format: 'stream', material_id: '' };
   const [form, setForm] = useState(empty);
   const load = useCallback(async () => {
     const since = new Date(Date.now() - 86400000).toISOString();
@@ -335,7 +384,7 @@ function Events({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
     if (!form.title.trim() || !form.starts_at) return toast.error('Вкажіть назву та дату');
     const link = form.format === 'room' ? (form.link || newMeetingRoomUrl()) : form.link;
     if (form.format === 'stream' && form.link && !/^https?:\/\//i.test(form.link)) return toast.error('Посилання має починатися з http(s)://');
-    const { error } = await sb.from('team_events').insert({ organization_id: orgId, title: form.title.trim(), kind: form.kind, starts_at: new Date(form.starts_at).toISOString(), location: form.location || null, link: link || null, description: form.description.trim() || null, is_public: form.is_public, duration_minutes: Math.min(600, Math.max(15, Number(form.duration_minutes) || 90)), created_by: user?.id ?? null });
+    const { error } = await sb.from('team_events').insert({ organization_id: orgId, title: form.title.trim(), kind: form.kind, starts_at: new Date(form.starts_at).toISOString(), location: form.location || null, link: link || null, description: form.description.trim() || null, is_public: form.is_public, duration_minutes: Math.min(600, Math.max(15, Number(form.duration_minutes) || 90)), created_by: user?.id ?? null, material_id: form.material_id || null });
     if (error) return toast.error('Не вдалося додати подію');
     setForm(empty); load();
   };
@@ -372,6 +421,10 @@ function Events({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
           <select className="h-10 rounded-md border border-input bg-background px-2 text-sm" value={form.format} onChange={(e) => setForm({ ...form, format: e.target.value, link: '' })}>
             <option value="stream">Трансляція зі сцени (YouTube / Vimeo)</option>
             <option value="room">Відеокімната команди (усі з камерами)</option>
+          </select>
+          <select className="h-10 rounded-md border border-input bg-background px-2 text-sm" value={form.material_id} onChange={(e) => setForm({ ...form, material_id: e.target.value })}>
+            <option value="">Без слайдів</option>
+            {decks.map((d) => <option key={d.id} value={d.id}>Слайди: {d.title}</option>)}
           </select>
           {form.format === 'stream'
             ? <Input placeholder="Посилання на трансляцію (YouTube Live, Vimeo, Zoom)" value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} />

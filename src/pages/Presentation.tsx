@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CalendarPlus, Phone, PlayCircle, CheckCircle2, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { presentationPhase, embedUrl } from '@/lib/presentation';
+import { SlideViewer } from '@/components/team/SlideViewer';
 
 const sb = supabase as any;
 
@@ -80,6 +81,7 @@ export default function Presentation() {
           <h1 className="text-2xl md:text-4xl font-bold">{data.title}</h1>
           <p className="text-muted-foreground">{new Date(start).toLocaleString('uk-UA', { dateStyle: 'full', timeStyle: 'short' })}{data.location ? ` · ${data.location}` : ''}</p>
           {data.description && <p className="whitespace-pre-wrap">{data.description}</p>}
+          {Array.isArray(data.slides) && data.slides.length > 0 && <SlideViewer slides={data.slides} title={data.title} />}
 
           {phase === 'before' && (
             <div className="space-y-3">
