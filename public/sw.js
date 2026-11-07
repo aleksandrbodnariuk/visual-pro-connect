@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'bc-v9';
+const CACHE_VERSION = 'bc-v10';
 const STATIC_CACHE = `bc-static-${CACHE_VERSION}`;
 const IMAGE_CACHE = `bc-images-${CACHE_VERSION}`;
 const API_CACHE = `bc-api-${CACHE_VERSION}`;
@@ -97,12 +97,14 @@ self.addEventListener('fetch', (event) => {
           (cached) =>
             cached ||
             fetch(request).then((response) => {
-              if (response.ok) {
+              const ct = response.headers.get('content-type') || '';
+              // Never cache an HTML fallback page as an image
+              if (response.ok && !ct.includes('text/html')) {
                 cache.put(request, response.clone());
                 trimCache(IMAGE_CACHE, MAX_IMAGE_CACHE);
               }
               return response;
-            })
+            }).catch(() => fetch(request))
         )
       )
     );

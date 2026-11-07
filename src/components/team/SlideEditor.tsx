@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, RefreshCw, Trash2, Plus, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { extractPptxSlideImages, toWebp } from '@/lib/pptxSlides';
+import { resolveSlideUrl } from '@/lib/slideUrl';
 
 const sb = supabase as any;
 const MAX = 80;
@@ -64,7 +65,7 @@ export function SlideEditor({ material, orgId, onDone }: { material: any; orgId:
       <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
         {slides.map((u, i) => (
           <div key={u + i} className="rounded-md border border-border overflow-hidden bg-card">
-            <img src={u} alt={`Слайд ${i + 1}`} loading="lazy" className="w-full aspect-video object-cover bg-muted" />
+            <img src={resolveSlideUrl(u)} alt={`Слайд ${i + 1}`} loading="lazy" className="w-full aspect-video object-cover bg-muted" />
             <div className="flex items-center justify-between gap-0.5 p-1">
               <span className="text-xs font-semibold w-6 text-center">{i + 1}</span>
               <Button size="icon" variant="ghost" className="h-9 w-9" disabled={i === 0 || !!busy} onClick={() => move(i, -1)} aria-label="Перемістити вліво"><ArrowLeft className="h-4 w-4" /></Button>

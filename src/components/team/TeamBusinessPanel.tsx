@@ -15,6 +15,7 @@ import { TeamLiveBanner } from './TeamLiveStage';
 import { TeamStructure } from './TeamStructure';
 import { TeamChat } from './TeamChat';
 import { SlideViewer } from './SlideViewer';
+import { resolveSlideUrl } from '@/lib/slideUrl';
 import { SlideEditor } from './SlideEditor';
 import { extractPptxSlideImages, toWebp } from '@/lib/pptxSlides';
 import { MessageCircle, UserRound, Images } from 'lucide-react';
@@ -229,7 +230,7 @@ function Materials({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
             {editId === m.id ? <SlideEditor material={m} orgId={orgId} onDone={() => { setEditId(null); load(); }} /> : m.slides?.length > 0 && (openId === m.id
               ? <><SlideViewer slides={m.slides} title={m.title} /><Button size="sm" variant="ghost" onClick={() => setOpenId(null)}>Згорнути</Button></>
               : <button className="block w-full text-left" onClick={() => setOpenId(m.id)}>
-                  <img src={m.slides[0]} alt={m.title} loading="lazy" className="w-full rounded-md aspect-video object-cover" />
+                  <img src={resolveSlideUrl(m.slides[0])} alt={m.title} loading="lazy" className="w-full rounded-md aspect-video object-cover" />
                   <span className="text-sm text-primary">▶ Переглянути презентацію · {m.slides.length} слайдів</span>
                 </button>)}
           </Card>
