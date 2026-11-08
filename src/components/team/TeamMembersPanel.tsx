@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ShieldCheck, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { nameMatches } from '@/lib/nameSearch';
 
 const sb = supabase as any;
 interface Profile { id: string; full_name: string; avatar_url: string | null }
@@ -29,7 +30,7 @@ export function TeamMembersPanel({ orgId }: { orgId: string }) {
   const byId = useMemo(() => new Map(profiles.map((p) => [p.id, p])), [profiles]);
   const ids = new Set(rows.map((r) => r.user_id));
   const results = query.trim().length < 2 ? [] : profiles
-    .filter((p) => !ids.has(p.id) && (p.full_name || '').toLowerCase().includes(query.toLowerCase())).slice(0, 8);
+    .filter((p) => !ids.has(p.id) && nameMatches(query, p.full_name)).slice(0, 8);
 
   const add = async (userId: string) => {
     const { error } = await sb.from('organization_members').insert({ organization_id: orgId, user_id: userId, role: 'member' });
@@ -63,6 +64,9 @@ export function TeamMembersPanel({ orgId }: { orgId: string }) {
             <Button size="sm" onClick={() => add(p.id)}>Надати</Button>
           </div>
         ))}
+        {query.trim().length >= 2 && results.length === 0 && (
+          <p className="text-xs text-muted-foreground">За запитом «{query.trim()}» нікого не знайдено. Перевірте написання або чи людина зареєстрована на платформі.</p>
+        )}
       </Card>
       <Card className="p-3">
         <p className="text-sm font-medium mb-2">Мають доступ ({rows.length})</p>

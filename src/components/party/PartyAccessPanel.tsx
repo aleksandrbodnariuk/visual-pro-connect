@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ShieldCheck, Trash2 } from 'lucide-react';
 import { partyActions } from '@/hooks/orgs/useOrganizations';
+import { nameMatches } from '@/lib/nameSearch';
 
 interface Profile { id: string; full_name: string; avatar_url: string | null }
 
@@ -26,7 +27,7 @@ export function PartyAccessPanel({ orgId }: { orgId: string }) {
   const byId = useMemo(() => new Map(profiles.map((p) => [p.id, p])), [profiles]);
   const grantedIds = new Set(grants.map((g) => g.user_id));
   const results = query.trim().length < 2 ? [] : profiles
-    .filter((p) => !grantedIds.has(p.id) && (p.full_name || '').toLowerCase().includes(query.toLowerCase()))
+    .filter((p) => !grantedIds.has(p.id) && nameMatches(query, p.full_name))
     .slice(0, 8);
 
   return (
@@ -43,6 +44,9 @@ export function PartyAccessPanel({ orgId }: { orgId: string }) {
             <Button size="sm" onClick={async () => { if (await partyActions.grantAccess(orgId, p.id)) { setQuery(''); load(); } }}>Надати</Button>
           </div>
         ))}
+        {query.trim().length >= 2 && results.length === 0 && (
+          <p className="text-xs text-muted-foreground">За запитом «{query.trim()}» нікого не знайдено. Перевірте написання або чи людина зареєстрована на платформі.</p>
+        )}
       </Card>
 
       <Card className="p-3">
