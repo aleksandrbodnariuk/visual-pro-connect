@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { IdCard, Mail, Pencil, Phone, Plus, Trash2, Download } from 'lucide-react';
 import { downloadCsv } from '@/lib/csvExport';
-import { PARTY_MEMBER_STATUS, partyMembersApi, type PartyMember, type PartyMemberStatus } from '@/hooks/orgs/useOrganizations';
+import { PARTY_MEMBER_STATUS, partyActions, partyMembersApi, type PartyHq, type PartyMember, type PartyMemberStatus } from '@/hooks/orgs/useOrganizations';
 
 const EMPTY: Partial<PartyMember> = { full_name: '', status: 'active' };
 
@@ -24,6 +24,8 @@ export function PartyMembersRegistry({ orgId, canEdit }: { orgId: string; canEdi
 
   const load = useCallback(async () => { setList(await partyMembersApi.list(orgId)); setLoading(false); }, [orgId]);
   useEffect(() => { load(); }, [load]);
+  const [orgs, setOrgs] = useState<PartyHq[]>([]);
+  useEffect(() => { partyActions.listHqs(orgId).then((h) => setOrgs(h.filter((x: any) => !x.is_test))); }, [orgId]);
 
   const units = useMemo(() => Array.from(new Set(list.map((m) => m.unit_name).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b, 'uk')), [list]);
   const ql = q.toLowerCase();
@@ -104,8 +106,12 @@ export function PartyMembersRegistry({ orgId, canEdit }: { orgId: string; canEdi
           {form && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2"><Label>Прізвище, ім’я, по батькові *</Label><Input maxLength={200} value={form.full_name || ''} onChange={(e) => set('full_name', e.target.value)} /></div>
-              <div className="sm:col-span-2"><Label>Організація (на обліку)</Label><Input list="party-units" placeholder="Напр. Хотинська міська організація" value={form.unit_name || ''} onChange={(e) => set('unit_name', e.target.value)} />
-                <datalist id="party-units">{units.map((u) => <option key={u} value={u} />)}</datalist></div>
+              <div className="sm:col-span-2"><Label>Організація (на обліку)</Label><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={form.unit_name || ''} onChange={(e) => set('unit_name', e.target.value)}>
+                  <option value="">— Оберіть організацію —</option>
+                  {form.unit_name && !orgs.some((o) => o.name === form.unit_name) && <option value={form.unit_name}>{form.unit_name} (немає в структурі)</option>}
+                  {orgs.map((o) => <option key={o.id} value={o.name}>{o.name}</option>)}
+                </select>
+                {orgs.length === 0 && <p className="text-xs text-muted-foreground mt-1">Спочатку створіть організації у вкладці «Організації».</p>}</div>
               <div><Label>Посада в організації</Label><Input placeholder="Голова, секретар, член партії…" value={form.position || ''} onChange={(e) => set('position', e.target.value)} /></div>
               <div><Label>Статус</Label>
                 <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={form.status || 'active'} onChange={(e) => set('status', e.target.value as PartyMemberStatus)}>
