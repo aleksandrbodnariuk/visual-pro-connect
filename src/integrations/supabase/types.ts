@@ -2383,6 +2383,7 @@ export type Database = {
           created_at: string
           id: string
           is_test: boolean
+          kind: string
           level: Database["public"]["Enums"]["hq_level"]
           name: string
           notes: string | null
@@ -2400,6 +2401,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_test?: boolean
+          kind?: string
           level: Database["public"]["Enums"]["hq_level"]
           name: string
           notes?: string | null
@@ -2417,6 +2419,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_test?: boolean
+          kind?: string
           level?: Database["public"]["Enums"]["hq_level"]
           name?: string
           notes?: string | null
