@@ -35,3 +35,9 @@ export function membersByChild(members: PartyMember[], hqs: PartyHq[], parentId:
     return { name: c.name, members: s.active + s.honorary, candidates: s.candidate, total: sub.length };
   }).sort((a, b) => b.total - a.total);
 }
+
+/** Члени, чий осередок не збігається з жодним штабом (не потрапляють у діаграми). */
+export function unmatchedMembers(members: PartyMember[], hqs: PartyHq[]): PartyMember[] {
+  const names = new Set(hqs.map((h) => norm(h.name)));
+  return members.filter((m) => !names.has(norm(m.unit_name)));
+}

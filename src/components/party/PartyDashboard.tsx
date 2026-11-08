@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Users, UserPlus, Building2, Award } from 'lucide-react';
+import { Users, UserPlus, Building2, Award, MapPin, AlertTriangle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { HQ_LEVELS, levelPlural, partyActions, partyExtra, partyMembersApi, type PartyHq, type PartyMember } from '@/hooks/orgs/useOrganizations';
-import { membersByChild, membersInScope, statusCounts, subtreeIds } from '@/lib/partyStats';
+import { unmatchedMembers, membersByChild, membersInScope, statusCounts, subtreeIds } from '@/lib/partyStats';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(38 92% 55%)', 'hsl(152 60% 45%)', 'hsl(var(--muted-foreground))'];
 type View = 'status' | 'regions' | 'levels';
@@ -19,6 +20,7 @@ export function PartyDashboard({ orgId, isAdmin }: { orgId: string; isAdmin: boo
   const [focus, setFocus] = useState<string>('');
   const [view, setView] = useState<View>('status');
   const [loading, setLoading] = useState(true);
+  const [precincts, setPrecincts] = useState<{ count: number; voters: number } | null>(null);
 
   useEffect(() => {
     Promise.all([partyActions.listHqs(orgId), partyMembersApi.list(orgId), partyExtra.listManagers(orgId)]).then(([h, m, mg]) => {
@@ -40,6 +42,15 @@ export function PartyDashboard({ orgId, isAdmin }: { orgId: string; isAdmin: boo
   const scopedHqs = scope ? hqs.filter((h) => scope.has(h.id)) : hqs;
   const s = statusCounts(scopedMembers);
   const focusHq = hqs.find((h) => h.id === focus);
+  const scopeKey = scope ? [...scope].sort().join(',') : '';
+  const unmatched = isAdmin && !focus ? unmatchedMembers(members, hqs).length : 0;
+
+  useEffect(() => {
+    if (loading) return;
+    let q = supabase.from('precincts').select('voters_count', { count: 'exact' }).eq('organization_id', orgId).limit(5000);
+    if (scopeKey) q = q.in('hq_id', scopeKey.split(','));
+    q.then(({ data, count }) => setPrecincts({ count: count ?? 0, voters: (data || []).reduce((a, r: any) => a + (r.voters_count || 0), 0) }));
+  }, [orgId, scopeKey, loading]);
 
   const statusData = [
     { name: 'Дійсні члени', value: s.active }, { name: 'Кандидати', value: s.candidate },
@@ -56,6 +67,8 @@ export function PartyDashboard({ orgId, isAdmin }: { orgId: string; isAdmin: boo
     { label: 'Кандидатів у члени', value: s.candidate, icon: UserPlus },
     { label: 'Осередків', value: scopedHqs.length, icon: Building2 },
     { label: 'Усього на обліку', value: scopedMembers.length, icon: Award },
+    { label: 'Виборчих дільниць', value: precincts?.count ?? '…', icon: MapPin },
+    { label: 'Виборців на дільницях', value: precincts ? precincts.voters.toLocaleString('uk-UA') : '…', icon: Users },
   ];
 
   return (
@@ -70,7 +83,7 @@ export function PartyDashboard({ orgId, isAdmin }: { orgId: string; isAdmin: boo
         )}
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         {kpi.map((k) => (
           <Card key={k.label} className="p-4">
             <k.icon className="h-5 w-5 text-primary mb-2" />
@@ -79,6 +92,13 @@ export function PartyDashboard({ orgId, isAdmin }: { orgId: string; isAdmin: boo
           </Card>
         ))}
       </div>
+
+      {unmatched > 0 && (
+        <Card className="p-3 flex items-start gap-2 border-destructive/40">
+          <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+          <p className="text-sm">{unmatched} член(ів) не враховано в діаграмах осередків: поле «Організація» в реєстрі не збігається з назвою жодного штабу. Виправте його в реєстрі членів.</p>
+        </Card>
+      )}
 
       <Card className="p-4">
         <div className="flex flex-wrap gap-2 mb-3">

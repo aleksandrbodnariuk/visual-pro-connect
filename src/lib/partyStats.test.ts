@@ -22,3 +22,12 @@ describe('partyStats', () => {
     expect(statusCounts(members)).toEqual({ active: 2, candidate: 1, honorary: 0, suspended: 0 });
   });
 });
+
+import { unmatchedMembers } from './partyStats';
+describe('unmatchedMembers', () => {
+  it('знаходить членів без відповідного штабу', () => {
+    const hqs = [{ id: 'a', name: 'Хотинська', parent_id: null, level: 'raion' }] as any;
+    const ms = [{ unit_name: ' хотинська ' }, { unit_name: 'Невідома' }, { unit_name: null }] as any;
+    expect(unmatchedMembers(ms, hqs)).toHaveLength(2);
+  });
+});
