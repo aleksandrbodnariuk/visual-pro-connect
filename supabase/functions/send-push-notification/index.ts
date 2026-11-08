@@ -114,11 +114,23 @@ Deno.serve(async (req) => {
     }
 
     // Count actual unread messages for this user
-    const { count: unreadMessages } = await supabase
-      .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('receiver_id', user_id)
-      .eq('read', false);
+    // Conversation-based chats: messages from others after my last_read_at
+    let unreadMessages = 0;
+    const { data: memberships } = await supabase
+      .from('conversation_members')
+      .select('conversation_id, last_read_at')
+      .eq('user_id', user_id);
+    const counts = await Promise.all((memberships || []).map(async (m: any) => {
+      let q = supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('conversation_id', m.conversation_id)
+        .neq('sender_id', user_id);
+      if (m.last_read_at) q = q.gt('created_at', m.last_read_at);
+      const { count } = await q;
+      return count || 0;
+    }));
+    unreadMessages = counts.reduce((a, b) => a + b, 0);
 
     // Count actual unread notifications for this user
     const { count: unreadNotifications } = await supabase

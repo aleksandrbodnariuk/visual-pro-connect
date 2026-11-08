@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { updateAppBadge } from '@/lib/badgeApi';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchUnreadFromDb } from '@/hooks/useUnreadMessages';
 
 /**
  * Syncs the app badge with the REAL unread count when the app becomes visible.
@@ -22,12 +23,8 @@ export function useBadgeClear() {
           return;
         }
 
-        const [msgRes, notifRes] = await Promise.all([
-          supabase
-            .from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('receiver_id', user.id)
-            .eq('read', false),
+        const [msgCount, notifRes] = await Promise.all([
+          fetchUnreadFromDb(user.id),
           supabase
             .from('notifications')
             .select('*', { count: 'exact', head: true })
@@ -35,7 +32,6 @@ export function useBadgeClear() {
             .eq('is_read', false),
         ]);
 
-        const msgCount = (!msgRes.error && msgRes.count !== null) ? msgRes.count : 0;
         const notifCount = (!notifRes.error && notifRes.count !== null) ? notifRes.count : 0;
         const total = msgCount + notifCount;
         console.log('[Badge] Sync — msgs:', msgCount, 'notifs:', notifCount, 'total:', total);

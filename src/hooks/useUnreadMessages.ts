@@ -107,7 +107,7 @@ function destroySharedChannel() {
   }
 }
 
-async function fetchUnreadFromDb(uid: string): Promise<number> {
+export async function fetchUnreadFromDb(uid: string): Promise<number> {
   // Sum unread_count across all the user's conversations (covers both direct + group chats).
   const { data, error } = await supabase
     .rpc('get_user_conversations', { _user_id: uid });
