@@ -104,11 +104,11 @@ export default function OrganizationPage() {
                   <Tabs defaultValue="overview">
                     <TabsList className="flex-wrap h-auto mb-2">
                       <TabsTrigger value="overview">Огляд та аналітика</TabsTrigger>
-                      <TabsTrigger value="hqs">Штаби</TabsTrigger>
+                      <TabsTrigger value="hqs">Організації</TabsTrigger>
                       <TabsTrigger value="leaders">Керівництво</TabsTrigger>
                       <TabsTrigger value="bodies">Керівні органи</TabsTrigger>
                       <TabsTrigger value="members">Члени партії</TabsTrigger>
-                      <TabsTrigger value="staff">Працівники штабів</TabsTrigger>
+                      <TabsTrigger value="staff">Працівники організацій</TabsTrigger>
                       <TabsTrigger value="symbols">Символіка</TabsTrigger>
                     </TabsList>
                     <TabsContent value="overview"><PartyDashboard orgId={organization.id} isAdmin={isAdmin} /></TabsContent>

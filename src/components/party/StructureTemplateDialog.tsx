@@ -6,9 +6,9 @@ import { Plus, Trash2, ArrowUp } from 'lucide-react';
 import { HQ_LEVELS, partyActions, type HqLevel, type StructureTemplate } from '@/hooks/orgs/useOrganizations';
 
 const DEFAULTS: Record<HqLevel, string[]> = {
-  central: ['Керівник штабу', 'Заступник керівника', 'Юрист', 'Фінансовий менеджер', 'Прес-секретар', 'Координатор регіонів', 'Координатор спостерігачів', 'IT / аналітика'],
-  oblast: ['Керівник обласного штабу', 'Заступник', 'Юрист', 'Координатор округів', 'Координатор спостерігачів', 'Медіа-менеджер'],
-  okrug: ['Керівник окружного штабу', 'Заступник', 'Юрист', 'Координатор дільниць', 'Координатор агітаторів'],
+  central: ['Голова організації', 'Заступник керівника', 'Юрист', 'Фінансовий менеджер', 'Прес-секретар', 'Координатор регіонів', 'Координатор спостерігачів', 'IT / аналітика'],
+  oblast: ['Голова обласної організації', 'Заступник', 'Юрист', 'Координатор округів', 'Координатор спостерігачів', 'Медіа-менеджер'],
+  okrug: ['Голова районної організації', 'Заступник', 'Юрист', 'Координатор дільниць', 'Координатор агітаторів'],
   city: ['Голова міської організації', 'Заступник', 'Секретар', 'Координатор агітаторів'],
   otg: ['Голова організації ОТГ', 'Секретар', 'Координатор агітаторів'],
   village: ['Голова сільської організації', 'Секретар'],
@@ -44,8 +44,8 @@ export function StructureTemplateDialog({ open, onOpenChange, orgId, templates, 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Структура штабів (зразок для рівня)</DialogTitle></DialogHeader>
-        <p className="text-sm text-muted-foreground">Структура діє для всіх штабів обраного рівня однаково.</p>
+        <DialogHeader><DialogTitle>Структура організацій (зразок для рівня)</DialogTitle></DialogHeader>
+        <p className="text-sm text-muted-foreground">Структура діє для всіх організацій обраного рівня однаково.</p>
         <select className="w-full h-10 rounded-md border bg-background px-3 text-sm" value={level} onChange={(e) => setLevel(e.target.value as HqLevel)}>
           {HQ_LEVELS.map((l) => <option key={l.value} value={l.value}>{l.plural}</option>)}
         </select>

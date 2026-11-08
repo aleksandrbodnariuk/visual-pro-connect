@@ -13,8 +13,8 @@ export function HqChatsPanel({ orgId, hqId, hqName }: { orgId: string; hqId: str
 
   const items = [
     ...(hqId ? [
-      { kind: 'internal' as const, icon: Users, title: 'Внутрішній чат штабу', desc: `Команда та керівники «${hqName}»` },
-      { kind: 'network' as const, icon: Network, title: 'Чат з підлеглими штабами', desc: 'Цей штаб + керівники підпорядкованих штабів' },
+      { kind: 'internal' as const, icon: Users, title: 'Внутрішній чат організації', desc: `Команда та керівники «${hqName}»` },
+      { kind: 'network' as const, icon: Network, title: 'Чат з підлеглими організаціями', desc: 'Ця організація + керівники підпорядкованих організацій' },
     ] : []),
     { kind: 'general' as const, icon: MessagesSquare, title: 'Загальнопартійний чат', desc: 'Усі, хто має доступ до партії' },
   ];
@@ -43,7 +43,7 @@ export function HqChatsPanel({ orgId, hqId, hqName }: { orgId: string; hqId: str
               </span>
             </button>
           ))}
-          <p className="p-3 text-xs text-muted-foreground">Учасники додаються автоматично при відкритті: люди з команди, прив’язані до профілю, та керівники штабів.</p>
+          <p className="p-3 text-xs text-muted-foreground">Учасники додаються автоматично при відкритті: люди з команди, прив’язані до профілю, та керівники організацій.</p>
         </div>
         <div className={cn('min-h-0', active ? 'flex flex-col' : 'hidden md:flex md:flex-col')}>
           {active ? (

@@ -14,7 +14,7 @@ export function HqManagersPanel({ orgId, hqId, isAdmin, onChanged }: { orgId: st
   return (
     <div className="space-y-3">
       <Card className="p-3 text-sm text-muted-foreground">
-        Керівник штабу може сам редагувати цей штаб, його команду, дільниці, протоколи та всі підлеглі штаби.
+        Керівник організації може сам редагувати цю організацію, її команду, дільниці, протоколи та всі підлеглі організації.
       </Card>
       {isAdmin && (
         <Card className="p-3 space-y-2">

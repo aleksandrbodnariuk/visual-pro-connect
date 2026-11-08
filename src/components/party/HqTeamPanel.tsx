@@ -118,7 +118,7 @@ export function HqTeamPanel({ orgId, hqId, level, templates, canEdit }: Props) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-3">
-          <p className="text-sm font-medium mb-2 flex items-center gap-2"><UserRound className="h-4 w-4" /> Команда штабу ({team.length})</p>
+          <p className="text-sm font-medium mb-2 flex items-center gap-2"><UserRound className="h-4 w-4" /> Команда організації ({team.length})</p>
           {team.length === 0 && <p className="text-sm text-muted-foreground">Поки нікого немає</p>}
           <div className="space-y-1">
             {team.map((m) => (

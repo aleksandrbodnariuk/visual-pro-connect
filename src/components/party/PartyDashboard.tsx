@@ -60,7 +60,7 @@ export function PartyDashboard({ orgId, isAdmin }: { orgId: string; isAdmin: boo
   const levelData = HQ_LEVELS.map((l) => ({ name: levelPlural(l.value), value: scopedHqs.filter((h) => h.level === l.value).length })).filter((d) => d.value > 0);
 
   if (loading) return <p className="text-sm text-muted-foreground py-6 text-center">Завантаження аналітики…</p>;
-  if (!isAdmin && !myHqs.length) return <p className="text-sm text-muted-foreground py-6 text-center">Аналітика доступна керівникам штабів.</p>;
+  if (!isAdmin && !myHqs.length) return <p className="text-sm text-muted-foreground py-6 text-center">Аналітика доступна керівникам організацій.</p>;
 
   const kpi = [
     { label: 'Членів партії', value: s.active + s.honorary, icon: Users },
@@ -96,7 +96,7 @@ export function PartyDashboard({ orgId, isAdmin }: { orgId: string; isAdmin: boo
       {unmatched > 0 && (
         <Card className="p-3 flex items-start gap-2 border-destructive/40">
           <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
-          <p className="text-sm">{unmatched} член(ів) не враховано в діаграмах осередків: поле «Організація» в реєстрі не збігається з назвою жодного штабу. Виправте його в реєстрі членів.</p>
+          <p className="text-sm">{unmatched} член(ів) не враховано в діаграмах осередків: поле «Організація» в реєстрі не збігається з назвою жодної організації. Виправте його в реєстрі членів.</p>
         </Card>
       )}
 
@@ -133,7 +133,7 @@ export function PartyDashboard({ orgId, isAdmin }: { orgId: string; isAdmin: boo
             </BarChart></ResponsiveContainer>
           ) : <Empty />)}
         </div>
-        <p className="text-xs text-muted-foreground mt-2">Члени зараховуються до осередку, якщо поле «Організація» в реєстрі збігається з назвою штабу.</p>
+        <p className="text-xs text-muted-foreground mt-2">Члени зараховуються до осередку, якщо поле «Організація» в реєстрі збігається з назвою організації.</p>
       </Card>
     </div>
   );

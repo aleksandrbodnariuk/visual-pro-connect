@@ -32,8 +32,8 @@ export function PartyPeoplePanel({ orgId, mode }: { orgId: string; mode: 'leader
     const regional = members.filter((m) => hqBy.get(m.hq_id)?.level === 'oblast' && !m.is_agitator && LEAD_RE.test(m.position || ''));
     return (
       <div className="space-y-4">
-        <Section title="Центральне керівництво" icon={Crown} list={central} hqBy={hqBy} empty="Додайте людей у команду центрального штабу" />
-        <Section title="Керівники обласних штабів" icon={Users} list={regional} hqBy={hqBy} empty="Посади з назвою «Голова», «Керівник» чи «Заступник» в обласних штабах з’являться тут" showHq />
+        <Section title="Центральне керівництво" icon={Crown} list={central} hqBy={hqBy} empty="Додайте людей у команду центральної організації" />
+        <Section title="Керівники обласних організацій" icon={Users} list={regional} hqBy={hqBy} empty="Посади з назвою «Голова», «Керівник» чи «Заступник» в обласних організаціях з’являться тут" showHq />
       </div>
     );
   }
@@ -47,17 +47,17 @@ export function PartyPeoplePanel({ orgId, mode }: { orgId: string; mode: 'leader
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         <Badge variant="secondary">Усього: {members.length}</Badge>
-        <Badge variant="secondary">Команди штабів: {members.length - agit}</Badge>
+        <Badge variant="secondary">Команди організацій: {members.length - agit}</Badge>
         <Badge variant="secondary">Агітатори: {agit}</Badge>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <Input placeholder="Пошук за ім’ям, посадою, телефоном…" value={q} onChange={(e) => setQ(e.target.value)} />
         <select className="h-10 rounded-md border bg-background px-3 text-sm" value={hqFilter} onChange={(e) => setHqFilter(e.target.value)}>
-          <option value="">Усі штаби</option>
+          <option value="">Усі організації</option>
           {hqs.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
         </select>
       </div>
-      {list.length === 0 ? <p className="text-sm text-muted-foreground py-6 text-center">Нікого не знайдено. Люди додаються у вкладці «Команда» кожного штабу.</p> : (
+      {list.length === 0 ? <p className="text-sm text-muted-foreground py-6 text-center">Нікого не знайдено. Люди додаються у вкладці «Команда» кожної організації.</p> : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
           {list.map((m) => <PersonCard key={m.id} m={m} hq={hqBy.get(m.hq_id)} showHq />)}
         </div>
