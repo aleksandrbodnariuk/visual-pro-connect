@@ -51,6 +51,7 @@ export function PartyMembersRegistry({ orgId, canEdit }: { orgId: string; canEdi
         <div className="flex flex-wrap gap-2">
           <Badge variant="secondary">Членів партії: {list.length}</Badge>
           <Badge variant="secondary">Осередків: {units.length}</Badge>
+          <Badge variant={status === 'candidate' ? 'default' : 'outline'} className="cursor-pointer" onClick={() => setStatus(status === 'candidate' ? '' : 'candidate')}>Кандидати: {list.filter((m) => m.status === 'candidate').length}</Badge>
         </div>
         <div className="flex gap-2">{shown.length > 0 && <Button size="sm" variant="outline" className="min-h-[44px]" onClick={exportCsv}><Download className="h-4 w-4 mr-1" />Excel</Button>}
         {canEdit && <Button onClick={() => setForm({ ...EMPTY })} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1" />Додати члена партії</Button>}</div>
@@ -86,7 +87,8 @@ export function PartyMembersRegistry({ orgId, canEdit }: { orgId: string; canEdi
                   {m.card_number && <span className="inline-flex items-center gap-1 text-muted-foreground min-h-[32px]"><IdCard className="h-3.5 w-3.5" />№ {m.card_number}</span>}
                 </div>
                 {canEdit && (
-                  <div className="flex justify-end">
+                  <div className="flex justify-end items-center gap-1">
+                    {m.status === 'candidate' && <Button size="sm" variant="outline" className="mr-auto min-h-[40px]" onClick={() => setForm({ ...m, status: 'active', joined_date: m.joined_date || new Date().toISOString().slice(0, 10) })}>Прийняти в партію</Button>}
                     <Button size="icon" variant="ghost" onClick={() => setForm(m)} aria-label="Редагувати"><Pencil className="h-4 w-4" /></Button>
                     <Button size="icon" variant="ghost" onClick={() => remove(m)} aria-label="Зняти з обліку"><Trash2 className="h-4 w-4 text-destructive" /></Button>
                   </div>

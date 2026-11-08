@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Building2, Flag, ShieldCheck, Trash2, Vote } from 'lucide-react';
 import { CampaignsPanel } from '@/components/party/CampaignsPanel';
 import { ORG_TYPES, orgActions, useOrganization } from '@/hooks/orgs/useOrganizations';
+import { PartyDashboard } from '@/components/party/PartyDashboard';
 import { PartySection } from '@/components/party/PartySection';
 import { PartyAccessPanel } from '@/components/party/PartyAccessPanel';
 import { PartyMembersRegistry } from '@/components/party/PartyMembersRegistry';
@@ -100,8 +101,9 @@ export default function OrganizationPage() {
               </TabsContent>
               {showParty && (
                 <TabsContent value="party">
-                  <Tabs defaultValue="hqs">
+                  <Tabs defaultValue="overview">
                     <TabsList className="flex-wrap h-auto mb-2">
+                      <TabsTrigger value="overview">Огляд та аналітика</TabsTrigger>
                       <TabsTrigger value="hqs">Штаби</TabsTrigger>
                       <TabsTrigger value="leaders">Керівництво</TabsTrigger>
                       <TabsTrigger value="bodies">Керівні органи</TabsTrigger>
@@ -109,6 +111,7 @@ export default function OrganizationPage() {
                       <TabsTrigger value="staff">Працівники штабів</TabsTrigger>
                       <TabsTrigger value="symbols">Символіка</TabsTrigger>
                     </TabsList>
+                    <TabsContent value="overview"><PartyDashboard orgId={organization.id} isAdmin={isAdmin} /></TabsContent>
                     <TabsContent value="hqs"><PartySection orgId={organization.id} canEdit={isAdmin} /></TabsContent>
                     <TabsContent value="leaders"><PartyPeoplePanel orgId={organization.id} mode="leaders" /></TabsContent>
                     <TabsContent value="bodies"><UnitOfficersPanel orgId={organization.id} canEdit={isAdmin} /></TabsContent>
