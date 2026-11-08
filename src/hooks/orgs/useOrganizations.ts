@@ -35,7 +35,9 @@ export interface PartyHq {
   address: string | null;
   phone: string | null;
   notes: string | null;
+  kind?: HqKind;
 }
+export type HqKind = 'party' | 'campaign';
 
 export interface HqMember {
   id: string;
@@ -196,12 +198,11 @@ export const orgActions = {
 };
 
 export const partyActions = {
-  async listHqs(orgId: string) {
-    const { data } = await supabase
-      .from('party_hqs')
-      .select('*')
-      .eq('organization_id', orgId)
-      .order('name');
+  /** kind: 'party' — статутні організації, 'campaign' — виборчі штаби. */
+  async listHqs(orgId: string, kind?: HqKind) {
+    let q: any = (supabase as any).from('party_hqs').select('*').eq('organization_id', orgId);
+    if (kind) q = q.eq('kind', kind);
+    const { data } = await q.order('name');
     return sortHqsByOkrug((data as PartyHq[]) || []);
   },
 
@@ -215,18 +216,19 @@ export const partyActions = {
       phone: hq.phone || null,
       parent_id: hq.parent_id || null,
       notes: hq.notes || null,
-    };
+      ...(hq.kind ? { kind: hq.kind } : {}),
+    } as any;
     const res = hq.id
       ? await supabase.from('party_hqs').update(payload).eq('id', hq.id)
       : await supabase.from('party_hqs').insert(payload);
-    if (res.error) { toast.error('Не вдалося зберегти штаб: ' + res.error.message); return false; }
-    toast.success('Штаб збережено');
+    if (res.error) { toast.error('Не вдалося зберегти: ' + res.error.message); return false; }
+    toast.success('Збережено');
     return true;
   },
 
   async removeHq(id: string) {
     const { error } = await supabase.from('party_hqs').delete().eq('id', id);
-    if (error) { toast.error('Не вдалося видалити штаб'); return false; }
+    if (error) { toast.error('Не вдалося видалити'); return false; }
     return true;
   },
 
@@ -533,7 +535,7 @@ export const partyExtra = {
     const me = (await supabase.auth.getUser()).data.user?.id ?? null;
     try {
       const { data: hq, error: he } = await db.from('party_hqs')
-        .insert({ organization_id: orgId, level: 'city', name: '[ТЕСТ] Навчальний штаб', notes: 'Навчальні дані — можна видалити', is_test: true })
+        .insert({ organization_id: orgId, level: 'city', kind: 'campaign', name: '[ТЕСТ] Навчальний штаб', notes: 'Навчальні дані — можна видалити', is_test: true })
         .select('id').single();
       if (he || !hq) throw he;
       const { data: camp, error: ce } = await db.from('election_campaigns')

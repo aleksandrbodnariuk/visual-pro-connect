@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Users, UserPlus, Building2, Award, MapPin, AlertTriangle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Users, UserPlus, Building2, Award, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { HQ_LEVELS, levelPlural, partyActions, partyExtra, partyMembersApi, type PartyHq, type PartyMember } from '@/hooks/orgs/useOrganizations';
 import { unmatchedMembers, membersByChild, membersInScope, statusCounts, subtreeIds } from '@/lib/partyStats';
@@ -20,10 +19,9 @@ export function PartyDashboard({ orgId, isAdmin }: { orgId: string; isAdmin: boo
   const [focus, setFocus] = useState<string>('');
   const [view, setView] = useState<View>('status');
   const [loading, setLoading] = useState(true);
-  const [precincts, setPrecincts] = useState<{ count: number; voters: number } | null>(null);
 
   useEffect(() => {
-    Promise.all([partyActions.listHqs(orgId), partyMembersApi.list(orgId), partyExtra.listManagers(orgId)]).then(([h, m, mg]) => {
+    Promise.all([partyActions.listHqs(orgId, 'party'), partyMembersApi.list(orgId), partyExtra.listManagers(orgId)]).then(([h, m, mg]) => {
       setHqs(h); setMembers(m);
       const mine = mg.filter((x) => x.user_id === user?.id).map((x) => x.hq_id);
       setMyHqs(mine);
@@ -42,15 +40,8 @@ export function PartyDashboard({ orgId, isAdmin }: { orgId: string; isAdmin: boo
   const scopedHqs = scope ? hqs.filter((h) => scope.has(h.id)) : hqs;
   const s = statusCounts(scopedMembers);
   const focusHq = hqs.find((h) => h.id === focus);
-  const scopeKey = scope ? [...scope].sort().join(',') : '';
   const unmatched = isAdmin && !focus ? unmatchedMembers(members, hqs).length : 0;
 
-  useEffect(() => {
-    if (loading) return;
-    let q = supabase.from('precincts').select('voters_count', { count: 'exact' }).eq('organization_id', orgId).limit(5000);
-    if (scopeKey) q = q.in('hq_id', scopeKey.split(','));
-    q.then(({ data, count }) => setPrecincts({ count: count ?? 0, voters: (data || []).reduce((a, r: any) => a + (r.voters_count || 0), 0) }));
-  }, [orgId, scopeKey, loading]);
 
   const statusData = [
     { name: 'Дійсні члени', value: s.active }, { name: 'Кандидати', value: s.candidate },
@@ -62,19 +53,25 @@ export function PartyDashboard({ orgId, isAdmin }: { orgId: string; isAdmin: boo
   if (loading) return <p className="text-sm text-muted-foreground py-6 text-center">Завантаження аналітики…</p>;
   if (!isAdmin && !myHqs.length) return <p className="text-sm text-muted-foreground py-6 text-center">Аналітика доступна керівникам організацій.</p>;
 
+  const cabinet = !focusHq || focusHq.level === 'central' ? 'Кабінет Голови партії'
+    : focusHq.level === 'oblast' ? 'Кабінет голови обласної організації'
+    : focusHq.level === 'village' ? 'Кабінет голови первинного осередку'
+    : 'Кабінет голови районної (міської) організації';
+  const isLocal = !!focusHq && !['central', 'oblast'].includes(focusHq.level);
   const kpi = [
     { label: 'Членів партії', value: s.active + s.honorary, icon: Users },
     { label: 'Кандидатів у члени', value: s.candidate, icon: UserPlus },
     { label: 'Осередків', value: scopedHqs.length, icon: Building2 },
     { label: 'Усього на обліку', value: scopedMembers.length, icon: Award },
-    { label: 'Виборчих дільниць', value: precincts?.count ?? '…', icon: MapPin },
-    { label: 'Виборців на дільницях', value: precincts ? precincts.voters.toLocaleString('uk-UA') : '…', icon: Users },
   ];
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">{focusHq ? focusHq.name : 'Вся партія'}</h2>
+        <div>
+          <p className="text-xs uppercase tracking-wide text-primary">{cabinet}</p>
+          <h2 className="text-lg font-semibold">{focusHq ? focusHq.name : 'Вся партія'}</h2>
+        </div>
         {options.length > 0 && (
           <select className="h-11 rounded-md border bg-background px-3 text-sm max-w-full" value={focus} onChange={(e) => setFocus(e.target.value)}>
             {isAdmin && <option value="">Вся партія</option>}
@@ -83,7 +80,7 @@ export function PartyDashboard({ orgId, isAdmin }: { orgId: string; isAdmin: boo
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
         {kpi.map((k) => (
           <Card key={k.label} className="p-4">
             <k.icon className="h-5 w-5 text-primary mb-2" />
@@ -92,6 +89,25 @@ export function PartyDashboard({ orgId, isAdmin }: { orgId: string; isAdmin: boo
           </Card>
         ))}
       </div>
+
+      {isLocal && (
+        <Card className="p-4">
+          <h3 className="font-semibold mb-2">Члени та кандидати організації ({scopedMembers.length})</h3>
+          {scopedMembers.length === 0 ? <p className="text-sm text-muted-foreground">На обліку ще нікого немає.</p> : (
+            <div className="divide-y">
+              {scopedMembers.map((m) => (
+                <div key={m.id} className="py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span className="font-medium">{m.full_name}{m.position ? <span className="text-muted-foreground font-normal"> · {m.position}</span> : null}</span>
+                  <span className="flex items-center gap-3">
+                    {m.phone && <a className="text-primary min-h-[44px] inline-flex items-center" href={`tel:${m.phone}`}>{m.phone}</a>}
+                    <span className="text-xs text-muted-foreground">{m.status === 'candidate' ? 'Кандидат' : m.status === 'active' ? 'Дійсний член' : m.status === 'honorary' ? 'Почесний' : 'Призупинений'}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
 
       {unmatched > 0 && (
         <Card className="p-3 flex items-start gap-2 border-destructive/40">

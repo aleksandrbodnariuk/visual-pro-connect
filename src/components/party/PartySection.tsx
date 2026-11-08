@@ -9,8 +9,8 @@ import { useAuth } from '@/context/AuthContext';
 import { HqChatsPanel } from './HqChatsPanel';
 import { HqManagersPanel } from './HqManagersPanel';
 import {
-  HQ_LEVELS, levelLabel, levelPlural, partyActions, partyExtra,
-  type HqLevel, type PartyHq, type StructureTemplate,
+  HQ_LEVELS, levelLabel, levelPlural, campaignLevelLabel, campaignLevelPlural, partyActions, partyExtra,
+  type HqKind, type HqLevel, type PartyHq, type StructureTemplate,
 } from '@/hooks/orgs/useOrganizations';
 import { HqDialog } from './HqDialog';
 import { HqTeamPanel } from './HqTeamPanel';
@@ -21,7 +21,10 @@ const PARENT_LEVEL: Record<HqLevel, HqLevel | null> = {
   central: null, oblast: 'central', okrug: 'oblast', city: 'okrug', otg: 'okrug', village: 'otg',
 };
 
-export function PartySection({ orgId, canEdit: isAdmin }: { orgId: string; canEdit: boolean }) {
+export function PartySection({ orgId, canEdit: isAdmin, kind = 'party' }: { orgId: string; canEdit: boolean; kind?: HqKind }) {
+  const isCampaign = kind === 'campaign';
+  const lvlLabel = (l: HqLevel) => isCampaign ? campaignLevelLabel(l) : levelLabel(l);
+  const lvlPlural = (l: HqLevel) => isCampaign ? campaignLevelPlural(l) : levelPlural(l);
   const { user } = useAuth();
   const [managed, setManaged] = useState<Set<string>>(new Set());
   const [hqs, setHqs] = useState<PartyHq[]>([]);
@@ -35,11 +38,11 @@ export function PartySection({ orgId, canEdit: isAdmin }: { orgId: string; canEd
   const [showGeneral, setShowGeneral] = useState(false);
 
   const load = useCallback(async () => {
-    const [h, t, m] = await Promise.all([partyActions.listHqs(orgId), partyActions.listTemplates(orgId), partyExtra.listManagers(orgId)]);
+    const [h, t, m] = await Promise.all([partyActions.listHqs(orgId, kind), partyActions.listTemplates(orgId), partyExtra.listManagers(orgId)]);
     setHqs(h); setTemplates(t);
     setManaged(new Set(m.filter((x) => x.user_id === user?.id).map((x) => x.hq_id)));
     setSelected((s) => (s ? h.find((x) => x.id === s.id) || null : null));
-  }, [orgId, user?.id]);
+  }, [orgId, user?.id, kind]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -72,7 +75,7 @@ export function PartySection({ orgId, canEdit: isAdmin }: { orgId: string; canEd
         <Card className="p-4">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <Badge variant="secondary" className="mb-1">{levelLabel(selected.level)}</Badge>
+              <Badge variant="secondary" className="mb-1">{lvlLabel(selected.level)}</Badge>
               <h2 className="text-xl font-bold">{selected.name}</h2>
               <div className="text-sm text-muted-foreground space-y-0.5 mt-1">
                 {selected.region && <p>{selected.region}</p>}
@@ -93,8 +96,8 @@ export function PartySection({ orgId, canEdit: isAdmin }: { orgId: string; canEd
         <Tabs defaultValue="team">
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="team">Команда</TabsTrigger>
-            <TabsTrigger value="precincts">Дільниці</TabsTrigger>
-            <TabsTrigger value="children">Підлеглі організації ({children.length})</TabsTrigger>
+            {isCampaign && <TabsTrigger value="precincts">Дільниці</TabsTrigger>}
+            <TabsTrigger value="children">{isCampaign ? 'Підлеглі штаби' : 'Підлеглі організації'} ({children.length})</TabsTrigger>
             <TabsTrigger value="chats"><MessagesSquare className="h-4 w-4 mr-1" />Чати</TabsTrigger>
             <TabsTrigger value="managers">Керівники</TabsTrigger>
           </TabsList>
@@ -109,14 +112,14 @@ export function PartySection({ orgId, canEdit: isAdmin }: { orgId: string; canEd
           <TabsContent value="children">
             {canEditHq && childLevel && (
               <Button size="sm" className="mb-3" onClick={() => { setLevel(childLevel); setEditing(null); setDialogOpen(true); }}>
-                <Plus className="h-4 w-4 mr-1" /> Додати: {levelLabel(childLevel)}
+                <Plus className="h-4 w-4 mr-1" /> Додати: {lvlLabel(childLevel)}
               </Button>
             )}
-            {children.length === 0 ? <p className="text-sm text-muted-foreground">Немає підлеглих організацій</p> : (
+            {children.length === 0 ? <p className="text-sm text-muted-foreground">{isCampaign ? 'Немає підлеглих штабів' : 'Немає підлеглих організацій'}</p> : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                 {children.map((c) => (
                   <Card key={c.id} className="p-3 cursor-pointer hover:border-primary transition-colors" onClick={() => setSelected(c)}>
-                    <Badge variant="outline" className="mb-1">{levelLabel(c.level)}</Badge>
+                    <Badge variant="outline" className="mb-1">{lvlLabel(c.level)}</Badge>
                     <p className="font-medium">{c.name}</p>
                     {c.region && <p className="text-xs text-muted-foreground">{c.region}</p>}
                   </Card>
@@ -126,7 +129,7 @@ export function PartySection({ orgId, canEdit: isAdmin }: { orgId: string; canEd
           </TabsContent>
         </Tabs>
 
-        <HqDialog open={dialogOpen} onOpenChange={setDialogOpen} orgId={orgId} level={level} parents={parents} editing={editing} onSaved={load} />
+        <HqDialog open={dialogOpen} onOpenChange={setDialogOpen} orgId={orgId} level={level} parents={parents} editing={editing} kind={kind} onSaved={load} />
       </div>
     );
   }
@@ -142,14 +145,14 @@ export function PartySection({ orgId, canEdit: isAdmin }: { orgId: string; canEd
                 onClick={() => setLevel(l.value)}
                 className={`flex items-center justify-between gap-2 rounded-md px-3 py-2.5 text-sm whitespace-nowrap min-h-[44px] transition-colors ${level === l.value ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
               >
-                <span className="flex items-center gap-2"><Building2 className="h-4 w-4" />{l.plural}</span>
+                <span className="flex items-center gap-2"><Building2 className="h-4 w-4" />{lvlPlural(l.value)}</span>
                 <span className="text-xs opacity-80">{counts[l.value] || 0}</span>
               </button>
             ))}
           </div>
         </Card>
         <Button variant={showGeneral ? 'default' : 'outline'} className="w-full mt-2 min-h-[44px]" onClick={() => setShowGeneral((v) => !v)}>
-          <MessagesSquare className="h-4 w-4 mr-1" /> {showGeneral ? 'Сховати чат' : 'Загальнопартійний чат'}
+          <MessagesSquare className="h-4 w-4 mr-1" /> {showGeneral ? 'Сховати чат' : isCampaign ? 'Загальноштабний чат' : 'Загальнопартійний чат'}
         </Button>
         {canEdit && (
           <Button variant="outline" className="w-full mt-2" onClick={() => setTplOpen(true)}>
@@ -161,7 +164,7 @@ export function PartySection({ orgId, canEdit: isAdmin }: { orgId: string; canEd
       <div className="col-span-12 md:col-span-8 xl:col-span-9 space-y-3">
         {showGeneral && <HqChatsPanel orgId={orgId} hqId={null} />}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">{levelPlural(level)}</h2>
+          <h2 className="text-lg font-semibold">{lvlPlural(level)}</h2>
           {canEdit && (
             <Button size="sm" onClick={() => { setEditing(null); setDialogOpen(true); }}>
               <Plus className="h-4 w-4 mr-1" /> Додати
@@ -199,7 +202,7 @@ export function PartySection({ orgId, canEdit: isAdmin }: { orgId: string; canEd
         )}
       </div>
 
-      <HqDialog open={dialogOpen} onOpenChange={setDialogOpen} orgId={orgId} level={level} parents={parents} editing={editing} onSaved={load} />
+      <HqDialog open={dialogOpen} onOpenChange={setDialogOpen} orgId={orgId} level={level} parents={parents} editing={editing} kind={kind} onSaved={load} />
       <StructureTemplateDialog open={tplOpen} onOpenChange={setTplOpen} orgId={orgId} templates={templates} onSaved={load} />
     </div>
   );

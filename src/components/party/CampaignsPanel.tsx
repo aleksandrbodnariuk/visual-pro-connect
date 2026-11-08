@@ -129,7 +129,7 @@ function CampaignDialog({ open, onOpenChange, orgId, onSaved }: { open: boolean;
   useEffect(() => {
     if (!open) return;
     setName(''); setDate(''); setRound(1); setMode('real'); setPicked(new Set());
-    Promise.all([partyActions.listHqs(orgId), partyExtra.listOrgPrecincts(orgId)]).then(([h, p]) => { setHqs(h); setPrecincts(p); });
+    Promise.all([partyActions.listHqs(orgId, 'campaign'), partyExtra.listOrgPrecincts(orgId)]).then(([h, p]) => { setHqs(h); setPrecincts(p); });
   }, [open, orgId]);
   const toggle = (ids: string[], on: boolean) => setPicked((prev) => { const n = new Set(prev); ids.forEach((i) => (on ? n.add(i) : n.delete(i))); return n; });
   const save = async () => {
@@ -213,7 +213,7 @@ function CampaignView({ orgId, campaign, isAdmin, onBack }: { orgId: string; cam
     const sb = supabase as any;
     // 1. Спершу з'ясовуємо роль користувача — від неї залежить, скільки дільниць завантажувати.
     const [c, h, m, pm, ob, tr] = await Promise.all([
-      partyExtra.listCandidates(campaign.id), partyActions.listHqs(orgId), partyExtra.listManagers(orgId),
+      partyExtra.listCandidates(campaign.id), partyActions.listHqs(orgId, 'campaign'), partyExtra.listManagers(orgId),
       user?.id ? sb.from('precinct_members').select('precinct_id').eq('organization_id', orgId).eq('user_id', user.id) : Promise.resolve({ data: [] }),
       user?.id ? sb.from('party_unit_officers').select('body, party_members!inner(user_id)').eq('organization_id', orgId).eq('party_members.user_id', user.id) : Promise.resolve({ data: [] }),
       campaign.mode === 'training' ? sb.from('campaign_trainees').select('id, user_id, full_name, role, precinct_id').eq('campaign_id', campaign.id) : Promise.resolve({ data: [] }),

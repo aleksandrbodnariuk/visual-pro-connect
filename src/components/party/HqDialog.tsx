@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { HQ_LEVELS, partyActions, type HqLevel, type PartyHq } from '@/hooks/orgs/useOrganizations';
+import { HQ_LEVELS, partyActions, type HqKind, type HqLevel, type PartyHq } from '@/hooks/orgs/useOrganizations';
 import { toast } from 'sonner';
 
 interface Props {
@@ -15,9 +15,10 @@ interface Props {
   parents: PartyHq[];
   editing?: PartyHq | null;
   onSaved: () => void;
+  kind?: HqKind;
 }
 
-export function HqDialog({ open, onOpenChange, orgId, level, parents, editing, onSaved }: Props) {
+export function HqDialog({ open, onOpenChange, orgId, level, parents, editing, onSaved, kind = 'party' }: Props) {
   const [name, setName] = useState('');
   const [region, setRegion] = useState('');
   const [address, setAddress] = useState('');
@@ -42,6 +43,7 @@ export function HqDialog({ open, onOpenChange, orgId, level, parents, editing, o
     const ok = await partyActions.saveHq(orgId, {
       id: editing?.id,
       level,
+      kind,
       name: name.trim(),
       region,
       address,
@@ -57,14 +59,14 @@ export function HqDialog({ open, onOpenChange, orgId, level, parents, editing, o
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editing ? 'Редагувати' : 'Додати'}: {HQ_LEVELS.find((l) => l.value === level)?.label}</DialogTitle>
+          <DialogTitle>{editing ? 'Редагувати' : 'Додати'}: {(() => { const l = HQ_LEVELS.find((x) => x.value === level); return kind === 'campaign' ? l?.campaign : l?.label; })()}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div><Label>Назва</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div><Label>Регіон / округ</Label><Input value={region} onChange={(e) => setRegion(e.target.value)} /></div>
           {parents.length > 0 && (
             <div>
-              <Label>Вища організація</Label>
+              <Label>{kind === 'campaign' ? 'Вищий штаб' : 'Вища організація'}</Label>
               <select className="w-full h-10 rounded-md border bg-background px-3 text-sm" value={parentId} onChange={(e) => setParentId(e.target.value)}>
                 <option value="">— не вказано —</option>
                 {parents.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}

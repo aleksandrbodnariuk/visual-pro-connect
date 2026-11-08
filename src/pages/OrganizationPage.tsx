@@ -123,7 +123,16 @@ export default function OrganizationPage() {
               )}
               {hasParty && isPartyOrg && (
                 <TabsContent value="campaigns">
-                  <CampaignsPanel orgId={organization.id} isAdmin={isAdmin} />
+                  {observerOnly ? <CampaignsPanel orgId={organization.id} isAdmin={isAdmin} /> : (
+                    <Tabs defaultValue="list">
+                      <TabsList className="flex-wrap h-auto mb-2">
+                        <TabsTrigger value="list">Виборчі кампанії</TabsTrigger>
+                        <TabsTrigger value="hqs">Штаби, округи та дільниці</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="list"><CampaignsPanel orgId={organization.id} isAdmin={isAdmin} /></TabsContent>
+                      <TabsContent value="hqs"><PartySection orgId={organization.id} canEdit={isAdmin} kind="campaign" /></TabsContent>
+                    </Tabs>
+                  )}
                 </TabsContent>
               )}
               {isTeam && (

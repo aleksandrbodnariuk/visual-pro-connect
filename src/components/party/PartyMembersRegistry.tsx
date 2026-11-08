@@ -25,7 +25,7 @@ export function PartyMembersRegistry({ orgId, canEdit }: { orgId: string; canEdi
   const load = useCallback(async () => { setList(await partyMembersApi.list(orgId)); setLoading(false); }, [orgId]);
   useEffect(() => { load(); }, [load]);
   const [orgs, setOrgs] = useState<PartyHq[]>([]);
-  useEffect(() => { partyActions.listHqs(orgId).then((h) => setOrgs(h.filter((x: any) => !x.is_test))); }, [orgId]);
+  useEffect(() => { partyActions.listHqs(orgId, 'party').then((h) => setOrgs(h.filter((x: any) => !x.is_test))); }, [orgId]);
 
   const units = useMemo(() => Array.from(new Set(list.map((m) => m.unit_name).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b, 'uk')), [list]);
   const ql = q.toLowerCase();

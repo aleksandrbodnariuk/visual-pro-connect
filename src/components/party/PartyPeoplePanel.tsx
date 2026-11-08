@@ -17,7 +17,7 @@ export function PartyPeoplePanel({ orgId, mode }: { orgId: string; mode: 'leader
 
   useEffect(() => {
     let alive = true;
-    Promise.all([partyExtra.listOrgMembers(orgId), partyActions.listHqs(orgId)]).then(([m, h]) => {
+    Promise.all([partyExtra.listOrgMembers(orgId), partyActions.listHqs(orgId, 'party')]).then(([m, h]) => {
       if (!alive) return; setMembers(m); setHqs(h); setLoading(false);
     });
     return () => { alive = false; };

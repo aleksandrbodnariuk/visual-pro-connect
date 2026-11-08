@@ -36,7 +36,7 @@ export function UnitOfficersPanel({ orgId, canEdit }: { orgId: string; canEdit: 
   const load = useCallback(async () => {
     const [{ data }, hqs, { data: mem }] = await Promise.all([
       db.from('party_unit_officers').select('*').eq('organization_id', orgId).order('unit_name').limit(2000),
-      partyActions.listHqs(orgId),
+      partyActions.listHqs(orgId, 'party'),
       db.from('party_members').select('id,full_name,user_id').eq('organization_id', orgId).order('full_name').limit(5000),
     ]);
     setList(data || []);
