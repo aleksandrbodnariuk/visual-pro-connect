@@ -214,7 +214,7 @@ export default function Search() {
     <div className="min-h-screen pb-safe-nav">
       <Navbar />
       
-      <div className="py-4 sm:py-8">
+      <div className="pb-4 pt-10 sm:pb-8">
         <div className="mx-auto max-w-6xl px-3 sm:px-4 md:px-6">
           <h1 className="mb-4 text-center text-2xl font-bold sm:mb-6 md:text-4xl">
             Знайти послугу
