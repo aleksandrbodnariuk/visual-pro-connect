@@ -67,13 +67,13 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <aside 
       className={cn(
-        "rounded-lg border bg-card scrollbar-hide",
+        "space-y-3 scrollbar-hide",
         className
       )}
     >
-      <div className="p-3 md:p-4 3xl:p-5 space-y-3 md:space-y-4">
+      <div className="rounded-xl border border-border/70 bg-card text-card-foreground shadow-sm p-3 md:p-4 3xl:p-5 space-y-3 md:space-y-4">
         <h2 className="text-base md:text-lg 3xl:text-xl font-semibold mb-3 md:mb-4">{t.menu}</h2>
-        <nav className="space-y-2">
+        <nav className="space-y-1">
           <Button variant="ghost" className="w-full justify-start" onClick={handleHomeNavigation} data-active={location.pathname === "/"}>
             <Home className="mr-2 h-4 w-4" /> {t.home}
           </Button>
@@ -135,7 +135,7 @@ export function Sidebar({ className }: SidebarProps) {
         </nav>
       </div>
 
-      <div className="border-t p-3 md:p-4 3xl:p-5">
+      <div className="rounded-xl border border-border/70 bg-card text-card-foreground shadow-sm p-3 md:p-4 3xl:p-5">
         <h2 className="text-base md:text-lg 3xl:text-xl font-semibold mb-1">{t.findService}</h2>
         <p className="text-xs text-muted-foreground mb-3 md:mb-4">{t.categories}</p>
         <nav className="space-y-1 md:space-y-2">
@@ -150,8 +150,8 @@ export function Sidebar({ className }: SidebarProps) {
         </nav>
       </div>
 
-      <div className="border-t p-4">
-        <div className="rounded-lg bg-muted p-4">
+      <div className="rounded-xl border border-border/70 bg-card text-card-foreground shadow-sm p-4">
+        <div>
           <h3 className="font-medium mb-2">{t.findFriendsTitle}</h3>
           <Button size="sm" className="w-full" onClick={() => handleNavigate('/connect')}>{t.findContacts}</Button>
         </div>

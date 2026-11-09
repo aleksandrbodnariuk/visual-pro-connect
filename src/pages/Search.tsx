@@ -29,7 +29,7 @@ import { AssistantChat } from "@/components/assistant/AssistantChat";
 import { useDynamicCategories, getIconComponent } from "@/hooks/useDynamicCategories";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { StudioPartnersTab, StudioSiteLink } from "@/components/search/StudioPartnersTab";
+import { StudioPartnersTab } from "@/components/search/StudioPartnersTab";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -214,13 +214,13 @@ export default function Search() {
     <div className="min-h-screen pb-safe-nav">
       <Navbar />
       
-      <div className="bg-gradient-to-b from-secondary/10 to-background/5 py-10">
-        <div className="container">
-          <h1 className="mb-6 text-center text-3xl font-bold md:text-4xl">
+      <div className="py-4 sm:py-8">
+        <div className="mx-auto max-w-6xl px-3 sm:px-4 md:px-6">
+          <h1 className="mb-4 text-center text-2xl font-bold sm:mb-6 md:text-4xl">
             Знайти послугу
           </h1>
           
-          <div className="mx-auto max-w-3xl rounded-2xl bg-card/80 p-6 shadow-md backdrop-blur-sm">
+          <div className="mx-auto max-w-3xl rounded-2xl border border-border/70 bg-card p-4 shadow-sm sm:p-6">
             <div className="mb-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <div className="lg:col-span-2">
                 <label className="mb-2 block text-sm font-medium">Що шукаєте?</label>
@@ -274,21 +274,20 @@ export default function Search() {
         </div>
       </div>
       
-      <div className="container mt-8">
+      <div className="mx-auto mt-4 max-w-6xl px-3 sm:mt-6 sm:px-4 md:px-6">
         <Tabs defaultValue="studio">
-          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-4 flex flex-wrap items-center gap-3">
             <TabsList className="h-auto flex-wrap">
               <TabsTrigger value="studio" className="min-h-[44px]">★ Послуги B&C studio</TabsTrigger>
               <TabsTrigger value="partners" className="min-h-[44px]">Партнери студії</TabsTrigger>
             </TabsList>
-            <StudioSiteLink />
           </div>
           <TabsContent value="studio">
         <StudioTeamBanner />
-        <div className="mx-auto mb-8 max-w-3xl">
-          <h2 className="mb-3 text-xl font-bold">ШІ-помічник: знайти послугу</h2>
-          <AssistantChat source="services" />
-        </div>
+        <details className="mx-auto mb-6 max-w-3xl rounded-xl border border-border/70 bg-card p-3 shadow-sm sm:p-4">
+          <summary className="flex min-h-[44px] cursor-pointer items-center text-base font-semibold">✨ ШІ-помічник: знайти послугу</summary><div className="mt-3">
+          <AssistantChat source="services" /></div>
+        </details>
         <SearchCategories />
         
         <div className="mt-8">
@@ -299,13 +298,13 @@ export default function Search() {
             </div>
           ) : (
             <>
-              <h2 className="mb-6 text-2xl font-bold">
+              <h2 className="mb-4 text-xl font-bold sm:text-2xl">
                 {filteredProfessionals.length > 0 
                   ? `Знайдено ${filteredProfessionals.length} професіоналів`
                   : "Не знайдено жодного професіонала за вашим запитом"}
               </h2>
               
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {filteredProfessionals.map((professional) => (
                   <Card key={professional.id} className="overflow-hidden transition-all hover:shadow-md">
                     <CardContent className="p-0">
@@ -344,14 +343,14 @@ export default function Search() {
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            className="flex-1"
+                            className="min-h-[44px] flex-1"
                             onClick={() => navigate(`/profile/${professional.id}`)}
                           >
                             Профіль
                           </Button>
                           <Button 
                             size="sm" 
-                            className="bg-gradient-purple flex-1"
+                            className="bg-gradient-purple min-h-[44px] flex-1"
                             onClick={() => navigate(`/messages?user=${professional.id}`)}
                           >
                             Замовити послугу
