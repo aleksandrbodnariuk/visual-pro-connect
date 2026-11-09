@@ -5,7 +5,7 @@
 @layer base {
   :root {
     /* Основні кольори для світлої теми */
-    --background: 220 14% 96%;
+    --background: 216 18% 93%;
     --foreground: 230 25% 15%;
 
     --card: 0 0% 100%;
@@ -38,7 +38,7 @@
     --ring: 259 90% 66%;
 
     --radius: 0.75rem;
-    --card-shadow: 0 1px 0 0 hsl(0 0% 100% / 0.8) inset, 0 0 0 1px hsl(220 13% 91% / 0.4), 0 8px 24px -14px hsl(230 25% 15% / 0.18);
+    --card-shadow: 0 1px 2px hsl(220 20% 20% / 0.10), 0 3px 8px -2px hsl(220 20% 20% / 0.08);
 
     --sidebar-background: 230 25% 15%;
     --sidebar-foreground: 0 0% 98%;
@@ -52,7 +52,7 @@
 
   .dark {
     /* Темна тема для ночі */
-    --background: 228 22% 8%;
+    --background: 228 20% 6%;
     --foreground: 0 0% 98%;
 
     --card: 228 22% 12%;
@@ -79,7 +79,7 @@
     --border: 225 14% 20%;
     --input: 225 14% 22%;
     --card-highlight: 0 0% 100% / 0.07;
-    --card-shadow: 0 1px 0 0 hsl(0 0% 100% / 0.06) inset, 0 0 0 1px hsl(0 0% 100% / 0.03), 0 10px 30px -12px hsl(0 0% 0% / 0.6);
+    --card-shadow: 0 1px 0 0 hsl(0 0% 100% / 0.05) inset, 0 2px 4px hsl(0 0% 0% / 0.45), 0 8px 20px -8px hsl(0 0% 0% / 0.6);
     --ring: 259 90% 66%;
 
     /* Бічна панель для темної теми */
@@ -125,7 +125,7 @@
   }
 
   .creative-card {
-    @apply rounded-xl overflow-hidden bg-card text-card-foreground border border-border/70 shadow-sm;
+    @apply rounded-xl overflow-hidden bg-card text-card-foreground border border-border/70 shadow-card;
   }
 
   /* Кнопки з градієнтами */

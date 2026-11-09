@@ -416,11 +416,11 @@ export default function Messages() {
     <div className="min-h-screen pb-20 md:pb-0">
       <Navbar />
       
-      <div className="container mt-8 md:mt-16 3xl:mt-20 pb-4 md:pb-10 px-2 sm:px-4 md:px-6">
-        <div className="rounded-xl border">
+      <div className="container pt-16 sm:pt-20 3xl:pt-24 pb-4 md:pb-6 px-2 sm:px-4 md:px-6">
+        <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-card">
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
             {/* Список чатів - приховувати на мобільному коли є activeChat */}
-            <div className={`border-r md:col-span-1 ${activeChat ? 'hidden md:block' : 'block'}`}>
+            <div className={`border-r border-border/70 bg-card md:col-span-1 ${activeChat ? 'hidden md:block' : 'block'}`}>
               <ChatList 
                 chats={chats} 
                 activeChat={activeChat} 
@@ -431,7 +431,7 @@ export default function Messages() {
             </div>
             
             {/* Вікно чату - показувати тільки коли є activeChat на мобільному */}
-            <div className={`flex h-[calc(100vh-8rem)] md:h-[calc(100vh-6rem)] flex-col md:col-span-2 lg:col-span-3 ${!activeChat ? 'hidden md:flex' : 'flex'}`}>
+            <div className={`flex h-[calc(100vh-8rem)] md:h-[calc(100vh-7.5rem)] flex-col bg-muted/30 md:col-span-2 lg:col-span-3 ${!activeChat ? 'hidden md:flex' : 'flex'}`}>
               {activeChat ? (
                 <>
                   <ChatHeader
@@ -456,7 +456,7 @@ export default function Messages() {
                   <MessageInput onSendMessage={handleSendMessage} onCreatePoll={handleCreatePoll} />
                 </>
               ) : (
-                <EmptyChat />
+                <EmptyChat onNewChat={() => setNewChatOpen(true)} />
               )}
             </div>
           </div>

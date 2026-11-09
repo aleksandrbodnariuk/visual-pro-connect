@@ -71,14 +71,15 @@ export function ChatList({ chats, activeChat, onSelectChat, onDeleteChat, isLoad
 
   return (
     <>
-      <div className="border-b p-3">
+      <div className="border-b border-border/70 p-3 space-y-3">
+        <h2 className="px-1 text-xl font-bold">Чати</h2>
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Пошук повідомлень"
-              className="w-full pl-8"
+              className="h-11 w-full rounded-full border-0 bg-muted pl-9"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -89,7 +90,7 @@ export function ChatList({ chats, activeChat, onSelectChat, onDeleteChat, isLoad
               variant="default"
               onClick={onNewChat}
               title="Новий чат"
-              className="shrink-0"
+              className="h-11 w-11 shrink-0 rounded-full"
             >
               <Plus className="h-5 w-5" />
             </Button>
@@ -124,7 +125,7 @@ export function ChatList({ chats, activeChat, onSelectChat, onDeleteChat, isLoad
                 <ContextMenu>
                 <ContextMenuTrigger asChild>
                   <div 
-                    className={`flex items-start gap-3 border-b p-3 transition-colors hover:bg-muted/50 cursor-pointer ${activeChat?.id === chat.id ? 'bg-muted/80' : ''} ${isGroup ? 'bg-primary/5 hover:bg-primary/10 border-l-2 border-l-primary' : ''}`}
+                    className={`mx-2 my-1 flex items-center gap-3 rounded-xl p-2.5 transition-colors cursor-pointer hover:bg-muted ${activeChat?.id === chat.id ? 'bg-accent/15 hover:bg-accent/20' : ''}`}
                     onClick={() => onSelectChat(chat)}
                   >
                     <div className="relative flex-shrink-0">

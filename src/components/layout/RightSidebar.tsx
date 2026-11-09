@@ -91,12 +91,12 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
 
   if (loading) {
     return (
-      <div className={cn("space-y-3", className)}>
+      <div className={cn("space-y-4", className)}>
         <h2 className="font-bold text-sm flex items-center gap-2 px-1">
           <FolderOpen className="h-4 w-4 text-primary" />
           {isOwnFiles ? "Мої файли" : "Файли"}
         </h2>
-        <div className="rounded-lg border bg-card p-3">
+        <div className="rounded-xl border border-border/70 bg-card shadow-card p-3">
           <Skeleton className="h-4 w-16 mb-2" />
           <div className="grid grid-cols-3 gap-1">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -113,7 +113,7 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
   if (!hasAnyMedia) return null;
 
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn("space-y-4", className)}>
       <PhotoViewer photos={viewerPhotos} index={viewerIndex} onIndexChange={setViewerIndex} />
       <h2 className="font-bold text-sm flex items-center gap-2 px-1">
         <FolderOpen className="h-4 w-4 text-primary" />
@@ -122,7 +122,7 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
 
       {/* Фото */}
       {photos.length > 0 && (
-        <div className="rounded-lg border bg-card p-3">
+        <div className="rounded-xl border border-border/70 bg-card shadow-card p-3">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-semibold flex items-center gap-1.5">
               <Image className="h-3.5 w-3.5 text-primary" />
@@ -156,7 +156,7 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
 
       {/* Відео */}
       {videos.length > 0 && (
-        <div className="rounded-lg border bg-card p-3">
+        <div className="rounded-xl border border-border/70 bg-card shadow-card p-3">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-semibold flex items-center gap-1.5">
               <Video className="h-3.5 w-3.5 text-primary" />
@@ -226,7 +226,7 @@ export function RightSidebar({ userId, className }: RightSidebarProps) {
 
       {/* Музика */}
       {music.length > 0 && (
-        <div className="rounded-lg border bg-card p-3">
+        <div className="rounded-xl border border-border/70 bg-card shadow-card p-3">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-semibold flex items-center gap-1.5">
               <Music className="h-3.5 w-3.5 text-primary" />
