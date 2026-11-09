@@ -59,8 +59,8 @@ export function PartyDashboard({ orgId, isAdmin }: { orgId: string; isAdmin: boo
     : 'Кабінет голови районної (міської) організації';
   const isLocal = !!focusHq && !['central', 'oblast'].includes(focusHq.level);
   const kpi = [
-    { label: 'Членів партії', value: s.active + s.honorary, icon: Users },
     { label: 'Кандидатів у члени', value: s.candidate, icon: UserPlus },
+    { label: 'Членів партії', value: s.active + s.honorary, icon: Users },
     { label: 'Осередків', value: scopedHqs.length, icon: Building2 },
     { label: 'Усього на обліку', value: scopedMembers.length, icon: Award },
   ];
