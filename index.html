@@ -34,7 +34,20 @@
     <meta name="twitter:title" content="Спільнота B&C — творча соціальна платформа">
     <meta name="twitter:description" content="Єдиний простір де зібрані всі послуги для створення подій. Фото, відео та музика від B&C Studio та перевірених партнерів.">
     <meta name="twitter:image" content="https://bcsocial.org/default-og.jpg?v=2">
+    <script>
+      (function () {
+        var t = null;
+        try { t = window.localStorage.getItem('theme'); } catch (e) {}
+        var dark = t !== 'light';
+        var r = document.documentElement;
+        r.classList.add(dark ? 'dark' : 'light');
+        r.style.colorScheme = dark ? 'dark' : 'light';
+      })();
+    </script>
     <style>
+      html { background-color: hsl(218 16% 89%); }
+      html.dark { background-color: hsl(228 20% 6%); }
+      html, body, #root { background-color: inherit; }
       html {
         /* Один скролбар для всього документа */
         overflow-y: scroll;

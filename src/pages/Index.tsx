@@ -45,7 +45,7 @@ const Index = () => {
     <div className="h-screen bg-background overflow-hidden pt-14 sm:pt-16 3xl:pt-20">
       <Navbar />
 
-      <div className="container grid grid-cols-1 md:grid-cols-12 items-start gap-0 px-2 sm:px-3 md:px-4 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] 3xl:h-[calc(100vh-5rem)]">
+      <div className="container grid grid-cols-1 md:grid-cols-12 items-start gap-4 md:gap-5 lg:gap-6 px-3 sm:px-4 lg:px-6 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] 3xl:h-[calc(100vh-5rem)]">
         {/* Left Sidebar */}
         <aside className="hidden md:block md:col-span-4 lg:col-span-3 h-full overflow-y-auto overscroll-contain scrollbar-hide py-4 md:py-6">
           <Sidebar />
