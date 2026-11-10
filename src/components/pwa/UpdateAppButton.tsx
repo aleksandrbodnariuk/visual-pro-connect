@@ -48,9 +48,11 @@ export function UpdateAppButton({
         await Promise.all(keys.map((k) => caches.delete(k)));
       }
 
-      // 3. Hard reload
+      // 3. Reload bypassing browser HTTP cache (plain reload() can reuse stale HTML in some browsers, e.g. Avast)
       setTimeout(() => {
-        window.location.reload();
+        const url = new URL(window.location.href);
+        url.searchParams.set("updated", String(Date.now()));
+        window.location.replace(url.toString());
       }, 400);
     } catch (err) {
       console.error("[UpdateApp] error:", err);

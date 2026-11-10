@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'bc-v10';
+const CACHE_VERSION = 'bc-v11';
 const STATIC_CACHE = `bc-static-${CACHE_VERSION}`;
 const IMAGE_CACHE = `bc-images-${CACHE_VERSION}`;
 const API_CACHE = `bc-api-${CACHE_VERSION}`;
@@ -71,7 +71,7 @@ self.addEventListener('fetch', (event) => {
   // 1) SPA navigation
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: 'no-store' })
         .then((response) => {
           if (response.ok) {
             const clone = response.clone();

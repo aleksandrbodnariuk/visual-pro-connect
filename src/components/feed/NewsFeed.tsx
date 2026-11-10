@@ -554,7 +554,7 @@ export function NewsFeed() {
 
       {/* Category filters */}
       <Tabs value={activeCategory} onValueChange={setActiveCategory}>
-        <TabsList className="w-full flex overflow-x-auto scrollbar-hide">
+        <TabsList className="w-full h-auto flex overflow-x-auto scrollbar-hide gap-1 p-1.5 rounded-2xl bg-card text-muted-foreground border border-border/80 shadow-card [&>button]:min-h-[40px] [&>button]:rounded-xl [&>button[data-state=active]]:bg-primary [&>button[data-state=active]]:text-primary-foreground [&>button:hover]:bg-muted">
           <TabsTrigger value="all" className="flex-1 min-w-[60px] text-xs sm:text-sm">Усі</TabsTrigger>
           <TabsTrigger value="photo" className="flex-1 min-w-[60px] text-xs sm:text-sm">Фото</TabsTrigger>
           <TabsTrigger value="video" className="flex-1 min-w-[60px] text-xs sm:text-sm">Відео</TabsTrigger>

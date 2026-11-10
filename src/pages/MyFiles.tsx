@@ -667,7 +667,7 @@ export default function MyFiles() {
     <div className="h-screen overflow-hidden bg-background">
       <PhotoViewer photos={photoList} index={viewerIndex} onIndexChange={setViewerIndex} />
       <Navbar />
-      <div className="container mx-auto px-2 sm:px-3 md:px-4 grid grid-cols-12 gap-0 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] 3xl:h-[calc(100vh-5rem)]">
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6 grid grid-cols-12 gap-4 md:gap-5 lg:gap-6 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] 3xl:h-[calc(100vh-5rem)]">
         {/* Left Sidebar */}
         <div className="hidden md:block md:col-span-3 h-full overflow-y-auto overscroll-contain scrollbar-hide py-4">
           <Sidebar />

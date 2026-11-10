@@ -133,7 +133,7 @@ export default function Connect() {
   return (
     <div className="min-h-screen bg-background pb-safe-nav pt-14 sm:pt-16 3xl:pt-20">
       <Navbar />
-      <div className="container grid grid-cols-12 items-start gap-0 px-2 sm:px-3 md:px-4 py-6">
+      <div className="container grid grid-cols-12 items-start gap-4 md:gap-5 lg:gap-6 px-3 sm:px-4 lg:px-6 py-6">
         <div className="hidden md:block md:col-span-4 lg:col-span-3 sticky top-14 sm:top-16 3xl:top-20 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] 3xl:h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain scrollbar-hide">
           <Sidebar />
         </div>
