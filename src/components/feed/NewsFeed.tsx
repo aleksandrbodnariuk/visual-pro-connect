@@ -26,7 +26,6 @@ import { interleaveAds } from "@/lib/feedAds";
 import { FOLLOWED_PRIORITY_LIMIT, followedSinceIso, mergeFollowedFirst } from "@/lib/followedFeed";
 
 const PAGE_SIZE = 12;
-const PREFETCH_THRESHOLD = 0.7; // trigger loadMore at 70% scroll
 
 export function NewsFeed() {
   const { user: authUser, appUser } = useAuth();
@@ -225,19 +224,17 @@ export function NewsFeed() {
     }
   }, [loadingMore, hasMore]);
 
-  // Scroll prefetch at ~70% of document height
+  // Auto-load when the end-of-feed marker approaches (works in any scroll container)
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    const onScroll = () => {
-      if (!hasMore || loadingMore || loading) return;
-      const scrolled = window.scrollY + window.innerHeight;
-      const total = document.documentElement.scrollHeight;
-      if (total > 0 && scrolled / total >= PREFETCH_THRESHOLD) {
-        loadMorePosts();
-      }
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [hasMore, loadingMore, loading, loadMorePosts]);
+    const el = sentinelRef.current;
+    if (!el || !hasMore || loading) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) loadMorePosts();
+    }, { rootMargin: '600px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, loading, loadMorePosts, posts.length]);
 
   /** Reveal pending posts (from realtime buffer) at top of feed. */
   const revealPendingPosts = useCallback(() => {
@@ -631,12 +628,16 @@ export function NewsFeed() {
             </Card>
           )}
 
-          {/* Load more (only when no category filter active to keep UX consistent) */}
-          {hasMore && filteredPosts.length > 0 && activeCategory === 'all' && (
-            <div className="flex justify-center pt-2">
-              <Button variant="outline" onClick={loadMorePosts} disabled={loadingMore}>
-                {loadingMore ? 'Завантаження...' : 'Завантажити ще'}
-              </Button>
+          {/* Load more */}
+          {posts.length > 0 && (
+            <div ref={sentinelRef} className="flex justify-center pt-2 pb-4">
+              {hasMore ? (
+                <Button variant="outline" className="min-h-11 w-full sm:w-auto px-6" onClick={loadMorePosts} disabled={loadingMore}>
+                  {loadingMore ? 'Завантаження...' : 'Дивитися далі'}
+                </Button>
+              ) : (
+                <p className="text-sm text-muted-foreground">Усі дописи переглянуто</p>
+              )}
             </div>
           )}
         </TabsContent>

@@ -55,7 +55,7 @@ const Index = () => {
         <main className="col-span-1 md:col-span-8 lg:col-span-6 h-full min-h-0">
           <PullToRefresh
             onRefresh={() => setFeedKey((k) => k + 1)}
-            className="h-full overflow-y-auto overscroll-contain scrollbar-hide py-4 md:py-6"
+            className="h-full overflow-y-auto overscroll-contain scrollbar-hide pt-4 md:py-6 pb-safe-nav md:pb-6"
           >
             <div key={feedKey} className="animate-fade-in space-y-4 md:space-y-6">
               <TrendingPosts />

@@ -295,24 +295,24 @@ export default function Notifications() {
         </div>
         
         <main className="col-span-12 md:col-span-8 lg:col-span-9">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
             <div className="flex items-center">
-              <h1 className="text-3xl font-bold">Сповіщення</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold">Сповіщення</h1>
               {unreadCount > 0 && (
                 <Badge variant="secondary" className="ml-3">
                   {unreadCount} нових
                 </Badge>
               )}
             </div>
-            <div className="flex space-x-2">
+            <div className="grid grid-cols-2 sm:flex gap-2">
               {unreadCount > 0 && (
-                <Button variant="outline" onClick={markAllAsRead}>
-                  Позначити всі як прочитані
+                <Button variant="outline" className="min-h-11" onClick={markAllAsRead}>
+                  Прочитати всі
                 </Button>
               )}
               {notifications.length > 0 && (
-                <Button variant="destructive" onClick={deleteAllNotifications}>
-                  <Trash className="h-4 w-4 mr-1" /> Видалити всі
+                <Button variant="destructive" className="min-h-11" onClick={() => { if (window.confirm('Видалити всі сповіщення? Цю дію не можна скасувати.')) deleteAllNotifications(); }}>
+                  <Trash className="h-4 w-4 mr-1" /> Очистити всі
                 </Button>
               )}
             </div>
@@ -329,23 +329,23 @@ export default function Notifications() {
                     if (notification.link && !isInviteNotification(notification.link)) navigate(notification.link);
                   }}
                 >
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
+                  <CardContent className="p-3.5 sm:p-5">
+                    <div className="flex items-start gap-3 sm:gap-4">
                       <div className="mt-1">
                         {getNotificationIcon(notification.type || "info", notification.link)}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-semibold text-lg">{notification.title || notification.type || "Сповіщення"}</h3>
-                          <div className="flex items-center space-x-3">
-                            <span className="text-sm text-muted-foreground">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mb-1">
+                          <h3 className="font-semibold text-base sm:text-lg break-words min-w-0">{notification.title || notification.type || "Сповіщення"}</h3>
+                          <div className="flex items-center gap-1 ml-auto shrink-0">
+                            <span className="text-xs sm:text-sm text-muted-foreground mr-1">
                               {new Date(notification.created_at || notification.date).toLocaleDateString()}
                             </span>
-                            <div className="flex space-x-2">
+                            <div className="flex items-center gap-1">
                               {notification.link && !isInviteNotification(notification.link) && (
                                 <Button 
                                   variant="ghost" 
-                                  size="sm"
+                                  size="sm" className="h-11 w-11 p-0" aria-label="Відкрити"
                                   onClick={(e) => { e.stopPropagation(); navigate(notification.link); }}
                                 >
                                   <ExternalLink className="h-4 w-4" />
@@ -354,16 +354,16 @@ export default function Notifications() {
                               {!notification.is_read && (
                                 <Button 
                                   variant="ghost" 
-                                  size="sm" 
+                                  size="sm" className="h-11 w-11 p-0" aria-label="Позначити прочитаним"
                                   onClick={(e) => { e.stopPropagation(); markAsRead(notification.id); }}
                                 >
-                                  Прочитано
+                                  <CheckCircle className="h-4 w-4" />
                                 </Button>
                               )}
                               <Button 
                                 variant="ghost" 
                                 size="sm"
-                                className="text-destructive hover:text-destructive"
+                                className="h-11 w-11 p-0 text-destructive hover:text-destructive" aria-label="Видалити"
                                 onClick={(e) => { e.stopPropagation(); deleteNotification(notification.id); }}
                               >
                                 <Trash className="h-4 w-4" />
@@ -371,7 +371,7 @@ export default function Notifications() {
                             </div>
                           </div>
                         </div>
-                        <p className="text-muted-foreground">{notification.message || notification.content}</p>
+                        <p className="text-sm sm:text-base text-muted-foreground break-words">{notification.message || notification.content}</p>
                         {isFriendRequest(notification.link) && (
                           <div className="mt-3 flex flex-wrap gap-2">
                             <Button size="sm" className="min-h-[44px]" disabled={acceptingInvite === notification.id}
