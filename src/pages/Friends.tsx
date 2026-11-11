@@ -15,7 +15,7 @@ export default function Friends() {
           <Sidebar />
         </div>
         <main className="col-span-12 md:col-span-8 lg:col-span-9">
-          <div className="max-w-4xl">
+          <div className="max-w-5xl">
             <div className="mb-6">
               <h1 className="text-3xl font-bold text-foreground mb-2">Друзі</h1>
               <p className="text-muted-foreground">Знаходьте та спілкуйтеся з друзями</p>

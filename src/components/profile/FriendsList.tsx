@@ -3,7 +3,10 @@ import { Button } from "@/components/ui/button";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Trash2, Ban, LayoutGrid, List, ChevronLeft, ChevronRight } from "lucide-react";
+import { Trash2, Ban, LayoutGrid, List, ChevronLeft, ChevronRight, MoreHorizontal, MessageCircle, User, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { matchesNameQuery } from "@/lib/nameSearch";
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -42,6 +45,7 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
   const [activeList, setActiveList] = useState<string | "all">("all");
   const [manageOpen, setManageOpen] = useState(false);
   const chipsRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState("");
   useEffect(() => {
     if (activeList !== "all" && !fl.lists.some((l) => l.id === activeList)) setActiveList("all");
   }, [fl.lists, activeList]);
@@ -106,7 +110,8 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
 
   const listsEnabled = isCurrentUser && showAll;
   const filteredFriends = listsEnabled ? filterFriendsByList(friendsList as any[], fl.memberships, activeList) : friendsList;
-  const displayedFriends = showAll ? filteredFriends : filteredFriends.slice(0, 9);
+  const searchedFriends = showAll && query.trim() ? (filteredFriends as any[]).filter((f: any) => matchesNameQuery(f?.full_name || "", query)) : filteredFriends;
+  const displayedFriends = showAll ? searchedFriends : filteredFriends.slice(0, 9);
   const listCounts: Record<string, number> = {};
   const friendIdSet = new Set(friendsList.map((f: any) => f?.id));
   fl.memberships.forEach((m) => { if (friendIdSet.has(m.friend_id)) listCounts[m.list_id] = (listCounts[m.list_id] ?? 0) + 1; });
@@ -148,6 +153,46 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
       </Card>
     );
   }
+
+  const renderFbCard = (friend: any) => {
+    const online = isUserOnline(lastSeenMap.get(friend.id) ?? null);
+    const name = friend?.full_name || "Користувач";
+    const lists = fl.lists.filter((l) => fl.listsOf(friend.id).includes(l.id)).map((l) => l.name);
+    const subtitle = lists.length ? lists.join(" · ") : (friend?.title || (online ? "У мережі" : ""));
+    return (
+      <div key={friend.id} className="flex items-center gap-3 sm:gap-4 rounded-xl border border-border bg-card p-3 sm:p-4 shadow-sm transition-colors hover:bg-muted/40">
+        <Link to={`/profile/${friend.id}`} className="relative shrink-0">
+          <div className="h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded-lg bg-muted">
+            {friend?.avatar_url ? (
+              <img src={friend.avatar_url} alt={name} loading="lazy" className="h-full w-full object-cover" />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center text-xl font-semibold text-muted-foreground">{getInitials(friend?.full_name)}</div>
+            )}
+          </div>
+          {online && <span className="absolute -bottom-0.5 -right-0.5 block h-4 w-4 rounded-full bg-green-500 ring-2 ring-card" />}
+        </Link>
+        <Link to={`/profile/${friend.id}`} className="flex-1 min-w-0">
+          <p className="text-[15px] sm:text-base font-semibold text-foreground leading-snug break-words line-clamp-2">{name}</p>
+          {subtitle && <p className="text-xs sm:text-sm text-muted-foreground truncate mt-0.5">{subtitle}</p>}
+        </Link>
+        {renderPicker(friend, "relative h-10 w-10 shrink-0")}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="ghost" className="h-10 w-10 shrink-0 rounded-full" aria-label={`Дії для ${name}`}>
+              <MoreHorizontal className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild><Link to={`/messages?user=${friend.id}`}><MessageCircle className="mr-2 h-4 w-4" />Написати повідомлення</Link></DropdownMenuItem>
+            <DropdownMenuItem asChild><Link to={`/profile/${friend.id}`}><User className="mr-2 h-4 w-4" />Переглянути профіль</Link></DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteTarget({ id: friend.id, name })}><Trash2 className="mr-2 h-4 w-4" />Видалити з друзів</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setBlockTarget({ id: friend.id, name })}><Ban className="mr-2 h-4 w-4" />Заблокувати</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
+  };
 
   const renderFriendCard = (friend: any) => {
     const online = isUserOnline(lastSeenMap.get(friend!.id) ?? null);
@@ -282,7 +327,14 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
             </div>
           )}
 
-          {friendsList.length > 0 && (
+          {listsEnabled && friendsList.length > 0 && (
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Пошук серед друзів" className="h-11 rounded-full pl-9" aria-label="Пошук серед друзів" />
+            </div>
+          )}
+
+          {!listsEnabled && friendsList.length > 0 && (
             <div className="flex flex-wrap items-center gap-3 mb-4">
               <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as "grid" | "list")}>
                 <ToggleGroupItem value="grid" aria-label="Плитка з фото" className="h-11 w-11"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
@@ -299,8 +351,12 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
 
           {friendsList.length > 0 && displayedFriends.length === 0 ? (
             <p className="text-muted-foreground text-center py-6 sm:py-8">
-              У цьому списку ще немає друзів. Натисніть значок міток на фото друга, щоб додати його сюди.
+              {query.trim() ? "Нікого не знайдено" : <>У цьому списку ще немає друзів. Натисніть значок міток на фото друга, щоб додати його сюди.</>}
             </p>
+          ) : friendsList.length > 0 && listsEnabled ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+              {(displayedFriends as any[]).map(renderFbCard)}
+            </div>
           ) : friendsList.length > 0 ? (
             viewMode === "grid" ? (
               <div className="grid gap-2 sm:gap-3" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${tileSize}px, 1fr))` }}>
