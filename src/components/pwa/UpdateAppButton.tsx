@@ -36,6 +36,7 @@ export function UpdateAppButton({
             if (reg.waiting) {
               reg.waiting.postMessage({ type: "SKIP_WAITING" });
             }
+            await reg.unregister();
           } catch (e) {
             console.warn("[UpdateApp] update failed", e);
           }
