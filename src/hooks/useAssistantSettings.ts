@@ -17,7 +17,7 @@ export function useAssistantSettings() {
   const q = useQuery({
     queryKey: ["ai-assistant-settings"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("ai_assistant_settings").select("*").eq("id", 1).maybeSingle();
+      const { data, error } = await (supabase as any).rpc("get_assistant_settings");
       if (error) throw error;
       return data as AssistantSettings | null;
     },

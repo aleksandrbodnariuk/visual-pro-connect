@@ -5225,6 +5225,7 @@ export type Database = {
               unique_visitors: number
             }[]
           }
+      get_assistant_settings: { Args: never; Returns: Json }
       get_confirmed_orders_for_forecast: {
         Args: never
         Returns: {
