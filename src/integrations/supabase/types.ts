@@ -4221,6 +4221,9 @@ export type Database = {
       }
       team_partners: {
         Row: {
+          co_full_name: string | null
+          co_phone: string | null
+          co_user_id: string | null
           created_at: string
           full_name: string
           id: string
@@ -4234,6 +4237,9 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          co_full_name?: string | null
+          co_phone?: string | null
+          co_user_id?: string | null
           created_at?: string
           full_name: string
           id?: string
@@ -4247,6 +4253,9 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          co_full_name?: string | null
+          co_phone?: string | null
+          co_user_id?: string | null
           created_at?: string
           full_name?: string
           id?: string
@@ -5095,6 +5104,10 @@ export type Database = {
         Returns: string
       }
       assign_default_role: { Args: { _user_id: string }; Returns: undefined }
+      bind_team_partner: {
+        Args: { _as_co?: boolean; _partner_id: string; _user_id: string }
+        Returns: undefined
+      }
       campaign_progress: {
         Args: { _campaign_id: string }
         Returns: {
@@ -5778,6 +5791,15 @@ export type Database = {
       }
       sync_all_shareholder_titles: { Args: never; Returns: undefined }
       sync_user_title: { Args: { _user_id: string }; Returns: undefined }
+      team_group_pv: { Args: { _partner_id: string }; Returns: number }
+      team_in_my_subtree: {
+        Args: { _partner_id: string; _user_id: string }
+        Returns: boolean
+      }
+      team_my_partner_id: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: string
+      }
       update_conversation_avatar: {
         Args: { _avatar_url: string; _conv_id: string }
         Returns: undefined
