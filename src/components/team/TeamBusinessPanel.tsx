@@ -21,6 +21,9 @@ import { SlideEditor } from './SlideEditor';
 import { extractPptxSlideImages, toWebp } from '@/lib/pptxSlides';
 import { MessageCircle, UserRound, Images } from 'lucide-react';
 import { TeamAlbums } from './TeamAlbums';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { nameMatches } from '@/lib/nameSearch';
+import { Users } from 'lucide-react';
 import { BONUS_SCALE, bonusPercent, differentialBonus, groupPv, nextLevel, type PlanNode } from '@/lib/amwayPlan';
 
 const sb = supabase as any;
@@ -259,65 +262,139 @@ function Materials({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
 }
 
 /* ---------------- Структура команди ---------------- */
+const coupleName = (r: any) => (r.co_full_name ? `${r.full_name} та ${r.co_full_name}` : r.full_name);
+const isMine = (r: any, uid?: string) => !!uid && (r.user_id === uid || r.co_user_id === uid);
+function subtreeOf(rows: any[], rootId: string): any[] {
+  const out: any[] = []; const stack = [rootId]; const seen = new Set<string>();
+  while (stack.length) {
+    const id = stack.pop()!; if (seen.has(id)) continue; seen.add(id);
+    const r = rows.find((x) => x.id === id); if (r) out.push(r);
+    rows.filter((x) => x.sponsor_id === id).forEach((c) => stack.push(c.id));
+  }
+  return out;
+}
+
+function BindDialog({ target, onClose, onDone }: { target: { id: string; co: boolean; name: string } | null; onClose: () => void; onDone: () => void }) {
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const [q, setQ] = useState('');
+  useEffect(() => { if (target) supabase.rpc('get_safe_public_profiles').then(({ data }) => setProfiles((data as any[]) || [])); }, [target]);
+  const res = q.trim().length < 2 ? [] : profiles.filter((p) => nameMatches(q, p.full_name)).slice(0, 8);
+  const bind = async (uid: string) => {
+    const { error } = await sb.rpc('bind_team_partner', { _partner_id: target!.id, _user_id: uid, _as_co: target!.co });
+    if (error) return toast.error(error.message || 'Не вдалося прикріпити акаунт');
+    toast.success('Акаунт прикріплено — кабінет відкрито'); setQ(''); onDone();
+  };
+  return (
+    <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>{target?.co ? 'Прикріпити акаунт чоловіка/дружини' : 'Прикріпити акаунт'} · {target?.name}</DialogTitle></DialogHeader>
+        <Input autoFocus placeholder="Ім'я користувача соцмережі" value={q} onChange={(e) => setQ(e.target.value)} />
+        <div className="space-y-1 max-h-72 overflow-y-auto">
+          {res.map((p) => (
+            <button key={p.id} onClick={() => bind(p.id)} className="flex w-full min-h-11 items-center gap-3 rounded-lg px-2 hover:bg-muted text-left">
+              <img src={p.avatar_url || '/placeholder.svg'} alt="" className="h-9 w-9 rounded-full object-cover" />
+              <span className="font-medium">{p.full_name}</span>
+            </button>
+          ))}
+          {q.trim().length >= 2 && res.length === 0 && <p className="text-sm text-muted-foreground py-2">Нікого не знайдено. Людина ще не зареєструвалась — місце чекатиме на неї.</p>}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function TeamTree({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
+  const { user } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
-  const [form, setForm] = useState({ full_name: '', phone: '', personal_pv: 0, sponsor_id: '' });
+  const [scope, setScope] = useState<'all' | 'mine'>('all');
+  const empty = { full_name: '', phone: '', personal_pv: 0, sponsor_id: '', co_full_name: '', co_phone: '' };
+  const [form, setForm] = useState(empty);
+  const [bindT, setBindT] = useState<{ id: string; co: boolean; name: string } | null>(null);
   const load = useCallback(async () => {
     const { data } = await sb.from('team_partners').select('*').eq('organization_id', orgId).order('created_at');
     setRows(data || []);
   }, [orgId]);
   useEffect(() => { load(); }, [load]);
+  const me = rows.find((r) => isMine(r, user?.id));
+  const visible = useMemo(() => {
+    if (canEdit && scope === 'all') return rows;
+    return me ? subtreeOf(rows, me.id) : [];
+  }, [rows, canEdit, scope, me]);
+  const canAdd = canEdit || !!me;
+
   const add = async () => {
     if (!form.full_name.trim()) return toast.error("Вкажіть ім'я");
-    const { error } = await sb.from('team_partners').insert({ organization_id: orgId, full_name: form.full_name.trim(), phone: form.phone || null, personal_pv: form.personal_pv, sponsor_id: form.sponsor_id || null });
+    const sponsor = form.sponsor_id || (!canEdit ? me?.id : '') || null;
+    const { error } = await sb.from('team_partners').insert({
+      organization_id: orgId, full_name: form.full_name.trim(), phone: form.phone || null, personal_pv: form.personal_pv, sponsor_id: sponsor,
+      co_full_name: form.co_full_name.trim() || null, co_phone: form.co_phone || null,
+    });
     if (error) return toast.error('Не вдалося додати партнера');
-    setForm({ full_name: '', phone: '', personal_pv: 0, sponsor_id: '' }); load();
+    toast.success('Місце в структурі створено'); setForm(empty); load();
   };
-  const setPv = async (id: string, pv: number) => { await sb.from('team_partners').update({ personal_pv: pv }).eq('id', id); load(); };
-  const nodes = rows as (PlanNode & any)[];
-  const hints = useMemo(() => rows.map((r) => ({ r, n: nextLevel(groupPv(nodes, r.id)) })).filter((x) => x.n && x.n.missing <= 150), [rows]);
+  const setPv = async (id: string, pv: number) => { const { error } = await sb.from('team_partners').update({ personal_pv: pv }).eq('id', id); if (error) toast.error('Немає прав змінювати ці бали'); load(); };
+  const nodes = visible as (PlanNode & any)[];
+  const hints = useMemo(() => visible.map((r) => ({ r, n: nextLevel(groupPv(nodes, r.id)) })).filter((x) => x.n && x.n.missing <= 150), [visible]);
+  const display = useMemo(() => visible.map((r) => ({ ...r, full_name: coupleName(r) })), [visible]);
 
-  const renderNode = (r: any, depth: number): JSX.Element => {
-    const g = groupPv(nodes, r.id);
-    const active = Number(r.personal_pv) >= 100;
-    return (
-      <div key={r.id} className={depth ? 'ml-3 sm:ml-6 border-l border-border pl-2 sm:pl-3' : ''}>
-        <div className="flex flex-wrap items-center gap-2 py-1.5">
-          <span className={`h-2.5 w-2.5 rounded-full ${active ? 'bg-primary' : 'bg-muted-foreground'}`} />
-          <span className="font-medium">{r.full_name}</span>
-          <Badge variant="secondary">{fmt(g)} PV · {bonusPercent(g)}%</Badge>
-          {canEdit && <Input className="h-9 w-24" type="number" defaultValue={r.personal_pv} onBlur={(e) => Number(e.target.value) !== Number(r.personal_pv) && setPv(r.id, Math.max(0, Number(e.target.value)))} aria-label="Особисті бали" />}
-          {r.phone && <a href={`tel:${r.phone}`} className="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-muted" aria-label="Подзвонити"><Phone className="h-4 w-4" /></a>}
-          {canEdit && <Button size="icon" variant="ghost" className="h-9 w-9" onClick={async () => { if (confirm('Видалити партнера?')) { await sb.from('team_partners').delete().eq('id', r.id); load(); } }}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
-        </div>
-        {rows.filter((c) => c.sponsor_id === r.id).map((c) => renderNode(c, depth + 1))}
-      </div>
-    );
-  };
+  if (!canEdit && !me) return <Card className="p-6 text-center text-sm text-muted-foreground">Вашого місця ще немає в дереві команди. Попросіть свого спонсора або лідера створити місце та прикріпити ваш акаунт.</Card>;
 
   return (
     <div className="space-y-3">
+      {canEdit && me && (
+        <div className="flex gap-1">
+          <Button size="sm" variant={scope === 'all' ? 'default' : 'outline'} onClick={() => setScope('all')}>Уся команда</Button>
+          <Button size="sm" variant={scope === 'mine' ? 'default' : 'outline'} onClick={() => setScope('mine')}>Моя гілка</Button>
+        </div>
+      )}
       {hints.length > 0 && (
         <Card className="p-4 space-y-1 border-primary">
           <p className="font-semibold text-sm">Пульс закриття місяця</p>
-          {hints.map(({ r, n }) => <p key={r.id} className="text-sm">{r.full_name}: не вистачає <b>{n!.missing} PV</b> до рівня {n!.pct}% — зателефонуйте.</p>)}
+          {hints.map(({ r, n }) => <p key={r.id} className="text-sm">{coupleName(r)}: не вистачає <b>{n!.missing} PV</b> до рівня {n!.pct}% — зателефонуйте.</p>)}
         </Card>
       )}
       <Card className="p-3">
-        <TeamStructure rows={nodes} canEdit={canEdit} onSetPv={setPv} onDelete={async (id) => { if (confirm('Видалити партнера?')) { await sb.from('team_partners').delete().eq('id', id); load(); } }} />
+        <TeamStructure rows={display} canEdit={canEdit} onSetPv={setPv} onDelete={async (id) => { if (confirm('Видалити партнера?')) { await sb.from('team_partners').delete().eq('id', id); load(); } }} />
       </Card>
-      {canEdit && (
-        <Card className="p-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          <Input placeholder="Ім'я та прізвище" value={form.full_name} maxLength={150} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
-          <Input placeholder="Телефон" value={form.phone} maxLength={30} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-          <Input type="number" placeholder="Особисті бали" value={form.personal_pv || ''} onChange={(e) => setForm({ ...form, personal_pv: Math.max(0, Number(e.target.value)) })} />
-          <select className="h-10 rounded-md border border-input bg-background px-2 text-sm" value={form.sponsor_id} onChange={(e) => setForm({ ...form, sponsor_id: e.target.value })}>
-            <option value="">Без спонсора (верх)</option>
-            {rows.map((r) => <option key={r.id} value={r.id}>Спонсор: {r.full_name}</option>)}
-          </select>
-          <Button onClick={add}><Plus className="h-4 w-4 mr-1" />Додати партнера</Button>
+
+      {canAdd && visible.length > 0 && (
+        <Card className="p-3 space-y-1">
+          <p className="font-semibold text-sm px-1">Керування місцями та акаунтами</p>
+          {visible.map((r) => (
+            <div key={r.id} className="flex flex-wrap items-center gap-2 rounded-lg px-1 py-1.5 hover:bg-muted/40">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium break-words">{coupleName(r)}{isMine(r, user?.id) && <Badge className="ml-2" variant="secondary">Це ви</Badge>}</p>
+                <p className="text-xs text-muted-foreground">
+                  {r.user_id ? 'Акаунт прикріплено' : 'Очікує реєстрації'}{r.co_full_name ? ` · пара: ${r.co_user_id ? 'прикріплено' : 'очікує'}` : ''}
+                </p>
+              </div>
+              <Button size="sm" variant="outline" className="min-h-10" onClick={() => setForm({ ...empty, sponsor_id: r.id })}><Plus className="h-4 w-4 mr-1" />Під цього</Button>
+              {!r.user_id && <Button size="sm" className="min-h-10" onClick={() => setBindT({ id: r.id, co: false, name: r.full_name })}><Link2 className="h-4 w-4 mr-1" />Прикріпити акаунт</Button>}
+              {!r.co_user_id && (r.user_id || r.co_full_name) && <Button size="sm" variant="outline" className="min-h-10" onClick={() => setBindT({ id: r.id, co: true, name: r.co_full_name || r.full_name })}><Users className="h-4 w-4 mr-1" />{r.co_full_name ? 'Акаунт пари' : 'Додати пару'}</Button>}
+            </div>
+          ))}
         </Card>
       )}
+
+      {canAdd && (
+        <Card className="p-4 space-y-2">
+          <p className="font-semibold text-sm">Нове місце в структурі {form.sponsor_id && <>під «{coupleName(rows.find((r) => r.id === form.sponsor_id) || {})}»</>}</p>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <Input placeholder="Ім'я та прізвище" value={form.full_name} maxLength={150} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+            <Input placeholder="Телефон" value={form.phone} maxLength={30} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            <Input type="number" placeholder="Особисті бали" value={form.personal_pv || ''} onChange={(e) => setForm({ ...form, personal_pv: Math.max(0, Number(e.target.value)) })} />
+            <Input placeholder="Чоловік/дружина (необов'язково)" value={form.co_full_name} maxLength={150} onChange={(e) => setForm({ ...form, co_full_name: e.target.value })} />
+            <Input placeholder="Телефон пари" value={form.co_phone} maxLength={30} onChange={(e) => setForm({ ...form, co_phone: e.target.value })} />
+            <select className="h-10 rounded-md border border-input bg-card px-2 text-sm" value={form.sponsor_id} onChange={(e) => setForm({ ...form, sponsor_id: e.target.value })}>
+              {canEdit ? <option value="">Без спонсора (верх)</option> : <option value="">Спонсор: я</option>}
+              {visible.map((r) => <option key={r.id} value={r.id}>Спонсор: {coupleName(r)}</option>)}
+            </select>
+          </div>
+          <Button onClick={add}><Plus className="h-4 w-4 mr-1" />Створити місце</Button>
+          <p className="text-xs text-muted-foreground">Якщо людина ще не має акаунта — місце чекатиме, а після реєстрації натисніть «Прикріпити акаунт».</p>
+        </Card>
+      )}
+      <BindDialog target={bindT} onClose={() => setBindT(null)} onDone={() => { setBindT(null); load(); }} />
     </div>
   );
 }
@@ -469,7 +546,7 @@ function MyCabinet({ orgId, isLeader }: { orgId: string; isLeader: boolean }) {
       setRows(data || []); setSteps((o.data || []).length);
     })();
   }, [orgId, user?.id]);
-  const me = rows.find((r) => r.user_id === user?.id);
+  const me = rows.find((r) => r.user_id === user?.id || r.co_user_id === user?.id);
   const sponsor = me?.sponsor_id ? rows.find((r) => r.id === me.sponsor_id) : null;
   const g = me ? groupPv(rows, me.id) : 0;
   const pct = bonusPercent(g); const nx = nextLevel(g);
@@ -492,7 +569,7 @@ function MyCabinet({ orgId, isLeader }: { orgId: string; isLeader: boolean }) {
       {sponsor && (
         <Card className="p-4 space-y-2">
           <p className="text-xs text-muted-foreground">Мій спонсор</p>
-          <p className="font-semibold">{sponsor.full_name}</p>
+          <p className="font-semibold">{sponsor.co_full_name ? `${sponsor.full_name} та ${sponsor.co_full_name}` : sponsor.full_name}</p>
           {sponsor.phone && <div className="flex gap-2 flex-wrap">
             <Button asChild size="sm"><a href={`tel:${sponsor.phone}`}><Phone className="h-4 w-4 mr-1" />Подзвонити</a></Button>
             <Button asChild size="sm" variant="outline"><a href={`viber://chat?number=${encodeURIComponent(sponsor.phone.replace(/[^\d+]/g, ''))}`}>Viber</a></Button>
@@ -524,7 +601,7 @@ export function TeamBusinessPanel({ orgId, canEdit }: { orgId: string; canEdit: 
     <Tabs defaultValue="me">
       <TabsList className="flex-wrap h-auto mb-3 gap-1 rounded-2xl border bg-card p-1.5 shadow-card [&>button]:rounded-xl [&>button]:px-3 [&>button]:py-2 [&>button[data-state=active]]:bg-secondary [&>button[data-state=active]]:text-secondary-foreground">
         <TabsTrigger value="me"><UserRound className="h-4 w-4 mr-1" />Мій кабінет</TabsTrigger>
-        <TabsTrigger value="chat"><MessageCircle className="h-4 w-4 mr-1" />Моя команда</TabsTrigger>
+        <TabsTrigger value="chat"><MessageCircle className="h-4 w-4 mr-1" />Чат команди</TabsTrigger>
         <TabsTrigger value="plan"><Calculator className="h-4 w-4 mr-1" />Маркетинг-план</TabsTrigger>
         <TabsTrigger value="materials"><BookOpen className="h-4 w-4 mr-1" />Матеріали</TabsTrigger>
         <TabsTrigger value="tree"><Network className="h-4 w-4 mr-1" />Структура</TabsTrigger>

@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.team_partners_guard() FROM PUBLIC, anon, authenticated;

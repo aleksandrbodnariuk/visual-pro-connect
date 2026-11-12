@@ -9,10 +9,19 @@ import { BV_PER_PV, PATH_TO_BRONZE, calcRewards } from '@/lib/amwayRewards';
 
 type Leg = { name: string; pv: number; isNew?: boolean };
 const money = (n: number) => n.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₴';
-const PRESETS: { label: string; ppv: number; legs: number[] }[] = [
-  { label: 'Приклад 15% + Бронза', ppv: 100, legs: [200, 200, 200, 600, 600, 1200, 1000, 0] },
-  { label: 'Старт 9%', ppv: 100, legs: [300, 300, 300, 200] },
-  { label: '21%', ppv: 300, legs: [3000, 3500, 3200] },
+const PRESETS: { label: string; ppv: number; legs: number[]; hint: string; newLegs?: boolean; path?: boolean }[] = [
+  { label: '3%', ppv: 200, legs: [], hint: '200 PV особистих покупок і клієнтів — перший бонус 3%.' },
+  { label: '6%', ppv: 100, legs: [250, 250], hint: '600 групових PV: ви + 2 партнери. Відкриває «Життя команди».' },
+  { label: '9%', ppv: 100, legs: [300, 300, 300, 200], hint: '1 200 групових PV — лідерський старт.' },
+  { label: '12%', ppv: 100, legs: [600, 600, 600, 500], hint: '2 400 групових PV — стабільна команда.' },
+  { label: '15%', ppv: 100, legs: [1000, 1000, 1000, 900], hint: '4 000 групових PV — передбронзовий рубіж.' },
+  { label: '18%', ppv: 100, legs: [2000, 2000, 1500, 1400], hint: '7 000 групових PV — високий лідерський рівень.' },
+  { label: '21%', ppv: 300, legs: [3000, 3500, 3200], hint: '10 000 групових PV — максимальний відсоток шкали (Q-місяць).' },
+];
+const SPECIAL: typeof PRESETS = [
+  { label: '🥉 Бронзовий старт (Foundation)', ppv: 100, legs: [300, 300, 300, 300], hint: 'Умова: 9%+, 100 особистих PV і 3 гілки по 3%+. Надбавка +30% до бонусу за обсяг.' },
+  { label: '🏆 Бронзовий білдер (Builder)', ppv: 100, legs: [700, 700, 700, 1900], hint: 'Умова: 15%+, 100 особистих PV і 3 гілки по 6%+. Надбавка +40% (разом із Foundation +70%).' },
+  { label: '⚡ Швидкий старт (Шлях до Бронзи+)', ppv: 100, legs: [100, 100, 100, 100], newLegs: true, path: true, hint: 'Умова: рівень 0–12%, 100 особистих PV і 3–6 нових новачків по 100 PV за місяць. Премія 2 300–5 150 ₴.' },
 ];
 
 export default function RewardsCalculator() {
@@ -20,9 +29,11 @@ export default function RewardsCalculator() {
   const [cpv, setCpv] = useState(0);
   const [rate, setRate] = useState(() => Number(localStorage.getItem('amway_bv_rate')) || BV_PER_PV);
   const [pathEligible, setPathEligible] = useState(false);
-  const [legs, setLegs] = useState<Leg[]>(PRESETS[0].legs.map((pv, k) => ({ name: `Гілка ${k + 1}`, pv })));
+  const [hint, setHint] = useState('');
+  const [legs, setLegs] = useState<Leg[]>(PRESETS[4].legs.map((pv, k) => ({ name: `Гілка ${k + 1}`, pv })));
   useEffect(() => { localStorage.setItem('amway_bv_rate', String(rate)); }, [rate]);
   const r = calcRewards({ personalPv: ppv, customerPv: cpv, legs, pathEligible, bvRate: rate });
+  const apply = (p: (typeof PRESETS)[number]) => { setPpv(p.ppv); setCpv(0); setPathEligible(!!p.path); setHint(p.hint); setLegs(p.legs.map((pv, k) => ({ name: p.newLegs ? `Новачок ${k + 1}` : `Гілка ${k + 1}`, pv, isNew: !!p.newLegs }))); };
   const upd = (k: number, p: Partial<Leg>) => setLegs((l) => l.map((x, i) => (i === k ? { ...x, ...p } : x)));
   const num = (v: string) => Math.max(0, Number(v) || 0);
   const Status = ({ ok, text }: { ok: boolean; text: string }) => (
@@ -31,9 +42,17 @@ export default function RewardsCalculator() {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
-        {PRESETS.map((p) => <Button key={p.label} size="sm" variant="outline" onClick={() => { setPpv(p.ppv); setCpv(0); setLegs(p.legs.map((pv, k) => ({ name: `Гілка ${k + 1}`, pv }))); }}>{p.label}</Button>)}
-      </div>
+      <Card className="p-3 space-y-2">
+        <p className="text-sm font-medium">Приклади рівнів</p>
+        <div className="flex flex-wrap gap-2">
+          {PRESETS.map((p) => <Button key={p.label} size="sm" variant="outline" className="min-h-10 min-w-12" onClick={() => apply(p)}>{p.label}</Button>)}
+        </div>
+        <p className="text-sm font-medium pt-1">Бронза та швидкий старт</p>
+        <div className="flex flex-wrap gap-2">
+          {SPECIAL.map((p) => <Button key={p.label} size="sm" variant="secondary" className="min-h-10" onClick={() => apply(p)}>{p.label}</Button>)}
+        </div>
+        {hint && <p className="text-sm text-muted-foreground rounded-lg bg-muted/50 p-2">{hint}</p>}
+      </Card>
 
       <Card className="p-4 grid gap-3 sm:grid-cols-3">
         <label className="text-sm">PV за особисті покупки<Input className="h-11 mt-1" type="number" min={0} value={ppv} onChange={(e) => setPpv(num(e.target.value))} /></label>

@@ -144,7 +144,7 @@ export function TeamAlbums({ orgId }: { orgId: string }) {
       </div>
       {albums.length === 0 ? (
         <Card className="p-8 text-center space-y-2"><Images className="h-10 w-10 mx-auto text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">{canEdit ? 'Створіть перший альбом команди' : 'Лідер ще не додав альбомів'}</p></Card>
+          <p className="text-sm text-muted-foreground">{canEdit ? 'Створіть перший альбом команди' : 'Альбомів поки немає. Додавати їх можуть лідери з рівня 6% (600 групових PV).'}</p></Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {albums.map((a) => (
