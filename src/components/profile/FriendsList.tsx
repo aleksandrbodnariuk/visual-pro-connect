@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 import { Trash2, Ban, LayoutGrid, List, ChevronLeft, ChevronRight, MoreHorizontal, MessageCircle, User, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { matchesNameQuery } from "@/lib/nameSearch";
+import { nameMatches } from "@/lib/nameSearch";
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -110,7 +110,7 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
 
   const listsEnabled = isCurrentUser && showAll;
   const filteredFriends = listsEnabled ? filterFriendsByList(friendsList as any[], fl.memberships, activeList) : friendsList;
-  const searchedFriends = showAll && query.trim() ? (filteredFriends as any[]).filter((f: any) => matchesNameQuery(f?.full_name || "", query)) : filteredFriends;
+  const searchedFriends = showAll && query.trim() ? (filteredFriends as any[]).filter((f: any) => nameMatches(query, f?.full_name)) : filteredFriends;
   const displayedFriends = showAll ? searchedFriends : filteredFriends.slice(0, 9);
   const listCounts: Record<string, number> = {};
   const friendIdSet = new Set(friendsList.map((f: any) => f?.id));
@@ -183,7 +183,7 @@ export function FriendsList({ userId, isCurrentUser = true, showAll = false }: {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem asChild><Link to={`/messages?user=${friend.id}`}><MessageCircle className="mr-2 h-4 w-4" />Написати повідомлення</Link></DropdownMenuItem>
+            <DropdownMenuItem asChild><Link to="/messages" onClick={() => localStorage.setItem("currentChatReceiverId", friend.id)}><MessageCircle className="mr-2 h-4 w-4" />Написати повідомлення</Link></DropdownMenuItem>
             <DropdownMenuItem asChild><Link to={`/profile/${friend.id}`}><User className="mr-2 h-4 w-4" />Переглянути профіль</Link></DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteTarget({ id: friend.id, name })}><Trash2 className="mr-2 h-4 w-4" />Видалити з друзів</DropdownMenuItem>
