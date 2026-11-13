@@ -7,7 +7,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { CheckCircle2, Plus, Trash2, XCircle } from 'lucide-react';
 import { BV_PER_PV, PATH_TO_BRONZE, calcRewards } from '@/lib/amwayRewards';
 
-type Leg = { name: string; pv: number; isNew?: boolean };
+type Leg = { id: string; name: string; pv: number; isNew?: boolean };
+let legSeq = 0;
+const newId = () => `leg-${Date.now().toString(36)}-${++legSeq}`;
+const AUTO = /^(Гілка|Новачок) \d+$/;
+/** Renumber default-named legs sequentially; custom names stay untouched. */
+const renumber = (legs: Leg[]): Leg[] => { let n = 0; return legs.map((l) => { if (!AUTO.test(l.name)) return l; n += 1; return { ...l, name: `${l.name.split(' ')[0]} ${n}` }; }); };
 const money = (n: number) => n.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₴';
 const PRESETS: { label: string; ppv: number; legs: number[]; hint: string; newLegs?: boolean; path?: boolean }[] = [
   { label: '3%', ppv: 200, legs: [], hint: '200 PV особистих покупок і клієнтів — перший бонус 3%.' },
@@ -30,11 +35,11 @@ export default function RewardsCalculator() {
   const [rate, setRate] = useState(() => Number(localStorage.getItem('amway_bv_rate')) || BV_PER_PV);
   const [pathEligible, setPathEligible] = useState(false);
   const [hint, setHint] = useState('');
-  const [legs, setLegs] = useState<Leg[]>(PRESETS[4].legs.map((pv, k) => ({ name: `Гілка ${k + 1}`, pv })));
+  const [legs, setLegs] = useState<Leg[]>(PRESETS[4].legs.map((pv, k) => ({ id: newId(), name: `Гілка ${k + 1}`, pv })));
   useEffect(() => { localStorage.setItem('amway_bv_rate', String(rate)); }, [rate]);
   const r = calcRewards({ personalPv: ppv, customerPv: cpv, legs, pathEligible, bvRate: rate });
-  const apply = (p: (typeof PRESETS)[number]) => { setPpv(p.ppv); setCpv(0); setPathEligible(!!p.path); setHint(p.hint); setLegs(p.legs.map((pv, k) => ({ name: p.newLegs ? `Новачок ${k + 1}` : `Гілка ${k + 1}`, pv, isNew: !!p.newLegs }))); };
-  const upd = (k: number, p: Partial<Leg>) => setLegs((l) => l.map((x, i) => (i === k ? { ...x, ...p } : x)));
+  const apply = (p: (typeof PRESETS)[number]) => { setPpv(p.ppv); setCpv(0); setPathEligible(!!p.path); setHint(p.hint); setLegs(p.legs.map((pv, k) => ({ id: newId(), name: p.newLegs ? `Новачок ${k + 1}` : `Гілка ${k + 1}`, pv, isNew: !!p.newLegs }))); };
+  const upd = (id: string, p: Partial<Leg>) => setLegs((l) => l.map((x) => (x.id === id ? { ...x, ...p } : x)));
   const num = (v: string) => Math.max(0, Number(v) || 0);
   const Status = ({ ok, text }: { ok: boolean; text: string }) => (
     <p className="flex items-center gap-2 text-sm">{ok ? <CheckCircle2 className="h-4 w-4 text-primary" /> : <XCircle className="h-4 w-4 text-muted-foreground" />}{text}</p>
@@ -74,21 +79,21 @@ export default function RewardsCalculator() {
               <th className="py-2">Гілка</th><th>Групові PV</th><th>%</th><th className="text-right">Групові BV</th><th className="text-right">Відсоткова різниця</th><th>Новий</th><th />
             </tr></thead>
             <tbody>
-              {r.legs.map((l, k) => (
-                <tr key={k} className="border-b border-border">
-                  <td className="py-1"><Input className="h-10 w-36" value={l.name} onChange={(e) => upd(k, { name: e.target.value })} aria-label="Назва гілки" /></td>
-                  <td><Input className="h-10 w-24" type="number" min={0} value={l.pv} onChange={(e) => upd(k, { pv: num(e.target.value) })} aria-label="Групові PV" /></td>
+              {r.legs.map((l, k) => { const id = legs[k]?.id ?? String(k); return (
+                <tr key={id} className="border-b border-border">
+                  <td className="py-1"><Input className="h-10 w-36" value={l.name} onChange={(e) => upd(id, { name: e.target.value })} aria-label="Назва гілки" /></td>
+                  <td><Input className="h-10 w-24" type="number" min={0} value={l.pv} onChange={(e) => upd(id, { pv: num(e.target.value) })} aria-label="Групові PV" /></td>
                   <td>{l.pct}%</td>
                   <td className="text-right">{money(l.bv)}</td>
                   <td className="text-right">{money(l.diff)}</td>
-                  <td><Checkbox checked={!!l.isNew} onCheckedChange={(v) => upd(k, { isNew: !!v })} aria-label="Новий НПА" /></td>
-                  <td><Button size="icon" variant="ghost" className="h-10 w-10" onClick={() => setLegs((x) => x.filter((_, i) => i !== k))} aria-label="Видалити"><Trash2 className="h-4 w-4 text-destructive" /></Button></td>
+                  <td><Checkbox checked={!!l.isNew} onCheckedChange={(v) => upd(id, { isNew: !!v })} aria-label="Новий НПА" /></td>
+                  <td><Button size="icon" variant="ghost" className="h-10 w-10" onClick={() => setLegs((x) => renumber(x.filter((y) => y.id !== id)))} aria-label="Видалити"><Trash2 className="h-4 w-4 text-destructive" /></Button></td>
                 </tr>
-              ))}
+              ); })}
             </tbody>
           </table>
         </div>
-        <Button className="mt-2" size="sm" onClick={() => setLegs((x) => [...x, { name: `Гілка ${x.length + 1}`, pv: 0 }])}><Plus className="h-4 w-4 mr-1" />Додати ще одну гілку</Button>
+        <Button className="mt-2" size="sm" onClick={() => setLegs((x) => renumber([...x, { id: newId(), name: `Гілка ${x.length + 1}`, pv: 0 }]))}><Plus className="h-4 w-4 mr-1" />Додати ще одну гілку</Button>
       </Card>
 
       <div className="grid gap-3 md:grid-cols-2">
