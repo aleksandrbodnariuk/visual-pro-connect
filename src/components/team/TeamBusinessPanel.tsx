@@ -274,6 +274,45 @@ function subtreeOf(rows: any[], rootId: string): any[] {
   return out;
 }
 
+function EditPartnerDialog({ row, rows, canEdit, onClose, onDone }: { row: any | null; rows: any[]; canEdit: boolean; onClose: () => void; onDone: () => void }) {
+  const { user } = useAuth();
+  const [f, setF] = useState<any>({});
+  useEffect(() => { if (row) setF({ full_name: row.full_name || '', phone: row.phone || '', co_full_name: row.co_full_name || '', co_phone: row.co_phone || '', personal_pv: Number(row.personal_pv) || 0, sponsor_id: row.sponsor_id || '' }); }, [row]);
+  const banned = useMemo(() => new Set(row ? subtreeOf(rows, row.id).map((x) => x.id) : []), [row, rows]);
+  const own = row && isMine(row, user?.id);
+  const lockSponsor = !canEdit && own;
+  const options = rows.filter((r) => !banned.has(r.id));
+  const save = async () => {
+    if (!f.full_name?.trim()) return toast.error("Вкажіть ім'я");
+    const { error } = await sb.from('team_partners').update({
+      full_name: f.full_name.trim(), phone: f.phone || null, co_full_name: f.co_full_name.trim() || null, co_phone: f.co_phone || null,
+      personal_pv: Math.max(0, Number(f.personal_pv) || 0), sponsor_id: f.sponsor_id || null,
+    }).eq('id', row.id);
+    if (error) return toast.error(error.message || 'Не вдалося зберегти');
+    toast.success(f.sponsor_id !== (row.sponsor_id || '') ? 'Партнера разом з гілкою перенесено' : 'Зміни збережено'); onDone();
+  };
+  return (
+    <Dialog open={!!row} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Редагування · {row && coupleName(row)}</DialogTitle></DialogHeader>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Input placeholder="Ім'я та прізвище" maxLength={150} value={f.full_name || ''} onChange={(e) => setF({ ...f, full_name: e.target.value })} />
+          <Input placeholder="Телефон" maxLength={30} value={f.phone || ''} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+          <Input placeholder="Чоловік/дружина" maxLength={150} value={f.co_full_name || ''} onChange={(e) => setF({ ...f, co_full_name: e.target.value })} />
+          <Input placeholder="Телефон пари" maxLength={30} value={f.co_phone || ''} onChange={(e) => setF({ ...f, co_phone: e.target.value })} />
+          <Input type="number" placeholder="Особисті бали" value={f.personal_pv ?? 0} onChange={(e) => setF({ ...f, personal_pv: e.target.value })} />
+          <select disabled={lockSponsor} className="h-10 rounded-md border border-input bg-card px-2 text-sm" value={f.sponsor_id || ''} onChange={(e) => setF({ ...f, sponsor_id: e.target.value })}>
+            {(canEdit || !row?.sponsor_id) && <option value="">Без спонсора (верх)</option>}
+            {options.map((r) => <option key={r.id} value={r.id}>Спонсор: {coupleName(r)}</option>)}
+          </select>
+        </div>
+        <p className="text-xs text-muted-foreground">{lockSponsor ? 'Свого спонсора може змінити лише керівник команди.' : 'Зміна спонсора переносить партнера разом з усією його структурою.'}</p>
+        <Button onClick={save}>Зберегти</Button>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function BindDialog({ target, onClose, onDone }: { target: { id: string; co: boolean; name: string } | null; onClose: () => void; onDone: () => void }) {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [q, setQ] = useState('');
@@ -310,6 +349,7 @@ function TeamTree({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
   const empty = { full_name: '', phone: '', personal_pv: 0, sponsor_id: '', co_full_name: '', co_phone: '' };
   const [form, setForm] = useState(empty);
   const [bindT, setBindT] = useState<{ id: string; co: boolean; name: string } | null>(null);
+  const [editT, setEditT] = useState<any | null>(null);
   const load = useCallback(async () => {
     const { data } = await sb.from('team_partners').select('*').eq('organization_id', orgId).order('created_at');
     setRows(data || []);
@@ -369,6 +409,7 @@ function TeamTree({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
                 </p>
               </div>
               <Button size="sm" variant="outline" className="min-h-10" onClick={() => setForm({ ...empty, sponsor_id: r.id })}><Plus className="h-4 w-4 mr-1" />Під цього</Button>
+              <Button size="sm" variant="outline" className="min-h-10" onClick={() => setEditT(r)}><Pencil className="h-4 w-4 mr-1" />Редагувати</Button>
               {!r.user_id && <Button size="sm" className="min-h-10" onClick={() => setBindT({ id: r.id, co: false, name: r.full_name })}><Link2 className="h-4 w-4 mr-1" />Прикріпити акаунт</Button>}
               {!r.co_user_id && (r.user_id || r.co_full_name) && <Button size="sm" variant="outline" className="min-h-10" onClick={() => setBindT({ id: r.id, co: true, name: r.co_full_name || r.full_name })}><Users className="h-4 w-4 mr-1" />{r.co_full_name ? 'Акаунт пари' : 'Додати пару'}</Button>}
             </div>
@@ -394,6 +435,7 @@ function TeamTree({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
           <p className="text-xs text-muted-foreground">Якщо людина ще не має акаунта — місце чекатиме, а після реєстрації натисніть «Прикріпити акаунт».</p>
         </Card>
       )}
+      <EditPartnerDialog row={editT} rows={rows} canEdit={canEdit} onClose={() => setEditT(null)} onDone={() => { setEditT(null); load(); }} />
       <BindDialog target={bindT} onClose={() => setBindT(null)} onDone={() => { setBindT(null); load(); }} />
     </div>
   );
