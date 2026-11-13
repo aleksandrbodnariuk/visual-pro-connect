@@ -84,7 +84,8 @@ export function MessageInput({ onSendMessage, onCreatePoll }: MessageInputProps)
 
       const fileExt = contentType === OUTPUT_FORMAT ? 'webp' : (file.name.split('.').pop() || 'jpg');
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `attachments/${fileName}`;
+      const { data: { session } } = await supabase.auth.getSession();
+      const filePath = `attachments/${session?.user?.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('message-attachments')
@@ -147,7 +148,8 @@ export function MessageInput({ onSendMessage, onCreatePoll }: MessageInputProps)
     try {
       const ext = file.name.split('.').pop() || 'webm';
       const fileName = `${crypto.randomUUID()}.${ext}`;
-      const filePath = `voice/${fileName}`;
+      const { data: { session } } = await supabase.auth.getSession();
+      const filePath = `voice/${session?.user?.id}/${fileName}`;
       const { error: uploadError } = await supabase.storage
         .from('message-attachments')
         .upload(filePath, file, {
