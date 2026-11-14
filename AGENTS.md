@@ -22,3 +22,4 @@
 - Guest presentations are exposed to anonymous visitors only through `get_public_presentation`/`submit_presentation_lead` RPCs with a time window, because team tables must stay member-only.
 - Statutory party organizations and election HQs share `party_hqs` but are split by `kind` ('party' in «Партія», 'campaign' in «Вибори» with precincts), because members are registered in organizations while HQs exist only during campaigns.
 - Team partners edit only their own branch (team_in_my_subtree) and one tree node may hold a couple (user_id + co_user_id); accounts are bound to placeholder nodes only via `bind_team_partner`, because direct client writes could hijack another person's place.
+- Non-manager team partners read only their own subtree plus up to 3 direct sponsors (team_can_view_partner RLS); managers read and edit the whole tree, because crosslines must stay private.

@@ -5791,6 +5791,10 @@ export type Database = {
       }
       sync_all_shareholder_titles: { Args: never; Returns: undefined }
       sync_user_title: { Args: { _user_id: string }; Returns: undefined }
+      team_can_view_partner: {
+        Args: { _partner_id: string; _user_id: string }
+        Returns: boolean
+      }
       team_group_pv: { Args: { _partner_id: string }; Returns: number }
       team_in_my_subtree: {
         Args: { _partner_id: string; _user_id: string }

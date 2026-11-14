@@ -361,6 +361,11 @@ function TeamTree({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
     return me ? subtreeOf(rows, me.id) : [];
   }, [rows, canEdit, scope, me]);
   const canAdd = canEdit || !!me;
+  const upline = useMemo(() => {
+    const out: any[] = []; let cur = me;
+    while (cur?.sponsor_id && out.length < 3) { const s = rows.find((r) => r.id === cur.sponsor_id); if (!s) break; out.push(s); cur = s; }
+    return out;
+  }, [rows, me]);
 
   const add = async () => {
     if (!form.full_name.trim()) return toast.error("Вкажіть ім'я");
@@ -386,6 +391,20 @@ function TeamTree({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
           <Button size="sm" variant={scope === 'all' ? 'default' : 'outline'} onClick={() => setScope('all')}>Уся команда</Button>
           <Button size="sm" variant={scope === 'mine' ? 'default' : 'outline'} onClick={() => setScope('mine')}>Моя гілка</Button>
         </div>
+      )}
+      {upline.length > 0 && (!canEdit || scope === 'mine') && (
+        <Card className="p-3 space-y-2">
+          <p className="font-semibold text-sm">Спонсорська лінія</p>
+          <div className="flex flex-wrap gap-2">
+            {upline.map((s, i) => (
+              <div key={s.id} className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">
+                <p className="text-xs text-muted-foreground">{['Ваш спонсор', 'Вищий спонсор', 'Лідер лінії'][i]}</p>
+                <p className="font-medium">{coupleName(s)}</p>
+                {s.phone && <a href={`tel:${s.phone}`} className="text-xs text-primary">{s.phone}</a>}
+              </div>
+            ))}
+          </div>
+        </Card>
       )}
       {hints.length > 0 && (
         <Card className="p-4 space-y-1 border-primary">
@@ -435,7 +454,7 @@ function TeamTree({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
           <p className="text-xs text-muted-foreground">Якщо людина ще не має акаунта — місце чекатиме, а після реєстрації натисніть «Прикріпити акаунт».</p>
         </Card>
       )}
-      <EditPartnerDialog row={editT} rows={rows} canEdit={canEdit} onClose={() => setEditT(null)} onDone={() => { setEditT(null); load(); }} />
+      <EditPartnerDialog row={editT} rows={canEdit ? rows : visible} canEdit={canEdit} onClose={() => setEditT(null)} onDone={() => { setEditT(null); load(); }} />
       <BindDialog target={bindT} onClose={() => setBindT(null)} onDone={() => { setBindT(null); load(); }} />
     </div>
   );
