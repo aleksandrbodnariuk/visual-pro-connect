@@ -50,7 +50,7 @@ export function TrendingPosts() {
         <div className="mb-3 flex min-h-11 items-center justify-between gap-2">
           <h2 id="trending-title" className="flex items-center gap-2 text-base font-semibold">
             <Flame className="h-5 w-5 text-accent" />Актуальне
-            <span className="text-xs font-normal text-muted-foreground">Сьогодні</span>
+            {posts.length > 0 && <span className="text-xs font-normal text-muted-foreground">{posts.every(p => new Date(p.created_at + (p.created_at.endsWith("Z") ? "" : "Z")) >= new Date(start)) ? "Сьогодні" : "Свіже й популярне"}</span>}
           </h2>
           {posts.length > 1 && (
             <div className="flex gap-1">
@@ -69,7 +69,7 @@ export function TrendingPosts() {
             <Button variant="outline" className="min-h-11" onClick={() => refetch()}>Спробувати ще</Button>
           </div>
         ) : posts.length === 0 ? (
-          <p className="py-3 text-sm text-muted-foreground">Сьогодні ще немає публікацій із реакціями.</p>
+          <p className="py-3 text-sm text-muted-foreground">Поки що немає публікацій.</p>
         ) : (
           <CarouselContent className="-ml-3">
             {posts.map((post, index) => (
@@ -84,7 +84,7 @@ export function TrendingPosts() {
   );
 }
 
-type TrendingPost = { id: string; content: string; media_url: string | null; category: string | null; reaction_count: number; authorName?: string | null; authorAvatar?: string | null };
+type TrendingPost = { id: string; created_at?: string; content: string; media_url: string | null; category: string | null; reaction_count: number; authorName?: string | null; authorAvatar?: string | null };
 
 function TrendingCard({ post, index }: { post: TrendingPost; index: number }) {
   const isImage = Boolean(post.media_url && /\.(jpe?g|png|webp|gif|avif)(?:[?#]|$)/i.test(post.media_url));
