@@ -313,30 +313,54 @@ function EditPartnerDialog({ row, rows, canEdit, onClose, onDone }: { row: any |
   );
 }
 
-function BindDialog({ target, onClose, onDone }: { target: { id: string; co: boolean; name: string } | null; onClose: () => void; onDone: () => void }) {
-  const [profiles, setProfiles] = useState<any[]>([]);
+function BindSlot({ row, co, profiles, onDone }: { row: any; co: boolean; profiles: any[]; onDone: () => void }) {
   const [q, setQ] = useState('');
-  useEffect(() => { if (target) supabase.rpc('get_safe_public_profiles').then(({ data }) => setProfiles((data as any[]) || [])); }, [target]);
-  const res = q.trim().length < 2 ? [] : profiles.filter((p) => nameMatches(q, p.full_name)).slice(0, 8);
-  const bind = async (uid: string) => {
-    const { error } = await sb.rpc('bind_team_partner', { _partner_id: target!.id, _user_id: uid, _as_co: target!.co });
+  const uid = co ? row.co_user_id : row.user_id;
+  const name = co ? row.co_full_name : row.full_name;
+  const cur = uid ? profiles.find((p) => p.id === uid) : null;
+  const res = q.trim().length < 2 ? [] : profiles.filter((p) => nameMatches(q, p.full_name)).slice(0, 6);
+  const bind = async (id: string | null) => {
+    const { error } = await sb.rpc('bind_team_partner', { _partner_id: row.id, _user_id: id, _as_co: co });
     if (error) return toast.error(error.message || 'Не вдалося прикріпити акаунт');
-    toast.success('Акаунт прикріплено — кабінет відкрито'); setQ(''); onDone();
+    toast.success(id ? 'Акаунт прикріплено — кабінет відкрито' : 'Акаунт відкріплено'); setQ(''); onDone();
   };
   return (
-    <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>{target?.co ? 'Прикріпити акаунт чоловіка/дружини' : 'Прикріпити акаунт'} · {target?.name}</DialogTitle></DialogHeader>
-        <Input autoFocus placeholder="Ім'я користувача соцмережі" value={q} onChange={(e) => setQ(e.target.value)} />
-        <div className="space-y-1 max-h-72 overflow-y-auto">
-          {res.map((p) => (
-            <button key={p.id} onClick={() => bind(p.id)} className="flex w-full min-h-11 items-center gap-3 rounded-lg px-2 hover:bg-muted text-left">
-              <img src={p.avatar_url || '/placeholder.svg'} alt="" className="h-9 w-9 rounded-full object-cover" />
-              <span className="font-medium">{p.full_name}</span>
-            </button>
-          ))}
-          {q.trim().length >= 2 && res.length === 0 && <p className="text-sm text-muted-foreground py-2">Нікого не знайдено. Людина ще не зареєструвалась — місце чекатиме на неї.</p>}
+    <div className="space-y-2 rounded-lg border border-border p-3">
+      <p className="text-sm font-semibold">{co ? 'Чоловік/дружина' : 'Основний партнер'} · {name}</p>
+      {uid ? (
+        <div className="flex items-center gap-3">
+          <img src={cur?.avatar_url || '/placeholder.svg'} alt="" className="h-9 w-9 rounded-full object-cover" />
+          <span className="flex-1 font-medium">{cur?.full_name || 'Акаунт прикріплено'}</span>
+          <Button size="sm" variant="outline" className="min-h-10" onClick={() => bind(null)}>Відкріпити</Button>
         </div>
+      ) : (
+        <>
+          <Input placeholder="Знайти акаунт у соцмережі" value={q} onChange={(e) => setQ(e.target.value)} />
+          <div className="space-y-1 max-h-56 overflow-y-auto">
+            {res.map((p) => (
+              <button key={p.id} onClick={() => bind(p.id)} className="flex w-full min-h-11 items-center gap-3 rounded-lg px-2 hover:bg-muted text-left">
+                <img src={p.avatar_url || '/placeholder.svg'} alt="" className="h-9 w-9 rounded-full object-cover" />
+                <span className="font-medium">{p.full_name}</span>
+              </button>
+            ))}
+            {q.trim().length >= 2 && res.length === 0 && <p className="text-sm text-muted-foreground py-2">Нікого не знайдено. Місце чекатиме на реєстрацію.</p>}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function BindDialog({ row, onClose, onDone }: { row: any | null; onClose: () => void; onDone: () => void }) {
+  const [profiles, setProfiles] = useState<any[]>([]);
+  useEffect(() => { if (row) supabase.rpc('get_safe_public_profiles').then(({ data }) => setProfiles((data as any[]) || [])); }, [row?.id]);
+  return (
+    <Dialog open={!!row} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>Акаунти · {row && coupleName(row)}</DialogTitle></DialogHeader>
+        {row && <BindSlot key={'m' + row.id} row={row} co={false} profiles={profiles} onDone={onDone} />}
+        {row?.co_full_name && <BindSlot key={'c' + row.id} row={row} co profiles={profiles} onDone={onDone} />}
+        {row && !row.co_full_name && <p className="text-xs text-muted-foreground">Щоб прикріпити акаунт чоловіка/дружини, спершу впишіть пару через «Редагувати».</p>}
       </DialogContent>
     </Dialog>
   );
@@ -348,7 +372,8 @@ function TeamTree({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
   const [scope, setScope] = useState<'all' | 'mine'>('all');
   const empty = { full_name: '', phone: '', personal_pv: 0, sponsor_id: '', co_full_name: '', co_phone: '' };
   const [form, setForm] = useState(empty);
-  const [bindT, setBindT] = useState<{ id: string; co: boolean; name: string } | null>(null);
+  const [bindId, setBindId] = useState<string | null>(null);
+  const bindRow = rows.find((r) => r.id === bindId) || null;
   const [editT, setEditT] = useState<any | null>(null);
   const load = useCallback(async () => {
     const { data } = await sb.from('team_partners').select('*').eq('organization_id', orgId).order('created_at');
@@ -424,13 +449,12 @@ function TeamTree({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
               <div className="min-w-0 flex-1">
                 <p className="font-medium break-words">{coupleName(r)}{isMine(r, user?.id) && <Badge className="ml-2" variant="secondary">Це ви</Badge>}</p>
                 <p className="text-xs text-muted-foreground">
-                  {r.user_id ? 'Акаунт прикріплено' : 'Очікує реєстрації'}{r.co_full_name ? ` · пара: ${r.co_user_id ? 'прикріплено' : 'очікує'}` : ''}
+                  {r.co_full_name ? `${r.full_name}: ${r.user_id ? 'прикріплено' : 'очікує'} · ${r.co_full_name}: ${r.co_user_id ? 'прикріплено' : 'очікує'}` : (r.user_id ? 'Акаунт прикріплено' : 'Очікує реєстрації')}
                 </p>
               </div>
               <Button size="sm" variant="outline" className="min-h-10" onClick={() => setForm({ ...empty, sponsor_id: r.id })}><Plus className="h-4 w-4 mr-1" />Під цього</Button>
               <Button size="sm" variant="outline" className="min-h-10" onClick={() => setEditT(r)}><Pencil className="h-4 w-4 mr-1" />Редагувати</Button>
-              {!r.user_id && <Button size="sm" className="min-h-10" onClick={() => setBindT({ id: r.id, co: false, name: r.full_name })}><Link2 className="h-4 w-4 mr-1" />Прикріпити акаунт</Button>}
-              {!r.co_user_id && (r.user_id || r.co_full_name) && <Button size="sm" variant="outline" className="min-h-10" onClick={() => setBindT({ id: r.id, co: true, name: r.co_full_name || r.full_name })}><Users className="h-4 w-4 mr-1" />{r.co_full_name ? 'Акаунт пари' : 'Додати пару'}</Button>}
+              <Button size="sm" className="min-h-10" variant={(r.user_id && (!r.co_full_name || r.co_user_id)) ? 'outline' : 'default'} onClick={() => setBindId(r.id)}>{r.co_full_name ? <Users className="h-4 w-4 mr-1" /> : <Link2 className="h-4 w-4 mr-1" />}{r.co_full_name ? 'Акаунти пари' : 'Акаунт'}</Button>
             </div>
           ))}
         </Card>
@@ -455,7 +479,7 @@ function TeamTree({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
         </Card>
       )}
       <EditPartnerDialog row={editT} rows={canEdit ? rows : visible} canEdit={canEdit} onClose={() => setEditT(null)} onDone={() => { setEditT(null); load(); }} />
-      <BindDialog target={bindT} onClose={() => setBindT(null)} onDone={() => { setBindT(null); load(); }} />
+      <BindDialog row={bindRow} onClose={() => setBindId(null)} onDone={load} />
     </div>
   );
 }
