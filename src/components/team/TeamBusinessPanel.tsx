@@ -23,7 +23,7 @@ import { MessageCircle, UserRound, Images } from 'lucide-react';
 import { TeamAlbums } from './TeamAlbums';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { nameMatches } from '@/lib/nameSearch';
-import { Users } from 'lucide-react';
+import { Users, Pencil } from 'lucide-react';
 import { BONUS_SCALE, bonusPercent, differentialBonus, groupPv, nextLevel, type PlanNode } from '@/lib/amwayPlan';
 
 const sb = supabase as any;
