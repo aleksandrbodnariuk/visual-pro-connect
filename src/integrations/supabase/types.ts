@@ -333,6 +333,57 @@ export type Database = {
         }
         Relationships: []
       }
+      asset_capital_contributions: {
+        Row: {
+          amount_usd: number
+          created_at: string
+          created_by: string | null
+          id: string
+          new_item_id: string | null
+          new_item_name: string
+          new_item_price_usd: number
+          note: string | null
+          old_item_name: string | null
+          operation_id: string
+          sale_amount_usd: number
+          share_price_usd: number
+          shares_issued: number
+          user_id: string
+        }
+        Insert: {
+          amount_usd: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_item_id?: string | null
+          new_item_name: string
+          new_item_price_usd: number
+          note?: string | null
+          old_item_name?: string | null
+          operation_id: string
+          sale_amount_usd?: number
+          share_price_usd: number
+          shares_issued: number
+          user_id: string
+        }
+        Update: {
+          amount_usd?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_item_id?: string | null
+          new_item_name?: string
+          new_item_price_usd?: number
+          note?: string | null
+          old_item_name?: string | null
+          operation_id?: string
+          sale_amount_usd?: number
+          share_price_usd?: number
+          shares_issued?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       asset_categories: {
         Row: {
           created_at: string
@@ -5102,6 +5153,21 @@ export type Database = {
       approve_vip_purchase: {
         Args: { _admin_note?: string; _request_id: string }
         Returns: string
+      }
+      asset_upgrade_with_contribution: {
+        Args: {
+          _acquired_at: string
+          _category_id: string
+          _condition: string
+          _contributions: Json
+          _new_description: string
+          _new_name: string
+          _new_price: number
+          _note?: string
+          _old_item_id: string
+          _sale_amount: number
+        }
+        Returns: Json
       }
       assign_default_role: { Args: { _user_id: string }; Returns: undefined }
       bind_team_partner: {

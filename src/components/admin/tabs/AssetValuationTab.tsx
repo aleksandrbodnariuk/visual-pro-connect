@@ -25,6 +25,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AssetUpgradeDialog } from "@/components/admin/assets/AssetUpgradeDialog";
 
 /* ───── types ───── */
 
@@ -79,6 +80,7 @@ export function AssetValuationTab() {
 
   const { totalShares, sharePriceUsd, loading: settingsLoading, updateSharePrice, refetch: refetchSettings } = useCompanySettings();
   const [applying, setApplying] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [autoUpdate, setAutoUpdate] = useState(false);
   const [autoUpdateLoading, setAutoUpdateLoading] = useState(true);
 
@@ -531,12 +533,25 @@ export function AssetValuationTab() {
               <Badge variant="outline" className="text-sm px-3 py-1">
                 Розділ: {totalValue.toLocaleString("en-US")} $
               </Badge>
+              <Button size="default" variant="outline" onClick={() => setUpgradeOpen(true)}>
+                <RefreshCw className="h-4 w-4 mr-1" /> Заміна з доплатою
+              </Button>
               <Button size="default" onClick={openAddItem}>
                 <Plus className="h-4 w-4 mr-1" /> Додати майно
               </Button>
             </div>
           )}
         </div>
+
+        <AssetUpgradeDialog
+          open={upgradeOpen}
+          onOpenChange={setUpgradeOpen}
+          items={allItems}
+          categories={categories}
+          defaultCategoryId={selectedCategoryId}
+          sharePrice={Number(sharePriceUsd) || 0}
+          onDone={() => { refreshAll(); refetchSettings(); }}
+        />
 
         {/* Item dialog */}
         <Dialog open={itemDialogOpen} onOpenChange={setItemDialogOpen}>
