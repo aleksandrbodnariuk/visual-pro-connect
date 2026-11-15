@@ -277,7 +277,7 @@ function subtreeOf(rows: any[], rootId: string): any[] {
 function EditPartnerDialog({ row, rows, canEdit, onClose, onDone }: { row: any | null; rows: any[]; canEdit: boolean; onClose: () => void; onDone: () => void }) {
   const { user } = useAuth();
   const [f, setF] = useState<any>({});
-  useEffect(() => { if (row) setF({ full_name: row.full_name || '', phone: row.phone || '', co_full_name: row.co_full_name || '', co_phone: row.co_phone || '', personal_pv: Number(row.personal_pv) || 0, sponsor_id: row.sponsor_id || '' }); }, [row]);
+  useEffect(() => { if (row) setF({ full_name: row.full_name || '', phone: row.phone || '', co_full_name: row.co_full_name || '', co_phone: row.co_phone || '', personal_pv: Number(row.personal_pv) || 0, sponsor_id: row.sponsor_id || '', active: row.status !== 'inactive' }); }, [row]);
   const banned = useMemo(() => new Set(row ? subtreeOf(rows, row.id).map((x) => x.id) : []), [row, rows]);
   const own = row && isMine(row, user?.id);
   const lockSponsor = !canEdit && own;
@@ -287,6 +287,7 @@ function EditPartnerDialog({ row, rows, canEdit, onClose, onDone }: { row: any |
     const { error } = await sb.from('team_partners').update({
       full_name: f.full_name.trim(), phone: f.phone || null, co_full_name: f.co_full_name.trim() || null, co_phone: f.co_phone || null,
       personal_pv: Math.max(0, Number(f.personal_pv) || 0), sponsor_id: f.sponsor_id || null,
+      ...(canEdit || !own ? { status: f.active ? 'partner' : 'inactive' } : {}),
     }).eq('id', row.id);
     if (error) return toast.error(error.message || 'Не вдалося зберегти');
     toast.success(f.sponsor_id !== (row.sponsor_id || '') ? 'Партнера разом з гілкою перенесено' : 'Зміни збережено'); onDone();
@@ -306,6 +307,12 @@ function EditPartnerDialog({ row, rows, canEdit, onClose, onDone }: { row: any |
             {options.map((r) => <option key={r.id} value={r.id}>Спонсор: {coupleName(r)}</option>)}
           </select>
         </div>
+        {(canEdit || !own) && (
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="checkbox" className="h-5 w-5" checked={f.active ?? true} onChange={(e) => setF({ ...f, active: e.target.checked })} />
+            Активний у бізнесі <span className="text-xs text-muted-foreground">(неактивного не бачить його нижня лінія)</span>
+          </label>
+        )}
         <p className="text-xs text-muted-foreground">{lockSponsor ? 'Свого спонсора може змінити лише керівник команди.' : 'Зміна спонсора переносить партнера разом з усією його структурою.'}</p>
         <Button onClick={save}>Зберегти</Button>
       </DialogContent>
@@ -388,7 +395,8 @@ function TeamTree({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
   const canAdd = canEdit || !!me;
   const upline = useMemo(() => {
     const out: any[] = []; let cur = me;
-    while (cur?.sponsor_id && out.length < 3) { const s = rows.find((r) => r.id === cur.sponsor_id); if (!s) break; out.push(s); cur = s; }
+    let guard = 0;
+    while (cur?.sponsor_id && out.length < 3 && guard++ < 50) { const s = rows.find((r) => r.id === cur.sponsor_id); if (!s) break; if (s.status !== 'inactive') out.push(s); cur = s; }
     return out;
   }, [rows, me]);
 
@@ -447,7 +455,7 @@ function TeamTree({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
           {visible.map((r) => (
             <div key={r.id} className="flex flex-wrap items-center gap-2 rounded-lg px-1 py-1.5 hover:bg-muted/40">
               <div className="min-w-0 flex-1">
-                <p className="font-medium break-words">{coupleName(r)}{isMine(r, user?.id) && <Badge className="ml-2" variant="secondary">Це ви</Badge>}</p>
+                <p className="font-medium break-words">{coupleName(r)}{isMine(r, user?.id) && <Badge className="ml-2" variant="secondary">Це ви</Badge>}{r.status === 'inactive' && <Badge className="ml-2" variant="outline">Неактивний</Badge>}</p>
                 <p className="text-xs text-muted-foreground">
                   {r.co_full_name ? `${r.full_name}: ${r.user_id ? 'прикріплено' : 'очікує'} · ${r.co_full_name}: ${r.co_user_id ? 'прикріплено' : 'очікує'}` : (r.user_id ? 'Акаунт прикріплено' : 'Очікує реєстрації')}
                 </p>
