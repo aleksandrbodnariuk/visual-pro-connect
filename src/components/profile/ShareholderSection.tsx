@@ -134,7 +134,7 @@ export function ShareholderSection({ user }: ShareholderSectionProps) {
                     {loading || settingsLoading ? (
                       <div className="h-8 w-16 bg-muted animate-pulse rounded mt-1" />
                     ) : (
-                      <h3 className="text-2xl font-bold mt-1">{shares}</h3>
+                      <h3 className="text-2xl font-bold mt-1">{Number(shares).toLocaleString("uk-UA", { maximumFractionDigits: 4 })}</h3>
                     )}
                   </div>
                   <div className="p-3 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">

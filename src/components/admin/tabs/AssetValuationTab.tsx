@@ -529,7 +529,7 @@ export function AssetValuationTab() {
             {selectedCategory?.name || "Оберіть розділ"}
           </h3>
           {selectedCategoryId && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <Badge variant="outline" className="text-sm px-3 py-1">
                 Розділ: {totalValue.toLocaleString("en-US")} $
               </Badge>
