@@ -14,6 +14,7 @@ import { UserActions } from "@/components/admin/users/UserActions";
 import { DeleteUserDialog } from "@/components/admin/users/DeleteUserDialog";
 import { Copy, Clock, MailCheck, MailX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UserActivityDialog } from "@/components/admin/users/UserActivityDialog";
 
 // Format last_seen date to a human-readable string
 const formatLastSeen = (lastSeen: string | null | undefined): string => {
@@ -46,6 +47,9 @@ export function UsersTab() {
   const [userRoles, setUserRoles] = useState<Record<string, string[]>>({});
   const [representativeIds, setRepresentativeIds] = useState<Record<string, string>>({});
   const [searchTerm, setSearchTerm] = useState("");
+  const [activityUser, setActivityUser] = useState<any>(null);
+  const lpTimer = { current: 0 as any };
+  const lpProps = (u: any) => ({ onDoubleClick: () => setActivityUser(u), onTouchStart: () => { lpTimer.current = setTimeout(() => setActivityUser(u), 600); }, onTouchEnd: () => clearTimeout(lpTimer.current), title: "Подвійний клік — діаграма активності", className: "cursor-pointer select-none" });
   const [showBlocked, setShowBlocked] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any>(null);
@@ -642,7 +646,7 @@ export function UsersTab() {
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-muted-foreground flex items-center gap-1 min-w-0" title={user.last_seen ? new Date(user.last_seen).toLocaleString('uk-UA') : 'Ніколи'}>
+                <div {...lpProps(user)} className="text-xs text-muted-foreground flex items-center gap-1 min-w-0 cursor-pointer select-none hover:text-primary">
                   <Clock className="h-3 w-3 shrink-0" />
                   <span className="truncate">{formatLastSeen(user.last_seen)}</span>
                 </div>
@@ -731,7 +735,7 @@ export function UsersTab() {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <div {...lpProps(user)} className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer select-none">
                     <Clock className="h-3 w-3" />
                     <span>{formatLastSeen(user.last_seen)}</span>
                   </div>
@@ -754,6 +758,7 @@ export function UsersTab() {
         userName={userToDelete?.full_name || 'Без імені'}
         onConfirmDelete={executeDelete}
       />
+      <UserActivityDialog open={!!activityUser} onOpenChange={(o) => !o && setActivityUser(null)} user={activityUser} />
     </Card>
   );
 }
