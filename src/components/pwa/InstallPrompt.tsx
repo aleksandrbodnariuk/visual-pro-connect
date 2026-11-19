@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getInstallPrompt, subscribeInstallPrompt, clearInstallPrompt } from "@/lib/installPrompt";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -22,21 +23,17 @@ export function InstallPrompt() {
     const dismissed = localStorage.getItem(DISMISSED_KEY);
     if (dismissed && Date.now() - Number(dismissed) < DISMISS_COOLDOWN_MS) return;
 
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setShowBanner(true);
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-
-    // Detect if already running as standalone
     if (window.matchMedia("(display-mode: standalone)").matches) {
       localStorage.setItem(INSTALLED_KEY, "true");
       return;
     }
-
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    const sync = () => {
+      const p = getInstallPrompt();
+      setDeferredPrompt(p as BeforeInstallPromptEvent | null);
+      setShowBanner(!!p);
+    };
+    sync();
+    return subscribeInstallPrompt(sync);
   }, []);
 
   // Hide banner after install
@@ -56,6 +53,7 @@ export function InstallPrompt() {
     if (outcome === "accepted") {
       localStorage.setItem(INSTALLED_KEY, "true");
     }
+    clearInstallPrompt();
     setDeferredPrompt(null);
     setShowBanner(false);
   }, [deferredPrompt]);

@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { Check } from 'lucide-react';
 import { NotificationSettings } from '@/components/settings/NotificationSettings';
 import { UpdateAppButton } from '@/components/pwa/UpdateAppButton';
+import { InstallAppButton } from '@/components/pwa/InstallAppButton';
 
 export default function Settings() {
   const { language } = useLanguage();
@@ -137,6 +138,19 @@ export default function Settings() {
                 </CardHeader>
                 <CardContent>
                   <UpdateAppButton />
+                </CardContent>
+              </Card>
+
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Встановлення застосунка</CardTitle>
+                  <CardDescription>
+                    Встановіть «Спільнота B&C» на комп'ютер чи телефон — він відкриватиметься в окремому вікні з власним ярликом.
+                    Якщо старий ярлик перестав запускатися, видаліть його та встановіть заново тут.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <InstallAppButton />
                 </CardContent>
               </Card>
             </TabsContent>
