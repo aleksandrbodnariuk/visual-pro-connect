@@ -5,7 +5,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Image as ImageIcon, BarChart3, X } from 'lucide-react';
+import { Image as ImageIcon, BarChart3, X, Link2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { extractVideoEmbed } from '@/lib/videoEmbed';
 import { toast } from 'sonner';
 import { uploadToStorage } from '@/lib/storage';
 import { CreatePollDialog, type PollDraft } from '@/components/messages/CreatePollDialog';
@@ -21,6 +23,7 @@ interface Props {
 
 export function GroupComposer({ group, currentUser, canPostAsGroup, onPosted }: Props) {
   const [content, setContent] = useState('');
+  const [link, setLink] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [asGroup, setAsGroup] = useState(canPostAsGroup);
@@ -44,8 +47,11 @@ export function GroupComposer({ group, currentUser, canPostAsGroup, onPosted }: 
   };
 
   const submit = async () => {
-    if (!content.trim() && !file) return;
-    if (content.length > 10000) { toast.error('Допис не може перевищувати 10000 символів'); return; }
+    const linkTrim = link.trim();
+    if (!content.trim() && !file && !linkTrim) return;
+    if (linkTrim && !/^https?:\/\/\S+$/i.test(linkTrim)) { toast.error('Посилання має починатися з http:// або https://'); return; }
+    const finalContent = [content.trim(), linkTrim].filter(Boolean).join('\n\n');
+    if (finalContent.length > 10000) { toast.error('Допис не може перевищувати 10000 символів'); return; }
     setBusy(true);
     try {
       let mediaUrl: string | null = null;
@@ -55,7 +61,7 @@ export function GroupComposer({ group, currentUser, canPostAsGroup, onPosted }: 
         mediaUrl = await uploadToStorage('posts', path, file, file.type);
       }
       const { error } = await supabase.from('posts').insert([{
-        content: content.trim(),
+        content: finalContent,
         user_id: currentUser.id,
         media_url: mediaUrl,
         group_id: group.id,
@@ -63,7 +69,7 @@ export function GroupComposer({ group, currentUser, canPostAsGroup, onPosted }: 
         ...(greetingEnabled && recipient ? { target_user_id: recipient.id } : {}),
       } as any]);
       if (error) throw error;
-      setContent(''); clearFile(); setRecipient(null);
+      setContent(''); setLink(''); clearFile(); setRecipient(null);
       toast.success('Опубліковано');
       onPosted();
     } catch (e: any) {
@@ -116,12 +122,31 @@ export function GroupComposer({ group, currentUser, canPostAsGroup, onPosted }: 
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder={greetingEnabled
-            ? 'Текст привітання + посилання на пісню (YouTube тощо) — усе в одному дописі'
+            ? 'Текст привітання'
             : `Напишіть допис у групі «${group.name}»`}
           rows={2}
           maxLength={10000}
         />
       </div>
+
+      <div className="flex items-center gap-2">
+        <Link2 className="h-4 w-4 text-muted-foreground shrink-0" />
+        <Input
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+          placeholder="Посилання на відео або пісню (YouTube, TikTok, Facebook…)"
+          inputMode="url"
+          className="h-10"
+        />
+        {link && (
+          <Button size="icon" variant="ghost" className="h-9 w-9 shrink-0" onClick={() => setLink('')} aria-label="Очистити посилання">
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+      {link.trim() && extractVideoEmbed(link.trim())?.platform && extractVideoEmbed(link.trim())?.platform !== 'link' && (
+        <p className="text-xs text-muted-foreground">Відео буде показано під текстом допису.</p>
+      )}
 
       {greetingEnabled && <GreetingRecipientPicker value={recipient} onChange={setRecipient} />}
 
@@ -152,7 +177,7 @@ export function GroupComposer({ group, currentUser, canPostAsGroup, onPosted }: 
               <Switch id="as-group" checked={asGroup} onCheckedChange={setAsGroup} />
             </div>
           )}
-          <Button size="sm" onClick={submit} disabled={busy || (!content.trim() && !file)}>
+          <Button size="sm" onClick={submit} disabled={busy || (!content.trim() && !file && !link.trim())}>
             {busy ? 'Публікація…' : 'Опублікувати'}
           </Button>
         </div>
