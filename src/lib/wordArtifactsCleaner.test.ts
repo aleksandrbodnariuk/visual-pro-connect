@@ -19,3 +19,15 @@ describe("split mailto stitching", () => {
     expect(cleanWordText(s)).toBe("BMBG aleksandrbodnariuk@gmail.com ютуб");
   });
 });
+
+describe("keeps ordinary text", () => {
+  it("does not delete capitalised words like DATE or PAGE", () => {
+    expect(cleanWordText("DATE OF BIRTH, PAGE TWO, TIME LINE")).toBe("DATE OF BIRTH, PAGE TWO, TIME LINE");
+  });
+  it("keeps intentional double spaces", () => {
+    expect(cleanWordText("А  Б")).toBe("А  Б");
+  });
+  it("still removes a real PAGEREF field", () => {
+    expect(cleanWordText('Див. HYPERLINK "https://x.ua" сайт')).toBe("Див. сайт");
+  });
+});

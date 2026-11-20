@@ -23,7 +23,8 @@ export function PartyDashboard({ orgId, isAdmin }: { orgId: string; isAdmin: boo
   useEffect(() => {
     Promise.all([partyActions.listHqs(orgId, 'party'), partyMembersApi.list(orgId), partyExtra.listManagers(orgId)]).then(([h, m, mg]) => {
       setHqs(h); setMembers(m);
-      const mine = mg.filter((x) => x.user_id === user?.id).map((x) => x.hq_id);
+      const partyIds = new Set(h.map((x) => x.id));
+      const mine = mg.filter((x) => x.user_id === user?.id && partyIds.has(x.hq_id)).map((x) => x.hq_id);
       setMyHqs(mine);
       if (!isAdmin && mine.length) setFocus(mine[0]);
       setLoading(false);

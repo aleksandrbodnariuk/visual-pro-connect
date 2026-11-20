@@ -3,8 +3,10 @@
  * version (97–365) are stored as clean HTML.
  */
 
+// Only real Word field codes: the keyword must be followed by a quoted
+// argument or a switch (\\h, \\* MERGEFORMAT …). Plain capitalised words stay.
 const FIELD_RE =
-  /\b(?:HYPERLINK|MERGEFIELD|PAGEREF|TOC|REF|PAGE|NUMPAGES|INCLUDEPICTURE|SHAPE|EMBED|FORMTEXT|FORMCHECKBOX|SEQ|DATE|TIME)\b\s+(?:\\[a-z*]\s*)*(?:"[^"]*"\s*)?(?:\\[a-z*]\s*(?:"[^"]*"\s*)?)*/g;
+  /\b(?:HYPERLINK|MERGEFIELD|PAGEREF|TOC|REF|PAGE|NUMPAGES|INCLUDEPICTURE|SHAPE|EMBED|FORMTEXT|FORMCHECKBOX|SEQ|DATE|TIME)\s+(?=["“”\\])(?:\\[a-z*]\s*)*(?:["“”][^"“”]*["“”]\s*)?(?:\\[a-z*]\s*(?:[A-Za-z]+\s*)?(?:["“”][^"“”]*["“”]\s*)?)*/g;
 
 // Word splits a linked e-mail into pieces, each prefixed by the same field:
 // `name HYPERLINK "mailto:X"@ HYPERLINK "mailto:X"gmail ... "mailto:X"com`
@@ -24,7 +26,8 @@ export function stitchMailtoFields(text: string): string {
 export function cleanWordText(text: string): string {
   return stitchMailtoFields(text.replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F]/g, ""))
     .replace(FIELD_RE, "")
-    .replace(/[ \t]{2,}/g, " ")
+    // Word keeps the display text after a mailto field: "a@b.ua a@b.ua" → one copy
+    .replace(/([^\s@]+@[^\s@]+\.[^\s@]+) \1(?![^\s])/g, "$1")
     .replace(/\n{3,}/g, "\n\n");
 }
 
