@@ -4,7 +4,8 @@ import { useAuth } from '@/context/AuthContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Pin, PinOff, Send, Trash2 } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { MessageCircle, Pin, PinOff, Send, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const sb = supabase as any;
@@ -20,12 +21,12 @@ export function TeamChat({ orgId, canEdit }: { orgId: string; canEdit: boolean }
     const { data } = await sb.from('team_messages').select('*').eq('organization_id', orgId).order('created_at', { ascending: false }).limit(100);
     const list = (data || []).reverse();
     setMsgs(list);
-    const ids = [...new Set(list.map((m: any) => m.user_id))];
+    const ids = [...new Set([...list.map((m: any) => m.user_id), user?.id].filter(Boolean))];
     if (ids.length) {
       const { data: p } = await sb.rpc('get_safe_public_profiles_by_ids', { _ids: ids });
       if (p) setNames(Object.fromEntries(p.map((x: any) => [x.id, x])));
     }
-  }, [orgId]);
+  }, [orgId, user?.id]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
     const ch = supabase.channel(`team-chat-${orgId}-${Math.random().toString(36).slice(2)}`)
@@ -44,7 +45,11 @@ export function TeamChat({ orgId, canEdit }: { orgId: string; canEdit: boolean }
   const pinned = msgs.filter((m) => m.is_pinned);
 
   return (
-    <Card className="flex flex-col h-[65vh] min-h-[380px]">
+    <Card className="flex flex-col h-[70vh] min-h-[420px] max-w-4xl overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+        <MessageCircle className="h-5 w-5 text-primary" />
+        <div><p className="font-semibold leading-tight">Чат команди</p><p className="text-xs text-muted-foreground">{msgs.length} повідомлень</p></div>
+      </div>
       {pinned.length > 0 && (
         <div className="border-b border-border p-2 space-y-1 bg-muted/40">
           {pinned.map((m) => <p key={m.id} className="text-sm flex gap-1"><Pin className="h-4 w-4 text-primary shrink-0" /><span className="line-clamp-2">{m.content}</span></p>)}
@@ -55,8 +60,12 @@ export function TeamChat({ orgId, canEdit }: { orgId: string; canEdit: boolean }
         {msgs.map((m) => {
           const mine = m.user_id === user?.id; const p = names[m.user_id];
           return (
-            <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-              <div className={`group max-w-[85%] rounded-lg px-3 py-2 text-sm ${mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+            <div key={m.id} className={`flex items-end gap-2 ${mine ? 'flex-row-reverse' : ''}`}>
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={(mine ? names[m.user_id]?.avatar_url : p?.avatar_url) || undefined} />
+                <AvatarFallback className="text-xs">{(p?.full_name || 'У').slice(0, 1)}</AvatarFallback>
+              </Avatar>
+              <div className={`group max-w-[75%] rounded-2xl px-3 py-2 text-sm ${mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                 {!mine && <p className="text-xs font-semibold mb-0.5">{p?.full_name || 'Учасник'}</p>}
                 <p className="whitespace-pre-wrap break-words">{m.content}</p>
                 <div className="flex items-center gap-1 mt-1 text-[10px] opacity-70">
@@ -70,8 +79,8 @@ export function TeamChat({ orgId, canEdit }: { orgId: string; canEdit: boolean }
         })}
         <div ref={end} />
       </div>
-      <div className="border-t border-border p-2 flex gap-2">
-        <Textarea rows={1} maxLength={5000} className="min-h-11 resize-none" placeholder="Повідомлення команді…" value={text}
+      <div className="border-t border-border p-2 flex items-end gap-2 bg-muted/30">
+        <Textarea rows={1} maxLength={5000} className="min-h-11 h-11 max-h-[40vh] resize-y rounded-2xl" placeholder="Повідомлення команді…" value={text}
           onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} />
         <Button className="h-11" onClick={send} aria-label="Надіслати"><Send className="h-4 w-4" /></Button>
       </div>
