@@ -122,7 +122,7 @@ export function SpecialistsTab() {
           <p className="py-8 text-center text-muted-foreground">Фахівців не знайдено.</p>
         ) : (
           <>
-            <div className="hidden overflow-x-auto md:block">
+            <div className="admin-table overflow-x-auto">
               <table className="w-full">
                 <thead><tr className="border-b">
                   <th className="p-2 text-left">Фахівець</th><th className="p-2 text-left">Спеціальності</th>
@@ -143,7 +143,7 @@ export function SpecialistsTab() {
                 </tbody>
               </table>
             </div>
-            <div className="space-y-3 md:hidden">
+            <div className="admin-cards space-y-3">
               {filtered.map((s) => (
                 <Card key={s.id} className="space-y-2 p-4">
                   <div className="flex items-center gap-3">

@@ -631,7 +631,7 @@ export function StockExchangeTab() {
           <CardDescription>Заявки, які очікують підтвердження адміністратором після офлайн-домовленості</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="hidden md:block overflow-x-auto">
+          <div className="admin-table overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
@@ -675,7 +675,7 @@ export function StockExchangeTab() {
           </div>
 
           {/* Mobile Cards */}
-          <div className="md:hidden space-y-4">
+          <div className="admin-cards space-y-4">
             {pendingTransactions.length > 0 ? (
               pendingTransactions.map((tx) => (
                 <Card key={tx.id} className="p-4">

@@ -160,7 +160,7 @@ export function OrdersTab() {
         </CardHeader>
         <CardContent>
           {/* Desktop Table - hidden on mobile */}
-          <div className="hidden md:block overflow-x-auto">
+          <div className="admin-table overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
@@ -210,7 +210,7 @@ export function OrdersTab() {
           </div>
 
           {/* Mobile Cards - shown only on mobile */}
-          <div className="md:hidden space-y-4">
+          <div className="admin-cards space-y-4">
             {orders.length > 0 ? (
               orders.map((order) => {
                 const net = calcNetProfit(order.amount ?? 0, order.expenses ?? 0);

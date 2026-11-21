@@ -382,3 +382,22 @@ select option:checked { background-color: #3b82f6 !important; color: #ffffff !im
 .portfolio-native-audio { color-scheme: light; }
 .dark .portfolio-native-audio { color-scheme: dark; }
 @media (prefers-reduced-motion: reduce) { .portfolio-meter-playing { animation: none; } }
+
+/* Admin: mobile table/cards switch + horizontal scroll */
+.admin-table { display: none; }
+.admin-cards { display: block; }
+@media (min-width: 768px) {
+  .admin-table { display: block; }
+  .admin-cards { display: none; }
+}
+@media (max-width: 767px) {
+  .admin-scope[data-admin-view="table"] .admin-table { display: block; }
+  .admin-scope[data-admin-view="table"] .admin-cards { display: none; }
+  .admin-scope .overflow-x-auto, .admin-scope .overflow-auto {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y;
+  }
+  .admin-scope table { min-width: 720px; }
+  .admin-scope table th, .admin-scope table td { white-space: nowrap; padding: 0.5rem 0.625rem; font-size: 0.8125rem; }
+}

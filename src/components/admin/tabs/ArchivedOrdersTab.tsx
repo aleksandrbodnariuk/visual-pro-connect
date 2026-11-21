@@ -33,7 +33,7 @@ export function ArchivedOrdersTab() {
       </CardHeader>
       <CardContent>
         {/* Desktop Table - hidden on mobile */}
-        <div className="hidden md:block overflow-x-auto">
+        <div className="admin-table overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b">
@@ -78,7 +78,7 @@ export function ArchivedOrdersTab() {
         </div>
 
         {/* Mobile Cards - shown only on mobile */}
-        <div className="md:hidden space-y-4">
+        <div className="admin-cards space-y-4">
           {archivedOrders.length > 0 ? (
             archivedOrders.map((order) => (
               <Card key={order.id} className="p-4">

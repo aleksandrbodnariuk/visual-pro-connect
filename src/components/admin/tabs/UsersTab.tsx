@@ -569,7 +569,7 @@ export function UsersTab() {
         </div>
 
         {/* Desktop Table - hidden on mobile */}
-        <div className="hidden md:block overflow-x-auto">
+        <div className="admin-table overflow-x-auto">
           <div className="min-w-[1500px] space-y-4">
             <div className="grid grid-cols-11 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
               <div>ID</div>
@@ -667,7 +667,7 @@ export function UsersTab() {
         </div>
 
         {/* Mobile Cards - shown only on mobile */}
-        <div className="md:hidden space-y-4">
+        <div className="admin-cards space-y-4">
           {filteredUsers.map((user) => (
             <Card key={user.id} className="p-4">
               <div className="space-y-3">

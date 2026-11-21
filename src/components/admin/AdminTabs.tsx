@@ -46,6 +46,8 @@ export function AdminTabs() {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("users");
+  const [view, setView] = useState<"table" | "cards">(() => (localStorage.getItem("admin-mobile-view") as "table" | "cards") || "table");
+  const changeView = (v: "table" | "cards") => { setView(v); localStorage.setItem("admin-mobile-view", v); };
   
   useEffect(() => {
     const tabFromUrl = location.pathname.split('/').pop();
@@ -73,6 +75,18 @@ export function AdminTabs() {
             ))}
           </SelectContent>
         </Select>
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Вигляд:</span>
+          <div className="inline-flex rounded-md border p-0.5">
+            {(["table", "cards"] as const).map((v) => (
+              <button key={v} type="button" onClick={() => changeView(v)}
+                className={`min-h-9 rounded px-3 text-sm ${view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+                {v === "table" ? "Таблиця" : "Картки"}
+              </button>
+            ))}
+          </div>
+        </div>
+        {view === "table" && <p className="mt-2 text-xs text-muted-foreground">↔ Гортайте таблиці вліво та вправо, щоб побачити всі колонки</p>}
       </div>
       <TabsList className="mb-4 hidden w-full justify-start gap-1 overflow-x-auto pb-2 md:flex">
         <TabsTrigger value="users">Користувачі</TabsTrigger>
@@ -115,7 +129,7 @@ export function AdminTabs() {
         <TabsTrigger value="ai-assistant">ШІ помічник</TabsTrigger>
       </TabsList>
       
-      <div className="min-w-0 max-w-full overflow-x-hidden">
+      <div className="admin-scope min-w-0 max-w-full overflow-x-hidden" data-admin-view={view}>
       <Suspense fallback={<p className="py-8 text-center text-sm text-muted-foreground">Завантаження розділу…</p>}>
       <TabsContent value="users">
         <UsersTab />

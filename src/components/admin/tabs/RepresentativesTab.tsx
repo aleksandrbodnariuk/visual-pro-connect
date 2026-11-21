@@ -737,7 +737,7 @@ function RepOrdersTable({
   return (
     <>
       {/* Desktop */}
-      <div className="hidden md:block overflow-x-auto">
+      <div className="admin-table overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-left">
@@ -779,7 +779,7 @@ function RepOrdersTable({
         </table>
       </div>
       {/* Mobile */}
-      <div className="md:hidden space-y-3">
+      <div className="admin-cards space-y-3">
         {orders.map((o) => (
           <Card key={o.id} className="p-3">
             <p className="font-medium">{o.title}</p>

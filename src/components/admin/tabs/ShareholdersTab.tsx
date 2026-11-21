@@ -568,7 +568,7 @@ export function ShareholdersTab() {
           ) : (
             <>
               {/* ─── Desktop Table ─── */}
-              <div className="hidden md:block overflow-x-auto">
+              <div className="admin-table overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
@@ -639,7 +639,7 @@ export function ShareholdersTab() {
               </div>
 
               {/* ─── Mobile Cards ─── */}
-              <div className="md:hidden space-y-4">
+              <div className="admin-cards space-y-4">
                 {shareholders.map((shareholder) => (
                   <Card key={shareholder.id} className="p-4">
                     <div className="space-y-3">

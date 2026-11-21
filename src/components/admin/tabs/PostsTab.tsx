@@ -103,7 +103,7 @@ export function PostsTab() {
       </CardHeader>
       <CardContent>
         {/* Desktop Table - hidden on mobile */}
-        <div className="hidden md:block overflow-x-auto">
+        <div className="admin-table overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b">
@@ -169,7 +169,7 @@ export function PostsTab() {
         </div>
 
         {/* Mobile Cards - shown only on mobile */}
-        <div className="md:hidden space-y-4">
+        <div className="admin-cards space-y-4">
           {posts.length > 0 ? (
             posts.map((post) => (
               <Card key={post.id} className="p-4">
