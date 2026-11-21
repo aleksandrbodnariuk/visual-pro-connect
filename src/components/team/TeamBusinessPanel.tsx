@@ -277,7 +277,7 @@ function subtreeOf(rows: any[], rootId: string): any[] {
 function EditPartnerDialog({ row, rows, canEdit, onClose, onDone }: { row: any | null; rows: any[]; canEdit: boolean; onClose: () => void; onDone: () => void }) {
   const { user } = useAuth();
   const [f, setF] = useState<any>({});
-  useEffect(() => { if (row) setF({ full_name: row.full_name || '', phone: row.phone || '', co_full_name: row.co_full_name || '', co_phone: row.co_phone || '', personal_pv: Number(row.personal_pv) || 0, sponsor_id: row.sponsor_id || '', active: row.status !== 'inactive' }); }, [row]);
+  useEffect(() => { if (row) setF({ full_name: row.full_name || '', phone: row.phone || '', co_full_name: row.co_full_name || '', co_phone: row.co_phone || '', personal_pv: Number(row.personal_pv) || 0, sponsor_id: row.sponsor_id || '', active: row.status !== 'inactive', is_platinum: !!row.is_platinum }); }, [row]);
   const banned = useMemo(() => new Set(row ? subtreeOf(rows, row.id).map((x) => x.id) : []), [row, rows]);
   const own = row && isMine(row, user?.id);
   const lockSponsor = !canEdit && own;
@@ -288,6 +288,7 @@ function EditPartnerDialog({ row, rows, canEdit, onClose, onDone }: { row: any |
       full_name: f.full_name.trim(), phone: f.phone || null, co_full_name: f.co_full_name.trim() || null, co_phone: f.co_phone || null,
       personal_pv: Math.max(0, Number(f.personal_pv) || 0), sponsor_id: f.sponsor_id || null,
       ...(canEdit || !own ? { status: f.active ? 'partner' : 'inactive' } : {}),
+      ...(canEdit ? { is_platinum: !!f.is_platinum } : {}),
     }).eq('id', row.id);
     if (error) return toast.error(error.message || 'Не вдалося зберегти');
     toast.success(f.sponsor_id !== (row.sponsor_id || '') ? 'Партнера разом з гілкою перенесено' : 'Зміни збережено'); onDone();
@@ -311,6 +312,12 @@ function EditPartnerDialog({ row, rows, canEdit, onClose, onDone }: { row: any |
           <label className="flex min-h-11 items-center gap-2 text-sm">
             <input type="checkbox" className="h-5 w-5" checked={f.active ?? true} onChange={(e) => setF({ ...f, active: e.target.checked })} />
             Активний у бізнесі <span className="text-xs text-muted-foreground">(неактивного не бачить його нижня лінія)</span>
+          </label>
+        )}
+        {canEdit && (
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="checkbox" className="h-5 w-5" checked={!!f.is_platinum} onChange={(e) => setF({ ...f, is_platinum: e.target.checked })} />
+            💎 Платиновий спонсор
           </label>
         )}
         <p className="text-xs text-muted-foreground">{lockSponsor ? 'Свого спонсора може змінити лише керівник команди.' : 'Зміна спонсора переносить партнера разом з усією його структурою.'}</p>
@@ -455,7 +462,7 @@ function TeamTree({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
           {visible.map((r) => (
             <div key={r.id} className="flex flex-wrap items-center gap-2 rounded-lg px-1 py-1.5 hover:bg-muted/40">
               <div className="min-w-0 flex-1">
-                <p className="font-medium break-words">{coupleName(r)}{isMine(r, user?.id) && <Badge className="ml-2" variant="secondary">Це ви</Badge>}{r.status === 'inactive' && <Badge className="ml-2" variant="outline">Неактивний</Badge>}</p>
+                <p className="font-medium break-words">{coupleName(r)}{isMine(r, user?.id) && <Badge className="ml-2" variant="secondary">Це ви</Badge>}{r.status === 'inactive' && <Badge className="ml-2" variant="outline">Неактивний</Badge>}{r.is_platinum && <Badge className="ml-2">💎 Платиновий</Badge>}</p>
                 <p className="text-xs text-muted-foreground">
                   {r.co_full_name ? `${r.full_name}: ${r.user_id ? 'прикріплено' : 'очікує'} · ${r.co_full_name}: ${r.co_user_id ? 'прикріплено' : 'очікує'}` : (r.user_id ? 'Акаунт прикріплено' : 'Очікує реєстрації')}
                 </p>
@@ -637,8 +644,11 @@ function MyCabinet({ orgId, isLeader }: { orgId: string; isLeader: boolean }) {
         user?.id ? sb.from('team_onboarding').select('step_key').eq('organization_id', orgId).eq('user_id', user.id) : Promise.resolve({ data: [] }),
       ]);
       setRows(data || []); setSteps((o.data || []).length);
+      const { data: pl } = await sb.rpc('get_my_team_platinum', { _org_id: orgId });
+      setPlat(pl?.[0] || null);
     })();
   }, [orgId, user?.id]);
+  const [plat, setPlat] = useState<any>(null);
   const me = rows.find((r) => r.user_id === user?.id || r.co_user_id === user?.id);
   const sponsor = me?.sponsor_id ? rows.find((r) => r.id === me.sponsor_id) : null;
   const g = me ? groupPv(rows, me.id) : 0;
@@ -667,6 +677,13 @@ function MyCabinet({ orgId, isLeader }: { orgId: string; isLeader: boolean }) {
             <Button asChild size="sm"><a href={`tel:${sponsor.phone}`}><Phone className="h-4 w-4 mr-1" />Подзвонити</a></Button>
             <Button asChild size="sm" variant="outline"><a href={`viber://chat?number=${encodeURIComponent(sponsor.phone.replace(/[^\d+]/g, ''))}`}>Viber</a></Button>
           </div>}
+        </Card>
+      )}
+      {plat && (
+        <Card className="p-4 space-y-2 border-primary/40">
+          <p className="text-xs text-muted-foreground">💎 Мій платиновий спонсор</p>
+          <p className="font-semibold">{plat.co_full_name ? `${plat.full_name} та ${plat.co_full_name}` : plat.full_name}</p>
+          {plat.phone && <Button asChild size="sm" variant="outline"><a href={`tel:${plat.phone}`}><Phone className="h-4 w-4 mr-1" />Подзвонити</a></Button>}
         </Card>
       )}
       {!isLeader && (

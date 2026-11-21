@@ -4203,8 +4203,46 @@ export type Database = {
           },
         ]
       }
+      team_message_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          message_id: string
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          message_id: string
+          organization_id: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          message_id?: string
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "team_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_messages: {
         Row: {
+          attachment_name: string | null
+          attachment_type: string | null
+          attachment_url: string | null
           content: string
           created_at: string
           id: string
@@ -4213,6 +4251,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attachment_name?: string | null
+          attachment_type?: string | null
+          attachment_url?: string | null
           content: string
           created_at?: string
           id?: string
@@ -4221,6 +4262,9 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          attachment_name?: string | null
+          attachment_type?: string | null
+          attachment_url?: string | null
           content?: string
           created_at?: string
           id?: string
@@ -4278,6 +4322,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          is_platinum: boolean
           notes: string | null
           organization_id: string
           personal_pv: number
@@ -4294,6 +4339,7 @@ export type Database = {
           created_at?: string
           full_name: string
           id?: string
+          is_platinum?: boolean
           notes?: string | null
           organization_id: string
           personal_pv?: number
@@ -4310,6 +4356,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          is_platinum?: boolean
           notes?: string | null
           organization_id?: string
           personal_pv?: number
@@ -5458,6 +5505,14 @@ export type Database = {
           orders_count: number
           team_size: number
           total_earnings: number
+        }[]
+      }
+      get_my_team_platinum: {
+        Args: { _org_id: string }
+        Returns: {
+          co_full_name: string
+          full_name: string
+          phone: string
         }[]
       }
       get_or_create_direct_conversation: {
