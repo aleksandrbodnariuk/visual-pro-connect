@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { CheckCircle2, Plus, Trash2, XCircle } from 'lucide-react';
+import { CheckCircle2, Plus, Trash2, XCircle, List, Network } from 'lucide-react';
 import { BV_PER_PV, PATH_TO_BRONZE, calcRewards } from '@/lib/amwayRewards';
 
 type Leg = { id: string; name: string; pv: number; isNew?: boolean };
@@ -14,14 +14,23 @@ const AUTO = /^(Гілка|Новачок) \d+$/;
 /** Renumber default-named legs sequentially; custom names stay untouched. */
 const renumber = (legs: Leg[]): Leg[] => { let n = 0; return legs.map((l) => { if (!AUTO.test(l.name)) return l; n += 1; return { ...l, name: `${l.name.split(' ')[0]} ${n}` }; }); };
 const money = (n: number) => n.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₴';
-const PRESETS: { label: string; ppv: number; legs: number[]; hint: string; newLegs?: boolean; path?: boolean }[] = [
+type SNode = { name: string; pv: number; kids: SNode[] };
+/** Sample downline for a leg: the partner keeps ~100 PV, the rest flows into lower levels. */
+const buildLeg = (name: string, total: number, depth = 3): SNode => {
+  if (depth <= 1 || total <= 150) return { name, pv: total, kids: [] };
+  const own = 100; const rest = total - own; const n = rest >= 400 ? 2 : 1;
+  const part = Math.floor(rest / n);
+  return { name, pv: own, kids: Array.from({ length: n }, (_, k) => buildLeg(`${name}.${k + 1}`, k === n - 1 ? rest - part * (n - 1) : part, depth - 1)) };
+};
+const split = (total: number, n: number) => Array.from({ length: n }, (_, k) => Math.floor(total / n) + (k < total % n ? 1 : 0));
+const PRESETS: { label: string; ppv: number; legs: number[]; hint: string; newLegs?: boolean; path?: boolean; deep?: boolean }[] = [
   { label: '3%', ppv: 200, legs: [], hint: '200 PV особистих покупок і клієнтів — перший бонус 3%.' },
   { label: '6%', ppv: 100, legs: [250, 250], hint: '600 групових PV: ви + 2 партнери. Відкриває «Життя команди».' },
-  { label: '9%', ppv: 100, legs: [300, 300, 300, 200], hint: '1 200 групових PV — лідерський старт.' },
-  { label: '12%', ppv: 100, legs: [600, 600, 600, 500], hint: '2 400 групових PV — стабільна команда.' },
+  { label: '9%', ppv: 100, legs: split(1100, 5), deep: true, hint: '1 200 групових PV: 5 ліній з нижніми рівнями — лідерський старт.' },
+  { label: '12%', ppv: 100, legs: split(2300, 5), deep: true, hint: '2 400 групових PV: 5 ліній з нижніми рівнями — стабільна команда.' },
   { label: '15%', ppv: 100, legs: [1000, 1000, 1000, 900], hint: '4 000 групових PV — передбронзовий рубіж.' },
-  { label: '18%', ppv: 100, legs: [2000, 2000, 1500, 1400], hint: '7 000 групових PV — високий лідерський рівень.' },
-  { label: '21%', ppv: 300, legs: [3000, 3500, 3200], hint: '10 000 групових PV — максимальний відсоток шкали (Q-місяць).' },
+  { label: '18%', ppv: 100, legs: split(6900, 8), deep: true, hint: '7 000 групових PV: 8 ліній з нижніми рівнями — високий лідерський рівень.' },
+  { label: '21%', ppv: 300, legs: split(9700, 12), deep: true, hint: '10 000 групових PV: 12 ліній з нижніми рівнями — максимальний відсоток шкали (Q-місяць).' },
 ];
 const SPECIAL: typeof PRESETS = [
   { label: '🥉 Бронзовий старт (Foundation)', ppv: 100, legs: [300, 300, 300, 300], hint: 'Умова: 9%+, 100 особистих PV і 3 гілки по 3%+. Надбавка +30% до бонусу за обсяг.' },
@@ -35,10 +44,12 @@ export default function RewardsCalculator() {
   const [rate, setRate] = useState(() => Number(localStorage.getItem('amway_bv_rate')) || BV_PER_PV);
   const [pathEligible, setPathEligible] = useState(false);
   const [hint, setHint] = useState('');
+  const [deep, setDeep] = useState(false);
+  const [view, setView] = useState<'tree' | 'list'>('tree');
   const [legs, setLegs] = useState<Leg[]>(PRESETS[4].legs.map((pv, k) => ({ id: newId(), name: `Гілка ${k + 1}`, pv })));
   useEffect(() => { localStorage.setItem('amway_bv_rate', String(rate)); }, [rate]);
   const r = calcRewards({ personalPv: ppv, customerPv: cpv, legs, pathEligible, bvRate: rate });
-  const apply = (p: (typeof PRESETS)[number]) => { setPpv(p.ppv); setCpv(0); setPathEligible(!!p.path); setHint(p.hint); setLegs(p.legs.map((pv, k) => ({ id: newId(), name: p.newLegs ? `Новачок ${k + 1}` : `Гілка ${k + 1}`, pv, isNew: !!p.newLegs }))); };
+  const apply = (p: (typeof PRESETS)[number]) => { setPpv(p.ppv); setCpv(0); setPathEligible(!!p.path); setHint(p.hint); setDeep(!!p.deep); setLegs(p.legs.map((pv, k) => ({ id: newId(), name: p.newLegs ? `Новачок ${k + 1}` : `Гілка ${k + 1}`, pv, isNew: !!p.newLegs }))); };
   const upd = (id: string, p: Partial<Leg>) => setLegs((l) => l.map((x) => (x.id === id ? { ...x, ...p } : x)));
   const num = (v: string) => Math.max(0, Number(v) || 0);
   const Status = ({ ok, text }: { ok: boolean; text: string }) => (
@@ -58,6 +69,31 @@ export default function RewardsCalculator() {
         </div>
         {hint && <p className="text-sm text-muted-foreground rounded-lg bg-muted/50 p-2">{hint}</p>}
       </Card>
+
+      {deep && legs.length > 0 && (() => {
+        const tree = legs.map((l) => buildLeg(l.name, l.pv));
+        const flat: { n: SNode; d: number }[] = []; const walk = (n: SNode, d: number) => { flat.push({ n, d }); n.kids.forEach((k) => walk(k, d + 1)); }; tree.forEach((t) => walk(t, 1));
+        const Node = ({ n }: { n: SNode }) => (
+          <li className="mt-1"><div className="inline-flex gap-2 rounded-lg border border-border bg-card px-2 py-1 text-sm"><b>{n.name}</b><span className="text-muted-foreground">{n.pv} PV</span></div>
+            {n.kids.length > 0 && <ul className="ml-4 border-l border-border pl-3">{n.kids.map((k) => <Node key={k.name} n={k} />)}</ul>}</li>);
+        return (
+          <Card className="p-3 space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-medium">Структура прикладу · {legs.length} ліній · {flat.length} партнерів</p>
+              <div className="flex gap-1">
+                <Button size="sm" variant={view === 'tree' ? 'default' : 'outline'} className="min-h-10" onClick={() => setView('tree')}><Network className="h-4 w-4 mr-1" />Гілками</Button>
+                <Button size="sm" variant={view === 'list' ? 'default' : 'outline'} className="min-h-10" onClick={() => setView('list')}><List className="h-4 w-4 mr-1" />Списком</Button>
+              </div>
+            </div>
+            <div className="max-h-96 overflow-auto">
+              {view === 'tree'
+                ? <ul><li><div className="inline-flex gap-2 rounded-lg bg-primary px-2 py-1 text-sm text-primary-foreground"><b>Я</b>{ppv} PV</div><ul className="ml-4 border-l border-border pl-3">{tree.map((t) => <Node key={t.name} n={t} />)}</ul></li></ul>
+                : <table className="w-full text-sm"><thead><tr className="text-left text-muted-foreground border-b border-border"><th className="py-1">Партнер</th><th>Рівень</th><th className="text-right">Особисті PV</th></tr></thead>
+                    <tbody>{flat.map(({ n, d }) => <tr key={n.name} className="border-b border-border"><td className="py-1" style={{ paddingLeft: (d - 1) * 12 }}>{n.name}</td><td>{d}</td><td className="text-right">{n.pv}</td></tr>)}</tbody></table>}
+            </div>
+          </Card>
+        );
+      })()}
 
       <Card className="p-4 grid gap-3 sm:grid-cols-3">
         <label className="text-sm">PV за особисті покупки<Input className="h-11 mt-1" type="number" min={0} value={ppv} onChange={(e) => setPpv(num(e.target.value))} /></label>
