@@ -24,3 +24,4 @@
 - Team partners edit only their own branch (team_in_my_subtree) and one tree node may hold a couple (user_id + co_user_id); accounts are bound to placeholder nodes only via `bind_team_partner`, because direct client writes could hijack another person's place.
 - Non-manager team partners read only their own subtree plus up to 3 nearest active sponsors, skipping status 'inactive' (team_can_view_partner RLS); managers read and edit the whole tree, because crosslines must stay private.
 - Asset upgrades with partner top-ups go only through the `asset_upgrade_with_contribution` RPC, which issues fractional shares (numeric, 4 decimals) at the current price and logs `asset_capital_contributions`, because contributions must never be lost to rounding or split across client writes.
+- Native Android/iOS builds use Capacitor with `capacitor.config.ts` (webDir `dist`); native folders are generated locally by the owner, because the sandbox cannot build APKs.
