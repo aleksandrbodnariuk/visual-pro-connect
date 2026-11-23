@@ -19,6 +19,7 @@ import { Check } from 'lucide-react';
 import { NotificationSettings } from '@/components/settings/NotificationSettings';
 import { UpdateAppButton } from '@/components/pwa/UpdateAppButton';
 import { InstallAppButton } from '@/components/pwa/InstallAppButton';
+import { AndroidApkDownload } from '@/components/pwa/AndroidApkDownload';
 
 export default function Settings() {
   const { language } = useLanguage();
@@ -151,6 +152,18 @@ export default function Settings() {
                 </CardHeader>
                 <CardContent>
                   <InstallAppButton />
+                </CardContent>
+              </Card>
+
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Застосунок для Android</CardTitle>
+                  <CardDescription>
+                    Справжній застосунок «Спільнота B&C» для смартфонів Android (Redmi, Samsung та інших) — встановлюється без браузера.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AndroidApkDownload />
                 </CardContent>
               </Card>
             </TabsContent>

@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { LogoUpload } from "@/components/settings/LogoUpload";
 import { AppLogoUpload } from "@/components/settings/AppLogoUpload";
 import { UpdateAppButton } from "@/components/pwa/UpdateAppButton";
+import { AndroidApkManager } from "@/components/admin/AndroidApkManager";
 import { DatabaseDiagnostics } from "@/components/admin/DatabaseDiagnostics";
 import { ImageCompressionSettings } from "@/components/admin/ImageCompressionSettings";
 import { PortfolioImageMigration } from "@/components/admin/PortfolioImageMigration";
@@ -86,6 +87,7 @@ export function SettingsTab() {
       <LogoUpload />
 
       <AppLogoUpload />
+      <AndroidApkManager />
 
       <Card>
         <CardHeader>
