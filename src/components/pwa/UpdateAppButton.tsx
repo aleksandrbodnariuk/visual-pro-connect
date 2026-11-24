@@ -2,6 +2,11 @@ import { useState } from "react";
 import { RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { App } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
+import { downloadAndroidApk, isNativeAndroid, loadApkInfo, type ApkInfo } from "@/lib/androidApk";
+import { needsAndroidUpdate } from "@/lib/androidRelease";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 interface UpdateAppButtonProps {
   variant?: "default" | "outline" | "ghost";
@@ -21,9 +26,30 @@ export function UpdateAppButton({
   showLabel = true,
 }: UpdateAppButtonProps) {
   const [updating, setUpdating] = useState(false);
+  const [release, setRelease] = useState<ApkInfo | null>(null);
+  const [installed, setInstalled] = useState<string | null>(null);
 
   const handleUpdate = async () => {
     setUpdating(true);
+    if (isNativeAndroid()) {
+      try {
+        const latest = await loadApkInfo();
+        if (Capacitor.isPluginAvailable("App")) {
+          const current = await App.getInfo();
+          if (!needsAndroidUpdate(current.build, latest.build)) {
+            toast.success(`Встановлено актуальну версію ${current.version}`);
+            return;
+          }
+          setInstalled(current.version);
+        } else {
+          setInstalled(null);
+        }
+        setRelease(latest);
+      } catch {
+        toast.error("Не вдалося перевірити оновлення. Спробуйте ще раз.");
+      } finally { setUpdating(false); }
+      return;
+    }
     toast.info("Оновлюємо застосунок...");
 
     try {
@@ -63,6 +89,7 @@ export function UpdateAppButton({
   };
 
   return (
+    <>
     <Button
       variant={variant}
       size={size}
@@ -77,5 +104,16 @@ export function UpdateAppButton({
       )}
       {showLabel && (updating ? "Оновлюємо…" : "Оновити застосунок")}
     </Button>
+    <Dialog open={Boolean(release)} onOpenChange={(open) => { if (!open) setRelease(null); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Оновлення Android-застосунку</DialogTitle>
+          <DialogDescription>Доступна версія {release?.version} · {release?.sizeMb} МБ{installed ? ` · встановлено ${installed}` : " · встановлену версію не вдалося визначити"}</DialogDescription>
+        </DialogHeader>
+        <p className="text-sm">Завантажте файл, відкрийте його в «Завантаженнях» і натисніть «Оновити». Не видаляйте поточний застосунок. Встановлення потребує вашого підтвердження на телефоні.</p>
+        <Button onClick={() => downloadAndroidApk().catch(() => toast.error("Не вдалося відкрити завантаження"))}>Завантажити оновлення для Android</Button>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

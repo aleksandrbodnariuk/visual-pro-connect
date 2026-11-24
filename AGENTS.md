@@ -25,3 +25,4 @@
 - Non-manager team partners read only their own subtree plus up to 3 nearest active sponsors, skipping status 'inactive' (team_can_view_partner RLS); managers read and edit the whole tree, because crosslines must stay private.
 - Asset upgrades with partner top-ups go only through the `asset_upgrade_with_contribution` RPC, which issues fractional shares (numeric, 4 decimals) at the current price and logs `asset_capital_contributions`, because contributions must never be lost to rounding or split across client writes.
 - Native Android/iOS builds use Capacitor with `capacitor.config.ts` (webDir `dist`); native folders are generated locally by the owner, because the sandbox cannot build APKs.
+- Android releases use private Supabase Storage, a fixed download redirect, staged unique files and post-publication cleanup; native updates compare Android build codes and open the system browser, because cross-domain asset paths and WebView downloads are unreliable.
