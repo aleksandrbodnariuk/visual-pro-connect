@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Move Android APK delivery to Supabase Storage and verify downloaded binary.
+- [ ] Publish replacement APKs safely from admin and adapt existing update button for native Android.
+- [ ] Test download/replacement/version handling; document native signing requirements.
+
 - [x] Оновити портфоліо: окремі колекції форматів, картки музики, відтворення без діалогу, обкладинки та звернення до автора.
 - [x] Перевірити нове портфоліо на широкому й вузькому екранах, паузу, перемотування, зміну пісні, недоступний файл та галерею з контрольними даними; 3 тести пройшли.
 - [ ] Перевірити завантаження обкладинки та відкриття особистого чату з реального акаунта — заблоковано: зовнішня авторизована сесія недоступна.

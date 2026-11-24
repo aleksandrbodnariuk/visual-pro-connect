@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.storage-admin]
 verify_jwt = false
+
+[functions.seed-android-release]
+verify_jwt = false
+
+[functions.android-release]
+verify_jwt = false
