@@ -1158,6 +1158,30 @@ export type Database = {
         }
         Relationships: []
       }
+      device_tokens: {
+        Row: {
+          id: string
+          platform: string | null
+          token: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          platform?: string | null
+          token: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          platform?: string | null
+          token?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       election_campaigns: {
         Row: {
           created_at: string
