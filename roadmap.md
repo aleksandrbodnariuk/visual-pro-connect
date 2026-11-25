@@ -1,8 +1,9 @@
 # Roadmap
 
-- [ ] Move Android APK delivery to Supabase Storage and verify downloaded binary.
-- [ ] Publish replacement APKs safely from admin and adapt existing update button for native Android.
-- [ ] Test download/replacement/version handling; document native signing requirements.
+- [x] Move Android APK delivery to Supabase Storage and verify downloaded binary.
+- [x] Publish replacement APKs safely from admin and adapt existing update button for native Android.
+- [x] Test download/replacement/version handling; document native signing requirements.
+- [ ] Verify admin publishing and phone install/update on a real Android device — blocked: no authorized admin session or physical phone here.
 
 - [x] Оновити портфоліо: окремі колекції форматів, картки музики, відтворення без діалогу, обкладинки та звернення до автора.
 - [x] Перевірити нове портфоліо на широкому й вузькому екранах, паузу, перемотування, зміну пісні, недоступний файл та галерею з контрольними даними; 3 тести пройшли.
