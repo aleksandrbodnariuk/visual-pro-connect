@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "https://esm.sh/web-push@3.6.7";
+import { sendFcmToUser } from "../_shared/fcm.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -108,13 +109,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!subscriptions?.length) {
-      return new Response(
-        JSON.stringify({ sent: 0, reason: 'No subscriptions found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const callerName = (typeof from_name === 'string' && from_name.trim()) ? from_name.trim() : 'Користувач';
     const url = `/messages?incoming_call=${encodeURIComponent(call_id)}&from=${encodeURIComponent(callerId)}`;
 
@@ -146,7 +140,7 @@ Deno.serve(async (req) => {
     let sent = 0;
     const errors: string[] = [];
 
-    for (const sub of subscriptions) {
+    for (const sub of subscriptions || []) {
       try {
         await webpush.sendNotification(
           {
@@ -168,10 +162,20 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[Call Push] Sent ${sent}/${subscriptions.length} call notifications to ${to_user_id}`);
+    const android = await sendFcmToUser(adminClient, to_user_id, {
+      title: '📞 Вхідний дзвінок',
+      body: `${callerName} вам телефонує`,
+      url,
+      badge: 1,
+      channelId: 'calls',
+      ttlSeconds: 30,
+      data: { type: 'incoming_call', call_id: String(call_id), from_user_id: callerId },
+    });
+
+    console.log(`[Call Push] Web sent ${sent}/${subscriptions?.length || 0}, Android sent ${android.sent}/${android.total} to ${to_user_id}`);
 
     return new Response(
-      JSON.stringify({ sent, total: subscriptions.length, errors }),
+      JSON.stringify({ sent, total: subscriptions?.length || 0, android, errors }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {

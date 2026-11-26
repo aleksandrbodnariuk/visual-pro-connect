@@ -31,6 +31,19 @@ async function syncBadgeToSW(count: number): Promise<void> {
 export async function updateAppBadge(count: number): Promise<void> {
   const safeCount = Math.max(0, count);
 
+  // Native Android/iOS app (Capacitor): use the native launcher badge.
+  const cap = (window as any).Capacitor;
+  if (cap?.isNativePlatform?.()) {
+    try {
+      const { Badge } = await import('@capawesome/capacitor-badge');
+      if (safeCount > 0) await Badge.set({ count: safeCount });
+      else await Badge.clear();
+    } catch (e) {
+      console.warn('[Badge] native update failed', e);
+    }
+    return;
+  }
+
   if (!isBadgeSupported()) {
     // Still try to sync to SW for platforms that support it via SW only
     await syncBadgeToSW(safeCount);

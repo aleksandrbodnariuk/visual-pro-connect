@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "https://esm.sh/web-push@3.6.7";
+import { sendFcmToUser } from "../_shared/fcm.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -106,13 +107,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!subscriptions?.length) {
-      return new Response(
-        JSON.stringify({ sent: 0, reason: 'No subscriptions found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Count actual unread messages for this user
     // Conversation-based chats: messages from others after my last_read_at
     let unreadMessages = 0;
@@ -153,7 +147,7 @@ Deno.serve(async (req) => {
     let sent = 0;
     const errors: string[] = [];
 
-    for (const sub of subscriptions) {
+    for (const sub of subscriptions || []) {
       try {
         await webpush.sendNotification(
           {
@@ -177,10 +171,18 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[Push] Sent ${sent}/${subscriptions.length} notifications to user ${user_id}, badge: ${totalBadge}`);
+    const android = await sendFcmToUser(supabase, user_id, {
+      title: title || 'Нове повідомлення',
+      body: body || '',
+      url: url || '/messages',
+      badge: totalBadge,
+      channelId: 'messages',
+    });
+
+    console.log(`[Push] Web sent: ${sent}/${subscriptions?.length || 0}, Android sent: ${android.sent}/${android.total}, badge: ${totalBadge}`);
 
     return new Response(
-      JSON.stringify({ sent, total: subscriptions.length, badge: totalBadge, errors }),
+      JSON.stringify({ sent, total: subscriptions?.length || 0, android, badge: totalBadge, errors }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {

@@ -10,6 +10,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
 import { SiteSettingsProvider } from "./context/SiteSettingsContext";
 import { CallProvider } from "./context/CallContext";
+import { NativePushBridge } from "./components/pwa/NativePushBridge";
 import { CallDialog } from "./components/messages/CallDialog";
 import { useDataSync } from "./hooks/useDataSync";
 import { usePushAutoSubscribe } from "./hooks/usePushSubscription";
@@ -175,6 +176,7 @@ const App = () => (
           <SiteSettingsProvider>
             <TooltipProvider>
               <CallProvider>
+                <NativePushBridge />
                 <FaviconUpdater />
                 <DynamicManifest />
                 <Toaster />
