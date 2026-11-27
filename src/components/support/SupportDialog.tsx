@@ -8,6 +8,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SupportForm } from "./SupportForm";
 import { SupportTicketsList } from "./SupportTicketsList";
+import { Button } from "@/components/ui/button";
 import { AssistantChat } from "@/components/assistant/AssistantChat";
 
 interface SupportDialogProps {
@@ -26,16 +27,16 @@ export function SupportDialog({ open, onOpenChange }: SupportDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[calc(100dvh-1rem)] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Служба підтримки</DialogTitle>
+          <DialogTitle className="pr-12">Служба підтримки</DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="w-full">
-            <TabsTrigger value="ai" className="flex-1">ШІ-помічник</TabsTrigger>
-            <TabsTrigger value="new" className="flex-1">Нове звернення</TabsTrigger>
-            <TabsTrigger value="history" className="flex-1">Мої звернення</TabsTrigger>
+            <TabsTrigger value="ai" className="flex-1 whitespace-normal text-xs sm:text-sm">ШІ-помічник</TabsTrigger>
+            <TabsTrigger value="new" className="flex-1 whitespace-normal text-xs sm:text-sm">Нове звернення</TabsTrigger>
+            <TabsTrigger value="history" className="flex-1 whitespace-normal text-xs sm:text-sm">Мої звернення</TabsTrigger>
           </TabsList>
 
           <TabsContent value="ai" className="mt-4 space-y-2">
@@ -53,6 +54,7 @@ export function SupportDialog({ open, onOpenChange }: SupportDialogProps) {
             <SupportTicketsList key={refreshKey} />
           </TabsContent>
         </Tabs>
+        <Button variant="outline" className="w-full min-h-[44px]" onClick={() => onOpenChange(false)}>Закрити</Button>
       </DialogContent>
     </Dialog>
   );

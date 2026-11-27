@@ -16,13 +16,13 @@ export function NavbarLogo() {
             <img 
               src={logoUrl} 
               alt={siteName}
-              className="h-10 max-w-[180px] object-contain"
+              className="h-10 max-w-[120px] sm:max-w-[180px] object-contain shrink-0"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';
               }}
             />
           )}
-          <span className="font-bold text-xl">{siteName}</span>
+          <span className={logoUrl ? "hidden lg:inline font-bold text-xl whitespace-nowrap" : "font-bold text-lg sm:text-xl whitespace-nowrap truncate max-w-[45vw]"}>{siteName}</span>
         </>
       )}
     </NavLink>
