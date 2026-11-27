@@ -450,6 +450,7 @@ export default function Messages() {
                     onEditMessage={handleEditMessage}
                     onDeleteMessage={handleDeleteMessage}
                     recipientAvatarUrl={activeChat.user.avatarUrl}
+                    recipientName={activeChat.user.name}
                     isGroup={activeChat.type === 'group'}
                   />
                   

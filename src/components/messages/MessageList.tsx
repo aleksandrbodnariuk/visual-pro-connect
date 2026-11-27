@@ -4,7 +4,7 @@ import { MessageReactionPicker } from "./MessageReactionPicker";
 import { MessageReactions } from "./MessageReactions";
 import { PollMessage } from "./PollMessage";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCheck } from "lucide-react";
+import { Check, CheckCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -103,6 +103,7 @@ interface MessageListProps {
   onEditMessage?: (messageId: string, newText: string) => void;
   onDeleteMessage?: (messageId: string) => void;
   recipientAvatarUrl?: string;
+  recipientName?: string;
   isGroup?: boolean;
 }
 
@@ -112,6 +113,7 @@ export function MessageList({
   onEditMessage,
   onDeleteMessage,
   recipientAvatarUrl,
+  recipientName,
   isGroup
 }: MessageListProps) {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
@@ -372,34 +374,29 @@ export function MessageList({
                           <span className="italic">(редаговано)</span>
                         )}
                         <span>{message.timestamp}</span>
+                        {!isGroup && message.isSender && !message.systemEvent && (
+                          message.id.startsWith('temp') ? (
+                            <Check className="w-3.5 h-3.5" aria-label="Надіслано" />
+                          ) : message.read ? (
+                            <span title="Прочитано" className="text-sky-300"><CheckCheck className="w-3.5 h-3.5" aria-label="Прочитано" /></span>
+                          ) : (
+                            <span title="Доставлено"><CheckCheck className="w-3.5 h-3.5 opacity-70" aria-label="Доставлено" /></span>
+                          )
+                        )}
                       </div>
                     </div>
                     
-                    {/* Read receipt: avatar only on the latest READ message; CheckCheck on the latest UNREAD sender message */}
-                    {!isGroup && message.isSender && !message.systemEvent && (
-                      <>
-                        {message.id === lastReadSenderMsgId && (
-                          recipientAvatarUrl ? (
-                            <div className="flex justify-end items-center gap-1 mt-1 pr-1">
-                              <img
-                                src={recipientAvatarUrl}
-                                alt="Переглянуто"
-                                title="Переглянуто"
-                                className="w-[18px] h-[18px] rounded-full object-cover ring-1 ring-background"
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex justify-end items-center gap-0.5 mt-1 pr-1 text-primary" title="Переглянуто">
-                              <CheckCheck className="w-3.5 h-3.5" />
-                            </div>
-                          )
+                    {/* Seen marker: recipient avatar (or initials) under the latest read message */}
+                    {!isGroup && message.id === lastReadSenderMsgId && (
+                      <div className="flex justify-end mt-1 pr-1" title="Переглянуто">
+                        {recipientAvatarUrl ? (
+                          <img src={recipientAvatarUrl} alt="Переглянуто" className="w-4 h-4 rounded-full object-cover ring-1 ring-background" />
+                        ) : (
+                          <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground text-[8px] font-semibold flex items-center justify-center ring-1 ring-background" aria-label="Переглянуто">
+                            {(recipientName || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()}
+                          </span>
                         )}
-                        {message.id === lastSenderMsgId && message.id !== lastReadSenderMsgId && (
-                          <div className="flex justify-end items-center gap-0.5 mt-1 pr-1 text-muted-foreground" title="Доставлено">
-                            <CheckCheck className="w-3.5 h-3.5" />
-                          </div>
-                        )}
-                      </>
+                      </div>
                     )}
 
                     {/* Reactions display */}
